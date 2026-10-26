@@ -64,7 +64,7 @@ public partial class Hud : Control
     {
         Box(new Rect2(10, 10, 232, 58));
         Txt($"Ур. {G.Level}", new Vector2(18, 28), 15, Gold);
-        Txt(Game.PickNames[G.Tier], new Vector2(18, 28), 12, Dim, HorizontalAlignment.Right, 216);
+        Txt(G.CurDef != null ? G.CurDef.Name : Game.PickNames[G.Tier], new Vector2(18, 28), 12, G.CurDef != null ? Db.RarCol[(int)G.CurDef.Rar] : Dim, HorizontalAlignment.Right, 216);
         Bar(new Rect2(18, 34, 216, 12), G.Hp / G.MaxHp, G.Hp / G.MaxHp < .3f ? new Color("#e03c3c") : new Color("#c8423f"));
         Txt($"{(int)G.Hp}/{(int)G.MaxHp}", new Vector2(18, 45), 11, Colors.White, HorizontalAlignment.Center, 216);
         Bar(new Rect2(18, 53, 216, 6), G.Xp / G.XpNeed, new Color("#7ad45a"));
@@ -122,13 +122,13 @@ public partial class Hud : Control
 
     void DrawInventory(Vector2 vs)
     {
-        float ix = 10, iy = vs.Y - 52, sw = 50;
+        float ix = 10, iy = vs.Y - 52, sw = 40;
         Box(new Rect2(ix, iy, It.Count * sw + 8, 44));
         for (int i = 0; i < It.Count; i++)
         {
-            var p = new Vector2(ix + 6 + i * sw, iy + 6);
-            DrawTextureRectRegion(Art.IconTex, new Rect2(p, new Vector2(26, 26)), new Rect2(i * 16, 0, 16, 16), G.Inv[i] > 0 ? Colors.White : new Color(1, 1, 1, .25f));
-            Txt(G.Inv[i].ToString(), p + new Vector2(24, 24), 12, G.Inv[i] > 0 ? Colors.White : Dim);
+            var p = new Vector2(ix + 5 + i * sw, iy + 4);
+            DrawTextureRectRegion(Art.IconTex, new Rect2(p, new Vector2(22, 22)), new Rect2(i * 16, 0, 16, 16), G.Inv[i] > 0 ? Colors.White : new Color(1, 1, 1, .25f));
+            Txt(G.Inv[i].ToString(), p + new Vector2(19, 26), 10, G.Inv[i] > 0 ? Colors.White : Dim);
         }
     }
 

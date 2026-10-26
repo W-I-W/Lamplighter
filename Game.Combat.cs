@@ -10,7 +10,7 @@ public sealed class Enemy
 {
     public EK Kind; public Vector2 Pos, Kb, DashDir, Face = new(1, 0); public Vector2? Home; public Poi Guard;
     public float Hp, MaxHp, Atk, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
-    public int State; public bool Hidden; public Vector2 Mark;
+    public int State; public bool Hidden, Elite, Carrier; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
     public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden;
     public float Radius => Kind switch
     {
@@ -43,7 +43,7 @@ public partial class Game
         if (!Has(Tech.Dash) || DashCd > 0 || DashT > 0) return;
         var d = LastMoveDir.LengthSquared() > .01f ? LastMoveDir : (Aim - PPos).Normalized();
         if (d.LengthSquared() < .01f) d = new Vector2(Facing, 0);
-        DashDir = d; DashT = .18f; DashCd = 1.6f; Invuln = Mathf.Max(Invuln, .3f); Sfx.Play("dash");
+        DashDir = d; DashT = .18f; DashCd = 1.6f; Invuln = Mathf.Max(Invuln, .3f); Sfx.Play("dash"); RelicOnDash();
     }
 
     void TrySpin()
@@ -66,7 +66,7 @@ public partial class Game
     void TryPulse()
     {
         if (!Has(Tech.Pulse) || PulseCd > 0) return;
-        PulseCd = 12f; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0;
+        PulseCd = 12f; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0; RelicOnPulse();
         Beacons.Add(new Beacon { Pos = PPos, Dur = 1.8f, R = 170, Ring = 1f });
         foreach (var e in new List<Enemy>(Enemies))
             if (!e.Hidden && e.Pos.DistanceTo(PPos) < 170)
@@ -208,6 +208,8 @@ public partial class Game
     {
         int id = e.Kind == EK.Warden ? 1 : e.Kind == EK.DepthWarden ? 2 : 3;
         BossMask |= 1 << (id - 1); if (Boss == e) Boss = null;
+        GiveWeapon(id == 1 ? "sword_u" : id == 2 ? "bow_u" : "staff_u");
+        GiveRelic(id == 1 ? "r_dawnprism" : id == 2 ? "r_winterheart" : "r_emberheart");
         Give(It.Core, 1, e.Pos + new Vector2(0, -20));
         Give(It.Shard, 6, e.Pos); Give(It.Relic, 2, e.Pos + new Vector2(0, -8));
         string title, sub;
@@ -260,6 +262,7 @@ public partial class Game
         if (Invuln > 0) return;
         if (fire && Has(Tech.Fireproof)) return;
         if (fire && Has(Tech.HeatShield)) dmg *= .4f;
+        if (fire) dmg *= 1f - N("HeatResist");
         Hp -= dmg; Invuln = .6f; regenDelay = 4f; Shake = 3f;
         pVel += kb * 120f; Sfx.Play("hurt");
         Burst(PPos, fire ? new Color("#ff9a2e") : new Color("#ff5050"), 8, 80);
@@ -284,6 +287,8 @@ public partial class Game
         float chance = e.Kind switch { EK.Shade => .7f, EK.Wraith => .45f, EK.Spitter => .6f, EK.Bomber => .5f, EK.Eel => .6f, EK.Leech => .5f, EK.Beetle => .7f, EK.Imp => .6f, EK.Golem => .9f, EK.Spirit => .6f, _ => .12f };
         GiveXp(xp);
         Burst(e.Pos, new Color("#a060ff"), e.Kind == EK.Swarm ? 5 : 14, 90);
+        if (E(Fxk.Blast) > 0 && !inBlast) BlastAt(e.Pos, CurDef != null ? WeaponDmg(CurDef) : PlayerDamage);
+        if (N("KillHeal") > 0) Hp = Mathf.Min(MaxHp, Hp + N("KillHeal"));
         if (Has(Tech.Reaper)) { Hp = Mathf.Min(MaxHp, Hp + 3); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+3", Life = .7f, C = new Color("#7ad45a") }); }
         if (rng.Randf() < chance) Give(It.Shard, e.Kind == EK.Golem ? 2 : 1, e.Pos);
         if (e.Kind == EK.Beetle && rng.Randf() < .3f) Give(It.Crystal, 1, e.Pos + new Vector2(0, -8));
@@ -300,10 +305,11 @@ public partial class Game
             var e = Enemies[i];
             e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt);
             e.Kb *= Mathf.Max(0, 1 - 9 * dt);
+            e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
             if (e.Burn > 0) { e.Burn -= dt; e.Hp -= 3f * dt * (e.IsBoss ? .3f : 1f); if (rng.Randf() < dt * 12) Burst(e.Pos, new Color("#ff9a2e"), 1, 25); }
             var to = PPos - e.Pos; float dist = to.Length(); var dir = dist > .01f ? to / dist : Vector2.Zero;
             var perp = new Vector2(-dir.Y, dir.X);
-            bool guard = e.Guard != null || e.IsBoss;
+            bool guard = e.Guard != null || e.IsBoss || e.Ev != null;
             if (!guard && dist > 380) { Enemies.RemoveAt(i); continue; }
 
             bool lit = !e.IsBoss && IsLit(e.Pos);
@@ -331,6 +337,7 @@ public partial class Game
             {
                 if (e.Home.HasValue) { var h = e.Home.Value - e.Pos; if (h.Length() > 20) vel = h.Normalized() * 28; }
             }
+            else if (e.Freeze > 0) { }
             else switch (e.Kind)
             {
                 case EK.Shade:
@@ -421,7 +428,7 @@ public partial class Game
                 default: vel = UpdateAshEnemy(e, dt, dir, dist, perp, k); break;
             }
             if (e.Kind == EK.Leech && e.State == 1) { }
-            else e.Pos = Move(e.Pos, (vel * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit);
+            else e.Pos = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit);
 
             if (!e.IsBoss && e.Kind != EK.Leech)
                 foreach (var o in Enemies) if (o != e && !o.IsBoss) { var dd = e.Pos - o.Pos; float l = dd.Length(); if (l > .01f && l < 8) e.Pos += dd / l * (8 - l) * .3f; }
@@ -607,7 +614,7 @@ public partial class Game
         int f = (int)(Time * 4 + e.Phase) % 2;
         float bob = Mathf.Sin(Time * 4 + e.Phase) * 1.2f - (e.Kind == EK.Wraith || e.Kind == EK.Spirit ? 2 : 0);
         float a = Mathf.Clamp(e.Age * 2f, 0, 1);
-        Color mod = e.Flash > 0 ? new Color(1.8f, .6f, .6f, a) : new Color(1, 1, 1, a);
+        Color mod = e.Flash > 0 ? new Color(1.8f, .6f, .6f, a) : e.Freeze > 0 ? new Color(.6f, .9f, 1.6f, a) : e.Slow > 0 ? new Color(.75f, .95f, 1.25f, a) : e.Elite ? new Color(1.3f, 1.15f, .7f, a) : new Color(1, 1, 1, a);
         if (e.Kind == EK.Warden && e.Flash <= 0) mod = new Color(1.2f, .6f, .9f, a);
         if ((e.Tele > 0 || (e.Kind == EK.Warden && (e.State == 1 || e.State == 2 || e.State == 5)) || (e.Kind == EK.DepthWarden && (e.State == 4 || e.State == 5 || e.State == 6))) && ((int)(Time * 25) % 2 == 0)) mod = new Color(1.6f, 1.6f, 2f, a);
         if (WaterAt(e.Pos) && e.Kind != EK.DepthWarden) mod.A *= .85f;

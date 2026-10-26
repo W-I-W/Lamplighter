@@ -9,13 +9,13 @@ namespace Lamplighter;
 public static class It
 {
     public const int Wood = 0, Stone = 1, CopperOre = 2, IronOre = 3, Shard = 4, Copper = 5, Iron = 6, Aether = 7, Relic = 8,
-        SilverOre = 9, Silver = 10, Crystal = 11, Obsidian = 12, Ember = 13, Core = 14, Count = 15;
+        SilverOre = 9, Silver = 10, Crystal = 11, Obsidian = 12, Ember = 13, Core = 14, AncCrystal = 15, Coins = 16, Gear = 17, Lens = 18, Count = 19;
     public static readonly string[] Names = { "Дерево", "Камень", "Медная руда", "Железная руда", "Осколок света", "Медь", "Железо", "Эфир", "Реликвия",
-        "Серебряная руда", "Серебро", "Кристалл", "Обсидиан", "Уголь пепла", "Ядро света" };
-    public static readonly string[] Ab = { "дер.", "кам.", "м.руда", "ж.руда", "оск.", "мед.", "жел.", "эфир", "рел.", "с.руда", "сер.", "крист.", "обсид.", "угол.", "ядро" };
+        "Серебряная руда", "Серебро", "Кристалл", "Обсидиан", "Уголь пепла", "Ядро света", "Древний кристалл", "Монеты", "Шестерня", "Линза" };
+    public static readonly string[] Ab = { "дер.", "кам.", "м.руда", "ж.руда", "оск.", "мед.", "жел.", "эфир", "рел.", "с.руда", "сер.", "крист.", "обсид.", "угол.", "ядро", "др.крист.", "мон.", "шест.", "линза" };
     public static readonly Color[] Col = {
         new("#c9a070"), new("#c0c0cc"), new("#f0a060"), new("#c8d4e8"), new("#8ff0ff"), new("#f2b062"), new("#dfe8f6"), new("#d58cff"), new("#ffd86b"),
-        new("#e8eef6"), new("#cfd6e2"), new("#bfe9ff"), new("#a890ff"), new("#ff9a2e"), new("#fff2b0") };
+        new("#e8eef6"), new("#cfd6e2"), new("#bfe9ff"), new("#a890ff"), new("#ff9a2e"), new("#fff2b0"), new("#ffb0ff"), new("#ffd86b"), new("#b0b8c8"), new("#9fe8ff") };
     /// <summary>Слиток, получаемый из руды (или -1).</summary>
     public static int IngotOf(int ore) => ore == CopperOre ? Copper : ore == IronOre ? Iron : ore == SilverOre ? Silver : -1;
 }
@@ -32,11 +32,14 @@ public sealed class Ix { public List<string> Lines = new(); public Action E, U; 
 
 public sealed class SaveData
 {
-    public int Version = 3, Seed; public string Obj; public bool[] Lit;
+    public int Version = 4, Seed; public string Obj; public bool[] Lit;
     public float Px, Py, Hp, MaxHp, Xp; public int Level, Tier, Tech, Ann, Kills, BossMask, Beacon; public long Ann2;
     public int[] Inv, Stock;
     public int[] BT, BX, BY, BL; public byte[] PoiState; public bool Boss;
     public int[] LX, LY, LK, LL, LD; public string Explored;
+    // этап 4
+    public string[] WId; public int[][] WMods; public int CurW, HeroLamp; public int[] ModInv;
+    public string[] Relics, Equipped, BpDone, FragK, Found; public int[] FragV;
 }
 
 public partial class Game : Node2D
@@ -62,6 +65,7 @@ public partial class Game : Node2D
     public Vector2 SmeltAt; public List<int> SmeltQ = new(); float smeltT; public float SmeltProg => SmeltQ.Count > 0 ? smeltT / SmeltTime : 0;
     const float SmeltTime = 0.9f;
     public bool HasFurnace;
+    public int HeroLampLv;
     public int TechMask; public long Ann; public bool TechOpen; public int TechPage;
 
     public List<Particle> Parts = new();
@@ -94,13 +98,14 @@ public partial class Game : Node2D
     public bool Has(Tech t) => ((TechMask >> (int)t) & 1) == 1;
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
     public bool WaterAt(Vector2 p) { var t = ToTile(p); return World.In(t.X, t.Y) && W.Ground[World.Key(t.X, t.Y)] == Art.WaterG; }
-    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * (Has(Tech.Lens) ? 1.3f : 1f) * (Has(Tech.HeroLamp) ? 1.25f : 1f) * LightDim;
+    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * (Has(Tech.Lens) ? 1.3f : 1f) * (Has(Tech.HeroLamp) ? 1.25f : 1f) * (1f + .12f * HeroLampLv + N("HeroRadius")) * (Surge > 0 ? 1.4f : 1f) * LightDim;
 
     // ───────────────────────── инициализация ─────────────────────────
     public override void _Ready()
     {
         rng.Randomize();
         Art.Build();
+        Db.Init();
         AddChild(new Sfx());
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != "";
         testDir = OS.GetEnvironment("LAMP_AUTOTEST");
@@ -203,6 +208,8 @@ public partial class Game : Node2D
                 Tech = TechMask, Ann2 = Ann, Kills = Kills, BossMask = BossMask, Beacon = BeaconLevel,
                 BT = new int[Buildings.Count], BX = new int[Buildings.Count], BY = new int[Buildings.Count], BL = new int[Buildings.Count],
                 PoiState = new byte[W.Pois.Count], Explored = Convert.ToBase64String(Expl),
+                WId = Owned.ConvertAll(o => o.Id).ToArray(), WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(), CurW = CurW, HeroLamp = HeroLampLv, ModInv = ModInv,
+                Relics = OwnedRelics.ToArray(), Equipped = EquippedRelics.ToArray(), BpDone = new List<string>(BpDone).ToArray(), FragK = new List<string>(Frag.Keys).ToArray(), FragV = new List<int>(Frag.Values).ToArray(), Found = Found.ToArray(),
                 LX = new int[Lamps.Count], LY = new int[Lamps.Count], LK = new int[Lamps.Count], LL = new int[Lamps.Count], LD = new int[Lamps.Count]
             };
             for (int i = 0; i < W.Ancients.Count; i++) d.Lit[i] = W.Ancients[i].Lit;
@@ -260,6 +267,13 @@ public partial class Game : Node2D
                 for (int i = 0; i < d.LX.Length; i++) Lamps.Add(new Lamp { X = d.LX[i], Y = d.LY[i], Kind = d.LK[i], Level = d.LL[i], Dir = d.LD[i], Anim = 1 });
             else
                 for (int y = 0; y < World.N; y++) for (int x = 0; x < World.N; x++) if (W.Get(x, y) == Tl.Lantern) Lamps.Add(new Lamp { X = x, Y = y, Anim = 1 });
+            if (d.WId != null) for (int i = 0; i < d.WId.Length; i++) { var o = new OwnedWeapon { Id = d.WId[i] }; if (d.WMods != null && i < d.WMods.Length && d.WMods[i] != null) o.Mods.AddRange(d.WMods[i]); if (Db.Weapon(o.Id) != null) Owned.Add(o); }
+            CurW = Math.Min(d.CurW, Owned.Count - 1); HeroLampLv = d.HeroLamp;
+            if (d.ModInv != null) for (int i = 0; i < ModInv.Length && i < d.ModInv.Length; i++) ModInv[i] = d.ModInv[i];
+            if (d.Relics != null) OwnedRelics.AddRange(d.Relics); if (d.Equipped != null) EquippedRelics.AddRange(d.Equipped);
+            if (d.BpDone != null) foreach (var b in d.BpDone) BpDone.Add(b);
+            if (d.FragK != null && d.FragV != null) for (int i = 0; i < d.FragK.Length && i < d.FragV.Length; i++) Frag[d.FragK[i]] = d.FragV[i];
+            if (d.Found != null) Found.AddRange(d.Found);
             if (d.Explored != null) { var e = Convert.FromBase64String(d.Explored); if (e.Length == Expl.Length) Expl = e; }
             return true;
         }
@@ -307,6 +321,7 @@ public partial class Game : Node2D
                 case Key.Escape: TechOpen = false; MapOpen = false; break;
                 case Key.Shift: TryDash(); break;
                 case Key.Q: TryFlare(); break;
+                case Key.V: CycleWeapon(); break;
                 case Key.F: TryPulse(); break;
                 case Key.F5: Save(); Toast("Игра сохранена"); break;
                 case Key.F9: NewGame(); break;
@@ -346,6 +361,8 @@ public partial class Game : Node2D
         UpdateAncients(dt);
         UpdateLamps(dt);
         UpdateBeams(dt);
+        UpdateWeaponFx(dt);
+        UpdateRelics(dt);
         UpdateEnemies(dt);
         UpdateProjectiles(dt);
         UpdateBeacons(dt);
@@ -446,7 +463,7 @@ public partial class Game : Node2D
         }
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
-        float speed = 80f * (water ? (Has(Tech.Boots) ? .9f : .55f) : 1f);
+        float speed = 80f * (1f + N("Speed")) * (water ? (Has(Tech.Boots) ? .9f : .55f) : 1f);
         if (DashT > 0)
         {
             DashT -= dt; pVel = DashDir * 260f;
@@ -481,7 +498,7 @@ public partial class Game : Node2D
         Tl.Iron => 1, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
     };
 
-    void Act(float dt)
+    void ActPick(float dt, bool melee)
     {
         var toAim = Aim - PPos; var dir = toAim.LengthSquared() > 1 ? toAim.Normalized() : new Vector2(Facing, 0);
         Enemy best = null; float bd = 30f;
@@ -491,6 +508,7 @@ public partial class Game : Node2D
             float d = e.Pos.DistanceTo(PPos) - e.Radius;
             if (d < bd && (d < 12 || (e.Pos - PPos).Normalized().Dot(dir) > .1f)) { bd = d; best = e; }
         }
+        if (!melee) best = null;
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
@@ -526,7 +544,7 @@ public partial class Game : Node2D
         Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), _ => Colors.White
     };
 
-    int ChainLimit => Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0;
+    int ChainLimit => (Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0) + (int)N("MineChain");
 
     void BreakTile(Vector2I tile, Tl t, bool chain)
     {
@@ -770,6 +788,7 @@ public partial class Game : Node2D
         DrawBuildings(c);
         DrawHazards(c);
         DrawBeams(c);
+        DrawWeaponFx(c);
 
         var list = new List<(float y, Action a)>();
         foreach (var e in Enemies) { var ee = e; list.Add((e.Pos.Y, () => DrawEnemy(c, ee))); }

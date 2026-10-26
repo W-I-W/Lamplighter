@@ -18,7 +18,7 @@ public sealed class TechDef
 
 public partial class Game
 {
-    static int[][] C(params int[] flat)
+    public static int[][] C(params int[] flat)
     {
         var r = new int[flat.Length / 2][];
         for (int i = 0; i < r.Length; i++) r[i] = new[] { flat[i * 2], flat[i * 2 + 1] };

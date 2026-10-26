@@ -67,6 +67,7 @@ public partial class Game
     {
         if (fire && Has(Tech.Fireproof)) return;
         if (fire && Has(Tech.HeatShield)) amt *= .4f;
+        if (fire) amt *= 1f - N("HeatResist");
         Hp -= amt; regenDelay = 3f; hotDot -= amt;
         if (hotDot < -3f) { hotDot = 0; Burst(PPos, new Color("#ff7a2a"), 3, 50); Sfx.Play("hurt", -8, 1.4f); Shake = Mathf.Max(Shake, 1.2f); }
         if (Hp <= 0) Die();
