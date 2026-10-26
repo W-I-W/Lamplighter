@@ -259,6 +259,7 @@ public partial class Game
 
     public void HurtPlayer(float dmg, Vector2 kb, bool fire = false)
     {
+        if (Window == Win.Trade) Window = Win.None;
         if (Invuln > 0) return;
         if (fire && Has(Tech.Fireproof)) return;
         if (fire && Has(Tech.HeatShield)) dmg *= .4f;
@@ -272,6 +273,7 @@ public partial class Game
 
     void Die()
     {
+        EventsOnDeath();
         Enemies.Clear(); Projs.Clear(); Boss = null; LightBlockT = 0; LeechT = 0; Zones.Clear();
         int lost = Inv[It.Shard] / 2; Inv[It.Shard] -= lost;
         PPos = new Vector2((W.Spawn.X + .5f) * TS, (W.Spawn.Y + .5f) * TS); Hp = MaxHp; Invuln = 1.5f;
@@ -282,6 +284,7 @@ public partial class Game
     void KillEnemy(Enemy e)
     {
         Kills++;
+        if (e.Ev != null) EvEnemyKilled(e);
         if (e.IsBoss) { BossKilled(e); return; }
         float xp = e.Kind switch { EK.Shade => 15, EK.Wraith => 12, EK.Spitter => 18, EK.Bomber => 16, EK.Eel => 22, EK.Leech => 14, EK.Beetle => 26, EK.Imp => 24, EK.Golem => 40, EK.Spirit => 26, _ => 3 };
         float chance = e.Kind switch { EK.Shade => .7f, EK.Wraith => .45f, EK.Spitter => .6f, EK.Bomber => .5f, EK.Eel => .6f, EK.Leech => .5f, EK.Beetle => .7f, EK.Imp => .6f, EK.Golem => .9f, EK.Spirit => .6f, _ => .12f };
@@ -320,7 +323,7 @@ public partial class Game
                 if (e.Hp <= 0) { Burst(e.Pos, new Color("#ffe9a0"), 10, 60); Enemies.RemoveAt(i); continue; }
             }
             float auraR = PlayerLightR * (Has(Tech.HeroLamp) ? .55f : .6f);
-            if ((Has(Tech.Searing) || Has(Tech.HeroLamp)) && dist < auraR && !e.Hidden)
+            if ((Has(Tech.Searing) || Has(Tech.HeroLamp) || HeroLampLv >= 2) && dist < auraR && !e.Hidden)
             {
                 e.Hp -= (Has(Tech.HeroLamp) ? 4.5f : 2.5f) * dt * (e.IsBoss ? .3f : 1f); e.Flash = Mathf.Max(e.Flash, .04f);
                 if (rng.Randf() < dt * 10) Burst(e.Pos, new Color("#ffe27a"), 1, 25);
@@ -428,7 +431,8 @@ public partial class Game
                 default: vel = UpdateAshEnemy(e, dt, dir, dist, perp, k); break;
             }
             if (e.Kind == EK.Leech && e.State == 1) { }
-            else e.Pos = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit);
+            else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit);
+                if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }
 
             if (!e.IsBoss && e.Kind != EK.Leech)
                 foreach (var o in Enemies) if (o != e && !o.IsBoss) { var dd = e.Pos - o.Pos; float l = dd.Length(); if (l > .01f && l < 8) e.Pos += dd / l * (8 - l) * .3f; }
@@ -595,7 +599,7 @@ public partial class Game
     // ───────────────────────── рисование врагов ─────────────────────────
     void DrawEnemy(EntityLayer c, Enemy e)
     {
-        float sc = e.Kind switch { EK.Warden => 2.6f, EK.DepthWarden => 2.8f, EK.AshWarden => 2.8f, EK.Swarm => .6f, EK.Golem => 1.5f, EK.Beetle => 1.15f, EK.Leech => .8f, _ => 1f };
+        float sc = (e.Elite ? 1.25f : 1f) * e.Kind switch { EK.Warden => 2.6f, EK.DepthWarden => 2.8f, EK.AshWarden => 2.8f, EK.Swarm => .6f, EK.Golem => 1.5f, EK.Beetle => 1.15f, EK.Leech => .8f, _ => 1f };
         if (e.Hidden)
         {
             // под водой видна только рябь

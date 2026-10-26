@@ -8,7 +8,7 @@ public static partial class Art
 {
     // Индексы тайлов в атласе (колонки)
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
-        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 85;
+        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 101;
 
     public static ImageTexture TileTex, PlayerTex, ShadeTex, WraithTex, IconTex;
 

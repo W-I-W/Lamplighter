@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://RelicDef.cs" id="1_jkgxl"]
+
+[resource]
+script = ExtResource("1_jkgxl")
+Id = "t_storm"
+Title = "Гроза испытания"
+Desc = "Временно: цепные молнии"
+Tags = PackedStringArray("storm")
+Rarity = 2
+Permanent = false
+Effects = PackedStringArray("Chain:2")
+Tint = Color(0.78431374, 0.65882355, 1, 1)

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://RelicDef.cs" id="1_ndbnn"]
+
+[resource]
+script = ExtResource("1_ndbnn")
+Id = "r_beaconwick"
+Title = "Фитиль маяка"
+Desc = "Удары копят свет"
+Tags = PackedStringArray("light")
+Rarity = 1
+Effects = PackedStringArray("Siphon:1")
+Tint = Color(1, 0.8156863, 0.2901961, 1)

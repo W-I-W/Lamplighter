@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SynergyDef" format=3]
+
+[ext_resource type="Script" path="res://SynergyDef.cs" id="1_t7o2w"]
+
+[resource]
+script = ExtResource("1_t7o2w")
+Id = "syn_storm_bow"
+Title = "Молниеносные стрелы"
+Path = "Путь бури"
+Desc = "Буря + лук: стрелы бьют молнией"
+Requires = PackedStringArray("tag:storm>=1", "class:bow")
+Grants = PackedStringArray("Chain:1")
+Hint = "нужен грозовой эффект и лук"

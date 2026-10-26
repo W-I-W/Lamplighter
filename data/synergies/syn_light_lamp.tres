@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SynergyDef" format=3]
+
+[ext_resource type="Script" path="res://SynergyDef.cs" id="1_ivqer"]
+
+[resource]
+script = ExtResource("1_ivqer")
+Id = "syn_light_lamp"
+Title = "Сияющие фонари"
+Path = "Путь света"
+Desc = "Свет + фонарь: радиус больше"
+Requires = PackedStringArray("tag:light>=1", "ability:lamp")
+Grants = PackedStringArray("LampRadius:0.15", "HeroRadius:0.1")
+Hint = "нужны световой эффект и хотя бы один фонарь"

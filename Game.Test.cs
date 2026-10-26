@@ -37,6 +37,7 @@ public partial class Game
     bool noHeal;
     void AutoTest(float dt)
     {
+        if (OS.GetEnvironment("LAMP_STAGE") == "genres") { Db.SaveDefaults(); GetTree().Quit(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "makeold") { MakeOldSave(); GetTree().Quit(); return; }
         if (!noHeal) Hp = MaxHp;
         if (OS.GetEnvironment("LAMP_LOAD") != "")
@@ -44,7 +45,7 @@ public partial class Game
             sw -= dt; if (sw > 0) return;
             if (si == 0)
             {
-                Log($"LOAD: buildings={Buildings.Count} levels=[{string.Join(",", Buildings.ConvertAll(b => b.Level))}] villagers={Villagers.Count} tech={TechMask} bossMask={BossMask} beacon={BeaconLevel} lit={LitCount}/{LitIn(1)}/{LitIn(2)} done={PoisDone} puzzles={PuzzlesSolved} lamps={Lamps.Count} kinds=[{string.Join(",", Lamps.ConvertAll(l => l.Kind))}] machines={MachinesRestored} sealOpen={W.Get(125, 64) == Tl.None} expl={Array.FindAll(Expl, b => b != 0).Length} inv=[{string.Join(",", Inv)}] tier={Tier} lvl={Level}");
+                Log($"LOAD: buildings={Buildings.Count} levels=[{string.Join(",", Buildings.ConvertAll(b => b.Level))}] villagers={Villagers.Count} tech={TechMask} bossMask={BossMask} beacon={BeaconLevel} lit={LitCount}/{LitIn(1)}/{LitIn(2)} done={PoisDone} puzzles={PuzzlesSolved} lamps={Lamps.Count} kinds=[{string.Join(",", Lamps.ConvertAll(l => l.Kind))}] machines={MachinesRestored} weapons=[{string.Join(",", Owned.ConvertAll(o => o.Id + ":" + o.Mods.Count))}] cur={CurW} relics={OwnedRelics.Count}/{EquippedRelics.Count} bps={BpDone.Count} frag={Frag.Count} mods=[{string.Join(",", ModInv)}] hero={HeroLampLv} epoch={TradeEpoch} bought={Bought.Count} extraV={ExtraVillagers} found={Found.Count} syn={ActiveSyn.Count} sealOpen={W.Get(125, 64) == Tl.None} expl={Array.FindAll(Expl, b => b != 0).Length} inv=[{string.Join(",", Inv)}] tier={Tier} lvl={Level}");
                 Shot("load"); si++; sw = .8f;
             }
             else GetTree().Quit();
@@ -79,6 +80,9 @@ public partial class Game
     void BuildScript()
     {
         if (OS.GetEnvironment("LAMP_STAGE") == "ash") { BuildAshScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "s4") { BuildS4Script(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "s4b") { BuildS4bScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "perf") { BuildPerfScript(); return; }
         var spawn = TileCenter(W.Spawn.X, W.Spawn.Y);
         var ent = new Vector2I(World.MX0 + 8, 64);
         Puzzle pz0 = null;

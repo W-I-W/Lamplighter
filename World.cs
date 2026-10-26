@@ -11,15 +11,16 @@ public enum Tl : byte
     Warehouse, Sawmill, Mine, Forge,
     CaveWall, CrystalOre, SilverOre, Machine, MachineOn, Mirror1, Mirror2, Receiver, ReceiverOn, Emitter,
     CrystalLantern, CombatLantern, Rubble, BridgeBroken, Bridge, Deep, Seal, SecretDoor, Drill, Collector,
-    DeadTree, Obsidian, Ember, AshRuin, Vent
+    DeadTree, Obsidian, Ember, AshRuin, Vent,
+    TechCache, Spire, Altar, AltarOn, SecretCache, Stall, Hub, Refinery, AmpCrystal, BarrierPost, MeteorOre
 }
 
-public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite }
+public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret }
 
 /// <summary>Место интереса. State: 0 нетронуто, 1 стража вышла, 2 стража побеждена, 3 завершено.</summary>
 public sealed class Poi
 {
-    public PK Kind; public Vector2I Tile; public byte State, Variant; public bool Seen, Revealed; public int Guards;
+    public PK Kind; public Vector2I Tile; public byte State, Variant; public bool Seen, Revealed; public int Guards; public string Tag;
     public Vector2 Pos => new((Tile.X + .5f) * World.TS, (Tile.Y + .5f) * World.TS);
 }
 
@@ -44,7 +45,7 @@ public sealed partial class World
     public byte[] Obj = new byte[Wd * Ht];
     public byte[] Ground = new byte[Wd * Ht];
     public static int Key(int x, int y) => y * Wd + x;
-    public static bool Blocks(Tl t) => t != Tl.None && t != Tl.Bridge;
+    public static bool Blocks(Tl t) => t != Tl.None && t != Tl.Bridge && t != Tl.SecretCache;
     public static int RegionOf(int tx) => tx < MX0 ? 0 : tx <= MX1 ? 1 : 2;
     public List<Ancient> Ancients = new();
     public Vector2I Spawn = new(N / 2, N / 2 + 2);
@@ -132,6 +133,7 @@ public sealed partial class World
         w.GenPois(seed);
         w.GenMines(seed);
         w.GenAsh(seed);
+        w.GenFinds(seed);
         return w;
     }
 

@@ -6,7 +6,7 @@ namespace Lamplighter;
 
 public sealed class Lamp
 {
-    public int X, Y, Kind, Level = 1, Dir; public float Anim;
+    public int X, Y, Kind, Level = 1, Dir, Amp; public float Anim;
     public Vector2 Pos => Game.TileCenter(X, Y);
 }
 
@@ -33,7 +33,7 @@ public partial class Game
         float b = l.Kind == 0 ? 96 : l.Kind == 1 ? 72 : 64;
         float lv = l.Level == 1 ? 1f : l.Level == 2 ? 1.35f : 1.7f;
         float f = b * lv * (Has(Tech.FarLanterns) ? 1.5f : 1f) * (Has(Tech.FireLens) ? 1.3f : 1f);
-        f *= (LightBlockT > 0 ? .4f : 1f) * (1f - .55f * SmokeAt(l.Pos));
+        f *= (LightBlockT > 0 ? .4f : 1f) * (1f - .55f * SmokeAt(l.Pos)) * (1f + .12f * l.Amp) * (1f + N("LampRadius")) * (Surge > 0 ? 1.25f : 1f);
         return f * Ease(l.Anim);
     }
 
@@ -168,7 +168,7 @@ public partial class Game
                     }
                 }
         puzzleT -= dt;
-        if (puzzleT <= 0) { puzzleT = .1f; UpdatePuzzles(rec); }
+        if (puzzleT <= 0) { puzzleT = .1f; UpdatePuzzles(rec); RevealSecrets(); }
     }
 
     bool beamTest;
@@ -190,9 +190,24 @@ public partial class Game
         }
     }
 
+    void RevealSecrets()
+    {
+        foreach (var p in W.Pois)
+        {
+            if (p.Kind != PK.Secret || p.State >= 3 || W.Get(p.Tile.X, p.Tile.Y) != Tl.SecretCache) continue;
+            bool lit = false;
+            foreach (var bp in Beams) { for (int i = 0; i + 1 < bp.Pts.Count && !lit; i++) if (DistToSeg(p.Pos, bp.Pts[i], bp.Pts[i + 1]) < 11) lit = true; if (lit) break; }
+            if (!lit) foreach (var b in Beacons) if (p.Pos.DistanceTo(b.Pos) < BeaconR(b) * .85f) { lit = true; break; }
+            if (!lit) continue;
+            SetObj(p.Tile.X, p.Tile.Y, Tl.Chest); p.Seen = true; Burst(p.Pos, new Color("#ffe27a"), 20, 90);
+            Announce("Скрытый тайник проявился!", "Свет выявил то, что скрывала тьма", new Color("#ffd86b"), "tech");
+        }
+    }
+
     void SolvePuzzle(Puzzle pz)
     {
         pz.Poi.State = 3; pz.Poi.Seen = true;
+        if (pz.Poi.Kind == PK.Altar) { SetObj(pz.Poi.Tile.X, pz.Poi.Tile.Y, Tl.AltarOn); Announce("Алтарь лучей пробуждён!", "Сундук сокровищницы открыт", new Color("#ffe27a"), "ancient"); Flash = .4f; GiveXp(80); Save(); return; }
         foreach (var d in pz.Doors) { SetObj(d.X, d.Y, Tl.None); Burst(TileCenter(d.X, d.Y), new Color("#8ff0ff"), 14, 70); }
         GiveXp(60); Shake = 3; Flash = .25f;
         Announce("Загадка света решена!", "Тайная дверь открылась — внутри хранилище", new Color("#ffe27a"), "tech");

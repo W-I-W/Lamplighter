@@ -26,7 +26,7 @@ public sealed class Toast { public string S; public float Life = 4.5f; }
 public sealed class Banner { public string Title, Sub; public Color C; public float Life = 5f; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
-public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status; public float Prog; public bool Worker; public Vector2 Pos => Game.TileCenter(X, Y); }
+public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
 public sealed class Ix { public List<string> Lines = new(); public Action E, U; }
 
@@ -40,6 +40,9 @@ public sealed class SaveData
     // этап 4
     public string[] WId; public int[][] WMods; public int CurW, HeroLamp; public int[] ModInv;
     public string[] Relics, Equipped, BpDone, FragK, Found; public int[] FragV;
+    public int[] BPrio, BMode; public bool[] BOff, BForced; public int[] BLocal;
+    public int TradeEpoch, ExtraV; public string[] Bought; public float[] Demand; public float EvNext;
+    public string[] EvK; public float[] EvX, EvY, EvT, EvL, EvV; public int[] EvS, EvW, EvSeed;
 }
 
 public partial class Game : Node2D
@@ -136,6 +139,10 @@ public partial class Game : Node2D
 
         Toast("Соберите дерево и камень (ЛКМ), постройте печь [1]. Тьма вокруг опасна — держитесь у маяка. [M] — карта");
         if (pendingMsg != null) Toast(pendingMsg);
+        if (pendingMsg2 != null) Toast(pendingMsg2);
+        InitLightTech();
+        foreach (var ev in pendingEvents) { InitEventState(ev); Events.Add(ev); }
+        EventsEnabled = !testing;
         GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count} pois={W.Pois.Count}");
     }
 
@@ -159,7 +166,7 @@ public partial class Game : Node2D
             {
                 groundL.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[y * World.Wd + x], 0));
                 var t = W.Get(x, y);
-                if (t != Tl.None) objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
+                if (t != Tl.None && t != Tl.SecretCache) objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
                 if (t == Tl.Furnace) HasFurnace = true;
             }
     }
@@ -179,6 +186,8 @@ public partial class Game : Node2D
         Tl.CrystalLantern => Art.CrystalLantern, Tl.CombatLantern => Art.CombatLantern, Tl.Rubble => Art.Rubble,
         Tl.BridgeBroken => Art.BridgeBroken, Tl.Bridge => Art.Bridge, Tl.Deep => Art.Deep, Tl.Seal => Art.Seal, Tl.SecretDoor => Art.SecretDoor,
         Tl.DeadTree => Art.DeadTree, Tl.Obsidian => Art.Obsidian, Tl.Ember => Art.Ember, Tl.AshRuin => Art.AshRuin, Tl.Vent => Art.Vent,
+        Tl.TechCache => Art.TechCache, Tl.Spire => Art.Spire, Tl.Altar => Art.Altar, Tl.AltarOn => Art.AltarOn, Tl.AmpCrystal => Art.AmpCrystal, Tl.BarrierPost => Art.BarrierPost, Tl.MeteorOre => Art.MeteorOre,
+        Tl.Stall => Art.Stall + Math.Min(lv, 3) - 1, Tl.Hub => Art.Hub + Math.Min(lv, 3) - 1, Tl.Refinery => Art.Refinery + Math.Min(lv, 3) - 1,
         _ => Art.Cliff
     };
 
@@ -188,12 +197,13 @@ public partial class Game : Node2D
     public void SetObj(int x, int y, Tl t)
     {
         W.Set(x, y, t);
-        if (t == Tl.None) objL.EraseCell(new Vector2I(x, y));
+        if (t == Tl.None || t == Tl.SecretCache) objL.EraseCell(new Vector2I(x, y));
         else objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
     }
 
     // ───────────────────────── сохранение ─────────────────────────
-    string pendingMsg;
+    string pendingMsg, pendingMsg2; readonly List<GEvent> pendingEvents = new();
+    static int[] Flat(List<Building> bs) { var a = new int[bs.Count * It.Count]; for (int i = 0; i < bs.Count; i++) Array.Copy(bs[i].Local, 0, a, i * It.Count, It.Count); return a; }
     string SavePath => testing ? Path.Combine(testDir, "save.json") : ProjectSettings.GlobalizePath("user://save.json");
 
     public void Save()
@@ -210,6 +220,10 @@ public partial class Game : Node2D
                 PoiState = new byte[W.Pois.Count], Explored = Convert.ToBase64String(Expl),
                 WId = Owned.ConvertAll(o => o.Id).ToArray(), WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(), CurW = CurW, HeroLamp = HeroLampLv, ModInv = ModInv,
                 Relics = OwnedRelics.ToArray(), Equipped = EquippedRelics.ToArray(), BpDone = new List<string>(BpDone).ToArray(), FragK = new List<string>(Frag.Keys).ToArray(), FragV = new List<int>(Frag.Values).ToArray(), Found = Found.ToArray(),
+                BPrio = Buildings.ConvertAll(b => b.Prio).ToArray(), BMode = Buildings.ConvertAll(b => b.Mode).ToArray(), BOff = Buildings.ConvertAll(b => b.Off).ToArray(), BForced = Buildings.ConvertAll(b => b.Forced).ToArray(),
+                BLocal = Flat(Buildings), TradeEpoch = TradeEpoch, ExtraV = ExtraVillagers, Bought = new List<string>(Bought).ToArray(), Demand = Demand, EvNext = evNext,
+                EvK = Events.ConvertAll(e => e.Kind).ToArray(), EvX = Events.ConvertAll(e => e.Pos.X).ToArray(), EvY = Events.ConvertAll(e => e.Pos.Y).ToArray(), EvT = Events.ConvertAll(e => e.T).ToArray(), EvL = Events.ConvertAll(e => e.Life).ToArray(),
+                EvV = Events.ConvertAll(e => e.V).ToArray(), EvS = Events.ConvertAll(e => e.State).ToArray(), EvW = Events.ConvertAll(e => e.Wave).ToArray(), EvSeed = Events.ConvertAll(e => e.Seed).ToArray(),
                 LX = new int[Lamps.Count], LY = new int[Lamps.Count], LK = new int[Lamps.Count], LL = new int[Lamps.Count], LD = new int[Lamps.Count]
             };
             for (int i = 0; i < W.Ancients.Count; i++) d.Lit[i] = W.Ancients[i].Lit;
@@ -236,7 +250,7 @@ public partial class Game : Node2D
             if (d.Version < 2) return false;
             W = World.Generate(d.Seed);
             var obj = Convert.FromBase64String(d.Obj);
-            bool legacy = d.Version < 3;
+            bool legacy = d.Version < 3; var genObj = (byte[])W.Obj.Clone();
             if (!legacy) { if (obj.Length != W.Obj.Length) return false; W.Obj = obj; }
             else
             {
@@ -249,6 +263,7 @@ public partial class Game : Node2D
                         W.Obj[y * World.Wd + x] = obj[y * World.N + x];
                     }
             }
+            OverlayNewFinds(genObj, d.PoiState != null ? d.PoiState.Length : 0, legacy);
             for (int i = 0; i < W.Ancients.Count && i < d.Lit.Length; i++) if (d.Lit[i]) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
             PPos = new Vector2(d.Px, d.Py); Hp = d.Hp; MaxHp = d.MaxHp; Xp = d.Xp; Level = d.Level; Tier = d.Tier;
             TechMask = d.Tech; Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
@@ -256,13 +271,32 @@ public partial class Game : Node2D
             if (d.Inv != null) for (int i = 0; i < Inv.Length && i < d.Inv.Length; i++) Inv[i] = d.Inv[i];
             if (legacy && d.Boss) { Inv[It.Core]++; pendingMsg = "Сохранение обновлено: за победу над Хранителем леса вы получили ядро света — улучшите Центральный маяк!"; }
             if (d.Stock != null) for (int i = 0; i < Stock.Length && i < d.Stock.Length; i++) Stock[i] = d.Stock[i];
-            if (d.BT != null) for (int i = 0; i < d.BT.Length; i++) Buildings.Add(new Building { Type = (Tl)d.BT[i], X = d.BX[i], Y = d.BY[i], Level = d.BL[i] });
+            if (d.BT != null) for (int i = 0; i < d.BT.Length; i++)
+                {
+                    var bb = new Building { Type = (Tl)d.BT[i], X = d.BX[i], Y = d.BY[i], Level = d.BL[i] };
+                    if (!legacy)
+                    {
+                        if (d.BPrio != null && i < d.BPrio.Length) bb.Prio = d.BPrio[i]; if (d.BMode != null && i < d.BMode.Length) bb.Mode = d.BMode[i];
+                        if (d.BOff != null && i < d.BOff.Length) bb.Off = d.BOff[i]; if (d.BForced != null && i < d.BForced.Length) bb.Forced = d.BForced[i];
+                        if (d.BLocal != null && (i + 1) * It.Count <= d.BLocal.Length) Array.Copy(d.BLocal, i * It.Count, bb.Local, 0, It.Count);
+                    }
+                    else bb.Forced = true;
+                    Buildings.Add(bb);
+                }
+            if (legacy) { Ann = -1L; pendingMsg2 = "Сохранение обновлено: старые постройки связаны со складом автоматически, новые нужно подключать узлами снабжения"; }
             if (d.PoiState != null)
                 for (int i = 0; i < W.Pois.Count && i < d.PoiState.Length; i++)
                 {
                     var b = d.PoiState[i]; var p = W.Pois[i];
                     p.State = (byte)(b & 15); p.Seen = (b & 16) != 0; p.Revealed = (b & 32) != 0;
                 }
+            if (!legacy)
+            {
+                TradeEpoch = d.TradeEpoch; ExtraVillagers = d.ExtraV; if (d.Bought != null) foreach (var b in d.Bought) Bought.Add(b);
+                if (d.Demand != null) for (int i = 0; i < Demand.Length && i < d.Demand.Length; i++) Demand[i] = d.Demand[i];
+                evNext = d.EvNext > 0 ? d.EvNext : 150;
+                if (d.EvK != null) for (int i = 0; i < d.EvK.Length; i++) pendingEvents.Add(new GEvent { Kind = d.EvK[i], Pos = new Vector2(d.EvX[i], d.EvY[i]), T = d.EvT[i], Life = d.EvL[i], V = d.EvV[i], State = d.EvS[i], Wave = d.EvW[i], Seed = d.EvSeed[i] });
+            }
             if (!legacy && d.LX != null)
                 for (int i = 0; i < d.LX.Length; i++) Lamps.Add(new Lamp { X = d.LX[i], Y = d.LY[i], Kind = d.LK[i], Level = d.LL[i], Dir = d.LD[i], Anim = 1 });
             else
@@ -280,6 +314,21 @@ public partial class Game : Node2D
         catch (Exception e) { GD.PushWarning("load failed: " + e.Message); return false; }
     }
 
+    /// <summary>Старые сохранения не знают о новых находках: переносим их плитки из свежесгенерированного мира.</summary>
+    void OverlayNewFinds(byte[] gen, int known, bool legacy)
+    {
+        for (int i = known; i < W.Pois.Count; i++)
+        {
+            var p = W.Pois[i]; if (legacy && World.RegionOf(p.Tile.X) != 0) continue;
+            for (int y = p.Tile.Y - 5; y <= p.Tile.Y + 5; y++)
+                for (int x = p.Tile.X - 5; x <= p.Tile.X + 5; x++)
+                {
+                    if (!World.In(x, y)) continue; int k = World.Key(x, y);
+                    if (W.Obj[k] == (byte)Tl.None && gen[k] != (byte)Tl.None) W.Obj[k] = gen[k];
+                }
+        }
+    }
+
     public override void _Notification(int what)
     {
         if (what == NotificationWMCloseRequest) Save();
@@ -295,9 +344,10 @@ public partial class Game : Node2D
     // ───────────────────────── ввод ─────────────────────────
     public override void _Input(InputEvent e)
     {
-        if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right) TrySpin();
+        if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right && Window == Win.None) TrySpin();
         if (e is InputEventKey k && k.Pressed && !k.Echo)
         {
+            if (Window != Win.None && k.Keycode != Key.F9) { WindowKey(k.Keycode, k.ShiftPressed); return; }
             switch (k.Keycode)
             {
                 case Key.E: if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
@@ -314,14 +364,18 @@ public partial class Game : Node2D
                 case Key.Key0: Digit(0); break;
                 case Key.Z: if (!TechOpen) BuildBuilding(4); break;
                 case Key.X: if (!TechOpen) BuildBuilding(5); break;
-                case Key.T: TechOpen = !TechOpen; MapOpen = false; Sfx.Play("tick"); break;
-                case Key.M: MapOpen = !MapOpen; TechOpen = false; Sfx.Play("tick"); break;
+                case Key.T: { bool o = !TechOpen; CloseWindows(); TechOpen = o; Sfx.Play("tick"); break; }
+                case Key.M: { bool o = !MapOpen; CloseWindows(); MapOpen = o; Sfx.Play("tick"); break; }
                 case Key.Left: if (TechOpen) { TechPage = (TechPage + 2) % 3; Sfx.Play("tick"); } break;
                 case Key.Right: if (TechOpen) { TechPage = (TechPage + 1) % 3; Sfx.Play("tick"); } break;
-                case Key.Escape: TechOpen = false; MapOpen = false; break;
+                case Key.Escape: CloseWindows(); break;
                 case Key.Shift: TryDash(); break;
                 case Key.Q: TryFlare(); break;
                 case Key.V: CycleWeapon(); break;
+                case Key.C: OpenWin(Win.Equip); break;
+                case Key.J: OpenWin(Win.Journal); break;
+                case Key.P: OpenWin(Win.Prod); break;
+                case Key.B: OpenWin(Win.Build); break;
                 case Key.F: TryPulse(); break;
                 case Key.F5: Save(); Toast("Игра сохранена"); break;
                 case Key.F9: NewGame(); break;
@@ -362,6 +416,9 @@ public partial class Game : Node2D
         UpdateLamps(dt);
         UpdateBeams(dt);
         UpdateWeaponFx(dt);
+        UpdateEvents(dt);
+        UpdateTrade(dt);
+        UpdateLightTech(dt);
         UpdateRelics(dt);
         UpdateEnemies(dt);
         UpdateProjectiles(dt);
@@ -410,6 +467,7 @@ public partial class Game : Node2D
         foreach (var b in Beacons) if (n < Fx.MaxLights) arr[n++] = new Vector4(b.Pos.X, b.Pos.Y, BeaconR(b), b.Ring * (1 - b.T / b.Dur));
         foreach (var p in BeamLights) if (n < Fx.MaxLights - 26) arr[n++] = new Vector4(p.X, p.Y, 34, 0);
         foreach (var z in ZoneLights()) if (n < Fx.MaxLights - 12) arr[n++] = z;
+        foreach (var z in EventLights()) if (n < Fx.MaxLights - 6) arr[n++] = z;
         // силуэты: слабая подсветка интересных объектов сквозь тьму
         foreach (var m in Marks()) if (n < Fx.MaxLights) arr[n++] = m;
         var target = RegionAt(PPos) switch { 1 => new Vector3(.0f, .03f, .075f), 2 => new Vector3(.075f, .03f, .016f), _ => new Vector3(.012f, .016f, .045f) };
@@ -456,10 +514,11 @@ public partial class Game : Node2D
         var dir = Vector2.Zero;
         if (!testing || aimOverride == null)
         {
-            if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
-            if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down)) dir.Y += 1;
-            if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
-            if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) dir.X += 1;
+            bool arrows = Window == Win.None && !TechOpen;
+            if (Input.IsKeyPressed(Key.W) || (arrows && Input.IsKeyPressed(Key.Up))) dir.Y -= 1;
+            if (Input.IsKeyPressed(Key.S) || (arrows && Input.IsKeyPressed(Key.Down))) dir.Y += 1;
+            if (Input.IsKeyPressed(Key.A) || (arrows && Input.IsKeyPressed(Key.Left))) dir.X -= 1;
+            if (Input.IsKeyPressed(Key.D) || (arrows && Input.IsKeyPressed(Key.Right))) dir.X += 1;
         }
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
@@ -491,11 +550,11 @@ public partial class Game : Node2D
     public float PlayerDamage => 2f + 2f * Tier + .4f * (Level - 1);
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
-        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember;
+        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre;
 
     static int TierNeed(Tl t) => t switch
     {
-        Tl.Iron => 1, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
+        Tl.Iron => 1, Tl.MeteorOre => 1, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
     };
 
     void ActPick(float dt, bool melee)
@@ -529,7 +588,7 @@ public partial class Game : Node2D
             MineProg = 0; return;
         }
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
-        MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, _ => 4f };
+        MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, _ => 4f };
         float before = MineProg;
         MineProg += dt * MineSpeed; Swing = .2f;
         if ((int)(before * 5) != (int)(MineProg * 5)) { Burst(TileCenter(tile.X, tile.Y), TileColor(t), 3, 40); Sfx.Play("mine", -3, t == Tl.Tree ? .8f : 1.1f); }
@@ -541,7 +600,7 @@ public partial class Game : Node2D
         Tl.Tree => new Color("#3b8a3a"), Tl.Stone => new Color("#a0a0ac"), Tl.Copper => new Color("#e58a3d"), Tl.Ruin => new Color("#9a9fae"),
         Tl.Iron => new Color("#cbd6e8"), Tl.Lumen => new Color("#5fe4ff"), Tl.Aether => new Color("#d58cff"),
         Tl.CrystalOre => new Color("#bfe9ff"), Tl.SilverOre => new Color("#e8eef6"), Tl.Rubble => new Color("#8a8f9c"), Tl.DeadTree => new Color("#5a4a44"),
-        Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), _ => Colors.White
+        Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), Tl.MeteorOre => new Color("#fff2b0"), _ => Colors.White
     };
 
     int ChainLimit => (Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0) + (int)N("MineChain");
@@ -567,6 +626,7 @@ public partial class Game : Node2D
             case Tl.CrystalOre: Give(It.Crystal, rng.RandiRange(1, 2), c); GiveXp(20); break;
             case Tl.Obsidian: Give(It.Obsidian, 1, c); GiveXp(24); break;
             case Tl.Ember: Give(It.Ember, rng.RandiRange(1, 2), c); GiveXp(24); break;
+            case Tl.MeteorOre: Give(It.AncCrystal, 1, c); Give(It.Shard, 3, c + new Vector2(0, -6)); Give(It.Crystal, 1, c + new Vector2(0, -12)); GiveXp(40); Found.Add("Осколок светового метеорита"); break;
         }
         if (chain && ChainLimit > 0)
         {
@@ -717,7 +777,7 @@ public partial class Game : Node2D
             SetObj(v.x, v.y, v.t); Burst(TileCenter(v.x, v.y), TileColor(v.t), 8, 50);
             if (seen.Add(v.t)) ex.Add(v.t switch { Tl.Iron => "железная руда", Tl.Lumen => "люмен-руда", Tl.Aether => "эфирные кристаллы", Tl.SilverOre => "серебро", Tl.CrystalOre => "кристаллы", Tl.Obsidian => "обсидиан", Tl.Ember => "уголь пепла", _ => "руда" });
         }
-        GiveXp(a.Boss ? 120 : 60); Shake = 5; Flash = .7f;
+        GiveXp(a.Boss ? 120 : 60); Shake = 5; Flash = .7f; TradeEpoch++;
         Burst(a.Pos, new Color("#ffe9a0"), 40, 140); Sfx.Play("ancient");
         string extra = ex.Count > 0 ? "Открыто: " + string.Join(", ", ex) : "Территория освобождена";
         Announce(a.Boss ? "Фонарь стража зажжён!" : $"Древний фонарь #{idx} зажжён!", "Тьма навсегда отступает. " + extra, new Color("#ffe9a0"), "ancient");
@@ -789,6 +849,8 @@ public partial class Game : Node2D
         DrawHazards(c);
         DrawBeams(c);
         DrawWeaponFx(c);
+        DrawBarriers(c);
+        DrawEvents(c);
 
         var list = new List<(float y, Action a)>();
         foreach (var e in Enemies) { var ee = e; list.Add((e.Pos.Y, () => DrawEnemy(c, ee))); }

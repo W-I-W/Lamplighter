@@ -27,6 +27,7 @@ public partial class Game
         var a = W.Ancients[0]; a.TargetRadius = BeaconRadius(BeaconLevel); a.Pulse = 1f;
         Flash = .6f; Shake = 6; Burst(a.Pos, new Color("#fff2b0"), 40, 160); Sfx.Play("ancient");
         GiveXp(80);
+        TradeEpoch++;
         if (BeaconLevel == 2) { OpenSeal(W.Seal1, "Затопленные шахты"); }
         else if (BeaconLevel == 3) { OpenSeal(W.Seal2, "Пепельные пустоши"); }
         else Announce("Центральный маяк: уровень " + BeaconLevel, BeaconGain[BeaconLevel - 1], new Color("#fff2b0"), "ancient");
@@ -69,10 +70,11 @@ public partial class Game
             {
                 var t = W.Get(x, y);
                 if (t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
-                    || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn)
+                    || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn)
                 { float d = TileCenter(x, y).DistanceTo(PPos); if (d < bd) { bd = d; best = new Vector2I(x, y); bt = t; } }
             }
         if (bt != Tl.None && TileIx(best.X, best.Y, bt, ix)) return ix;
+        if (EventIx(ix)) return ix;
         var lamp = LampNear(PPos, 32);
         if (lamp != null) { LampIx(lamp, ix); return ix; }
         var b = BuildingNear(PPos, 44);
@@ -86,7 +88,9 @@ public partial class Game
         W.ByTile.TryGetValue(World.Key(x, y), out var p);
         switch (t)
         {
-            case Tl.Chest: case Tl.Shrine: case Tl.Obelisk: case Tl.Cage: return p != null && PoiIx(p, ix);
+            case Tl.Chest: case Tl.Shrine: case Tl.Obelisk: case Tl.Cage: case Tl.TechCache: case Tl.Spire: return p != null && PoiIx(p, ix);
+            case Tl.Altar: ix.Lines.Add("Алтарь лучей: направьте лучи на три приёмника вокруг (кристальные фонари, зеркала, Прожектор)"); return true;
+            case Tl.AltarOn: ix.Lines.Add("Алтарь пробуждён"); return true;
             case Tl.Machine:
                 ix.Lines.Add("Заброшенный механизм древних");
                 ix.Lines.Add($"[E] Починить: {CostStr(MachineCost)} → производство деревни +15%"); ix.E = () => RestoreMachine(x, y, p);
@@ -256,7 +260,7 @@ public partial class Game
         foreach (var p in W.Pois)
         {
             if (p.State >= 3 && p.Kind != PK.Chest) continue;
-            if (!(p.Kind == PK.Workshop || p.Kind == PK.Puzzle || p.Kind == PK.Obelisk || p.Kind == PK.Shrine || p.Kind == PK.Camp || p.Kind == PK.Ruins || p.Kind == PK.House)) continue;
+            if (!(p.Kind == PK.TechCache || p.Kind == PK.Spire || p.Kind == PK.Altar || p.Kind == PK.Workshop || p.Kind == PK.Puzzle || p.Kind == PK.Obelisk || p.Kind == PK.Shrine || p.Kind == PK.Camp || p.Kind == PK.Ruins || p.Kind == PK.House)) continue;
             if (p.Pos.DistanceTo(PPos) > 300) continue;
             yield return new Vector4(p.Pos.X, p.Pos.Y, 34, -.4f * pulse); if (++n >= 12) yield break;
         }

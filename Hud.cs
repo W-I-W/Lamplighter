@@ -41,6 +41,7 @@ public partial class Hud : Control
 
         if (G.LightBlockT > 0) DrawRect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         DrawMarkers(vs);
+        DrawEventMarkers(vs);
         DrawStatus();
         DrawGoals();
         DrawTopRight(vs);
@@ -54,8 +55,10 @@ public partial class Hud : Control
         float y = DrawBanners(vs);
         DrawToasts(vs, y);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 70), 20, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
+        DrawStage4Hud(vs);
         if (G.TechOpen) DrawTech(vs);
         if (G.MapOpen) DrawMap(vs);
+        DrawWindows(vs);
         if (G.Hp / G.MaxHp < .3f) DrawRect(new Rect2(Vector2.Zero, vs), new Color(.6f, 0, 0, .12f + .06f * Mathf.Sin(G.Time * 6f)));
     }
 
@@ -163,7 +166,7 @@ public partial class Hud : Control
     {
         float w = 350, h = 270, cx = vs.X - w - 10, cy = vs.Y - h - 10;
         Box(new Rect2(cx, cy, w, h));
-        Txt("Строить и создавать   [T] улучшения", new Vector2(cx + 8, cy + 16), 11, Dim);
+        Txt("Строить   [B] все · [C] экип. · [J] журнал · [P] произв.", new Vector2(cx + 8, cy + 16), 11, Dim);
         float y = cy + 38;
         void Line(string key, string name, string right, int state)
         {
@@ -362,6 +365,7 @@ public partial class Hud : Control
             DrawCircle(o + p.Pos / 16f * s, 2.2f, Game.PoiColor(p.Kind));
         }
         foreach (var b in G.Buildings) DrawRect(new Rect2(o + b.Pos / 16f * s - new Vector2(2, 2), new Vector2(4, 4)), new Color("#d9b27c"));
+        foreach (var ev in G.Events) { var ep = o + ev.Pos / 16f * s; var ec = Game.EvColor(ev.Kind); DrawColoredPolygon(new[] { ep + new Vector2(0, -5), ep + new Vector2(4, 0), ep + new Vector2(0, 5), ep + new Vector2(-4, 0) }, ec); }
         var pp = o + G.PPos / 16f * s; float blink = Mathf.Sin(G.Time * 6f) > 0 ? 1f : .5f;
         DrawCircle(pp, 4.5f, new Color(0, 0, 0, .8f)); DrawCircle(pp, 3f, new Color(.4f, 1f, .5f, blink));
         Txt("● вы   ◆ страж   ○ фонарь (золото — горит)   • места   ▮ печать", new Vector2(o.X, o.Y + mh + 34), 11, Dim);

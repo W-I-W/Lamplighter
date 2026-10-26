@@ -13,7 +13,8 @@ public partial class Game
     public static string PoiName(PK k) => k switch
     {
         PK.Chest => "Сундук путника", PK.Ruins => "Древние руины", PK.House => "Заброшенный дом", PK.Camp => "Лагерь теней",
-        PK.Shrine => "Святилище света", PK.Captive => "Пленник Тьмы", PK.Obelisk => "Обелиск", PK.Workshop => "Заброшенная мастерская", PK.Puzzle => "Хранилище света", PK.BridgeSite => "Разрушенный мост", _ => "Эфирная роща"
+        PK.Shrine => "Святилище света", PK.Captive => "Пленник Тьмы", PK.Obelisk => "Обелиск", PK.Workshop => "Заброшенная мастерская", PK.Puzzle => "Хранилище света", PK.BridgeSite => "Разрушенный мост",
+        PK.TechCache => "Забытая технология", PK.Spire => "Древний кристалл", PK.Altar => "Алтарь лучей", PK.Secret => "Скрытый тайник", _ => "Эфирная роща"
     };
 
     static string PoiHint(PK k) => k switch
@@ -23,13 +24,15 @@ public partial class Game
         PK.Captive => "Победите стражу и освободите жителя — он будет работать в деревне",
         PK.Obelisk => "Коснитесь [E]: он укажет другие места",
         PK.Workshop => "Древний механизм можно починить — он ускорит деревню", PK.Puzzle => "Направьте луч света на приёмник зеркалами — откроется хранилище",
-        PK.BridgeSite => "Почините мост [E] и пройдите на ту сторону", _ => "Редкие кристаллы эфира — нужна железная кирка"
+        PK.BridgeSite => "Почините мост [E] и пройдите на ту сторону",
+        PK.TechCache => "Постамент хранит чертёж — коснитесь [E]", PK.Spire => "Шпиль древнего света: возьмите кристалл [E]",
+        PK.Altar => "Направьте три луча на приёмники — откроется сокровищница", PK.Secret => "Тайник проявился!", _ => "Редкие кристаллы эфира — нужна железная кирка"
     };
 
     public static Color PoiColor(PK k) => k switch
     {
         PK.Camp => new Color("#ff6a5a"), PK.Captive => new Color("#7ad45a"), PK.Shrine => new Color("#8ff0ff"), PK.Obelisk => new Color("#9fb4ff"),
-        PK.Grove => new Color("#d58cff"), PK.Workshop => new Color("#8ff0ff"), PK.Puzzle => new Color("#ffe27a"), PK.BridgeSite => new Color("#d9b27c"), _ => new Color("#ffd86b")
+        PK.Grove => new Color("#d58cff"), PK.Workshop => new Color("#8ff0ff"), PK.Puzzle => new Color("#ffe27a"), PK.BridgeSite => new Color("#d9b27c"), PK.TechCache => new Color("#8ff0ff"), PK.Spire => new Color("#ffb0ff"), PK.Altar => new Color("#ffe27a"), PK.Secret => new Color("#ffd86b"), _ => new Color("#ffd86b")
     };
 
     void UpdatePois(float dt)
@@ -39,6 +42,7 @@ public partial class Game
         foreach (var p in W.Pois)
         {
             float d = p.Pos.DistanceTo(PPos);
+            if (p.Kind == PK.Secret && W.Get(p.Tile.X, p.Tile.Y) == Tl.SecretCache) continue;
             if (!p.Seen && d < seeR)
             {
                 p.Seen = true; GiveXp(8);
@@ -90,7 +94,10 @@ public partial class Game
         var t = W.Get(p.Tile.X, p.Tile.Y);
         switch (t)
         {
+            case Tl.TechCache: ix.Lines.Add("[E] Взять чертёж с постамента"); ix.E = () => ClaimCache(p); return true;
+            case Tl.Spire: ix.Lines.Add("[E] Взять древний световой кристалл"); ix.E = () => TakeSpire(p); return true;
             case Tl.Chest:
+                if (p.Variant == 7 && AltarLocked(p)) { ix.Lines.Add("Сундук сокровищницы запечатан: оживите алтарь тремя лучами света"); return true; }
                 if (p.Kind == PK.Camp && p.State < 2) ix.Lines.Add("Сундук охраняется: победите стражу лагеря");
                 else { ix.Lines.Add("[E] Открыть сундук"); ix.E = () => OpenChest(p); }
                 return true;
@@ -125,6 +132,8 @@ public partial class Game
         if (reg == 2) { G(It.Obsidian, r.Next(1, 3)); G(It.Ember, r.Next(1, 3)); }
         if (p.Variant == 1) { G(It.Relic, 1); G(It.Crystal, 2); if (reg > 0) G(It.Aether, 1 + r.Next(2)); }
         var parts = new List<string>(); int k = 0;
+        if (p.Tag != null) foreach (var tg in p.Tag.Split(';')) GrantTag(tg, p.Pos);
+        { var rr = new Random(W.Seed * 61 + p.Tile.X * 7 + p.Tile.Y); float chance = p.Variant == 3 ? 1f : p.Variant == 1 || p.Variant == 7 ? .7f : p.Kind == PK.Camp ? .5f : .15f + Luck; if (rr.NextDouble() < chance) GrantTag(RollTag(rr, tier, p.Variant == 7 ? .4f : 0), p.Pos); }
         foreach (var (item, n) in got)
         {
             Inv[item] += n; parts.Add($"{n} {It.Ab[item]}");
@@ -132,7 +141,7 @@ public partial class Game
         }
         SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); p.State = 3; GiveXp(15 + tier * 5);
         Burst(p.Pos, new Color("#ffe27a"), 18, 80);
-        Announce(p.Variant == 1 ? "Тайник вскрыт!" : "Сундук открыт!", string.Join(", ", parts), new Color("#ffd86b"), "chest");
+        Announce(p.Variant == 1 ? "Тайник вскрыт!" : p.Variant == 7 ? "Сокровищница открыта!" : "Сундук открыт!", string.Join(", ", parts), new Color("#ffd86b"), "chest");
         Save();
     }
 
@@ -202,19 +211,25 @@ public partial class Game
         var a1 = W.Ancients[1]; var boss1 = BossLantern(1);
         bool Lv2() { foreach (var b in Buildings) if (b.Level >= 2) return true; return false; }
         Add("Построить печь [1]", HasFurnace, NeedStr(CostFurnace));
+        Add("Создать оружие [C]", Owned.Count > 0, "Вкладка «Создание» у печи: меч — Медь 4, Дерево 3; лук; посох");
         Add("Медная кирка [3] у печи", Tier >= 1, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedStr(CostPick[0]) : NeedStr(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [4]", HasBuilding(Tl.Warehouse), NeedStr(BCost(0, 1)));
+        Add("Найти забытую технологию", BpDone.Contains("bp_hub"), "Светящийся постамент даёт чертёж «Логистика» (его можно и купить в лавке)", NearestPoi(PK.TechCache, true)?.Pos);
         var cap = NearestPoi(PK.Captive, true);
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
+        Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedStr(BCost(8, 1)));
         Add("Построить лесопилку [5]", HasBuilding(Tl.Sawmill), NeedStr(BCost(1, 1)));
         Add("Построить шахту [6]", HasBuilding(Tl.Mine), LitCount >= 1 ? NeedStr(BCost(2, 1)) : "Сначала зажгите древний фонарь");
         Add("Железная кирка [3]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedStr(CostPick[1]));
         Add("Построить кузницу [7]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedStr(BCost(3, 1)) : "Нужен спасённый житель");
+        Add("Подключить производство узлами [B]", HasBuilding(Tl.Hub) || !HasBuilding(Tl.Mine), BpDone.Contains("bp_hub") ? NeedStr(BCost(7, 1)) : "Нужен чертёж «Логистика» [J]");
+        Add("Построить цех переработки [B]", HasBuilding(Tl.Refinery), BpDone.Contains("bp_refinery") ? NeedStr(BCost(6, 1)) : "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)");
         Add("Улучшить здание до ур.2 [U]", Lv2(), "Подойдите к зданию и нажмите U");
         Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
         Add("Победить Хранителя Тёмного леса", BossDown(1), "Он ждёт у особого фонаря на краю леса — награда: первое ядро света", boss1?.Pos);
+        Add("Экипировать реликвию [C]", EquippedRelics.Count > 0, "Реликвии усиливают оружие и свет; синергии — в окне экипировки");
         Add("Улучшить Центральный маяк", BeaconLevel >= 2, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — подойдите к маяку и нажмите E: откроется путь в шахты", W.Ancients[0].Pos);
         if (BeaconLevel >= 2)
         {
@@ -247,4 +262,27 @@ public partial class Game
         return best;
     }
     public int PuzzlesSolved { get { int n = 0; foreach (var pz in W.Puzzles) if (pz.Poi.State == 3) n++; return n; } }
+}
+
+public partial class Game
+{
+    bool AltarLocked(Poi chest)
+    {
+        foreach (var q in W.Pois) if (q.Kind == PK.Altar && q.State < 3 && q.Pos.DistanceTo(chest.Pos) < 8 * TS) return true;
+        return false;
+    }
+
+    void ClaimCache(Poi p)
+    {
+        SetObj(p.Tile.X, p.Tile.Y, Tl.ShrineUsed); p.State = 3; GiveXp(30);
+        foreach (var tg in p.Tag.Split(';')) GrantTag(tg, p.Pos);
+        Burst(p.Pos, new Color("#8ff0ff"), 24, 100); Sfx.Play("tech"); Save();
+    }
+
+    void TakeSpire(Poi p)
+    {
+        int n = World.RegionOf(p.Tile.X) == 0 ? 1 : 2;
+        SetObj(p.Tile.X, p.Tile.Y, Tl.ObeliskUsed); p.State = 3; GiveXp(20);
+        Give(It.AncCrystal, n, p.Pos); Found.Add("Древний кристалл"); Burst(p.Pos, new Color("#ffb0ff"), 24, 100); Sfx.Play("chest"); Save();
+    }
 }

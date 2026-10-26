@@ -184,7 +184,7 @@ public static partial class Art
             c.Outline(H("#1a0606"));
         }
         BomberTex = ImageTexture.CreateFromImage(img);
-        ExtraEntities2();
+        ExtraEntities2(); ExtraEntities3();
     }
 
     static void ExtraIcons(Image img)
