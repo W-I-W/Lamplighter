@@ -8,25 +8,35 @@ namespace Lamplighter;
 
 public static class It
 {
-    public const int Wood = 0, Stone = 1, CopperOre = 2, IronOre = 3, Shard = 4, Copper = 5, Iron = 6, Count = 7;
-    public static readonly string[] Names = { "Дерево", "Камень", "Медная руда", "Железная руда", "Осколок света", "Медь", "Железо" };
+    public const int Wood = 0, Stone = 1, CopperOre = 2, IronOre = 3, Shard = 4, Copper = 5, Iron = 6, Aether = 7, Relic = 8,
+        SilverOre = 9, Silver = 10, Crystal = 11, Obsidian = 12, Ember = 13, Core = 14, Count = 15;
+    public static readonly string[] Names = { "Дерево", "Камень", "Медная руда", "Железная руда", "Осколок света", "Медь", "Железо", "Эфир", "Реликвия",
+        "Серебряная руда", "Серебро", "Кристалл", "Обсидиан", "Уголь пепла", "Ядро света" };
+    public static readonly string[] Ab = { "дер.", "кам.", "м.руда", "ж.руда", "оск.", "мед.", "жел.", "эфир", "рел.", "с.руда", "сер.", "крист.", "обсид.", "угол.", "ядро" };
+    public static readonly Color[] Col = {
+        new("#c9a070"), new("#c0c0cc"), new("#f0a060"), new("#c8d4e8"), new("#8ff0ff"), new("#f2b062"), new("#dfe8f6"), new("#d58cff"), new("#ffd86b"),
+        new("#e8eef6"), new("#cfd6e2"), new("#bfe9ff"), new("#a890ff"), new("#ff9a2e"), new("#fff2b0") };
+    /// <summary>Слиток, получаемый из руды (или -1).</summary>
+    public static int IngotOf(int ore) => ore == CopperOre ? Copper : ore == IronOre ? Iron : ore == SilverOre ? Silver : -1;
 }
 
-public sealed class Enemy
-{
-    public Vector2 Pos, Kb, DashDir;
-    public float Hp, MaxHp, Atk, Flash, Phase, Dash, DashCd = 1.5f, Tele, Age;
-    public bool Wraith;
-}
 public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
-public sealed class Lamp { public Vector2 Pos; public float Anim; }
 public sealed class Toast { public string S; public float Life = 4.5f; }
+public sealed class Banner { public string Title, Sub; public Color C; public float Life = 5f; }
+public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone; }
+public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
+public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status; public float Prog; public bool Worker; public Vector2 Pos => Game.TileCenter(X, Y); }
+public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
+public sealed class Ix { public List<string> Lines = new(); public Action E, U; }
 
 public sealed class SaveData
 {
-    public int Seed; public string Obj; public bool[] Lit;
-    public float Px, Py, Hp, MaxHp, Xp; public int Level, Tier; public int[] Inv;
+    public int Version = 3, Seed; public string Obj; public bool[] Lit;
+    public float Px, Py, Hp, MaxHp, Xp; public int Level, Tier, Tech, Ann, Kills, BossMask, Beacon; public long Ann2;
+    public int[] Inv, Stock;
+    public int[] BT, BX, BY, BL; public byte[] PoiState; public bool Boss;
+    public int[] LX, LY, LK, LL, LD; public string Explored;
 }
 
 public partial class Game : Node2D
@@ -38,63 +48,74 @@ public partial class Game : Node2D
     public World W;
     TileMapLayer groundL, objL; int srcId;
     EntityLayer ents; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud;
-    readonly RandomNumberGenerator rng = new();
+    public readonly RandomNumberGenerator rng = new();
 
     // игрок
     public Vector2 PPos; Vector2 pVel; public int Facing = 1; public float Walk;
     public float Hp = 60, MaxHp = 60, Xp; public int Level = 1, Tier;
     public int[] Inv = new int[It.Count];
     public float Invuln, AtkCd, Swing, MineProg, MineNeed, Shake, Flash, Time;
-    float regenDelay, tierMsgCd;
+    float regenDelay, tierMsgCd, rippleT;
     public Vector2I MineTile = new(-1, -1);
     public Vector2 Aim;
-    public string Prompt = "";
+    public Ix Cur = new();
     public Vector2 SmeltAt; public List<int> SmeltQ = new(); float smeltT; public float SmeltProg => SmeltQ.Count > 0 ? smeltT / SmeltTime : 0;
     const float SmeltTime = 0.9f;
     public bool HasFurnace;
+    public int TechMask; public long Ann; public bool TechOpen; public int TechPage;
 
-    public List<Enemy> Enemies = new();
     public List<Particle> Parts = new();
     public List<FText> Texts = new();
     public List<Toast> Toasts = new();
-    public List<Lamp> Lamps = new();
-    float spawnT = 4, saveT;
+    public List<Banner> Banners = new();
+    float saveT, regionT; int lastRegion = -1;
     public int Kills;
-
-    // автотест (отладка): LAMP_AUTOTEST=1 — скриптованный прогон со скриншотами
-    string testDir; int testStep; float testT; bool testing;
-    Vector2? aimOverride;
+    Vector3 tint = new(.012f, .016f, .045f);
 
     static readonly int[][] CostFurnace = { new[] { It.Stone, 10 }, new[] { It.Wood, 5 } };
     static readonly int[][] CostLantern = { new[] { It.Wood, 4 }, new[] { It.Copper, 2 } };
     static readonly int[][][] CostPick = {
         new[] { new[] { It.Copper, 5 }, new[] { It.Wood, 5 } },
-        new[] { new[] { It.Iron, 6 }, new[] { It.Shard, 3 } } };
-    public static readonly string[] PickNames = { "Деревянная кирка", "Медная кирка", "Железная кирка" };
-    public const int MaxLamps = 40;
-    const float LampR = 96, PlayerLightBase = 72;
+        new[] { new[] { It.Iron, 6 }, new[] { It.Shard, 3 } },
+        new[] { new[] { It.Crystal, 6 }, new[] { It.Silver, 4 }, new[] { It.Iron, 3 } },
+        new[] { new[] { It.Obsidian, 5 }, new[] { It.Ember, 5 }, new[] { It.Silver, 3 } } };
+    public static readonly string[] PickNames = { "Деревянная кирка", "Медная кирка", "Железная кирка", "Кристальная кирка", "Обсидиановая кирка" };
+    static readonly string[] PickGain = {
+        "", "Добыча быстрее, урон выше, берёт железную руду",
+        "Ещё быстрее, берёт люмен-руду, эфир, серебро и кристаллы",
+        "Добыча жил: ломает до 3 соседних блоков руды сразу",
+        "Добыча жил до 5 блоков, удары поджигают врагов" };
 
     public float XpNeed => 25 + 20 * Level;
-    public int LitCount { get { int n = 0; for (int i = 1; i < W.Ancients.Count; i++) if (W.Ancients[i].Lit) n++; return n; } }
+    public int LitCount { get { int n = 0; for (int i = 1; i < W.Ancients.Count; i++) { var a = W.Ancients[i]; if (!a.Boss && a.Region == 0 && a.Lit) n++; } return n; } }
+    public int LitIn(int region) { int n = 0; foreach (var a in W.Ancients) if (a.Region == region && !a.Boss && a.Lit && a != W.Ancients[0]) n++; return n; }
     public Vector2 ViewSize => GetViewportRect().Size;
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
-    public float PlayerLightR => PlayerLightBase + 8 * Tier + 2 * Level;
+    public bool Has(Tech t) => ((TechMask >> (int)t) & 1) == 1;
+    public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
+    public bool WaterAt(Vector2 p) { var t = ToTile(p); return World.In(t.X, t.Y) && W.Ground[World.Key(t.X, t.Y)] == Art.WaterG; }
+    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * (Has(Tech.Lens) ? 1.3f : 1f) * (Has(Tech.HeroLamp) ? 1.25f : 1f) * LightDim;
 
     // ───────────────────────── инициализация ─────────────────────────
     public override void _Ready()
     {
         rng.Randomize();
         Art.Build();
+        AddChild(new Sfx());
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != "";
         testDir = OS.GetEnvironment("LAMP_AUTOTEST");
         if (!LoadGame()) NewWorld(testing ? 4242 : (int)(rng.Randi() % 1000000));
+        ApplyBeaconRadius();
+        InitVillage();
+        InitMap();
+        InitAsh();
 
         BuildTileMaps();
         ents = new EntityLayer { G = this };
         AddChild(ents);
 
         cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = true, PositionSmoothingSpeed = 9f, Position = PPos };
-        cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.N * TS; cam.LimitBottom = World.N * TS;
+        cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.Wd * TS; cam.LimitBottom = World.Ht * TS;
         AddChild(cam); cam.MakeCurrent(); cam.ResetSmoothing();
 
         var dl = new CanvasLayer { Layer = 5 }; AddChild(dl);
@@ -108,8 +129,9 @@ public partial class Game : Node2D
         hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore };
         hl.AddChild(hud);
 
-        Toast("Соберите дерево и камень (ЛКМ), постройте печь [1]. Тьма вокруг опасна — держитесь у маяка.");
-        GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count}");
+        Toast("Соберите дерево и камень (ЛКМ), постройте печь [1]. Тьма вокруг опасна — держитесь у маяка. [M] — карта");
+        if (pendingMsg != null) Toast(pendingMsg);
+        GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count} pois={W.Pois.Count}");
     }
 
     void NewWorld(int seed)
@@ -127,49 +149,70 @@ public partial class Game : Node2D
         groundL = new TileMapLayer { TileSet = ts }; objL = new TileMapLayer { TileSet = ts };
         AddChild(groundL); AddChild(objL);
         HasFurnace = false;
-        for (int y = 0; y < World.N; y++)
-            for (int x = 0; x < World.N; x++)
+        for (int y = 0; y < World.Ht; y++)
+            for (int x = 0; x < World.Wd; x++)
             {
-                groundL.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[y * World.N + x], 0));
+                groundL.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[y * World.Wd + x], 0));
                 var t = W.Get(x, y);
-                if (t != Tl.None) objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t), 0));
+                if (t != Tl.None) objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
                 if (t == Tl.Furnace) HasFurnace = true;
-                if (t == Tl.Lantern) Lamps.Add(new Lamp { Pos = TileCenter(x, y), Anim = 1 });
             }
     }
 
-    static int AtlasX(Tl t) => t switch
+    static int AtlasX(Tl t, int lv = 1) => t switch
     {
         Tl.Tree => Art.Tree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
-        Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.Lantern => Art.Lantern, _ => Art.Cliff
+        Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
+        Tl.Chest => Art.Chest, Tl.ChestOpen => Art.ChestOpen, Tl.Ruin => Art.Ruin, Tl.House => Art.House, Tl.Tent => Art.Tent,
+        Tl.Shrine => Art.Shrine, Tl.ShrineUsed => Art.ShrineUsed, Tl.Aether => Art.AetherOre, Tl.Cage => Art.Cage,
+        Tl.BossOff => Art.BossOff, Tl.BossOn => Art.BossOn, Tl.Obelisk => Art.Obelisk, Tl.ObeliskUsed => Art.ObeliskUsed,
+        Tl.Warehouse => lv >= 4 ? Art.Wh4 : Art.Warehouse + lv - 1, Tl.Sawmill => lv >= 4 ? Art.Saw4 : Art.Sawmill + lv - 1,
+        Tl.Mine => lv >= 4 ? Art.Mine4 : Art.Mine + lv - 1, Tl.Forge => lv >= 4 ? Art.Forge4 : Art.Forge + lv - 1,
+        Tl.Drill => Art.Drill + Math.Min(lv, 4) - 1, Tl.Collector => Art.Collector + Math.Min(lv, 4) - 1,
+        Tl.CaveWall => Art.CaveWall, Tl.CrystalOre => Art.CrystalOre, Tl.SilverOre => Art.SilverOre, Tl.Machine => Art.Machine, Tl.MachineOn => Art.MachineOn,
+        Tl.Mirror1 => Art.Mirror1, Tl.Mirror2 => Art.Mirror2, Tl.Receiver => Art.Receiver, Tl.ReceiverOn => Art.ReceiverOn, Tl.Emitter => Art.Emitter,
+        Tl.CrystalLantern => Art.CrystalLantern, Tl.CombatLantern => Art.CombatLantern, Tl.Rubble => Art.Rubble,
+        Tl.BridgeBroken => Art.BridgeBroken, Tl.Bridge => Art.Bridge, Tl.Deep => Art.Deep, Tl.Seal => Art.Seal, Tl.SecretDoor => Art.SecretDoor,
+        Tl.DeadTree => Art.DeadTree, Tl.Obsidian => Art.Obsidian, Tl.Ember => Art.Ember, Tl.AshRuin => Art.AshRuin, Tl.Vent => Art.Vent,
+        _ => Art.Cliff
     };
 
     public static Vector2 TileCenter(int x, int y) => new((x + .5f) * TS, (y + .5f) * TS);
-    static Vector2I ToTile(Vector2 p) => new((int)Mathf.Floor(p.X / TS), (int)Mathf.Floor(p.Y / TS));
+    public static Vector2I ToTile(Vector2 p) => new((int)Mathf.Floor(p.X / TS), (int)Mathf.Floor(p.Y / TS));
 
-    void SetObj(int x, int y, Tl t)
+    public void SetObj(int x, int y, Tl t)
     {
         W.Set(x, y, t);
         if (t == Tl.None) objL.EraseCell(new Vector2I(x, y));
-        else objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t), 0));
+        else objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
     }
 
     // ───────────────────────── сохранение ─────────────────────────
-    static string SavePath => ProjectSettings.GlobalizePath("user://save.json");
+    string pendingMsg;
+    string SavePath => testing ? Path.Combine(testDir, "save.json") : ProjectSettings.GlobalizePath("user://save.json");
 
     public void Save()
     {
-        if (testing) return;
         try
         {
-            // завершаем плавку, чтобы ничего не терялось
-            while (SmeltQ.Count > 0) { Inv[SmeltQ[0] == It.CopperOre ? It.Copper : It.Iron]++; SmeltQ.RemoveAt(0); }
+            while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
             var d = new SaveData
             {
                 Seed = W.Seed, Obj = Convert.ToBase64String(W.Obj), Lit = new bool[W.Ancients.Count],
-                Px = PPos.X, Py = PPos.Y, Hp = Hp, MaxHp = MaxHp, Xp = Xp, Level = Level, Tier = Tier, Inv = Inv
+                Px = PPos.X, Py = PPos.Y, Hp = Hp, MaxHp = MaxHp, Xp = Xp, Level = Level, Tier = Tier, Inv = Inv, Stock = Stock,
+                Tech = TechMask, Ann2 = Ann, Kills = Kills, BossMask = BossMask, Beacon = BeaconLevel,
+                BT = new int[Buildings.Count], BX = new int[Buildings.Count], BY = new int[Buildings.Count], BL = new int[Buildings.Count],
+                PoiState = new byte[W.Pois.Count], Explored = Convert.ToBase64String(Expl),
+                LX = new int[Lamps.Count], LY = new int[Lamps.Count], LK = new int[Lamps.Count], LL = new int[Lamps.Count], LD = new int[Lamps.Count]
             };
             for (int i = 0; i < W.Ancients.Count; i++) d.Lit[i] = W.Ancients[i].Lit;
+            for (int i = 0; i < Buildings.Count; i++) { var b = Buildings[i]; d.BT[i] = (int)b.Type; d.BX[i] = b.X; d.BY[i] = b.Y; d.BL[i] = b.Level; }
+            for (int i = 0; i < Lamps.Count; i++) { var l = Lamps[i]; d.LX[i] = l.X; d.LY[i] = l.Y; d.LK[i] = l.Kind; d.LL[i] = l.Level; d.LD[i] = l.Dir; }
+            for (int i = 0; i < W.Pois.Count; i++)
+            {
+                var p = W.Pois[i];
+                d.PoiState[i] = (byte)((p.State == 1 ? 0 : p.State) | (p.Seen ? 16 : 0) | (p.Revealed ? 32 : 0));
+            }
             File.WriteAllText(SavePath, JsonSerializer.Serialize(d, new JsonSerializerOptions { IncludeFields = true }));
         }
         catch (Exception e) { GD.PushWarning("save failed: " + e.Message); }
@@ -177,18 +220,47 @@ public partial class Game : Node2D
 
     bool LoadGame()
     {
-        if (testing || forceNew) { forceNew = false; return false; }
+        if (forceNew) { forceNew = false; return false; }
+        if (testing && OS.GetEnvironment("LAMP_LOAD") == "") return false;
         try
         {
             if (!File.Exists(SavePath)) return false;
             var d = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SavePath), new JsonSerializerOptions { IncludeFields = true });
+            if (d.Version < 2) return false;
             W = World.Generate(d.Seed);
             var obj = Convert.FromBase64String(d.Obj);
-            if (obj.Length != W.Obj.Length) return false;
-            W.Obj = obj;
+            bool legacy = d.Version < 3;
+            if (!legacy) { if (obj.Length != W.Obj.Length) return false; W.Obj = obj; }
+            else
+            {
+                if (obj.Length != World.N * World.N) return false;
+                // перенос старого леса 128x128 в новый мир (проход к шахтам остаётся новым)
+                for (int y = 0; y < World.N; y++)
+                    for (int x = 0; x < World.N; x++)
+                    {
+                        if (x >= 116 && y >= 61 && y <= 67) continue;
+                        W.Obj[y * World.Wd + x] = obj[y * World.N + x];
+                    }
+            }
             for (int i = 0; i < W.Ancients.Count && i < d.Lit.Length; i++) if (d.Lit[i]) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
             PPos = new Vector2(d.Px, d.Py); Hp = d.Hp; MaxHp = d.MaxHp; Xp = d.Xp; Level = d.Level; Tier = d.Tier;
+            TechMask = d.Tech; Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
+            BossMask = legacy ? (d.Boss ? 1 : 0) : d.BossMask; BeaconLevel = legacy ? 1 : Math.Max(1, d.Beacon);
             if (d.Inv != null) for (int i = 0; i < Inv.Length && i < d.Inv.Length; i++) Inv[i] = d.Inv[i];
+            if (legacy && d.Boss) { Inv[It.Core]++; pendingMsg = "Сохранение обновлено: за победу над Хранителем леса вы получили ядро света — улучшите Центральный маяк!"; }
+            if (d.Stock != null) for (int i = 0; i < Stock.Length && i < d.Stock.Length; i++) Stock[i] = d.Stock[i];
+            if (d.BT != null) for (int i = 0; i < d.BT.Length; i++) Buildings.Add(new Building { Type = (Tl)d.BT[i], X = d.BX[i], Y = d.BY[i], Level = d.BL[i] });
+            if (d.PoiState != null)
+                for (int i = 0; i < W.Pois.Count && i < d.PoiState.Length; i++)
+                {
+                    var b = d.PoiState[i]; var p = W.Pois[i];
+                    p.State = (byte)(b & 15); p.Seen = (b & 16) != 0; p.Revealed = (b & 32) != 0;
+                }
+            if (!legacy && d.LX != null)
+                for (int i = 0; i < d.LX.Length; i++) Lamps.Add(new Lamp { X = d.LX[i], Y = d.LY[i], Kind = d.LK[i], Level = d.LL[i], Dir = d.LD[i], Anim = 1 });
+            else
+                for (int y = 0; y < World.N; y++) for (int x = 0; x < World.N; x++) if (W.Get(x, y) == Tl.Lantern) Lamps.Add(new Lamp { X = x, Y = y, Anim = 1 });
+            if (d.Explored != null) { var e = Convert.FromBase64String(d.Explored); if (e.Length == Expl.Length) Expl = e; }
             return true;
         }
         catch (Exception e) { GD.PushWarning("load failed: " + e.Message); return false; }
@@ -209,19 +281,58 @@ public partial class Game : Node2D
     // ───────────────────────── ввод ─────────────────────────
     public override void _Input(InputEvent e)
     {
+        if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right) TrySpin();
         if (e is InputEventKey k && k.Pressed && !k.Echo)
         {
             switch (k.Keycode)
             {
-                case Key.E: Interact(); break;
-                case Key.Key1: BuildFurnace(); break;
-                case Key.Key2: BuildLantern(); break;
-                case Key.Key3: UpgradePick(); break;
+                case Key.E: if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
+                case Key.U: if (Cur.U != null) Cur.U(); else Fail("Рядом нет здания или фонаря для улучшения"); break;
+                case Key.Key1: Digit(1); break;
+                case Key.Key2: Digit(2); break;
+                case Key.Key3: Digit(3); break;
+                case Key.Key4: Digit(4); break;
+                case Key.Key5: Digit(5); break;
+                case Key.Key6: Digit(6); break;
+                case Key.Key7: Digit(7); break;
+                case Key.Key8: Digit(8); break;
+                case Key.Key9: Digit(9); break;
+                case Key.Key0: Digit(0); break;
+                case Key.Z: if (!TechOpen) BuildBuilding(4); break;
+                case Key.X: if (!TechOpen) BuildBuilding(5); break;
+                case Key.T: TechOpen = !TechOpen; MapOpen = false; Sfx.Play("tick"); break;
+                case Key.M: MapOpen = !MapOpen; TechOpen = false; Sfx.Play("tick"); break;
+                case Key.Left: if (TechOpen) { TechPage = (TechPage + 2) % 3; Sfx.Play("tick"); } break;
+                case Key.Right: if (TechOpen) { TechPage = (TechPage + 1) % 3; Sfx.Play("tick"); } break;
+                case Key.Escape: TechOpen = false; MapOpen = false; break;
+                case Key.Shift: TryDash(); break;
+                case Key.Q: TryFlare(); break;
+                case Key.F: TryPulse(); break;
                 case Key.F5: Save(); Toast("Игра сохранена"); break;
                 case Key.F9: NewGame(); break;
             }
         }
     }
+
+    void Digit(int n)
+    {
+        if (TechOpen) { if (n >= 1) BuyTech(n - 1); return; }
+        switch (n)
+        {
+            case 1: BuildFurnace(); break;
+            case 2: BuildLamp(0); break;
+            case 3: UpgradePick(); break;
+            case 4: BuildBuilding(0); break;
+            case 5: BuildBuilding(1); break;
+            case 6: BuildBuilding(2); break;
+            case 7: BuildBuilding(3); break;
+            case 8: BuildLamp(1); break;
+            case 9: BuildLamp(2); break;
+            case 0: BuildMirror(); break;
+        }
+    }
+
+    public void Fail(string msg) { Toast(msg); Sfx.Play("error"); }
 
     // ───────────────────────── игровой цикл ─────────────────────────
     public override void _Process(double delta)
@@ -233,26 +344,34 @@ public partial class Game : Node2D
 
         UpdatePlayer(dt);
         UpdateAncients(dt);
-        foreach (var l in Lamps) if (l.Anim < 1) l.Anim = Mathf.Min(1, l.Anim + dt / 1.2f);
+        UpdateLamps(dt);
+        UpdateBeams(dt);
         UpdateEnemies(dt);
-        UpdateSmelting(dt);
+        UpdateProjectiles(dt);
+        UpdateBeacons(dt);
+        UpdateBossSpawn(dt);
         UpdateSpawning(dt);
+        UpdateVillage(dt);
+        UpdatePois(dt);
+        UpdateSmelting(dt);
+        UpdateRegion(dt);
+        UpdateMap(dt);
         UpdateFx(dt);
-        UpdatePrompt();
+        UpdateUnlocks(dt);
+        Cur = FindIx();
 
         saveT += dt; if (saveT > 10) { saveT = 0; Save(); }
 
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
         cam.Position = PPos;
         cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake : Vector2.Zero;
-        UpdateShaders();
+        UpdateShaders(dt);
         ents.QueueRedraw(); hud.QueueRedraw();
     }
 
     // ───────────────────────── свет ─────────────────────────
-    static float Ease(float t) => 1 - Mathf.Pow(1 - Mathf.Clamp(t, 0, 1), 3);
+    public static float Ease(float t) => 1 - Mathf.Pow(1 - Mathf.Clamp(t, 0, 1), 3);
     public float AncientR(Ancient a) => a.RadiusTiles * TS * Ease(a.Anim);
-    float LampRad(Lamp l) => LampR * Ease(l.Anim);
 
     /// <summary>Находится ли точка в постоянном свете (маяк/фонарь) — там тьма не властна.</summary>
     public bool IsLit(Vector2 p)
@@ -262,15 +381,23 @@ public partial class Game : Node2D
         return false;
     }
 
-    void UpdateShaders()
+    void UpdateShaders(float dt)
     {
         var vs = ViewSize;
         darkRect.Size = vs; glowRect.Size = vs; darkRect.Position = glowRect.Position = Vector2.Zero;
         var arr = new Vector4[Fx.MaxLights]; int n = 0;
         float fl = 1f + .05f * Mathf.Sin(Time * 11f) + .03f * Mathf.Sin(Time * 23f + 1f);
         arr[n++] = new Vector4(PPos.X, PPos.Y, PlayerLightR * fl, 0);
-        foreach (var a in W.Ancients) if (a.Lit && n < Fx.MaxLights) arr[n++] = new Vector4(a.Pos.X, a.Pos.Y, AncientR(a), a.Anim < 1 ? 1 - a.Anim : 0);
+        foreach (var a in W.Ancients) if (a.Lit && n < Fx.MaxLights) arr[n++] = new Vector4(a.Pos.X, a.Pos.Y, AncientR(a), Mathf.Max(a.Anim < 1 ? 1 - a.Anim : 0, a.Pulse));
         foreach (var l in Lamps) if (n < Fx.MaxLights) arr[n++] = new Vector4(l.Pos.X, l.Pos.Y, LampRad(l) * (1f + .02f * Mathf.Sin(Time * 9f + l.Pos.X)), 0);
+        foreach (var b in Beacons) if (n < Fx.MaxLights) arr[n++] = new Vector4(b.Pos.X, b.Pos.Y, BeaconR(b), b.Ring * (1 - b.T / b.Dur));
+        foreach (var p in BeamLights) if (n < Fx.MaxLights - 26) arr[n++] = new Vector4(p.X, p.Y, 34, 0);
+        foreach (var z in ZoneLights()) if (n < Fx.MaxLights - 12) arr[n++] = z;
+        // силуэты: слабая подсветка интересных объектов сквозь тьму
+        foreach (var m in Marks()) if (n < Fx.MaxLights) arr[n++] = m;
+        var target = RegionAt(PPos) switch { 1 => new Vector3(.0f, .03f, .075f), 2 => new Vector3(.075f, .03f, .016f), _ => new Vector3(.012f, .016f, .045f) };
+        tint = tint.Lerp(target, Mathf.Min(1, dt * 1.5f));
+        var sm = SmokeUniform();
         foreach (var m in new[] { darkMat, glowMat })
         {
             m.SetShaderParameter("cam", CamCenter);
@@ -280,19 +407,22 @@ public partial class Game : Node2D
             m.SetShaderParameter("count", n);
             m.SetShaderParameter("lights", arr);
             m.SetShaderParameter("flash", Flash);
+            m.SetShaderParameter("tint", tint);
+            m.SetShaderParameter("smokes", sm);
         }
     }
 
     // ───────────────────────── игрок ─────────────────────────
-    bool Solid(int tx, int ty, bool phase) { var t = W.Get(tx, ty); return phase ? t == Tl.Cliff : t != Tl.None; }
-    bool Collides(Vector2 p, float r, bool phase)
+    public static bool IsWall(Tl t) => t == Tl.Cliff || t == Tl.CaveWall || t == Tl.Seal;
+    bool Solid(int tx, int ty, bool phase) { var t = W.Get(tx, ty); return phase ? IsWall(t) : World.Blocks(t); }
+    public bool Collides(Vector2 p, float r, bool phase)
     {
         int x0 = (int)Mathf.Floor((p.X - r) / TS), x1 = (int)Mathf.Floor((p.X + r) / TS);
         int y0 = (int)Mathf.Floor((p.Y - r) / TS), y1 = (int)Mathf.Floor((p.Y + r) / TS);
         for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) if (Solid(x, y, phase)) return true;
         return false;
     }
-    Vector2 Move(Vector2 pos, Vector2 d, float r, bool phase)
+    public Vector2 Move(Vector2 pos, Vector2 d, float r, bool phase)
     {
         var p = pos; p.X += d.X; if (Collides(p, r, phase)) p.X = pos.X;
         var q = p; q.Y += d.Y; if (Collides(q, r, phase)) q.Y = p.Y;
@@ -302,6 +432,8 @@ public partial class Game : Node2D
     void UpdatePlayer(float dt)
     {
         Invuln = Mathf.Max(0, Invuln - dt); AtkCd = Mathf.Max(0, AtkCd - dt); Swing = Mathf.Max(0, Swing - dt);
+        SpinT = Mathf.Max(0, SpinT - dt);
+        DashCd = Mathf.Max(0, DashCd - dt); SpinCd = Mathf.Max(0, SpinCd - dt); FlareCd = Mathf.Max(0, FlareCd - dt); PulseCd = Mathf.Max(0, PulseCd - dt);
         regenDelay = Mathf.Max(0, regenDelay - dt); tierMsgCd = Mathf.Max(0, tierMsgCd - dt);
 
         var dir = Vector2.Zero;
@@ -312,13 +444,21 @@ public partial class Game : Node2D
             if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
             if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) dir.X += 1;
         }
-        dir = dir.Normalized();
-        pVel = pVel.Lerp(dir * 80f, Mathf.Min(1, dt * 16f));
+        dir = dir.Normalized(); LastMoveDir = dir;
+        bool water = WaterAt(PPos);
+        float speed = 80f * (water ? (Has(Tech.Boots) ? .9f : .55f) : 1f);
+        if (DashT > 0)
+        {
+            DashT -= dt; pVel = DashDir * 260f;
+            if (rng.Randf() < dt * 60) Burst(PPos, new Color("#8ff0ff"), 1, 20);
+        }
+        else pVel = pVel.Lerp(dir * speed, Mathf.Min(1, dt * 16f));
         PPos = Move(PPos, pVel * dt, 5f, false);
-        if (pVel.LengthSquared() > 100) Walk += dt * 9f;
+        if (pVel.LengthSquared() > 100) Walk += dt * 9f * (water ? .6f : 1f);
+        if (water && pVel.LengthSquared() > 100) { rippleT -= dt; if (rippleT <= 0) { rippleT = .12f; Burst(PPos + new Vector2(0, 4), new Color("#9fd8ff"), 2, 25); } }
         if (Mathf.Abs(Aim.X - PPos.X) > 2) Facing = Aim.X < PPos.X ? -1 : 1;
+        ApplyHazards(dt);
 
-        // регенерация: быстро в свете, медленно в темноте
         if (Hp < MaxHp)
         {
             if (IsLit(PPos)) Hp = Mathf.Min(MaxHp, Hp + 4f * dt);
@@ -333,70 +473,106 @@ public partial class Game : Node2D
     float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1));
     public float PlayerDamage => 2f + 2f * Tier + .4f * (Level - 1);
 
+    static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
+        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember;
+
+    static int TierNeed(Tl t) => t switch
+    {
+        Tl.Iron => 1, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
+    };
+
     void Act(float dt)
     {
         var toAim = Aim - PPos; var dir = toAim.LengthSquared() > 1 ? toAim.Normalized() : new Vector2(Facing, 0);
-        // 1) враг рядом — бьём
         Enemy best = null; float bd = 30f;
         foreach (var e in Enemies)
         {
-            float d = e.Pos.DistanceTo(PPos);
-            if (d < bd && (d < 14 || (e.Pos - PPos).Normalized().Dot(dir) > .1f)) { bd = d; best = e; }
+            if (e.Hidden) continue;
+            float d = e.Pos.DistanceTo(PPos) - e.Radius;
+            if (d < bd && (d < 12 || (e.Pos - PPos).Normalized().Dot(dir) > .1f)) { bd = d; best = e; }
         }
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (AtkCd <= 0) { AtkCd = .42f; Swing = .22f; Hurt(best, PlayerDamage, dir); }
+            if (AtkCd <= 0) { AtkCd = .42f; Swing = .22f; Hurt(best, PlayerDamage, dir, true); Sfx.Play("hit"); }
             return;
         }
-        // 2) добыча тайла под курсором
         var tile = ToTile(Aim);
         var t = W.Get(tile.X, tile.Y);
-        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f || !(t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen))
+        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f || !Mineable(t))
         { MineProg = 0; MineTile = new Vector2I(-1, -1); return; }
-        int need = t == Tl.Iron ? 1 : t == Tl.Lumen ? 2 : 0;
-        if (Tier < need)
+        if (Tier < TierNeed(t))
         {
-            if (tierMsgCd <= 0) { tierMsgCd = 2; Toast(t == Tl.Iron ? "Железо не берётся этой киркой — улучшите её до медной [3]" : "Люмен-руда требует железной кирки"); }
+            if (tierMsgCd <= 0)
+            {
+                tierMsgCd = 2;
+                Fail(t == Tl.Iron ? "Железо не берётся этой киркой — улучшите её до медной [3]" : TierNeed(t) == 3 ? "Эта руда требует кристальной кирки [3]" : "Эта руда требует железной кирки");
+            }
             MineProg = 0; return;
         }
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
-        MineNeed = t switch { Tl.Tree => 1.1f, Tl.Stone => 1.5f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, _ => 3.2f };
+        MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, _ => 4f };
         float before = MineProg;
         MineProg += dt * MineSpeed; Swing = .2f;
-        if ((int)(before * 5) != (int)(MineProg * 5)) Burst(TileCenter(tile.X, tile.Y), TileColor(t), 3, 40);
-        if (MineProg >= MineNeed) BreakTile(tile, t);
+        if ((int)(before * 5) != (int)(MineProg * 5)) { Burst(TileCenter(tile.X, tile.Y), TileColor(t), 3, 40); Sfx.Play("mine", -3, t == Tl.Tree ? .8f : 1.1f); }
+        if (MineProg >= MineNeed) BreakTile(tile, t, true);
     }
 
-    static Color TileColor(Tl t) => t switch
+    public static Color TileColor(Tl t) => t switch
     {
-        Tl.Tree => new Color("#3b8a3a"), Tl.Stone => new Color("#a0a0ac"), Tl.Copper => new Color("#e58a3d"),
-        Tl.Iron => new Color("#cbd6e8"), Tl.Lumen => new Color("#5fe4ff"), _ => Colors.White
+        Tl.Tree => new Color("#3b8a3a"), Tl.Stone => new Color("#a0a0ac"), Tl.Copper => new Color("#e58a3d"), Tl.Ruin => new Color("#9a9fae"),
+        Tl.Iron => new Color("#cbd6e8"), Tl.Lumen => new Color("#5fe4ff"), Tl.Aether => new Color("#d58cff"),
+        Tl.CrystalOre => new Color("#bfe9ff"), Tl.SilverOre => new Color("#e8eef6"), Tl.Rubble => new Color("#8a8f9c"), Tl.DeadTree => new Color("#5a4a44"),
+        Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), _ => Colors.White
     };
 
-    void BreakTile(Vector2I tile, Tl t)
+    int ChainLimit => Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0;
+
+    void BreakTile(Vector2I tile, Tl t, bool chain)
     {
         SetObj(tile.X, tile.Y, Tl.None);
         MineProg = 0; MineTile = new Vector2I(-1, -1);
         var c = TileCenter(tile.X, tile.Y);
-        Burst(c, TileColor(t), 10, 70);
+        Burst(c, TileColor(t), 10, 70); Sfx.Play("break", -2);
         switch (t)
         {
             case Tl.Tree: Give(It.Wood, rng.RandiRange(2, 3), c); GiveXp(3); break;
+            case Tl.DeadTree: Give(It.Wood, rng.RandiRange(1, 2), c); GiveXp(3); break;
             case Tl.Stone: Give(It.Stone, rng.RandiRange(1, 2), c); GiveXp(4); break;
+            case Tl.Ruin: Give(It.Stone, 2, c); GiveXp(2); break;
+            case Tl.Rubble: Give(It.Stone, 1, c); GiveXp(1); break;
             case Tl.Copper: Give(It.CopperOre, rng.RandiRange(1, 2), c); GiveXp(6); break;
             case Tl.Iron: Give(It.IronOre, rng.RandiRange(1, 2), c); GiveXp(10); break;
             case Tl.Lumen: Give(It.Shard, rng.RandiRange(1, 2), c); GiveXp(15); break;
+            case Tl.Aether: Give(It.Aether, 1, c); GiveXp(25); break;
+            case Tl.SilverOre: Give(It.SilverOre, rng.RandiRange(1, 2), c); GiveXp(14); break;
+            case Tl.CrystalOre: Give(It.Crystal, rng.RandiRange(1, 2), c); GiveXp(20); break;
+            case Tl.Obsidian: Give(It.Obsidian, 1, c); GiveXp(24); break;
+            case Tl.Ember: Give(It.Ember, rng.RandiRange(1, 2), c); GiveXp(24); break;
+        }
+        if (chain && ChainLimit > 0)
+        {
+            int left = ChainLimit; var q = new Queue<Vector2I>(); q.Enqueue(tile);
+            while (q.Count > 0 && left > 0)
+            {
+                var cur = q.Dequeue();
+                foreach (var d in World.D4)
+                {
+                    var n = cur + d;
+                    if (left > 0 && W.Get(n.X, n.Y) == t) { BreakTile(n, t, false); q.Enqueue(n); left--; }
+                }
+            }
         }
     }
 
-    void Give(int item, int n, Vector2 at)
+    public void Give(int item, int n, Vector2 at)
     {
         Inv[item] += n;
-        Texts.Add(new FText { P = at, S = $"+{n} {It.Names[item]}", Life = 1.1f, C = item == It.Shard ? new Color("#8ff0ff") : Colors.White });
+        Texts.Add(new FText { P = at, S = $"+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });
+        Sfx.Play("pickup", -6, 1f + .05f * (item % 5));
     }
 
-    void GiveXp(float x)
+    public void GiveXp(float x)
     {
         Xp += x;
         while (Xp >= XpNeed)
@@ -404,7 +580,7 @@ public partial class Game : Node2D
             Xp -= XpNeed; Level++; MaxHp += 10; Hp = MaxHp;
             Toast($"Уровень {Level}! Здоровье +10, добыча и урон выросли");
             Texts.Add(new FText { P = PPos + new Vector2(0, -16), S = "УРОВЕНЬ!", Life = 1.6f, C = new Color("#ffe27a") });
-            Burst(PPos, new Color("#ffe27a"), 16, 90);
+            Burst(PPos, new Color("#ffe27a"), 16, 90); Sfx.Play("levelup");
         }
     }
 
@@ -414,42 +590,49 @@ public partial class Game : Node2D
         if (Toasts.Count > 3) Toasts.RemoveAt(0);
     }
 
+    public void Announce(string title, string sub, Color c, string sfx = "discover")
+    {
+        Banners.Add(new Banner { Title = title, Sub = sub, C = c });
+        if (Banners.Count > 3) Banners.RemoveAt(0);
+        Sfx.Play(sfx);
+    }
+
     // ───────────────────────── крафт и строительство ─────────────────────────
     public static bool CanPay(int[] inv, int[][] cost) { foreach (var c in cost) if (inv[c[0]] < c[1]) return false; return true; }
-    void Pay(int[][] cost) { foreach (var c in cost) Inv[c[0]] -= c[1]; }
+    public void Pay(int[][] cost) { foreach (var c in cost) Inv[c[0]] -= c[1]; }
     public bool Can(int[][] cost) => CanPay(Inv, cost);
     public static int[][] FurnaceCost => CostFurnace;
     public static int[][] LanternCost => CostLantern;
-    public int[][] NextPickCost => Tier < 2 ? CostPick[Tier] : null;
+    public int[][] NextPickCost => Tier < 4 ? CostPick[Tier] : null;
 
-    Vector2I? PlaceTarget()
+    public static string CostStr(int[][] cost)
+    {
+        var s = new List<string>(); foreach (var c in cost) s.Add($"{c[1]} {It.Ab[c[0]]}"); return string.Join(" ", s);
+    }
+    public string NeedStr(int[][] cost)
+    {
+        var s = new List<string>(); foreach (var c in cost) s.Add($"{It.Names[c[0]]} {Math.Min(Inv[c[0]], c[1])}/{c[1]}"); return string.Join(" · ", s);
+    }
+
+    public Vector2I? PlaceTarget(bool needLit = false)
     {
         var tile = ToTile(Aim);
-        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 56f) { Toast("Слишком далеко: наведите курсор на свободную клетку рядом"); return null; }
-        if (W.Get(tile.X, tile.Y) != Tl.None) { Toast("Клетка занята: наведите курсор на свободную"); return null; }
-        if (ToTile(PPos) == tile) { Toast("Нельзя строить под собой"); return null; }
+        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 56f) { Fail("Слишком далеко: наведите курсор на свободную клетку рядом"); return null; }
+        if (W.Get(tile.X, tile.Y) != Tl.None) { Fail("Клетка занята: наведите курсор на свободную"); return null; }
+        if (ToTile(PPos) == tile) { Fail("Нельзя строить под собой"); return null; }
+        if (W.Ground[World.Key(tile.X, tile.Y)] == Art.WaterG) { Fail("В воде строить нельзя"); return null; }
+        if (needLit && !IsLit(TileCenter(tile.X, tile.Y))) { Fail("Здания строятся только на освещённой земле — расширяйте свет"); return null; }
         return tile;
     }
 
     void BuildFurnace()
     {
-        if (!Can(CostFurnace)) { Toast("Для печи нужно: 10 камня и 5 дерева"); return; }
+        if (!Can(CostFurnace)) { Fail("Для печи нужно: 10 камня и 5 дерева"); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(CostFurnace); SetObj(t.Value.X, t.Value.Y, Tl.Furnace); HasFurnace = true;
-        Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#ff9a2e"), 14, 60);
+        Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#ff9a2e"), 14, 60); Sfx.Play("build");
         GiveXp(20); Toast("Печь построена! Подойдите и нажмите E, чтобы плавить руду (1 руда + 1 дерево)");
         Save();
-    }
-
-    void BuildLantern()
-    {
-        if (!Can(CostLantern)) { Toast("Для фонаря нужно: 4 дерева и 2 слитка меди"); return; }
-        if (Lamps.Count >= MaxLamps) { Toast("Достигнут предел фонарей"); return; }
-        var t = PlaceTarget(); if (t == null) return;
-        Pay(CostLantern); SetObj(t.Value.X, t.Value.Y, Tl.Lantern);
-        Lamps.Add(new Lamp { Pos = TileCenter(t.Value.X, t.Value.Y), Anim = 0 });
-        Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#ffd86b"), 14, 70);
-        GiveXp(25); Save();
     }
 
     bool FurnaceNear(float r, out Vector2 at)
@@ -463,37 +646,28 @@ public partial class Game : Node2D
 
     void UpgradePick()
     {
-        if (Tier >= 2) { Toast("Кирка уже железная — лучше не бывает"); return; }
-        if (!HasFurnace || !FurnaceNear(56, out _)) { Toast("Улучшать кирку можно только рядом с печью"); return; }
+        if (Tier >= 4) { Fail("Кирка уже обсидиановая — лучше не бывает"); return; }
+        if (!HasFurnace || !FurnaceNear(56, out _) && !HasBuilding(Tl.Forge)) { Fail("Улучшать кирку можно только рядом с печью"); return; }
+        if (!FurnaceNear(56, out _) && BuildingNear(PPos, 56) == null) { Fail("Улучшать кирку можно только рядом с печью или кузницей"); return; }
         var cost = CostPick[Tier];
-        if (!Can(cost)) { Toast(Tier == 0 ? "Для медной кирки: 5 слитков меди и 5 дерева" : "Для железной кирки: 6 слитков железа и 3 осколка света"); return; }
-        Pay(cost); Tier++; GiveXp(40); Shake = 3;
-        Burst(PPos, new Color("#ffe27a"), 18, 90);
-        Toast(Tier == 1 ? $"{PickNames[Tier]}: добыча быстрее, урон выше, берёт железную руду" : $"{PickNames[Tier]}: добыча ещё быстрее, берёт люмен-руду");
+        if (!Can(cost)) { Fail($"Для «{PickNames[Tier + 1]}» нужно: {NeedStr(cost)}"); return; }
+        Pay(cost); Tier++; GiveXp(40 + 20 * Tier); Shake = 3;
+        Burst(PPos, new Color("#ffe27a"), 18, 90); Sfx.Play("upgrade");
+        Announce(PickNames[Tier], PickGain[Tier], new Color("#ffe27a"), "upgrade");
         Save();
-    }
-
-    void Interact()
-    {
-        for (int i = 1; i < W.Ancients.Count; i++)
-        {
-            var a = W.Ancients[i];
-            if (!a.Lit && a.Pos.DistanceTo(PPos) < 44) { Activate(a, i); return; }
-        }
-        if (FurnaceNear(44, out var f)) { StartSmelt(f); return; }
-        Toast("Рядом нет ничего, с чем можно взаимодействовать");
     }
 
     void StartSmelt(Vector2 at)
     {
         int loaded = 0;
-        while (Inv[It.Wood] > 0 && loaded < 12 && (Inv[It.CopperOre] > 0 || Inv[It.IronOre] > 0))
+        while (Inv[It.Wood] > 0 && loaded < 12)
         {
-            int ore = Inv[It.CopperOre] > 0 ? It.CopperOre : It.IronOre;
+            int ore = Inv[It.CopperOre] > 0 ? It.CopperOre : Inv[It.IronOre] > 0 ? It.IronOre : Inv[It.SilverOre] > 0 ? It.SilverOre : -1;
+            if (ore < 0) break;
             Inv[ore]--; Inv[It.Wood]--; SmeltQ.Add(ore); loaded++;
         }
-        if (loaded == 0) { Toast("Нужна руда и дерево (топливо): по 1 дереву на слиток"); return; }
-        SmeltAt = at;
+        if (loaded == 0) { Fail("Нужна руда и дерево (топливо): по 1 дереву на слиток"); return; }
+        SmeltAt = at; Sfx.Play("build", -4);
         Toast($"Плавка: {loaded} шт.");
     }
 
@@ -505,160 +679,40 @@ public partial class Game : Node2D
         if (smeltT >= SmeltTime)
         {
             smeltT = 0; int ore = SmeltQ[0]; SmeltQ.RemoveAt(0);
-            int ingot = ore == It.CopperOre ? It.Copper : It.Iron;
-            Inv[ingot]++; GiveXp(2);
-            Texts.Add(new FText { P = SmeltAt + new Vector2(0, -8), S = $"+1 {It.Names[ingot]}", Life = 1.1f, C = Colors.White });
+            int ingot = It.IngotOf(ore);
+            Inv[ingot]++; GiveXp(2); Sfx.Play("tick");
+            Texts.Add(new FText { P = SmeltAt + new Vector2(0, -8), S = $"+1 {It.Names[ingot]}", Life = 1.1f, C = It.Col[ingot] });
         }
     }
 
+    // ───────────────────────── древние фонари ─────────────────────────
     void Activate(Ancient a, int idx)
     {
-        if (Inv[It.Shard] < a.Cost) { Toast($"Для зажигания нужно осколков света: {a.Cost} (у вас {Inv[It.Shard]}). Их роняют тени и люмен-руда"); return; }
+        if (a.Boss && !BossDown(a.BossId)) { Fail("Фонарь охраняет страж — сначала победите его"); return; }
+        if (Inv[It.Shard] < a.Cost) { Fail($"Для зажигания нужно осколков света: {a.Cost} (у вас {Inv[It.Shard]}). Их роняют тени и люмен-руда"); return; }
         Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0;
-        SetObj(a.Tile.X, a.Tile.Y, Tl.AncOn);
-        bool iron = false, lum = false;
+        SetObj(a.Tile.X, a.Tile.Y, a.Boss ? Tl.BossOn : Tl.AncOn);
+        var ex = new List<string>(); var seen = new HashSet<Tl>();
         foreach (var v in a.Veins)
         {
             if (W.Get(v.x, v.y) != Tl.None) continue;
             SetObj(v.x, v.y, v.t); Burst(TileCenter(v.x, v.y), TileColor(v.t), 8, 50);
-            if (v.t == Tl.Iron) iron = true; else lum = true;
+            if (seen.Add(v.t)) ex.Add(v.t switch { Tl.Iron => "железная руда", Tl.Lumen => "люмен-руда", Tl.Aether => "эфирные кристаллы", Tl.SilverOre => "серебро", Tl.CrystalOre => "кристаллы", Tl.Obsidian => "обсидиан", Tl.Ember => "уголь пепла", _ => "руда" });
         }
-        GiveXp(60); Shake = 5; Flash = .7f;
-        Burst(a.Pos, new Color("#ffe9a0"), 40, 140);
-        string extra = iron && lum ? " Открыты железная и люмен-руда!" : iron ? " Открыта железная руда!" : lum ? " Открыта люмен-руда!" : "";
-        Toast(LitCount >= 5 ? "Все древние фонари зажжены — Тьма отступила!" : $"Древний фонарь #{idx} зажжён, Тьма навсегда отступает.{extra}");
+        GiveXp(a.Boss ? 120 : 60); Shake = 5; Flash = .7f;
+        Burst(a.Pos, new Color("#ffe9a0"), 40, 140); Sfx.Play("ancient");
+        string extra = ex.Count > 0 ? "Открыто: " + string.Join(", ", ex) : "Территория освобождена";
+        Announce(a.Boss ? "Фонарь стража зажжён!" : $"Древний фонарь #{idx} зажжён!", "Тьма навсегда отступает. " + extra, new Color("#ffe9a0"), "ancient");
         Save();
     }
 
     void UpdateAncients(float dt)
     {
         foreach (var a in W.Ancients)
+        {
             if (a.Lit && a.Anim < 1) { a.Anim = Mathf.Min(1, a.Anim + dt / 3.5f); Shake = Mathf.Max(Shake, 1.5f * (1 - a.Anim)); }
-    }
-
-    void UpdatePrompt()
-    {
-        Prompt = "";
-        for (int i = 1; i < W.Ancients.Count; i++)
-        {
-            var a = W.Ancients[i];
-            if (!a.Lit && a.Pos.DistanceTo(PPos) < 44) { Prompt = $"[E] Зажечь древний фонарь ({a.Cost} осколков света)"; return; }
-        }
-        if (FurnaceNear(44, out _)) Prompt = SmeltQ.Count > 0 ? "[E] Добавить в плавку" : "[E] Плавить руду";
-    }
-
-    // ───────────────────────── враги ─────────────────────────
-    float DangerScale => 1f + .18f * LitCount;
-
-    void UpdateSpawning(float dt)
-    {
-        if (IsLit(PPos)) return;
-        float nearUnlit = float.MaxValue;
-        for (int i = 1; i < W.Ancients.Count; i++) if (!W.Ancients[i].Lit) nearUnlit = Mathf.Min(nearUnlit, W.Ancients[i].Pos.DistanceTo(PPos));
-        bool guarded = nearUnlit < 9 * TS;
-        int cap = 3 + LitCount * 2 + (guarded ? 3 : 0); cap = Math.Min(cap, 12);
-        spawnT -= dt;
-        if (spawnT > 0) return;
-        spawnT = rng.RandfRange(2.2f, 3.8f) * (guarded ? .55f : 1f);
-        if (Enemies.Count >= cap) return;
-        for (int tries = 0; tries < 12; tries++)
-        {
-            float a = rng.Randf() * Mathf.Tau, d = rng.RandfRange(130, 200);
-            var p = PPos + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * d;
-            var t = ToTile(p);
-            if (W.Get(t.X, t.Y) != Tl.None || IsLit(p)) continue;
-            SpawnEnemy(p, rng.Randf() < .3f + .08f * LitCount);
-            return;
-        }
-    }
-
-    void SpawnEnemy(Vector2 p, bool wraith)
-    {
-        float hp = (wraith ? 3.5f : 7f) * DangerScale;
-        Enemies.Add(new Enemy { Pos = p, Wraith = wraith, Hp = hp, MaxHp = hp, Phase = rng.Randf() * 6.28f });
-    }
-
-    void Hurt(Enemy e, float dmg, Vector2 dir)
-    {
-        e.Hp -= dmg; e.Flash = .15f; e.Kb += dir * (e.Wraith ? 160f : 120f);
-        Burst(e.Pos, new Color("#c070ff"), 6, 70);
-        Texts.Add(new FText { P = e.Pos + new Vector2(0, -8), S = ((int)Mathf.Round(dmg)).ToString(), Life = .6f, C = new Color("#ffd0d0") });
-        Shake = Mathf.Max(Shake, 1.2f);
-    }
-
-    void UpdateEnemies(float dt)
-    {
-        for (int i = Enemies.Count - 1; i >= 0; i--)
-        {
-            var e = Enemies[i];
-            e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt);
-            e.Kb *= Mathf.Max(0, 1 - 9 * dt);
-            var to = PPos - e.Pos; float dist = to.Length(); var dir = dist > .01f ? to / dist : Vector2.Zero;
-
-            if (dist > 380) { Enemies.RemoveAt(i); continue; }
-
-            bool lit = IsLit(e.Pos);
-            if (lit)
-            {
-                e.Hp -= 5f * dt; e.Flash = .05f;
-                if (rng.Randf() < dt * 20) Burst(e.Pos, new Color("#ffe9a0"), 1, 30);
-                if (e.Hp <= 0) { Burst(e.Pos, new Color("#ffe9a0"), 10, 60); Enemies.RemoveAt(i); continue; }
-            }
-            float k = lit ? .5f : 1f;
-
-            Vector2 vel;
-            if (!e.Wraith) vel = dir * (36f + 2f * LitCount) * k;
-            else
-            {
-                e.DashCd -= dt;
-                if (e.Tele > 0) { e.Tele -= dt; vel = Vector2.Zero; if (e.Tele <= 0) { e.Dash = .32f; e.DashDir = dir; } }
-                else if (e.Dash > 0) { e.Dash -= dt; vel = e.DashDir * 170f * k; }
-                else
-                {
-                    var perp = new Vector2(-dir.Y, dir.X);
-                    vel = (dir + perp * Mathf.Sin(Time * 3f + e.Phase) * .8f).Normalized() * 58f * k;
-                    if (e.DashCd <= 0 && dist < 100) { e.Tele = .35f; e.DashCd = rng.RandfRange(2.2f, 3.2f); }
-                }
-            }
-            e.Pos = Move(e.Pos, (vel + e.Kb) * dt, 5f, e.Wraith);
-
-            // отталкивание друг от друга
-            foreach (var o in Enemies) if (o != e) { var dd = e.Pos - o.Pos; float l = dd.Length(); if (l > .01f && l < 10) e.Pos += dd / l * (10 - l) * .3f; }
-
-            // атака игрока
-            float reach = e.Wraith ? (e.Dash > 0 ? 12 : 8) : 12;
-            if (dist < reach && e.Atk <= 0 && Invuln <= 0 && (!e.Wraith || e.Dash > 0))
-            {
-                e.Atk = .9f;
-                HurtPlayer((e.Wraith ? 7f : 9f) * DangerScale, -dir);
-            }
-            else if (!e.Wraith && dist < 12 && e.Atk <= 0 && Invuln <= 0) { e.Atk = .9f; HurtPlayer(9f * DangerScale, -dir); }
-
-            if (e.Hp <= 0) { KillEnemy(e); Enemies.RemoveAt(i); }
-        }
-    }
-
-    void KillEnemy(Enemy e)
-    {
-        Kills++; GiveXp(e.Wraith ? 12 : 15);
-        Burst(e.Pos, new Color("#a060ff"), 14, 90);
-        float chance = e.Wraith ? .45f : .7f;
-        if (rng.Randf() < chance) Give(It.Shard, 1, e.Pos);
-    }
-
-    void HurtPlayer(float dmg, Vector2 kb)
-    {
-        Hp -= dmg; Invuln = .6f; regenDelay = 4f; Shake = 3f;
-        pVel += kb * 120f;
-        Burst(PPos, new Color("#ff5050"), 8, 80);
-        Texts.Add(new FText { P = PPos + new Vector2(0, -12), S = "-" + (int)Mathf.Round(dmg), Life = .8f, C = new Color("#ff6060") });
-        if (Hp <= 0)
-        {
-            Enemies.Clear();
-            int lost = Inv[It.Shard] / 2; Inv[It.Shard] -= lost;
-            PPos = new Vector2((W.Spawn.X + .5f) * TS, (W.Spawn.Y + .5f) * TS); Hp = MaxHp; Invuln = 1.5f;
-            Toast(lost > 0 ? $"Тьма поглотила вас. Вы очнулись у маяка (потеряно осколков: {lost})" : "Тьма поглотила вас. Вы очнулись у маяка");
-            cam.ResetSmoothing();
+            if (a.TargetRadius > a.RadiusTiles) { a.RadiusTiles = Mathf.Min(a.TargetRadius, a.RadiusTiles + dt * 2.5f); Shake = Mathf.Max(Shake, 1.2f); }
+            a.Pulse = Mathf.Max(0, a.Pulse - dt * .4f);
         }
     }
 
@@ -671,7 +725,7 @@ public partial class Game : Node2D
             float life = rng.RandfRange(.3f, .7f);
             Parts.Add(new Particle { P = p, V = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * s, Life = life, Max = life, C = c });
         }
-        if (Parts.Count > 600) Parts.RemoveRange(0, Parts.Count - 600);
+        if (Parts.Count > 800) Parts.RemoveRange(0, Parts.Count - 800);
     }
 
     void UpdateFx(float dt)
@@ -683,41 +737,23 @@ public partial class Game : Node2D
         }
         for (int i = Texts.Count - 1; i >= 0; i--) { var t = Texts[i]; t.Life -= dt; t.P += new Vector2(0, -14 * dt); if (t.Life <= 0) Texts.RemoveAt(i); }
         for (int i = Toasts.Count - 1; i >= 0; i--) { Toasts[i].Life -= dt; if (Toasts[i].Life <= 0) Toasts.RemoveAt(i); }
-    }
-
-    // ───────────────────────── подсказки HUD ─────────────────────────
-    public Vector2? CompassTarget()
-    {
-        Ancient best = null; float bd = float.MaxValue;
-        for (int i = 1; i < W.Ancients.Count; i++) { var a = W.Ancients[i]; if (a.Lit) continue; float d = a.Pos.DistanceTo(PPos); if (d < bd) { bd = d; best = a; } }
-        return best?.Pos;
-    }
-
-    public string Objective()
-    {
-        if (!HasFurnace) return "Цель: добудьте 10 камня и 5 дерева и постройте печь [1]";
-        if (Tier == 0)
+        for (int i = Banners.Count - 1; i >= 0; i--) { Banners[i].Life -= dt; if (Banners[i].Life <= 0) Banners.RemoveAt(i); }
+        // атмосфера биома
+        int reg = RegionAt(PPos);
+        if (reg != 0 && rng.Randf() < dt * 10)
         {
-            if (Inv[It.Copper] >= 5 && Inv[It.Wood] >= 5) return "Цель: у печи нажмите [3] — улучшить кирку";
-            return "Цель: добудьте медную руду и переплавьте у печи [E] — нужно 5 слитков меди и 5 дерева";
+            var p = PPos + new Vector2(rng.RandfRange(-190, 190), rng.RandfRange(-110, 110));
+            if (reg == 1) Parts.Add(new Particle { P = p, V = new Vector2(rng.RandfRange(-4, 4), -rng.RandfRange(4, 12)), Life = 2f, Max = 2f, C = new Color(.55f, .85f, 1f), Size = 1.2f });
+            else Parts.Add(new Particle { P = p, V = new Vector2(rng.RandfRange(-6, 6), rng.Randf() < .25f ? -rng.RandfRange(10, 22) : rng.RandfRange(6, 14)), Life = 2.5f, Max = 2.5f, C = rng.Randf() < .25f ? new Color(1f, .55f, .2f) : new Color(.6f, .58f, .55f), Size = 1.4f });
         }
-        int lit = LitCount;
-        if (lit == 0)
-        {
-            int need = W.Ancients[1].Cost;
-            return Inv[It.Shard] >= need ? "Цель: идите к древнему фонарю (стрелка) и зажгите его [E]" : $"Цель: убивайте теней во Тьме — нужно {need} осколков света, затем к фонарю (стрелка)";
-        }
-        if (Tier == 1) return "Цель: добудьте железо у зажжённого фонаря, переплавьте (6 слитков) и улучшите кирку [3]";
-        if (lit < 5) { int need = W.Ancients[lit + 1].Cost; return $"Цель: зажгите древний фонарь {lit + 1}/5 — осколков света: {Inv[It.Shard]}/{need}"; }
-        return "Все древние фонари зажжены — мир освещён. Расширяйте свет своими фонарями!";
     }
 
     // ───────────────────────── отрисовка сущностей ─────────────────────────
     public void DrawEntities(EntityLayer c)
     {
-        // подсветка тайла-цели и прогресс добычи
+        DrawWaterShimmer(c);
         var at = ToTile(Aim);
-        if (PPos.DistanceTo(TileCenter(at.X, at.Y)) <= 40f && W.Get(at.X, at.Y) != Tl.None && W.Get(at.X, at.Y) != Tl.Cliff)
+        if (PPos.DistanceTo(TileCenter(at.X, at.Y)) <= 40f && W.Get(at.X, at.Y) != Tl.None && !IsWall(W.Get(at.X, at.Y)))
             c.DrawRect(new Rect2(at.X * TS, at.Y * TS, TS, TS), new Color(1, 1, 1, .25f), false, 1f);
         if (MineTile.X >= 0 && MineProg > 0)
         {
@@ -731,19 +767,37 @@ public partial class Game : Node2D
             c.DrawRect(new Rect2(o, new Vector2(16, 2)), new Color(0, 0, 0, .7f));
             c.DrawRect(new Rect2(o, new Vector2(16 * SmeltProg, 2)), new Color("#ff9a2e"));
         }
+        DrawBuildings(c);
+        DrawHazards(c);
+        DrawBeams(c);
 
-        // сортировка по Y: враги и игрок
         var list = new List<(float y, Action a)>();
         foreach (var e in Enemies) { var ee = e; list.Add((e.Pos.Y, () => DrawEnemy(c, ee))); }
+        foreach (var v in Villagers) { var vv = v; list.Add((v.Pos.Y, () => DrawVillager(c, vv))); }
         list.Add((PPos.Y, () => DrawPlayer(c)));
         list.Sort((a, b) => a.y.CompareTo(b.y));
         foreach (var l in list) l.a();
 
+        foreach (var p in Projs) { c.DrawCircle(p.Pos, 2.5f, new Color(p.C.R, p.C.G, p.C.B, .5f)); c.DrawCircle(p.Pos, 1.5f, p.C); }
         foreach (var p in Parts)
         {
             var col = p.C; col.A = Mathf.Clamp(p.Life / p.Max * 1.5f, 0, 1);
             c.DrawRect(new Rect2(p.P - new Vector2(p.Size, p.Size) * .5f, new Vector2(p.Size, p.Size)), col);
         }
+    }
+
+    void DrawWaterShimmer(EntityLayer c)
+    {
+        var pt = ToTile(PPos);
+        for (int y = pt.Y - 8; y <= pt.Y + 8; y++)
+            for (int x = pt.X - 13; x <= pt.X + 13; x++)
+            {
+                if (!World.In(x, y) || W.Ground[World.Key(x, y)] != Art.WaterG) continue;
+                float ph = (x * 7 + y * 13) % 10 * .6f;
+                float a = .5f + .5f * Mathf.Sin(Time * 1.8f + ph);
+                if (a < .55f) continue;
+                c.DrawRect(new Rect2(x * TS + 3 + (x * 5 + y * 3) % 7, y * TS + 4 + (x * 3 + y * 7) % 8, 4, 1), new Color(.75f, .92f, 1f, (a - .55f) * 1.2f));
+            }
     }
 
     void Shadow(EntityLayer c, Vector2 p, float r)
@@ -755,96 +809,40 @@ public partial class Game : Node2D
 
     void DrawPlayer(EntityLayer c)
     {
+        bool water = WaterAt(PPos);
         Shadow(c, PPos, 5);
-        if (Invuln > 0 && ((int)(Time * 20) % 2 == 0)) return;
+        if (Invuln > 0 && DashT <= 0 && ((int)(Time * 20) % 2 == 0)) return;
         int f = pVel.LengthSquared() > 100 ? (int)Walk % 2 : 0;
         float bob = pVel.LengthSquared() > 100 ? -Mathf.Abs(Mathf.Sin(Walk)) : 0;
-        c.DrawSetTransform(PPos + new Vector2(0, bob), 0, new Vector2(Facing, 1));
-        c.DrawTextureRectRegion(Art.PlayerTex, new Rect2(-8, -11, 16, 16), new Rect2(f * 16, 0, 16, 16));
+        c.DrawSetTransform(PPos + new Vector2(0, bob + (water ? 2 : 0)), 0, new Vector2(Facing, 1));
+        var mod = DashT > 0 ? new Color(.6f, 1f, 1f, .8f) : Colors.White;
+        c.DrawTextureRectRegion(Art.PlayerTex, new Rect2(-8, -11, 16, water ? 13 : 16), new Rect2(f * 16, 0, 16, water ? 13 : 16), mod);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+        if (water) c.DrawRect(new Rect2(PPos.X - 7, PPos.Y + 1, 14, 2), new Color(.5f, .8f, 1f, .45f));
         if (Swing > 0)
         {
             var d = (Aim - PPos); d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0);
             float t = 1 - Swing / .22f; float ang = d.Angle() - 1.0f + t * 2.0f;
             var a = PPos + new Vector2(0, -3); var b = a + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 13;
-            Color head = Tier == 0 ? new Color("#c9b08a") : Tier == 1 ? new Color("#e58a3d") : new Color("#dfe8f6");
+            Color head = Tier == 0 ? new Color("#c9b08a") : Tier == 1 ? new Color("#e58a3d") : Tier == 2 ? new Color("#dfe8f6") : Tier == 3 ? new Color("#9fe4ff") : new Color("#a890ff");
+            var pp = new Vector2(Mathf.Cos(ang + 1.57f), Mathf.Sin(ang + 1.57f));
             c.DrawLine(a, b, new Color("#6b4423"), 1.5f);
-            c.DrawLine(b + new Vector2(Mathf.Cos(ang + 1.57f), Mathf.Sin(ang + 1.57f)) * 3, b - new Vector2(Mathf.Cos(ang + 1.57f), Mathf.Sin(ang + 1.57f)) * 3, head, 2f);
+            c.DrawLine(b + pp * 3, b - pp * 3, head, 2f);
         }
-    }
-
-    void DrawEnemy(EntityLayer c, Enemy e)
-    {
-        Shadow(c, e.Pos, 5);
-        var tex = e.Wraith ? Art.WraithTex : Art.ShadeTex;
-        int f = (int)(Time * 4 + e.Phase) % 2;
-        float bob = Mathf.Sin(Time * 4 + e.Phase) * 1.2f - (e.Wraith ? 2 : 0);
-        float a = Mathf.Clamp(e.Age * 2f, 0, 1);
-        Color mod = e.Flash > 0 ? new Color(1.8f, .6f, .6f, a) : new Color(1, 1, 1, a);
-        if (e.Tele > 0 && ((int)(Time * 25) % 2 == 0)) mod = new Color(1.5f, 1.5f, 2f, a);
-        int face = PPos.X < e.Pos.X ? -1 : 1;
-        c.DrawSetTransform(e.Pos + new Vector2(0, bob), 0, new Vector2(face, 1));
-        c.DrawTextureRectRegion(tex, new Rect2(-8, -10, 16, 16), new Rect2(f * 16, 0, 16, 16), mod);
-        c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
-        if (e.Hp < e.MaxHp)
+        if (SpinT > 0)
         {
-            var o = e.Pos + new Vector2(-6, -14);
-            c.DrawRect(new Rect2(o, new Vector2(12, 1.5f)), new Color(0, 0, 0, .7f));
-            c.DrawRect(new Rect2(o, new Vector2(12 * Mathf.Clamp(e.Hp / e.MaxHp, 0, 1), 1.5f)), new Color("#ff5ec8"));
+            float k = 1 - SpinT / .25f;
+            c.DrawArc(PPos, 10 + 20 * k, 0, Mathf.Tau, 32, new Color(1, .95f, .7f, 1 - k), 2f);
         }
     }
 
-    // ───────────────────────── автотест ─────────────────────────
-    void Shot(string name)
+    // ───────────────────────── компас ─────────────────────────
+    public Vector2? CompassTarget()
     {
-        var img = GetViewport().GetTexture().GetImage();
-        img.SavePng(Path.Combine(testDir, name + ".png"));
-        GD.Print($"[test] shot {name}");
-    }
-
-    void AutoTest(float dt)
-    {
-        testT += dt;
-        void Log(string s) => GD.Print($"[test t={testT:F1}] {s}");
-        switch (testStep)
-        {
-            case 0 when testT > 1.2f: Shot("1_start"); testStep++; break;
-            case 1 when testT > 1.5f:
-                Inv[It.Wood] = 30; Inv[It.Stone] = 30; Inv[It.CopperOre] = 6; Inv[It.IronOre] = 0;
-                aimOverride = Aim = PPos + new Vector2(24, 0); BuildFurnace();
-                Log($"furnace={HasFurnace} wood={Inv[It.Wood]} stone={Inv[It.Stone]}");
-                Interact(); Log($"smelt queue={SmeltQ.Count}");
-                testStep++; break;
-            case 2 when testT > 8.5f:
-                Log($"copper ingots={Inv[It.Copper]} xp={Xp} lvl={Level}");
-                Inv[It.Copper] += 6; UpgradePick(); Log($"tier={Tier}");
-                aimOverride = Aim = PPos + new Vector2(-24, 0); BuildLantern(); Log($"lamps={Lamps.Count}");
-                testStep++; break;
-            case 3 when testT > 9.5f:
-                Shot("2_lamp"); Inv[It.Shard] = 10;
-                PPos = W.Ancients[1].Pos + new Vector2(0, 30); cam.ResetSmoothing();
-                SpawnEnemy(PPos + new Vector2(60, 10), false); SpawnEnemy(PPos + new Vector2(-50, 30), true);
-                testStep++; break;
-            case 4 when testT > 11f: Shot("3_dark_enemies"); Interact(); Log($"lit={LitCount}"); testStep++; break;
-            case 5 when testT > 12.2f: Shot("4_reveal_mid"); testStep++; break;
-            case 6 when testT > 16f:
-                Shot("5_reveal_end"); Log($"obj iron nearby: {CountTiles(Tl.Iron)}");
-                Enemies.Clear(); SpawnEnemy(PPos + new Vector2(30, 0), false);
-                aimOverride = null; testStep++; break;
-            case 7 when testT > 17f:
-                // боевой тест: удары по ближайшему врагу
-                foreach (var e in Enemies) Hurt(e, PlayerDamage, Vector2.Right);
-                Log($"enemy hp={(Enemies.Count > 0 ? Enemies[0].Hp : -1)}");
-                testStep++; break;
-            case 8 when testT > 17.5f:
-                Save2Test(); GetTree().Quit(); break;
-        }
-    }
-
-    int CountTiles(Tl t) { int n = 0; foreach (var b in W.Obj) if (b == (byte)t) n++; return n; }
-
-    void Save2Test()
-    {
-        GD.Print($"[test] done: tier={Tier} lvl={Level} xp={Xp:F0} kills={Kills} lit={LitCount} inv=[{string.Join(",", Inv)}]");
+        Ancient best = null; float bd = float.MaxValue;
+        int reg = RegionAt(PPos);
+        for (int i = 1; i < W.Ancients.Count; i++) { var a = W.Ancients[i]; if (a.Lit || a.Boss || a.Region != reg) continue; float d = a.Pos.DistanceTo(PPos); if (d < bd) { bd = d; best = a; } }
+        if (best == null) foreach (var a in W.Ancients) if (a.Boss && !a.Lit && a.Region == reg && BossDown(a.BossId)) return a.Pos;
+        return best?.Pos;
     }
 }

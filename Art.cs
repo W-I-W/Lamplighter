@@ -4,11 +4,11 @@ using System;
 namespace Lamplighter;
 
 /// <summary>Вся графика рисуется кодом: никаких внешних ассетов.</summary>
-public static class Art
+public static partial class Art
 {
     // Индексы тайлов в атласе (колонки)
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
-        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 15;
+        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 85;
 
     public static ImageTexture TileTex, PlayerTex, ShadeTex, WraithTex, IconTex;
 
@@ -56,7 +56,7 @@ public static class Art
     public static void Build()
     {
         if (TileTex != null) return;
-        BuildTiles(); BuildEntities(); BuildIcons();
+        BuildTiles(); BuildEntities(); BuildIcons(); ExtraEntities();
     }
 
     static void BuildTiles()
@@ -155,6 +155,7 @@ public static class Art
         cl.Fill(H("#2a2531"));
         cl.Speckle(r, 50, H("#352f3d")); cl.Speckle(r, 30, H("#1f1b25")); cl.Speckle(r, 10, H("#4a4358"));
 
+        ExtraTiles(img, r);
         TileTex = ImageTexture.CreateFromImage(img);
     }
 
@@ -213,7 +214,7 @@ public static class Art
     static void BuildIcons()
     {
         // 0 дерево 1 камень 2 медная руда 3 железная руда 4 осколок 5 медь 6 железо 7 кирка
-        var img = NewImg(16 * 8);
+        var img = NewImg(16 * 16);
         var r = new Random(77);
         var c = new Cv(img, 0, 0);
         c.R(2, 4, 12, 4, H("#8a5a2e")); c.R(2, 4, 12, 1, H("#a8743d")); c.R(1, 5, 1, 2, H("#d9b27c")); c.R(14, 5, 1, 2, H("#d9b27c"));
@@ -235,7 +236,8 @@ public static class Art
         c = new Cv(img, 96, 0);
         c.R(3, 6, 10, 5, H("#a9b6cc")); c.R(4, 5, 8, 1, H("#dfe8f6")); c.R(3, 11, 10, 1, H("#6a7690")); c.R(5, 7, 4, 1, H("#ffffff"));
         c.Outline(H("#1c2438"));
-        c = new Cv(img, 112, 0);
+        ExtraIcons(img);
+        c = new Cv(img, 240, 0);
         c.R(7, 4, 2, 11, H("#8a5a2e")); c.R(2, 3, 12, 2, H("#cfd6e2")); c.R(1, 4, 2, 2, H("#cfd6e2")); c.R(13, 4, 2, 2, H("#cfd6e2")); c.R(3, 2, 10, 1, H("#ffffff"));
         c.Outline(H("#1a1a22"));
         IconTex = ImageTexture.CreateFromImage(img);

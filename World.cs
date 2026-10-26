@@ -4,32 +4,54 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Tl : byte { None, Tree, Stone, Copper, Iron, Lumen, AncOff, AncOn, Furnace, Lantern, Cliff }
+public enum Tl : byte
+{
+    None, Tree, Stone, Copper, Iron, Lumen, AncOff, AncOn, Furnace, Lantern, Cliff,
+    Chest, ChestOpen, Ruin, House, Tent, Shrine, ShrineUsed, Aether, Cage, BossOff, BossOn, Obelisk, ObeliskUsed,
+    Warehouse, Sawmill, Mine, Forge,
+    CaveWall, CrystalOre, SilverOre, Machine, MachineOn, Mirror1, Mirror2, Receiver, ReceiverOn, Emitter,
+    CrystalLantern, CombatLantern, Rubble, BridgeBroken, Bridge, Deep, Seal, SecretDoor, Drill, Collector,
+    DeadTree, Obsidian, Ember, AshRuin, Vent
+}
+
+public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite }
+
+/// <summary>Место интереса. State: 0 нетронуто, 1 стража вышла, 2 стража побеждена, 3 завершено.</summary>
+public sealed class Poi
+{
+    public PK Kind; public Vector2I Tile; public byte State, Variant; public bool Seen, Revealed; public int Guards;
+    public Vector2 Pos => new((Tile.X + .5f) * World.TS, (Tile.Y + .5f) * World.TS);
+}
 
 public sealed class Ancient
 {
     public Vector2I Tile;
-    public bool Lit;
+    public bool Lit, Boss; public int Region, BossId;
     public float Anim;          // 0..1 — анимация отступления тьмы
     public int Cost;            // осколков света для зажигания
-    public float RadiusTiles;
+    public float RadiusTiles, TargetRadius, Pulse;
     public List<(int x, int y, Tl t)> Veins = new();   // скрытые жилы, появляются после зажигания
     public Vector2 Pos => new((Tile.X + .5f) * World.TS, (Tile.Y + .5f) * World.TS);
 }
 
 /// <summary>Данные мира: два плоских массива вместо Node на тайл.</summary>
-public sealed class World
+public sealed partial class World
 {
-    public const int N = 128, TS = 16;
+    public const int N = 128, TS = 16;          // N — сторона области леса
+    public const int Wd = 384, Ht = 128;        // весь мир: лес, шахты, пустоши
+    public const int MX0 = 128, MX1 = 255, AX0 = 256, AX1 = 383;
     public int Seed;
-    public byte[] Obj = new byte[N * N];
-    public byte[] Ground = new byte[N * N];
+    public byte[] Obj = new byte[Wd * Ht];
+    public byte[] Ground = new byte[Wd * Ht];
+    public static int Key(int x, int y) => y * Wd + x;
+    public static bool Blocks(Tl t) => t != Tl.None && t != Tl.Bridge;
+    public static int RegionOf(int tx) => tx < MX0 ? 0 : tx <= MX1 ? 1 : 2;
     public List<Ancient> Ancients = new();
     public Vector2I Spawn = new(N / 2, N / 2 + 2);
 
-    public static bool In(int x, int y) => x >= 0 && y >= 0 && x < N && y < N;
-    public Tl Get(int x, int y) => In(x, y) ? (Tl)Obj[y * N + x] : Tl.Cliff;
-    public void Set(int x, int y, Tl t) { if (In(x, y)) Obj[y * N + x] = (byte)t; }
+    public static bool In(int x, int y) => x >= 0 && y >= 0 && x < Wd && y < Ht;
+    public Tl Get(int x, int y) => In(x, y) ? (Tl)Obj[y * Wd + x] : Tl.Cliff;
+    public void Set(int x, int y, Tl t) { if (In(x, y)) Obj[y * Wd + x] = (byte)t; }
 
     public static World Generate(int seed)
     {
@@ -43,7 +65,7 @@ public sealed class World
         for (int y = 0; y < N; y++)
             for (int x = 0; x < N; x++)
             {
-                int i = y * N + x;
+                int i = y * Wd + x;
                 w.Ground[i] = nz.GetNoise2D(x, y) > .3f ? (byte)Art.Dirt : (byte)(rng.NextDouble() < .72 ? 0 : rng.Next(1, 4));
                 int d = Math.Min(Math.Min(x, y), Math.Min(N - 1 - x, N - 1 - y));
                 if (d < 2 + (int)((edge.GetNoise2D(x, y) + 1f) * 1.2f)) { w.Obj[i] = (byte)Tl.Cliff; continue; }
@@ -95,6 +117,21 @@ public sealed class World
             if (k <= 4) w.Veins(rng, an, Tl.Iron, 7);
             if (k >= 3) w.Veins(rng, an, Tl.Lumen, 4);
         }
+
+        // Хранитель: особый древний фонарь на краю карты
+        {
+            double a = a0 + 5 * 2.4;
+            int x = Math.Clamp(c + (int)(Math.Cos(a) * 54), 10, N - 11), y = Math.Clamp(c + (int)(Math.Sin(a) * 54), 10, N - 11);
+            for (int yy = y - 5; yy <= y + 5; yy++)
+                for (int xx = x - 5; xx <= x + 5; xx++)
+                    if ((xx - x) * (xx - x) + (yy - y) * (yy - y) <= 25) w.Set(xx, yy, Tl.None);
+            var an = new Ancient { Tile = new Vector2I(x, y), RadiusTiles = 14, Cost = 0, Boss = true, BossId = 1 };
+            w.Set(x, y, Tl.BossOff); w.Ancients.Add(an);
+            w.Veins(rng, an, Tl.Aether, 4); w.Veins(rng, an, Tl.Lumen, 4);
+        }
+        w.GenPois(seed);
+        w.GenMines(seed);
+        w.GenAsh(seed);
         return w;
     }
 
