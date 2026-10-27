@@ -15,15 +15,15 @@ public partial class Game
         swayMat = GD.Load<ShaderMaterial>("res://Assets/Materials/sway.tres");
         var cfg = VisualFxConfig.Get();
         // таблица по колонкам атласа: размах качания, верхний непрозрачный ряд спрайта, свечение (текстура-данные, а не массивы uniform)
-        var data = Image.CreateEmpty(144, 1, false, Image.Format.Rgbaf); var tex = Art.TileTex?.GetImage();
-        for (int c = 0; c < 144; c++)
+        var data = Image.CreateEmpty(192, 1, false, Image.Format.Rgbaf); var tex = Art.TileTex?.GetImage();
+        for (int c = 0; c < 192; c++)
         {
-            float amp = 0, top = 0, glow = 0;
-            for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] == c) amp = cfg.SwayAmp[i];
+            float amp = 0, top = 0, glow = 0, pose = 0;
+            for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] == c) { amp = cfg.SwayAmp[i]; if (cfg.UsePoses && i < cfg.PoseBase.Length) pose = cfg.PoseBase[i]; }
             for (int i = 0; i < cfg.GlowTiles.Length && i < cfg.GlowAmount.Length; i++) if (cfg.GlowTiles[i] == c) glow = cfg.GlowAmount[i];
             if (tex != null && (c + 1) * 16 <= tex.GetWidth())
                 for (int y = 0; y < 16; y++) { bool any = false; for (int x = 0; x < 16 && !any; x++) any = tex.GetPixel(c * 16 + x, y).A > .1f; if (any) { top = y; break; } }
-            data.SetPixel(c, 0, new Color(amp, top, glow, 1f));
+            data.SetPixel(c, 0, new Color(amp, top, glow, pose));
         }
         swayMat.SetShaderParameter("tile_data", ImageTexture.CreateFromImage(data));
         waterMat = GD.Load<ShaderMaterial>("res://Assets/Materials/water.tres"); waterMat.SetShaderParameter("water_col", Art.WaterG);

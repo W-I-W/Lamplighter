@@ -19,7 +19,7 @@ void vertex() {
 void fragment() {
 	vec2 atlas = vec2(textureSize(TEXTURE, 0));
 	float col = floor(UV.x * atlas.x / 16.0 + 0.001);
-	vec4 td = texture(tile_data, vec2((col + 0.5) / 144.0, 0.5));
+	vec4 td = texture(tile_data, vec2((col + 0.5) / 192.0, 0.5));
 	float a = td.r;
 	vec2 uv = UV;
 	if (a > 0.0) {
@@ -47,12 +47,20 @@ void fragment() {
 			vec4 s = shakes[i];
 			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) shift += s.z * sin(TIME * 48.0 + s.w);
 		}
+		if (td.a > 0.0) {
+			// hand-drawn poses: pick the upright tile or one of four bent tiles stored next to it in the atlas (whole sprite pixels, no distortion)
+			float k = clamp(floor(shift * 2.0 / a + 0.5), -2.0, 2.0);
+			float pose_col = k == 0.0 ? col : td.a + (k < -1.5 ? 0.0 : k < 0.0 ? 1.0 : k < 1.5 ? 2.0 : 3.0);
+			uv.x = UV.x + (pose_col - col) * 16.0 / atlas.x;
+			COLOR = texture(TEXTURE, uv);
+		} else {
 		float px = shift * lift;          // fractional on purpose: with nearest sampling and a 3x zoom the blade edges then move in single screen pixels (smooth), not in 3-pixel jumps
 		uv.x = UV.x - px / atlas.x;
 		float lo = col * 16.0 / atlas.x + 0.5 / atlas.x;
 		float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
 		uv.x = clamp(uv.x, lo, hi);                                // edge pixels are repeated instead of cut off, so the silhouette never gets sliced
 		COLOR = texture(TEXTURE, uv);
+		}
 	} else {
 		COLOR = texture(TEXTURE, UV);
 	}
