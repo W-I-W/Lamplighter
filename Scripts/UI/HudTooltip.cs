@@ -95,7 +95,7 @@ public partial class Hud
     /// <summary>Клавиша действия — просто текст в квадратных скобках: золотой и мягко пульсирует, когда действие доступно; приглушённо-золотой, когда нет (цвет клавиши не теряется).</summary>
     void DrawKeyCap(string key, Vector2 baseline, bool ok, TooltipStyle st)
     {
-        var c = ok ? st.KeyColor.Lerp(Colors.White, .55f * tip.Pulse(st.KeyPulseSpeed)) : st.KeyColor.Darkened(.35f);
+        var c = ok ? st.KeyColor.Lerp(Colors.White, .3f * tip.Pulse(st.KeyPulseSpeed)) : st.KeyColor;
         Txt("[" + key + "]", baseline, 9, c);
     }
 }

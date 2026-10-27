@@ -49,7 +49,7 @@ public partial class WindowView : Control
             PanelContainer t;
             if (nTab < tabNodes.Count) t = tabNodes[nTab]; else { t = tabScene.Instantiate<PanelContainer>(); tabNodes.Add(t); tabs.AddChild(t); }
             nTab++; t.Visible = true; if (t.GetIndex() != i) tabs.MoveChild(t, i);
-            var l = t.GetNode<Label>("%Text"); string txt = Loc.T(names[i]); if (l.Text != txt) l.Text = txt; l.Modulate = i == cur ? new Color("#ffe08a") : new Color("#8a96b0");
+            var l = t.GetNode<Label>("%Text"); string txt = Loc.T(names[i]); if (l.Text != txt) l.Text = txt; l.Modulate = i == cur ? new Color("#ffd23f") : new Color("#8a96b0");
             string v = i == cur ? "TabActive" : "TabNormal"; if (t.ThemeTypeVariation != v) t.ThemeTypeVariation = v;
         }
     }

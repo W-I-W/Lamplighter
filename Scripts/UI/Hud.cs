@@ -12,7 +12,7 @@ public partial class Hud : Control
     public const string ThemePath = "res://Resources/UI/LanternTheme.tres";
     Theme theme; Font font; WindowView wv; MenuView mv;
 
-    static readonly Color Dim = new("#8a96b0"), Good = new("#9be07a"), Warn = new("#ffb36a"), Gold = new("#ffe08a"), Cyan = new("#8ff0ff"), Text = new("#d8e0f0"), Bad = new("#f06a5e");
+    static readonly Color Dim = new("#8a96b0"), Good = new("#9be07a"), Warn = new("#ffb36a"), Gold = new("#ffd23f"), Cyan = new("#8ff0ff"), Text = new("#d8e0f0"), Bad = new("#f06a5e");
     readonly List<Rect2> panelRects = new();
 
     public override void _Ready()

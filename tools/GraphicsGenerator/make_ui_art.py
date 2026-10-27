@@ -152,8 +152,8 @@ Button/styles/pressed = SubResource("sb_button_pressed")
 Button/styles/disabled = SubResource("sb_button_disabled")
 Button/styles/focus = SubResource("sb_button_selected")
 Button/colors/font_color = Color(0.847, 0.878, 0.941, 1)
-Button/colors/font_hover_color = Color(1, 0.878, 0.541, 1)
-Button/colors/font_pressed_color = Color(1, 0.878, 0.541, 1)
+Button/colors/font_hover_color = Color(1, 0.824, 0.247, 1)
+Button/colors/font_pressed_color = Color(1, 0.824, 0.247, 1)
 Button/colors/font_disabled_color = Color(0.4, 0.44, 0.52, 1)
 ButtonSelected/base_type = &"Button"
 ButtonSelected/styles/normal = SubResource("sb_button_selected")
@@ -167,7 +167,7 @@ TabSelected/base_type = &"Button"
 TabSelected/styles/normal = SubResource("sb_tab_selected")
 TabSelected/styles/hover = SubResource("sb_tab_selected")
 TabSelected/styles/pressed = SubResource("sb_tab_selected")
-TabSelected/colors/font_color = Color(1, 0.878, 0.541, 1)
+TabSelected/colors/font_color = Color(1, 0.824, 0.247, 1)
 ProgressBar/styles/background = SubResource("sb_bar_bg")
 ProgressBar/styles/fill = SubResource("sb_bar_xp")
 ProgressBar/constants/outline_size = 0
@@ -184,7 +184,7 @@ CdBar/base_type = &"ProgressBar"
 CdBar/styles/background = SubResource("sb_bar_bg")
 CdBar/styles/fill = SubResource("sb_bar_cd")
 GoldLabel/base_type = &"Label"
-GoldLabel/colors/font_color = Color(1, 0.878, 0.541, 1)
+GoldLabel/colors/font_color = Color(1, 0.824, 0.247, 1)
 CountLabel/base_type = &"Label"
 CountLabel/colors/font_outline_color = Color(0.043, 0.059, 0.102, 1)
 CountLabel/constants/outline_size = 1
@@ -221,7 +221,7 @@ BigLabel/colors/font_color = Color(1, 1, 1, 1)
 BigLabel/constants/shadow_offset_x = 2
 BigLabel/constants/shadow_offset_y = 2
 BigLabel/font_sizes/font_size = 18''')
-L.append('Lantern/colors/gold = Color(0.91, 0.722, 0.29, 1)\nLantern/colors/gold_hi = Color(1, 0.878, 0.541, 1)\nLantern/colors/text = Color(0.847, 0.878, 0.941, 1)\nLantern/colors/dim = Color(0.541, 0.588, 0.69, 1)\nLantern/colors/warn = Color(1, 0.7, 0.42, 1)\nLantern/colors/good = Color(0.608, 0.878, 0.478, 1)\nLantern/colors/bad = Color(0.94, 0.42, 0.37, 1)\nLantern/colors/ink = Color(0.035, 0.047, 0.078, 1)')
+L.append('Lantern/colors/gold = Color(0.91, 0.722, 0.29, 1)\nLantern/colors/gold_hi = Color(1, 0.824, 0.247, 1)\nLantern/colors/text = Color(0.847, 0.878, 0.941, 1)\nLantern/colors/dim = Color(0.541, 0.588, 0.69, 1)\nLantern/colors/warn = Color(1, 0.7, 0.42, 1)\nLantern/colors/good = Color(0.608, 0.878, 0.478, 1)\nLantern/colors/bad = Color(0.94, 0.42, 0.37, 1)\nLantern/colors/ink = Color(0.035, 0.047, 0.078, 1)')
 # sub_resources must precede [resource]: reorder
 text = '\n'.join(L)
 head, res = text.split('\n[resource]\n')

@@ -469,7 +469,7 @@ size_flags_horizontal = 3
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
-text = "[right][color=#ffe08a][lb]Tab][/color] [color=#ffe08a][lb]Enter][/color] [color=#ffe08a][lb]Esc][/color][/right]"
+text = "[right][color=#ffd23f][lb]Tab][/color] [color=#ffd23f][lb]Enter][/color] [color=#ffd23f][lb]Esc][/color][/right]"
 
 [node name="Tabs" type="HBoxContainer" parent="Panel/V"]
 layout_mode = 2
@@ -587,7 +587,7 @@ size_flags_horizontal = 3
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
-text = "[right][color=#ffe08a][lb]I][/color] / [color=#ffe08a][lb]Esc][/color] — закрыть[/right]"
+text = "[right][color=#ffd23f][lb]I][/color] / [color=#ffd23f][lb]Esc][/color] — закрыть[/right]"
 
 [node name="Grid" type="GridContainer" parent="Panel/V"]
 unique_name_in_owner = true

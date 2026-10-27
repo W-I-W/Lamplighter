@@ -35,7 +35,7 @@ public partial class MenuView : Control
     {
         WindowRow r; if (nRow < rows.Count) r = rows[nRow]; else { r = rowScene.Instantiate<WindowRow>(); rows.Add(r); items.AddChild(r); }
         if (r.GetIndex() != nRow) items.MoveChild(r, nRow); nRow++; r.Visible = true;
-        r.Set(idx, true, sel, disabled, Loc.T(text), null, disabled ? new Color("#5a6278") : sel ? new Color("#ffe08a") : new Color("#d8e0f0"));
+        r.Set(idx, true, sel, disabled, Loc.T(text), null, disabled ? new Color("#5a6278") : sel ? new Color("#ffd23f") : new Color("#d8e0f0"));
     }
 
     /// <summary>Строка текста на заданном месте экрана (титры, финальные сцены). wrap — перенос по ширине.</summary>

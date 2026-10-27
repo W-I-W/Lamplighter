@@ -80,7 +80,7 @@ public partial class GameHud : Control
     void UpdateGoal()
     {
         var goals = G.Goals; var g = goals.Count > 0 ? goals[0] : null;
-        TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), new Color("#ffe08a"), 90f);
+        TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), new Color("#ffd23f"), 90f);
         TextFx.Apply(goalNeeds, g == null ? "" : T(g.Needs), new Color("#8a96b0"), 0);
         goalNeeds.Visible = g != null && (GoalsOpen || true);
         var m = g != null ? Frac.Match(g.Needs ?? "") : null;

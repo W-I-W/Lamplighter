@@ -20,16 +20,16 @@ public static class TextFx
         foreach (Match m in Rx.Matches(t))
         {
             sb.Append(Esc(t.Substring(last, m.Index - last))); last = m.Index + m.Length; string v = Esc(m.Value);
-            if (m.Groups["key"].Success) sb.Append($"[color=#ffe08a]{v}[/color]");
+            if (m.Groups["key"].Success) sb.Append($"[color=#ffd23f]{v}[/color]");
             else if (m.Groups["hero"].Success) sb.Append($"[color=#8ff0ff]{v}[/color]");
             else if (m.Groups["dark"].Success) sb.Append($"[pulse freq=1.2 color=#c070ff55 ease=-2][color=#c070ff]{v}[/color][/pulse]");
-            else if (m.Groups["level"].Success) sb.Append($"[pulse freq=1.4 color=#ffffff77 ease=-2][color=#ffd86b]{v}[/color][/pulse]");
+            else if (m.Groups["level"].Success) sb.Append($"[pulse freq=1.4 color=#ffffff77 ease=-2][color=#ffd23f]{v}[/color][/pulse]");
             else if (m.Groups["good"].Success) sb.Append($"[color=#9be07a]{v}[/color]");
             else if (m.Groups["hp"].Success) sb.Append($"[color=#f06a5e]{v}[/color]");
             else if (m.Groups["stat"].Success) sb.Append($"[color=#ffb36a]{v}[/color]");
-            else if (m.Groups["num"].Success) sb.Append($"[color=#ffd86b]{v}[/color]");
+            else if (m.Groups["num"].Success) sb.Append($"[color=#ffd23f]{v}[/color]");
             else if (m.Groups["bad"].Success) sb.Append($"[color=#f06a5e]{v}[/color]");
-            else sb.Append($"[pulse freq=1.6 color=#ffe08a66 ease=-2][color=#ffe08a]{v}[/color][/pulse]");
+            else sb.Append($"[pulse freq=1.6 color=#ffd23f66 ease=-2][color=#ffd23f]{v}[/color][/pulse]");
         }
         sb.Append(Esc(t.Substring(last))); return sb.ToString();
     }

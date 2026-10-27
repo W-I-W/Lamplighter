@@ -14,7 +14,7 @@ public partial class TooltipStyle : Resource
 
     // палитра
     [Export] public Color TextColor = new("#eef2fa");
-    [Export] public Color KeyColor = new("#ffe08a");
+    [Export] public Color KeyColor = new("#ffd23f");
     [Export] public Color ResourceColor = new("#ffd23f");
     [Export] public Color ZoneColor = new("#8ff0ff");
     [Export] public Color OkColor = new("#9be07a");

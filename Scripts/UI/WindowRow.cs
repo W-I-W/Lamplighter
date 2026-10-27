@@ -7,7 +7,7 @@ public partial class WindowRow : PanelContainer
 {
     public int Index = -1;
     readonly Label[] c = new Label[6]; Label cr; RichTextLabel sub; Control subM; string variation = "";
-    static readonly Color Gold = new("#ffe08a");
+    static readonly Color Gold = new("#ffd23f");
 
     public override void _Ready()
     {
