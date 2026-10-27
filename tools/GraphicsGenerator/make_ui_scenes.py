@@ -211,12 +211,6 @@ max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="XpLabel" type="Label" parent="TopLeft/Status/H/V/XpRow"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"DimLabel"
-text = "0/40"
-
 [node name="Goal" type="PanelContainer" parent="TopLeft"]
 unique_name_in_owner = true
 layout_mode = 2

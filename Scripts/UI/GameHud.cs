@@ -11,7 +11,7 @@ public partial class GameHud : Control
 {
     public Game G;
     Control status, goal, world, hint, detail, abilities;
-    Label level, lvCap, xpLabel, hpLabel, goalTitle, goalNeeds, goalMore, biome, lLabel, beacon, hintLabel, dTitle, dBody;
+    Label level, lvCap, hpLabel, goalTitle, goalNeeds, goalMore, biome, lLabel, beacon, hintLabel, dTitle, dBody;
     ProgressBar hp, xp, goalBar, lBar;
     UiSlot weapon; readonly UiSlot[] hot = new UiSlot[8]; readonly UiSlot[] abil = new UiSlot[5];
     readonly Control[] chips = new Control[5];
@@ -24,7 +24,7 @@ public partial class GameHud : Control
     public override void _Ready()
     {
         status = GetNode<Control>("%Status"); goal = GetNode<Control>("%Goal"); world = GetNode<Control>("%World"); hint = GetNode<Control>("%Hint"); detail = GetNode<Control>("%Detail"); abilities = GetNode<Control>("%Abilities");
-        level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); xpLabel = GetNode<Label>("%XpLabel"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<Label>("%Title"); goalNeeds = GetNode<Label>("%Needs"); goalMore = GetNode<Label>("%More");
+        level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<Label>("%Title"); goalNeeds = GetNode<Label>("%Needs"); goalMore = GetNode<Label>("%More");
         biome = GetNode<Label>("%Biome"); lLabel = GetNode<Label>("%LLabel"); beacon = GetNode<Label>("%Beacon"); hintLabel = GetNode<Label>("%HintLabel"); dTitle = GetNode<Label>("%DTitle"); dBody = GetNode<Label>("%DBody");
         hp = GetNode<ProgressBar>("%HpBar"); xp = GetNode<ProgressBar>("%XpBar"); goalBar = GetNode<ProgressBar>("%Bar"); lBar = GetNode<ProgressBar>("%LBar");
         weapon = GetNode<UiSlot>("%Weapon");
@@ -72,7 +72,7 @@ public partial class GameHud : Control
 
     void UpdateStatus()
     {
-        level.Text = G.Level.ToString(); lvCap.Text = T("УР"); xpLabel.Text = $"{(int)G.Xp}/{(int)G.XpNeed}";
+        level.Text = G.Level.ToString(); lvCap.Text = T("УР");
         hp.Value = Mathf.Clamp(G.Hp / G.MaxHp, 0, 1); hpLabel.Text = $"{(int)G.Hp}";
         xp.Value = Mathf.Clamp(G.Xp / G.XpNeed, 0, 1);
     }
