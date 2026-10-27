@@ -4,7 +4,7 @@ Run from the project root: python tools/GraphicsGenerator/make_foliage.py (repla
 from PIL import Image
 
 OUT = 'Assets/Sprites/Environment/'
-D, M, L, H = (36, 88, 44, 255), (58, 130, 62, 255), (92, 172, 76, 255), (140, 206, 104, 255)
+D, M, L, H = (30, 78, 40, 255), (84, 160, 70, 255), (130, 205, 92, 255), (186, 236, 130, 255)
 INK = (24, 52, 34, 255)
 PINK, YEL, WHT = (240, 130, 170, 255), (255, 214, 90, 255), (236, 240, 250, 255)
 

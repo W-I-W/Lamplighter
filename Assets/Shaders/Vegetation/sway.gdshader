@@ -31,7 +31,8 @@ void fragment() {
 		float strength = wind * (0.45 + 1.1 * smoothstep(0.35, 0.8, gust));
 		float sway = sin(time_s * 1.7 * sv + ph + wpos.x * 0.015) * strength + 0.35 * sin(time_s * 3.1 * sv + ph * 1.7) * strength;
 		float ly = fract(UV.y * atlas.y / 16.0);                 // 0 = top of the tile, 1 = bottom
-		float lift = pow(clamp(1.0 - ly / 0.7, 0.0, 1.0), 1.5);   // only the crown moves; the widest row and the trunk barely move
+		// grass and bushes (columns >= 130) bend over the whole sprite height, taller plants move their tips further
+		float lift = col >= 130.0 ? pow(clamp(1.0 - ly, 0.0, 1.0), 1.1) : pow(clamp(1.0 - ly / 0.7, 0.0, 1.0), 1.5);
 		float shift = a * sway;
 		// pushed by the player
 		vec2 centre = (cell + 0.5) * 16.0;
