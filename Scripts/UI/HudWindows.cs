@@ -245,11 +245,30 @@ public partial class Hud
     }
 
     // ───────────────────────── записки ─────────────────────────
+    // ───────────────────────── записки: раскраска ключевых слов и «печатная машинка» ─────────────────────────
+    static readonly System.Text.RegularExpressions.Regex StoryRx = new(
+        @"(?<hero>[Фф]онарщик\w*|lamplighter)|(?<dark>Источник\w* Тьмы|Тьм\w+|погасил\w*|Source of Darkness|Darkness|extinguished)|(?<light>Сеть Маяков|Центральн\w+ маяк\w*|ядер света|ядр\w+|свет\w*|фонар\w+|маяк\w*|Beacon Network|Central Beacon|cores? of light|light|lanterns?|beacon\w*)",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    string storyPlain = ""; float storyStart; bool storyTyping; int storyTicks;
+
+    /// <summary>Подсвечивает ключевые слова: свет — золотым с пульсацией, Тьма — фиолетовым, герой — голубым.</summary>
+    static string Colorize(string t) => StoryRx.Replace(t.Replace("[", "[lb]"), m =>
+        m.Groups["hero"].Success ? $"[color=#8ff0ff]{m.Value}[/color]"
+        : m.Groups["dark"].Success ? $"[pulse freq=1.2 color=#c070ff55 ease=-2][color=#c070ff]{m.Value}[/color][/pulse]"
+        : $"[pulse freq=1.6 color=#ffe08a66 ease=-2][color=#ffe08a]{m.Value}[/color][/pulse]");
+
+    /// <summary>Пропуск печати: первое нажатие показывает текст целиком. Возвращает true, если нажатие потрачено на это.</summary>
+    public bool StorySkip() { if (!storyTyping) return false; storyStart = -1000f; return true; }
+
     void DrawStory(Vector2 vs)
     {
         wv.Begin(vs, G.StoryTitle, Gold, "[E] / [Esc] — закрыть", new Vector2(330, 190));
+        string plain = Loc.T(G.StoryText);
+        if (plain != storyPlain) { storyPlain = plain; storyStart = G.UiTime; storyTicks = 0; }
+        int n = (int)((G.UiTime - storyStart) * 70f); storyTyping = n < plain.Length;
         if (G.StorySub != "") wv.Text(false, G.StorySub, Dim, false);
-        wv.Text(false, G.StoryText, Text);
+        wv.Rich(Colorize(plain), storyTyping ? n : -1);
+        if (storyTyping && n / 4 > storyTicks) { storyTicks = n / 4; Sfx.Play("tick", -16, 1.5f + .1f * (storyTicks % 3)); }
     }
 
     void DrawFinale(Vector2 vs)

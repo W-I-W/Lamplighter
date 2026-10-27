@@ -123,7 +123,7 @@ public partial class Game
             case Win.Prod: ProdKey(k); break;
             case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
-            case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) CloseWindows(); break;
+            case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) { if (!hud.StorySkip()) CloseWindows(); } break;
         }
         return true;
     }

@@ -9,7 +9,7 @@ public partial class WindowView : Control
 {
     public Game G; public bool Started;
     ColorRect dim; PanelContainer frame, listPanel, detailPanel; Label title, foot; HBoxContainer chips, tabs, body; VBoxContainer listBox, detailBox; Control mapArea;
-    readonly List<WindowRow> rows = new(); readonly List<Label> texts = new(); readonly List<PanelContainer> tabNodes = new(); readonly List<Control> chipNodes = new();
+    readonly List<WindowRow> rows = new(); readonly List<Label> texts = new(); readonly List<RichTextLabel> riches = new(); int nRich; readonly List<PanelContainer> tabNodes = new(); readonly List<Control> chipNodes = new();
     PackedScene rowScene, tabScene, chipScene;
     int nRow, nText, nTab, nChip, posList, posDetail; bool hasTabs; Vector2 frameSize; float detailW;
     public Control Map => mapArea;
@@ -27,7 +27,7 @@ public partial class WindowView : Control
     /// <summary>Начало кадра: размер и положение рамки, заголовок, подсказка. listW: 0 — один список; &gt;0 — слева список такой ширины, справа подробности; -1 — область карты.</summary>
     public void Begin(Vector2 vs, string titleText, Color accent, string footer, Vector2 size, float listW = 0, float dimAlpha = .55f)
     {
-        nRow = nText = nTab = nChip = posList = posDetail = 0; hasTabs = false; ResetMap();
+        nRow = nText = nRich = nTab = nChip = posList = posDetail = 0; hasTabs = false; ResetMap();
         size = new Vector2(Mathf.Min(size.X, vs.X - 12), Mathf.Min(size.Y, vs.Y - 12)); frameSize = size; detailW = size.X - 12 - Mathf.Max(0, listW) - 6 - 10;
         dim.Color = new Color(0, 0, .03f, dimAlpha);
         frame.CustomMinimumSize = size; frame.Size = size; frame.Position = new Vector2(Mathf.Round(vs.X * .5f - size.X * .5f), Mathf.Round(vs.Y * .5f - size.Y * .5f - 4));
@@ -91,11 +91,23 @@ public partial class WindowView : Control
         l.TextOverrunBehavior = wrap ? TextServer.OverrunBehavior.NoTrimming : TextServer.OverrunBehavior.TrimEllipsis; l.CustomMinimumSize = new Vector2(wrap ? (detail ? detailW : 1) : 0, 0);
     }
 
+    /// <summary>Текст с BBCode-раскраской и «печатной машинкой»: visible — сколько символов уже показано (-1 — все).</summary>
+    public void Rich(string bbcode, int visible)
+    {
+        RichTextLabel l;
+        if (nRich < riches.Count) l = riches[nRich];
+        else { l = new RichTextLabel { BbcodeEnabled = true, FitContent = true, ScrollActive = false, MouseFilter = MouseFilterEnum.Ignore, AutowrapMode = TextServer.AutowrapMode.WordSmart }; riches.Add(l); }
+        nRich++; l.Visible = true; Place(l, listBox, ref posList);
+        if (l.Text != bbcode) l.Text = bbcode;
+        l.VisibleCharacters = visible; l.CustomMinimumSize = new Vector2(frameSize.X - 30, 0);
+    }
+
     /// <summary>Конец кадра: прячет неиспользованные узлы.</summary>
     public void End()
     {
         for (int i = nRow; i < rows.Count; i++) rows[i].Visible = false;
         for (int i = nText; i < texts.Count; i++) texts[i].Visible = false;
+        for (int i = nRich; i < riches.Count; i++) riches[i].Visible = false;
         for (int i = nTab; i < tabNodes.Count; i++) tabNodes[i].Visible = false;
         for (int i = nChip; i < chipNodes.Count; i++) chipNodes[i].Visible = false;
         tabs.Visible = hasTabs; chips.Visible = nChip > 0; EndMap();
