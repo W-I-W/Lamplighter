@@ -233,7 +233,7 @@ public partial class Game
         Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
         Add("Победить Хранителя Тёмного леса", BossDown(1), "Он ждёт у особого фонаря на краю леса — награда: первое ядро света", boss1?.Pos);
         Add("Экипировать реликвию [C]", EquippedRelics.Count > 0, "Реликвии усиливают оружие и свет; синергии — в окне экипировки");
-        Add("Улучшить Центральный маяк", BeaconLevel >= 2, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — подойдите к маяку и нажмите E: откроется путь в шахты", W.Ancients[0].Pos);
+        Add("Улучшить Центральный маяк", BeaconLevel >= 2, $"{It.Ic(It.Core)}Ядро света {Math.Min(Inv[It.Core], 1)}/1 — подойдите к маяку и нажмите E: откроется путь в шахты", W.Ancients[0].Pos);
         if (BeaconLevel >= 2)
         {
             var nm = NearestUnlit(1);
