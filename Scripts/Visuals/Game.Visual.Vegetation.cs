@@ -13,19 +13,19 @@ public partial class Game
     void InitVegetation()
     {
         swayMat = GD.Load<ShaderMaterial>("res://Assets/Materials/sway.tres");
-        var cfg = VisualFxConfig.Get(); var amp = new float[140];
-        for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] >= 0 && cfg.SwayTiles[i] < 140) amp[cfg.SwayTiles[i]] = cfg.SwayAmp[i];
-        swayMat.SetShaderParameter("amp", amp);
-        var tops = new float[140]; var img = Art.TileTex?.GetImage();
-        if (img != null)
-            for (int c = 0; c < 140 && (c + 1) * 16 <= img.GetWidth(); c++)
-            {
-                tops[c] = 0;
-                for (int y = 0; y < 16; y++) { bool any = false; for (int x = 0; x < 16 && !any; x++) any = img.GetPixel(c * 16 + x, y).A > .1f; if (any) { tops[c] = y; break; } }
-            }
-        swayMat.SetShaderParameter("top_row", tops);
-        var glow = new float[140]; for (int i = 0; i < cfg.GlowTiles.Length && i < cfg.GlowAmount.Length; i++) if (cfg.GlowTiles[i] >= 0 && cfg.GlowTiles[i] < 140) glow[cfg.GlowTiles[i]] = cfg.GlowAmount[i];
-        swayMat.SetShaderParameter("glow", glow);
+        var cfg = VisualFxConfig.Get();
+        // таблица по колонкам атласа: размах качания, верхний непрозрачный ряд спрайта, свечение (текстура-данные, а не массивы uniform)
+        var data = Image.CreateEmpty(144, 1, false, Image.Format.Rgbaf); var tex = Art.TileTex?.GetImage();
+        for (int c = 0; c < 144; c++)
+        {
+            float amp = 0, top = 0, glow = 0;
+            for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] == c) amp = cfg.SwayAmp[i];
+            for (int i = 0; i < cfg.GlowTiles.Length && i < cfg.GlowAmount.Length; i++) if (cfg.GlowTiles[i] == c) glow = cfg.GlowAmount[i];
+            if (tex != null && (c + 1) * 16 <= tex.GetWidth())
+                for (int y = 0; y < 16; y++) { bool any = false; for (int x = 0; x < 16 && !any; x++) any = tex.GetPixel(c * 16 + x, y).A > .1f; if (any) { top = y; break; } }
+            data.SetPixel(c, 0, new Color(amp, top, glow, 1f));
+        }
+        swayMat.SetShaderParameter("tile_data", ImageTexture.CreateFromImage(data));
         waterMat = GD.Load<ShaderMaterial>("res://Assets/Materials/water.tres"); waterMat.SetShaderParameter("water_col", Art.WaterG);
     }
 

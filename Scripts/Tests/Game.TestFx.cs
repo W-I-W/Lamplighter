@@ -18,4 +18,12 @@ public partial class Game
         S(.03f, () => Shot("fx_die1")); S(.1f, () => Shot("fx_die2")); S(.15f, () => Shot("fx_die3"));
         S(.2f, () => GD.Print("[check] FX SCREENSHOTS DONE"));
     }
+
+    /// <summary>Снимки качания травы (LAMP_STAGE=veg): восемь кадров подряд без интерфейса.</summary>
+    void BuildVegScript()
+    {
+        S(.3f, () => { Menu = Mn.None; Tp(PPos); TestAim(new Vector2(0, 90)); hud.Visible = false; GameHudNode.Visible = false; });
+        for (int i = 0; i < 8; i++) { int n = i; S(.15f, () => Shot($"veg_{n}")); }
+        S(.1f, () => GD.Print("[check] VEG DONE"));
+    }
 }

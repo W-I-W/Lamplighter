@@ -4,12 +4,9 @@
 shader_type canvas_item;
 
 uniform sampler2D noise_tex : filter_linear, repeat_enable;
-uniform float top_row[140];         // first opaque pixel row of each tile (the sprite top), measured from the atlas at startup
-uniform float amp[140];            // max sway in pixels per atlas column (0 = static tile)
+uniform sampler2D tile_data : filter_nearest, repeat_disable;   // one texel per atlas column: r = max sway (px), g = first opaque row (sprite top), b = glow
 uniform float wind = 1.0;          // overall wind strength (config * player setting)
-uniform float time_s = 0.0;
 uniform vec2 player = vec2(-99999.0);   // world position of the player (grass bends away)
-uniform float glow[140];            // pulse of rare resources (brightness boost per atlas column)
 uniform vec4 shakes[8];            // x, y = tile coords, z = amplitude (px, already decayed), w = phase
 varying vec2 wpos;
 
@@ -20,20 +17,21 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 atlas = 1.0 / TEXTURE_PIXEL_SIZE;
+	vec2 atlas = vec2(textureSize(TEXTURE, 0));
 	float col = floor(UV.x * atlas.x / 16.0 + 0.001);
-	float a = amp[int(col)];
+	vec4 td = texture(tile_data, vec2((col + 0.5) / 144.0, 0.5));
+	float a = td.r;
 	vec2 uv = UV;
 	if (a > 0.0) {
 		vec2 cell = floor(wpos / 16.0);
 		float ph = hash(cell) * 6.2831;
 		float sv = 0.75 + 0.5 * hash(cell + 7.0);
-		float gust = texture(noise_tex, wpos / 700.0 + vec2(time_s * 0.012, 0.0)).r;
+		float gust = texture(noise_tex, wpos / 700.0 + vec2(TIME * 0.012, 0.0)).r;
 		float strength = wind * (0.45 + 1.1 * smoothstep(0.35, 0.8, gust));
-		float sway = sin(time_s * 1.7 * sv + ph + wpos.x * 0.015) * strength + 0.35 * sin(time_s * 3.1 * sv + ph * 1.7) * strength;
+		float sway = sin(TIME * 1.7 * sv + ph + wpos.x * 0.015) * strength + 0.35 * sin(TIME * 3.1 * sv + ph * 1.7) * strength;
 		float ly = fract(UV.y * atlas.y / 16.0);                 // 0 = top of the tile, 1 = bottom
 		// the base of the plant stays fixed, the tip moves most: 0 at the bottom row, 1 at the first opaque row of the sprite
-		float tr = top_row[int(col)] / 16.0;
+		float tr = td.g / 16.0;
 		// bend curve taken from the CapyCam "Tree & Grass Motion" shader (smoothstep * power), normalised so the tip of the sprite = 1 and the root = 0
 		float yy = clamp((ly - tr) / max(1.0 - tr, 0.1), 0.0, 1.0);          // 0 at the first opaque row, 1 at the bottom
 		float lift = smoothstep(0.3, 1.3, pow(1.0 - yy, 0.5)) * pow(2.0 - yy, 1.5) / (0.784 * 2.83);
@@ -46,7 +44,7 @@ void fragment() {
 		// axe/pickaxe hits
 		for (int i = 0; i < 8; i++) {
 			vec4 s = shakes[i];
-			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) shift += s.z * sin(time_s * 48.0 + s.w);
+			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) shift += s.z * sin(TIME * 48.0 + s.w);
 		}
 		float px = floor(shift * lift + 0.5);
 		uv.x = UV.x - px / atlas.x;
@@ -57,10 +55,10 @@ void fragment() {
 	} else {
 		COLOR = texture(TEXTURE, UV);
 	}
-	float g = glow[int(col)];
+	float g = td.b;
 	if (g > 0.0) {
 		float ph = hash(floor(wpos / 16.0)) * 6.2831;
-		float pulse = 0.5 + 0.5 * sin(time_s * 2.0 + ph);
+		float pulse = 0.5 + 0.5 * sin(TIME * 2.0 + ph);
 		COLOR.rgb *= 1.0 + g * (0.25 + 0.75 * pulse);
 		COLOR.rgb += vec3(0.10, 0.09, 0.05) * g * pulse * COLOR.a;
 	}

@@ -21,7 +21,7 @@ public partial class Game
     void InitChunks()
     {
         chunkSet = new TileSet { TileSize = new Vector2I(TS, TS) };
-        var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS) };
+        var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS), UseTexturePadding = false };   // без внутренних полей: шейдеры растительности читают атлас по колонкам 16 px
         for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
         srcId = chunkSet.AddSource(src);
         groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D();
