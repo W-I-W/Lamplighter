@@ -164,6 +164,7 @@ public partial class Game : Node2D
         InitLightTech();
         foreach (var ev in pendingEvents) { InitEventState(ev); Events.Add(ev); }
         EventsEnabled = !testing;
+        UpdateUiScale();
         StartMenuOnLaunch();
         if (showPrologue || (!testing && !HasSave && Menu == Mn.None)) { showPrologue = false; OpenStory("Фонарщик", string.Join("\n\n", Story.Prologue), "Пролог"); }
         GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count} pois={W.Pois.Count}");
@@ -481,7 +482,7 @@ public partial class Game : Node2D
         Time += dt;
         Aim = aimOverride ?? GetGlobalMousePosition();
         if (testing) AutoTest(dt);
-        UiTime += dt; UpdateMusic(dt);
+        UiTime += dt; UpdateMusic(dt); UpdateUiScale();
         if (Menu != Mn.None) { UpdateShaders(dt); ents.QueueRedraw(); hud.QueueRedraw(); return; }
         PlaySecs += dt; achT -= dt; if (achT <= 0) { achT = 2f; Ach.Check(this); }
         if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); hud.QueueRedraw(); return; }
