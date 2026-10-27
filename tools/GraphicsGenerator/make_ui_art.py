@@ -185,7 +185,24 @@ WarnLabel/base_type = &"Label"
 WarnLabel/colors/font_color = Color(1, 0.7, 0.42, 1)
 GoodLabel/base_type = &"Label"
 GoodLabel/colors/font_color = Color(0.608, 0.878, 0.478, 1)
-HSeparator/constants/separation = 3''')
+HSeparator/constants/separation = 3
+BtnNormal/base_type = &"PanelContainer"
+BtnNormal/styles/panel = SubResource("sb_button_normal")
+BtnSelected/base_type = &"PanelContainer"
+BtnSelected/styles/panel = SubResource("sb_button_selected")
+BtnDisabled/base_type = &"PanelContainer"
+BtnDisabled/styles/panel = SubResource("sb_button_disabled")
+TabNormal/base_type = &"PanelContainer"
+TabNormal/styles/panel = SubResource("sb_tab_normal")
+TabActive/base_type = &"PanelContainer"
+TabActive/styles/panel = SubResource("sb_tab_selected")
+PlainLabel/base_type = &"Label"
+PlainLabel/colors/font_color = Color(1, 1, 1, 1)
+BigLabel/base_type = &"Label"
+BigLabel/colors/font_color = Color(1, 1, 1, 1)
+BigLabel/constants/shadow_offset_x = 2
+BigLabel/constants/shadow_offset_y = 2
+BigLabel/font_sizes/font_size = 18''')
 L.append('Lantern/colors/gold = Color(0.91, 0.722, 0.29, 1)\nLantern/colors/gold_hi = Color(1, 0.878, 0.541, 1)\nLantern/colors/text = Color(0.847, 0.878, 0.941, 1)\nLantern/colors/dim = Color(0.541, 0.588, 0.69, 1)\nLantern/colors/warn = Color(1, 0.7, 0.42, 1)\nLantern/colors/good = Color(0.608, 0.878, 0.478, 1)\nLantern/colors/bad = Color(0.94, 0.42, 0.37, 1)\nLantern/colors/ink = Color(0.035, 0.047, 0.078, 1)')
 # sub_resources must precede [resource]: reorder
 text = '\n'.join(L)

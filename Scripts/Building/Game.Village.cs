@@ -125,30 +125,25 @@ public partial class Game
         int bk = BIndex(b.Type);
         ix.Title = $"{BNames[bk]} — уровень {b.Level}";
         bool prod = IsProducer(b.Type);
-        ix.Lines.Add("Производство: " + BDesc[bk][b.Level - 1]);
-        if (prod)
-        {
-            string st = b.Off ? "пауза [P]" : b.Status == 0 ? (b.Worker ? "работает (работник на месте)" : "работает (без работника, 60% скорости)") : "остановлено: " + StatusText(b.Status);
-            ix.Lines.Add("Состояние: " + st);
-        }
-        if (!(b.Linked || b.Forced) && b.Type != Tl.Warehouse) ix.Lines.Add("Нет связи со складом: ставьте узлы снабжения цепочкой [B]");
-        if (b.Type == Tl.Stall) { ix.Lines.Add("[E] Торговать"); ix.E = () => OpenTrade(null); }
+        ix.Info($"{BNames[bk]} · ур.{b.Level}", TipRole.Text);
+        if (prod && !b.Off && b.Status != 0 && b.Status != 4) ix.Warn("Остановлено: " + StatusText(b.Status));
+        if (!(b.Linked || b.Forced) && b.Type != Tl.Warehouse) ix.Warn("Нет связи со складом: ставьте узлы снабжения [B]");
+        if (b.Type == Tl.Stall) { ix.Action("E", "Торговать"); ix.E = () => OpenTrade(null); }
         else
         {
             int tot = StockTotal + LocalTotal(b);
-            ix.Lines.Add($"Склад: {tot} шт. (лимит {StockCap} на ресурс)");
-            if (tot > 0) { ix.Lines.Add("[E] Забрать ресурсы"); ix.E = () => CollectFrom(b); }
+            if (tot > 0) { ix.Action("E", "Забрать ресурсы"); ix.Gives("Получите", $"{tot} шт.", TipRole.Resource); ix.E = () => CollectFrom(b); }
         }
         if (b.Level < MaxLv(bk))
         {
             var cost = BCost(bk, b.Level + 1);
-            ix.Lines.Add($"[U] Улучшить до ур.{b.Level + 1}: {CostStr(cost)}"); ix.U = () => UpgradeBuilding(b);
-            if (!Can(cost)) ix.Lines.Add("Не хватает: " + MissingStr(cost));
+            ix.Action("U", $"Улучшить до ур.{b.Level + 1}"); NeedCost(ix, cost); ix.U = () => UpgradeBuilding(b);
+            if (b.Level < BDesc[bk].Length) ix.Gives("Новое", BDesc[bk][b.Level], TipRole.Zone);
         }
-        else ix.Lines.Add("Максимальный уровень · [P] управление производством");
+        else ix.Info("Максимальный уровень · [P] управление");
     }
 
-    static bool IsProducer(Tl t) => t == Tl.Sawmill || t == Tl.Mine || t == Tl.Forge || t == Tl.Drill || t == Tl.Collector || t == Tl.Refinery || t == Tl.Cryo;
+    public static bool IsProducer(Tl t) => t == Tl.Sawmill || t == Tl.Mine || t == Tl.Forge || t == Tl.Drill || t == Tl.Collector || t == Tl.Refinery || t == Tl.Cryo;
     static int LocalTotal(Building b) { int n = 0; foreach (var x in b.Local) n += x; return n; }
 
     void CollectFrom(Building b)

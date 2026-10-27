@@ -28,7 +28,7 @@ public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg;
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
-public sealed class Ix { public List<string> Lines = new(); public Action E, U; public string Title, Key; }
+public sealed partial class Ix { public List<string> Lines = new(); public Action E, U; public string Title, Key; }
 
 public sealed class SaveData
 {
@@ -164,7 +164,6 @@ public partial class Game : Node2D
         InitLightTech();
         foreach (var ev in pendingEvents) { InitEventState(ev); Events.Add(ev); }
         EventsEnabled = !testing;
-        UpdateUiScale();
         StartMenuOnLaunch();
         if (showPrologue || (!testing && !HasSave && Menu == Mn.None)) { showPrologue = false; OpenStory("Фонарщик", string.Join("\n\n", Story.Prologue), "Пролог"); }
         GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count} pois={W.Pois.Count}");

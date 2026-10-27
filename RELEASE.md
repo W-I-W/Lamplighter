@@ -92,3 +92,7 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 - Regenerate art: `python tools/GraphicsGenerator/make_ui_font.py`, `make_ui_art.py`, `make_ui_scenes.py`.
 - UI scale: Settings -> "Масштаб интерфейса" (Auto, x1..x4). Logical grid is 640x360; Auto uses floor(window height / 360), so 1280x720 and 1920x1080 give identical layouts.
 - Check: `LAMP_STAGE=ui` writes screenshots of every window (also part of `tools/run_checks.ps1`; it verifies no exceptions, not visual quality).
+
+## No code-drawn graphics
+
+World effects use `Scripts/Visuals/Gfx.cs` (places and tints the PNGs from `Assets/Sprites/Vfx/`). Windows and menus (`Scripts/UI/Hud*.cs`) are composed each frame from pooled Control nodes (`HudNodes.cs`: Label, PanelContainer, ProgressBar, ColorRect, TextureRect) styled by `Resources/UI/LanternTheme.tres` - there is no `_Draw`/`DrawString`/`DrawRect` left in the game code. Still generated at runtime: the minimap texture (from world data) and the procedural fallback sprites used only when a PNG is missing (and by the `texcheck` test).

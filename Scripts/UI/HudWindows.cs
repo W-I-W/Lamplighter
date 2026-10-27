@@ -22,7 +22,7 @@ public partial class Hud
         }
     }
 
-    void Icon(int item, Vector2 p) => DrawTextureRectRegion(Art.IconTex, new Rect2(p.Round(), new Vector2(16, 16)), new Rect2(item * 16, 0, 16, 16));
+    void Icon(int item, Vector2 p) => Tex(UiIcons.Item(item), new Rect2(p.Round(), new Vector2(16, 16)));
 
     // ───────────────────────── экипировка ─────────────────────────
     string EffText()
@@ -165,7 +165,7 @@ public partial class Hud
         {
             var b = list[i]; int bk = Game.BIndex(b.Type); y += 12; bool lk = b.Linked || b.Forced;
             winRects.Add((new Rect2(a.Position.X, y - 8, a.Size.X, 11), i));
-            if (i == G.WinCur) theme.GetStylebox("normal", "ButtonSelected").Draw(GetCanvasItem(), new Rect2(a.Position.X, y - 8, a.Size.X, 11));
+            if (i == G.WinCur) Sty(new Rect2(a.Position.X, y - 8, a.Size.X, 11), "BtnSelected");
             Txt(Game.BNames[bk], new Vector2(a.Position.X + 4, y), 9, b.Off ? Dim : Text, HorizontalAlignment.Left, 96);
             Txt(b.Level.ToString(), new Vector2(a.Position.X + 4 + xs[1], y), 9, Gold);
             Txt(StatusText(b), new Vector2(a.Position.X + 4 + xs[2], y), 9, b.Status == 0 && !b.Off ? Good : b.Status == 4 || b.Off ? Dim : Warn, HorizontalAlignment.Left, 70);
@@ -229,28 +229,28 @@ public partial class Hud
     {
         float s = Mathf.Min(1.4f, (vs.X - 40) / World.Wd); float mw = Mathf.Round(World.Wd * s), mh = Mathf.Round(World.Ht * s);
         var o = new Vector2(Mathf.Round(vs.X * .5f - mw * .5f), Mathf.Round(vs.Y * .5f - mh * .5f - 6));
-        DrawRect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .03f, .7f));
+        Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .03f, .7f));
         Panel(new Rect2(o - new Vector2(8, 18), new Vector2(mw + 16, mh + 44)));
         Txt("Карта · M/Esc — закрыть", new Vector2(o.X, o.Y - 8), 9, Cyan);
-        DrawRect(new Rect2(o, new Vector2(mw, mh)), new Color(.03f, .04f, .07f));
-        DrawTextureRect(G.MapTex, new Rect2(o, new Vector2(mw, mh)), false);
-        for (int i = 1; i < 5; i++) DrawLine(o + new Vector2(i * 128 * s, 0), o + new Vector2(i * 128 * s, mh), new Color(1, 1, 1, .2f), 1);
+        Rect(new Rect2(o, new Vector2(mw, mh)), new Color(.03f, .04f, .07f));
+        Tex(G.MapTex, new Rect2(o, new Vector2(mw, mh)));
+        for (int i = 1; i < 5; i++) Rect(new Rect2(o.X + i * 128 * s, o.Y, 1, mh), new Color(1, 1, 1, .2f));
         for (int i = 0; i < 5; i++) Txt(Game.RegionNames[i], o + new Vector2(i * 128 * s, mh + 9), 9, Game.RegionCol(i), HorizontalAlignment.Center, 128 * s);
-        foreach (var an in G.W.Ancients) if (an.Lit) DrawCircle(o + an.Pos / 16f * s, G.AncientR(an) / 16f * s, new Color(1f, .85f, .4f, .18f));
-        foreach (var l in G.Lamps) DrawCircle(o + l.Pos / 16f * s, 5 * s, new Color(1f, .85f, .4f, .16f));
+        foreach (var an in G.W.Ancients) if (an.Lit) Disc(o + an.Pos / 16f * s, G.AncientR(an) / 16f * s, new Color(1f, .85f, .4f, .18f));
+        foreach (var l in G.Lamps) Disc(o + l.Pos / 16f * s, 5 * s, new Color(1f, .85f, .4f, .16f));
         foreach (var seal in new[] { G.W.Seal1, G.W.Seal2, G.W.Seal3, G.W.Seal4 })
-            if (seal.Count > 0 && G.W.Get(seal[0].X, seal[0].Y) == Tl.Seal) DrawRect(new Rect2(o + new Vector2(seal[0].X, seal[0].Y - 1) * s, new Vector2(2 * s, 9 * s)), new Color("#d58cff"));
+            if (seal.Count > 0 && G.W.Get(seal[0].X, seal[0].Y) == Tl.Seal) Rect(new Rect2(o + new Vector2(seal[0].X, seal[0].Y - 1) * s, new Vector2(2 * s, 9 * s)), new Color("#d58cff"));
         foreach (var an in G.W.Ancients)
         {
             var p = (o + an.Pos / 16f * s).Round(); if (!(an.Lit || G.IsExplored(an.Pos))) continue;
-            if (an.Boss) DrawColoredPolygon(new[] { p + new Vector2(0, -3), p + new Vector2(3, 0), p + new Vector2(0, 3), p + new Vector2(-3, 0) }, an.Lit ? Gold : new Color("#d58cff"));
-            else DrawRect(new Rect2(p - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), an.Lit ? Gold : Colors.White);
+            if (an.Boss) Diamond(p, 3f, an.Lit ? Gold : new Color("#d58cff"));
+            else Rect(new Rect2(p - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), an.Lit ? Gold : Colors.White);
         }
-        foreach (var p in G.W.Pois) { if (!(p.Seen || p.Revealed) || p.State >= 3) continue; DrawRect(new Rect2((o + p.Pos / 16f * s).Round(), new Vector2(1, 1)), Game.PoiColor(p.Kind)); }
-        foreach (var b in G.Buildings) DrawRect(new Rect2((o + b.Pos / 16f * s).Round() - new Vector2(1, 1), new Vector2(2, 2)), new Color("#d9b27c"));
-        foreach (var ev in G.Events) { var ep = (o + ev.Pos / 16f * s).Round(); DrawRect(new Rect2(ep - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), Game.EvColor(ev.Kind)); }
+        foreach (var p in G.W.Pois) { if (!(p.Seen || p.Revealed) || p.State >= 3) continue; Rect(new Rect2((o + p.Pos / 16f * s).Round(), new Vector2(1, 1)), Game.PoiColor(p.Kind)); }
+        foreach (var b in G.Buildings) Rect(new Rect2((o + b.Pos / 16f * s).Round() - new Vector2(1, 1), new Vector2(2, 2)), new Color("#d9b27c"));
+        foreach (var ev in G.Events) { var ep = (o + ev.Pos / 16f * s).Round(); Rect(new Rect2(ep - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), Game.EvColor(ev.Kind)); }
         var pp = (o + G.PPos / 16f * s).Round(); bool blink = Mathf.Sin(G.Time * 6f) > 0;
-        DrawRect(new Rect2(pp - new Vector2(2, 2), new Vector2(4, 4)), new Color("#090c14")); DrawRect(new Rect2(pp - new Vector2(1, 1), new Vector2(2, 2)), blink ? new Color("#9be07a") : new Color("#5fbf4a"));
+        Rect(new Rect2(pp - new Vector2(2, 2), new Vector2(4, 4)), new Color("#090c14")); Rect(new Rect2(pp - new Vector2(1, 1), new Vector2(2, 2)), blink ? new Color("#9be07a") : new Color("#5fbf4a"));
         Txt("● вы  ◆ страж  золото — горит  ▮ печать", new Vector2(o.X, o.Y + mh + 20), 9, Dim, HorizontalAlignment.Left, mw);
     }
 
@@ -268,11 +268,11 @@ public partial class Hud
         if (G.FinStage == 0) return;
         if (G.FinStage == 1) { float k = Mathf.Clamp((G.FinT - 6f) / 3f, 0, 1); if (k > 0) Txt("СВЕТ ВОЗВРАЩАЕТСЯ", new Vector2(0, vs.Y * .4f), 14, new Color(1, .95f, .7f, k), HorizontalAlignment.Center, vs.X); return; }
         float fade = Mathf.Clamp(G.FinT / 1.2f, 0, 1);
-        DrawRect(new Rect2(Vector2.Zero, vs), new Color(.01f, .01f, .03f, G.FinStage == 3 ? .94f : .82f));
-        var old = Modulate;
+        Rect(new Rect2(Vector2.Zero, vs), new Color(.01f, .01f, .03f, G.FinStage == 3 ? .94f : .82f));
+        var old = curMod;
         if (G.FinStage == 2)
         {
-            Modulate = new Color(1, 1, 1, fade); float w = Mathf.Min(360, vs.X - 40); Para(Story.Finale[G.FinScene], (vs.X - w) / 2, vs.Y * .38f, w, new Color(1, .96f, .85f)); Modulate = old;
+            curMod = new Color(1, 1, 1, fade); float w = Mathf.Min(360, vs.X - 40); Para(Story.Finale[G.FinScene], (vs.X - w) / 2, vs.Y * .38f, w, new Color(1, .96f, .85f)); curMod = old;
             Txt(G.FinScene >= Story.Finale.Length - 1 ? "[Enter] — титры" : "[Enter] — дальше · [Esc] — пропустить", new Vector2(0, vs.Y - 12), 9, Dim, HorizontalAlignment.Center, vs.X);
             return;
         }

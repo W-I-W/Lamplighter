@@ -85,10 +85,10 @@ public partial class Game
 
     void LampIx(Lamp l, Ix ix)
     {
-        ix.Lines.Add($"{LampNames[l.Kind]} ур.{l.Level}" + (l.Kind == 2 ? $" · луч {(new[] { "→", "↓", "←", "↑" })[l.Dir]}" : l.Kind == 1 ? " · жжёт врагов рядом" : ""));
-        if (l.Kind == 2) { ix.Lines.Add("[E] Повернуть луч (90°)"); ix.E = () => { l.Dir = (l.Dir + 1) % 4; Sfx.Play("tick"); Burst(l.Pos, new Color("#bfe9ff"), 4, 40); }; }
-        if (l.Level < 3) { ix.Lines.Add($"[U] Улучшить до ур.{l.Level + 1}: {CostStr(LampUpCost(l.Level + 1))}"); ix.U = () => UpgradeLamp(l); }
-        else ix.Lines.Add("Максимальный уровень");
+        ix.Info($"{LampNames[l.Kind]} ур.{l.Level}" + (l.Kind == 2 ? $" · луч {(new[] { "→", "↓", "←", "↑" })[l.Dir]}" : l.Kind == 1 ? " · жжёт врагов рядом" : ""), TipRole.Text);
+        if (l.Kind == 2) { ix.Action("E", "Повернуть луч"); ix.E = () => { l.Dir = (l.Dir + 1) % 4; Sfx.Play("tick"); Burst(l.Pos, new Color("#bfe9ff"), 4, 40); }; }
+        if (l.Level < 3) { ix.Action("U", $"Улучшить до ур.{l.Level + 1}"); NeedCost(ix, LampUpCost(l.Level + 1)); ix.U = () => UpgradeLamp(l); }
+        else ix.Info("Максимальный уровень");
     }
 
     void UpdateLamps(float dt)

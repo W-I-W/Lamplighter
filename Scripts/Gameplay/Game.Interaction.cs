@@ -38,7 +38,7 @@ public partial class Game
                 if (idx == 0) { BeaconIx(ix); return; }
                 if (a.Lit) { if (FastOk(a)) { ix.Lines.Add("Древний фонарь горит"); FastTravelIx(a, ix); } return; }
                 if (a.Boss && !BossDown(a.BossId)) ix.Lines.Add("Фонарь стража: победите стража, чтобы зажечь его");
-                else { ix.Lines.Add($"[E] Зажечь древний фонарь ({a.Cost} осколков света)"); ix.E = () => Activate(a, idx); }
+                else { ix.Action("E", "Зажечь древний фонарь"); if (a.Cost > 0) ix.Need(("Осколки света", a.Cost, Inv[It.Shard])); ix.Gives("Даст", "Свет и новую территорию", TipRole.Key); ix.E = () => Activate(a, idx); }
             });
         }
         // объекты-тайлы: сундуки, святилища, зеркала, печь и т.д.
@@ -47,7 +47,7 @@ public partial class Game
             for (int x = c.X - 3; x <= c.X + 3; x++)
             {
                 var t = W.Get(x, y); int tx = x, ty = y;
-                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Lines.Add(SmeltQ.Count > 0 ? "[E] Добавить в плавку" : "[E] Плавить руду (1 руда + 1 дерево = слиток)"); ix.E = () => StartSmelt(at); }); continue; }
+                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", SmeltQ.Count > 0 ? "Добавить в плавку" : "Плавить руду"); ix.Gives("Даст", "Слиток (1 руда + 1 дерево)", TipRole.Resource); ix.E = () => StartSmelt(at); }); continue; }
                 if (!IsTileInteractable(t)) continue;
                 Add($"t:{x}:{y}", TileTitle(t), TileRect(x, y), 1, ix => TileIx(tx, ty, W.Get(tx, ty), ix));
             }

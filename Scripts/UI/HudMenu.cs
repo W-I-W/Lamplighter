@@ -13,7 +13,7 @@ public partial class Hud
     void MenuButton(float cx, float y, float w, string text, bool sel, string value = null, bool disabled = false, int idx = -1)
     {
         var r = new Rect2(Mathf.Round(cx - w / 2), Mathf.Round(y), w, 15); panelRects.Add(r); if (idx >= 0 && !disabled) menuRects.Add((r, idx));
-        theme.GetStylebox(disabled ? "disabled" : "normal", disabled ? "Button" : sel ? "ButtonSelected" : "Button").Draw(GetCanvasItem(), r);
+        Sty(r, disabled ? "BtnDisabled" : sel ? "BtnSelected" : "BtnNormal");
         var col = disabled ? new Color("#5a6278") : sel ? Gold : Text;
         Txt(text, new Vector2(r.Position.X + 6, y + 11), 9, col, HorizontalAlignment.Left, w - 12);
         if (value != null) Txt(value, new Vector2(r.Position.X, y + 11), 9, sel ? Gold : Dim, HorizontalAlignment.Right, w - 6);
@@ -32,13 +32,13 @@ public partial class Hud
     void DrawMenu(Vector2 vs)
     {
         if (G.Menu == Mn.None) return;
-        DrawRect(new Rect2(Vector2.Zero, vs), new Color(.02f, .03f, .06f, G.Menu == Mn.Main ? .92f : .82f));
+        Rect(new Rect2(Vector2.Zero, vs), new Color(.02f, .03f, .06f, G.Menu == Mn.Main ? .92f : .82f));
         float cx = vs.X / 2, w = Mathf.Min(260, vs.X - 20);
         if (G.Menu == Mn.Main || G.Menu == Mn.Pause)
         {
             Txt("ФОНАРЩИК", new Vector2(0, 62), 14, Gold, HorizontalAlignment.Center, vs.X);
             Txt("Lanternreach", new Vector2(0, 76), 9, new Color("#9fd8ff"), HorizontalAlignment.Center, vs.X);
-            float fl = .8f + .2f * Mathf.Sin(G.UiTime * 9f); DrawRect(new Rect2(cx - 3, 24, 6, 6), new Color(1f, .8f, .3f, .35f * fl)); DrawRect(new Rect2(cx - 2, 25, 4, 4), new Color(1f, .9f, .5f)); DrawRect(new Rect2(cx - 1, 26, 2, 2), Colors.White);
+            float fl = .8f + .2f * Mathf.Sin(G.UiTime * 9f); Rect(new Rect2(cx - 3, 24, 6, 6), new Color(1f, .8f, .3f, .35f * fl)); Rect(new Rect2(cx - 2, 25, 4, 4), new Color(1f, .9f, .5f)); Rect(new Rect2(cx - 1, 26, 2, 2), Colors.White);
             var items = G.Menu == Mn.Main ? Game.MainItems : Game.PauseItems; float y0 = 92;
             Panel(new Rect2(cx - w / 2 - 8, y0 - 8, w + 16, items.Length * 17 + 10), "PanelContainer");
             for (int i = 0; i < items.Length; i++) MenuButton(cx, y0 + i * 17, w, items[i], G.MenuCur == i, null, G.Menu == Mn.Main && i == 0 && !G.HasSave, i);
@@ -75,7 +75,7 @@ public partial class Hud
                         var s = G.Slots[i]; string name = i == 0 ? "Автосохранение" : $"Слот {i}";
                         string info = s.Exists ? $"ур.{s.Level} · маяк {s.Beacon}/6 · {(int)(s.Secs / 3600)}ч {(int)(s.Secs % 3600 / 60)}м" + (s.Finished ? " · пройдена" : "") : "пусто";
                         float y = a.Position.Y + 4 + i * 36; var rr = new Rect2(a.Position.X, y, a.Size.X, 32); panelRects.Add(rr); menuRects.Add((rr, i));
-                        theme.GetStylebox("normal", G.MenuCur == i ? "ButtonSelected" : "Button").Draw(GetCanvasItem(), rr);
+                        Sty(rr, G.MenuCur == i ? "BtnSelected" : "BtnNormal");
                         Txt(name, new Vector2(rr.Position.X + 6, y + 11), 9, G.SlotSaveMode && i == 0 ? Dim : Text); Txt(info, new Vector2(rr.Position.X + 6, y + 23), 9, Dim, HorizontalAlignment.Left, rr.Size.X - 12);
                         if (s.Stamp != "") Txt(s.Stamp, new Vector2(rr.Position.X, y + 11), 9, Dim, HorizontalAlignment.Right, rr.Size.X - 6);
                     }
@@ -107,7 +107,7 @@ public partial class Hud
                     {
                         var d = Ach.All[i]; bool got = Ach.Got.Contains(d.Id); float y = a.Position.Y + 6 + (i - sc) * 22;
                         menuRects.Add((new Rect2(a.Position.X, y - 2, a.Size.X, 21), i));
-                        if (G.MenuCur == i) theme.GetStylebox("normal", "ButtonSelected").Draw(GetCanvasItem(), new Rect2(a.Position.X, y - 2, a.Size.X, 21));
+                        if (G.MenuCur == i) Sty(new Rect2(a.Position.X, y - 2, a.Size.X, 21), "BtnSelected");
                         Txt((got ? "★ " : "☆ ") + d.Name, new Vector2(a.Position.X + 4, y + 8), 9, got ? Gold : Dim, HorizontalAlignment.Left, a.Size.X - 8);
                         Txt(d.Desc, new Vector2(a.Position.X + 14, y + 17), 9, got ? Text : new Color("#6a7288"), HorizontalAlignment.Left, a.Size.X - 18);
                     }

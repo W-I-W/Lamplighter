@@ -17,6 +17,7 @@ public partial class Game
         var a = W.Ancients[0]; a.RadiusTiles = BeaconRadius(BeaconLevel); a.TargetRadius = a.RadiusTiles;
     }
 
+    static readonly string[] BeaconOpens = { "", "Затопленные шахты", "Пепельные пустоши", "Ледяной монастырь", "Сердце Тьмы", "" };
     static readonly string[] BeaconGain = { "", "Откроется путь в Затопленные шахты", "Откроется путь в Пепельные пустоши", "Откроется путь в Ледяной монастырь", "Откроется путь в Сердце Тьмы", "Окончательная активация: волна света очистит мир" };
 
     void UpgradeBeacon()
@@ -50,7 +51,8 @@ public partial class Game
         ix.Lines.Add($"Центральный маяк · уровень {BeaconLevel}/6 · радиус {(int)BeaconRadius(BeaconLevel)}");
         if (BeaconLevel < 6)
         {
-            ix.Lines.Add($"[E] Улучшить за 1 ядро света (есть {Inv[It.Core]}): {BeaconGain[BeaconLevel]}");
+            ix.Action("E", "Улучшить маяк").Need((It.Names[It.Core], 1, Inv[It.Core]));
+            if (BeaconOpens[BeaconLevel] != "") ix.Gives("Откроет", BeaconOpens[BeaconLevel]); else ix.Gives("Результат", "Волна света очистит мир", TipRole.Key);
             ix.E = UpgradeBeacon;
         }
     }
@@ -67,7 +69,7 @@ public partial class Game
             case Tl.AltarOn: ix.Lines.Add("Алтарь пробуждён"); return true;
             case Tl.Machine:
                 ix.Lines.Add("Заброшенный механизм древних");
-                ix.Lines.Add($"[E] Починить: {CostStr(MachineCost)} → производство деревни +15%"); ix.E = () => RestoreMachine(x, y, p);
+                ix.Action("E", "Починить механизм"); NeedCost(ix, MachineCost); ix.Gives("Даст", "Производство деревни +15%", TipRole.Ok); ix.E = () => RestoreMachine(x, y, p);
                 return true;
             case Tl.MachineOn: ix.Lines.Add("Механизм работает: производство деревни ускорено"); return true;
             case Tl.Mirror1: case Tl.Mirror2:
@@ -76,7 +78,7 @@ public partial class Game
                 return true;
             case Tl.BridgeBroken:
                 ix.Lines.Add("Разрушенный мост");
-                ix.Lines.Add($"[E] Починить мост: {CostStr(BridgeCost)}"); ix.E = () => RepairBridge(x, y);
+                ix.Action("E", "Починить мост"); NeedCost(ix, BridgeCost); ix.Gives("Откроет", "Новый путь"); ix.E = () => RepairBridge(x, y);
                 return true;
             case Tl.Seal:
                 ix.Lines.Add(x < 200 ? "Древняя печать. Её снимет только улучшенный Центральный маяк (ядро света)" : x < 300 ? "Печать пепла. Её снимет второе улучшение Центрального маяка" : x < 450 ? "Ледяная печать. Её снимет третье улучшение Центрального маяка" : "Печать пустоты. Её снимет четвёртое улучшение маяка");

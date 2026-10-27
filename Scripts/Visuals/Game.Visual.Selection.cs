@@ -26,14 +26,14 @@ public partial class Game
         if (hovA > .01f)
         {
             var col = st.HoverColor; col.A = st.HoverAlpha * hovA;
-            c.DrawRect(hovRect.Grow(1), col, false, 1f);
+            Gfx.Outline(c, hovRect.Grow(1), col, 1f);
         }
         if (selA > .01f)
         {
             var col = st.SelectedColor; var r = selRect.Grow(1.5f);
-            c.DrawRect(r, new Color(col.R, col.G, col.B, st.FillAlpha * selA), true);
-            c.DrawRect(r.Grow(1), new Color(col.R, col.G, col.B, .25f * selA), false, 2f);
-            c.DrawRect(r, new Color(col.R, col.G, col.B, selA), false, 1f);
+            Gfx.Rect(c, r, new Color(col.R, col.G, col.B, st.FillAlpha * selA));
+            Gfx.Outline(c, r.Grow(1), new Color(col.R, col.G, col.B, .25f * selA), 2f);
+            Gfx.Outline(c, r, new Color(col.R, col.G, col.B, selA), 1f);
         }
     }
 
@@ -46,6 +46,6 @@ public partial class Game
         bool ok = e.Unlocked && W.Get(t.X, t.Y) == Tl.None && PPos.DistanceTo(center) <= 56f && ToTile(PPos) != t && W.Ground[World.Key(t.X, t.Y)] != Art.WaterG;
         var col = ok ? new Color(.45f, 1f, .45f, .75f) : new Color(1f, .4f, .35f, .6f);
         c.DrawTextureRectRegion(Art.TileTex, new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), new Rect2(e.Tile * 16, 0, 16, 16), col);
-        c.DrawRect(new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), new Color(col.R, col.G, col.B, .9f), false, 1f);
+        Gfx.Outline(c, new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), new Color(col.R, col.G, col.B, .9f), 1f);
     }
 }

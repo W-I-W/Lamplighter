@@ -151,22 +151,10 @@ public partial class GameHud : Control
         abilities.Visible = any;
     }
 
+    /// <summary>Подсказки к объектам рисует Hud.DrawTooltip по модели TipModel; старые панели сцены (Hint/Detail) скрыты.</summary>
     void UpdateHint(float dt)
     {
-        var ix = G.Cur; var sel = G.Interact.Selected;
-        bool show = sel != null && (ix.Lines.Count > 0 || ix.Title != null);
-        string action = "";
-        foreach (var l in ix.Lines) if (l.StartsWith("[")) { action = l; break; }
-        string label = ix.Title ?? "";
-        hint.Visible = show; if (show) hintLabel.Text = T(action != "" ? action : label) + (ix.U != null && action.StartsWith("[E]") ? "   " + T("[U] улучшить") : "");
-        bool hover = sel != null && G.Interact.Hover?.Key == sel.Key;
-        detail.Visible = show && (hover || G.DetailT > 0);
-        if (detail.Visible)
-        {
-            dTitle.Text = T(ix.Title ?? "");
-            var sb = new System.Text.StringBuilder(); foreach (var l in ix.Lines) sb.Append(T(l)).Append('\n');
-            dBody.Text = sb.ToString().TrimEnd('\n');
-        }
+        hint.Visible = false; detail.Visible = false;
     }
 }
 
