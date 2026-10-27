@@ -143,7 +143,22 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Level" type="Label" parent="TopLeft/Status/H"]
+[node name="LvBox" type="PanelContainer" parent="TopLeft/Status/H"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"Keycap"
+
+[node name="LvH" type="HBoxContainer" parent="TopLeft/Status/H/LvBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LvCap" type="Label" parent="TopLeft/Status/H/LvBox/LvH"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"DimLabel"
+text = "LV"
+
+[node name="Level" type="Label" parent="TopLeft/Status/H/LvBox/LvH"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"GoldLabel"
@@ -181,14 +196,26 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "60/60"
 
-[node name="XpBar" type="ProgressBar" parent="TopLeft/Status/H/V"]
+[node name="XpRow" type="HBoxContainer" parent="TopLeft/Status/H/V"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="XpBar" type="ProgressBar" parent="TopLeft/Status/H/V/XpRow"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 custom_minimum_size = Vector2(0, 4)
 theme_type_variation = &"XpBar"
 max_value = 1.0
 step = 0.001
 show_percentage = false
+
+[node name="XpLabel" type="Label" parent="TopLeft/Status/H/V/XpRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"DimLabel"
+text = "0/40"
 
 [node name="Goal" type="PanelContainer" parent="TopLeft"]
 unique_name_in_owner = true
