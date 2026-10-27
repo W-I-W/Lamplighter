@@ -22,13 +22,13 @@ public static class It
 
 public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
-public sealed class Toast { public string S; public float Life = 4.5f; }
-public sealed class Banner { public string Title, Sub; public Color C; public float Life = 5f; }
+public sealed class Toast { public string S; public float Life = 3.4f; }
+public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
-public sealed class Ix { public List<string> Lines = new(); public Action E, U; }
+public sealed class Ix { public List<string> Lines = new(); public Action E, U; public string Title, Key; }
 
 public sealed class SaveData
 {
@@ -57,7 +57,8 @@ public partial class Game : Node2D
     public World W;
     int srcId;
     const int LightLimit = 96;                       // должен совпадать с размером массива lights в Assets/Shaders/Lighting/lights_common.gdshaderinc
-    EntityLayer ents; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud;
+    EntityLayer ents; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; Control uiRoot; public GameHud GameHudNode; BuildMenu buildMenu; InventoryWindow invWindow;
+    public float UiScaleVp = 2f;
     public readonly RandomNumberGenerator rng = new();
 
     // игрок
@@ -68,7 +69,7 @@ public partial class Game : Node2D
     float regenDelay, tierMsgCd, rippleT;
     public Vector2I MineTile = new(-1, -1);
     public Vector2 Aim;
-    public Ix Cur = new();
+    public Ix Cur = new(); public int BuildCat;
     public Vector2 SmeltAt; public List<int> SmeltQ = new(); float smeltT; public float SmeltProg => SmeltQ.Count > 0 ? smeltT / SmeltTime : 0;
     const float SmeltTime = 0.9f;
     public bool HasFurnace;
@@ -101,6 +102,13 @@ public partial class Game : Node2D
     public int LitCount { get { int n = 0; for (int i = 1; i < W.Ancients.Count; i++) { var a = W.Ancients[i]; if (!a.Boss && a.Region == 0 && a.Lit) n++; } return n; } }
     public int LitIn(int region) { int n = 0; foreach (var a in W.Ancients) if (a.Region == region && !a.Boss && a.Lit && a != W.Ancients[0]) n++; return n; }
     public Vector2 ViewSize => GetViewportRect().Size;
+    /// <summary>Интерфейс масштабируется только целыми множителями физических пикселей (пиксель-перфект); логическая сетка при «Авто» — 640×360.</summary>
+    void UpdateUiScale()
+    {
+        float wh = testing ? ViewSize.Y : DisplayServer.WindowGetSize().Y; int si = Settings.UiInt(wh);
+        UiScaleVp = si * ViewSize.Y / Mathf.Max(1f, wh);
+        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size;
+    }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
     public bool Has(Tech t) => ((TechMask >> (int)t) & 1) == 1;
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
@@ -144,8 +152,11 @@ public partial class Game : Node2D
         dl.AddChild(darkRect); dl.AddChild(glowRect);
 
         var hl = new CanvasLayer { Layer = 10 }; AddChild(hl);
-        hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore };
-        hl.AddChild(hud);
+        uiRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore }; hl.AddChild(uiRoot);
+        hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore }; uiRoot.AddChild(hud);
+        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode);
+        buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildMenu>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
+        invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
 
         Toast("Соберите дерево и камень (ЛКМ), постройте печь [1]. Тьма вокруг опасна — держитесь у маяка. [M] — карта");
         if (pendingMsg != null) Toast(pendingMsg);
@@ -399,6 +410,7 @@ public partial class Game : Node2D
     public override void _Input(InputEvent e)
     {
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); return; }
+        if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0) { OverUi = UiOver(cb.Position / UiScaleVp); ClickWorld(); }
         if (FinStage > 0) { if (e is InputEventKey fk && fk.Pressed && !fk.Echo) FinaleKey(fk.Keycode); return; }
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right && Window == Win.None) TrySpin();
         if (e is InputEventKey k && k.Pressed && !k.Echo)
@@ -407,8 +419,8 @@ public partial class Game : Node2D
             if (Window != Win.None) { WindowKey(key, k.ShiftPressed); return; }
             switch (key)
             {
-                case Key.E: if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
-                case Key.U: if (Cur.U != null) Cur.U(); else Fail("Рядом нет здания или фонаря для улучшения"); break;
+                case Key.E: DetailT = 3f; if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
+                case Key.U: DetailT = 3f; if (Cur.U != null) Cur.U(); else Fail("Рядом нет здания или фонаря для улучшения"); break;
                 case Key.Key1: Digit(1); break;
                 case Key.Key2: Digit(2); break;
                 case Key.Key3: Digit(3); break;
@@ -433,6 +445,8 @@ public partial class Game : Node2D
                 case Key.J: OpenWin(Win.Journal); break;
                 case Key.P: OpenWin(Win.Prod); break;
                 case Key.B: OpenWin(Win.Build); break;
+                case Key.I: OpenWin(Win.Inventory); break;
+                case Key.G: if (GameHudNode != null) GameHudNode.GoalsOpen = !GameHudNode.GoalsOpen; break;
                 case Key.F: TryPulse(); break;
                 case Key.F5: Save(); Toast("Игра сохранена"); break;
             }
@@ -501,7 +515,10 @@ public partial class Game : Node2D
         UpdateMap(dt);
         UpdateFx(dt);
         UpdateUnlocks(dt);
-        Cur = FindIx();
+        UpdateUiScale();
+        OverUi = UiOver(GetViewport().GetMousePosition() / UiScaleVp);
+        RunInteraction();
+        UpdateSelectionVisual(dt);
 
         saveT += dt; if (saveT > 10) { saveT = 0; Save(); }
 

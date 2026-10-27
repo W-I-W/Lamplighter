@@ -12,6 +12,7 @@ public partial class VisualCatalog : Resource
     [Export] public Godot.Collections.Array<VfxDef> Effects = new();
     [Export] public ShaderMaterial Darkness;
     [Export] public ShaderMaterial Glow;
+    [Export] public HighlightStyle Highlight;
 
     static VisualCatalog inst; static bool tried;
     readonly Dictionary<string, EntityVisualDef> ents = new(); readonly Dictionary<string, VfxDef> fx = new();

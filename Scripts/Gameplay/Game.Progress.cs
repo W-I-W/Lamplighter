@@ -55,40 +55,6 @@ public partial class Game
         }
     }
 
-    Ix FindIx()
-    {
-        var ix = new Ix();
-        if (RiftOn) { RiftIx(ix); return ix; }
-        for (int i = 0; i < W.Ancients.Count; i++)
-        {
-            var a = W.Ancients[i]; int idx = i;
-            if (a.Pos.DistanceTo(PPos) >= 44) continue;
-            if (i == 0) { BeaconIx(ix); return ix; }
-            if (a.Lit) { if (FastOk(a)) { var tix = new Ix(); FastTravelIx(a, tix); if (tix.U != null) { ix.Lines.Add("Древний фонарь горит"); ix.Lines.AddRange(tix.Lines); ix.U = tix.U; return ix; } } continue; }
-            if (a.Boss && !BossDown(a.BossId)) ix.Lines.Add("Фонарь стража: победите стража, чтобы зажечь его");
-            else { ix.Lines.Add($"[E] Зажечь древний фонарь ({a.Cost} осколков света)"); ix.E = () => Activate(a, idx); }
-            return ix;
-        }
-        var c = ToTile(PPos); Vector2I best = default; Tl bt = Tl.None; float bd = 45;
-        for (int y = c.Y - 3; y <= c.Y + 3; y++)
-            for (int x = c.X - 3; x <= c.X + 3; x++)
-            {
-                var t = W.Get(x, y);
-                if (t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
-                    || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn
-                    || t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn || t == Tl.RiftGate)
-                { float d = TileCenter(x, y).DistanceTo(PPos); if (d < bd) { bd = d; best = new Vector2I(x, y); bt = t; } }
-            }
-        if (bt != Tl.None && TileIx(best.X, best.Y, bt, ix)) return ix;
-        if (EventIx(ix)) return ix;
-        var lamp = LampNear(PPos, 32);
-        if (lamp != null) { LampIx(lamp, ix); return ix; }
-        var b = BuildingNear(PPos, 44);
-        if (b != null) { BuildingIx(b, ix); return ix; }
-        if (FurnaceNear(44, out var f)) { ix.Lines.Add(SmeltQ.Count > 0 ? "[E] Добавить в плавку" : "[E] Плавить руду (1 руда + 1 дерево = слиток)"); ix.E = () => StartSmelt(f); }
-        return ix;
-    }
-
     bool TileIx(int x, int y, Tl t, Ix ix)
     {
         W.ByTile.TryGetValue(World.Key(x, y), out var p);

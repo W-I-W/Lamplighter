@@ -41,7 +41,7 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "makeold") { MakeOldSave(); GetTree().Quit(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "makev4") { BeaconLevel = 4; Save(); GetTree().Quit(); return; }
         if (!noHeal) Hp = MaxHp;
-        if (OS.GetEnvironment("LAMP_LOAD") != "" && OS.GetEnvironment("LAMP_STAGE") != "reload" && OS.GetEnvironment("LAMP_STAGE") != "savesmoke")
+        if (OS.GetEnvironment("LAMP_LOAD") != "" && OS.GetEnvironment("LAMP_STAGE") != "reload" && OS.GetEnvironment("LAMP_STAGE") != "savesmoke" && OS.GetEnvironment("LAMP_STAGE") != "interactload" && OS.GetEnvironment("LAMP_STAGE") != "ui")
         {
             sw -= dt; if (sw > 0) return;
             if (si == 0)
@@ -91,6 +91,9 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "menu") { BuildMenuScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "loc") { BuildLocScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "econ") { BuildEconScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "ui") { BuildUiScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "interact") { BuildInteractScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "interactload") { BuildInteractLoadScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "texcheck") { BuildTexCheckScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "soak") { BuildSoakScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "combat") { BuildCombatScript(); return; }

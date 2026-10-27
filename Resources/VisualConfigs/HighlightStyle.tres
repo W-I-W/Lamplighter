@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="HighlightStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/HighlightStyle.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+SelectedColor = Color(1, 0.886, 0.478, 1)
+HoverColor = Color(0.749, 0.914, 1, 1)
+FadeSpeed = 9.0
+FillAlpha = 0.12
+HoverAlpha = 0.45
+LabelSize = 9
+IconBob = 1.2

@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://ccd3t16mxo3mp"
+path="res://.godot/imported/lantern.fnt-f2895d30ab8258dd9043021cf78cb31f.fontdata"
+
+[deps]
+
+source_file="res://Assets/UI/Fonts/lantern.fnt"
+dest_files=["res://.godot/imported/lantern.fnt-f2895d30ab8258dd9043021cf78cb31f.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=1

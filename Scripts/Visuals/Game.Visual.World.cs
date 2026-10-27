@@ -71,6 +71,8 @@ public partial class Game
         }
         DrawBuildings(c);
         DrawStatusMarkers(c);
+        DrawSelection(c);
+        DrawBuildGhost(c);
         DrawMineFx(c);
         DrawHazards(c);
         DrawHeartWorld(c);

@@ -83,3 +83,12 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 * Drawing code lives in `Scripts/Visuals` (`Game.Visual.*.cs`) and `Scripts/Rendering` (light data for the darkness shader); effects are launched by name with `Fx("tile_break", pos, color)`.
 * Regenerate placeholders (only needed if you change the procedural generators): `LAMP_STAGE=gengfx godot --path .` then `godot --headless --path . --import`.
 * The `graphics` check in `tools/run_checks.ps1` verifies the PNG-loaded textures equal the procedural ones and that nothing is regenerated at startup.
+
+## Interface (pixel-art UI)
+
+- Theme and styles: `Resources/UI/LanternTheme.tres` (9-patch `StyleBoxTexture`, type variations: Slot, Keycap, Button, Tab, bars, labels); textures and the 5x7 bitmap font in `Assets/UI/` (`Fonts/lantern.fnt`). All UI textures use nearest filtering and integer scaling.
+- Scenes (editable in the Godot editor): `Scenes/UI/Slot.tscn`, `GameHud.tscn`, `BuildMenu.tscn`, `InventoryWindow.tscn`. Logic: `Scripts/UI/GameHud.cs`, `BuildMenu.cs`, `InventoryWindow.cs`, `UiSlot.cs`.
+- Other windows (equipment, journal, production, trade, upgrades, map, story, rift, menus) are still drawn in `Hud*.cs` but only through the shared theme/font helpers - not yet converted to scenes.
+- Regenerate art: `python tools/GraphicsGenerator/make_ui_font.py`, `make_ui_art.py`, `make_ui_scenes.py`.
+- UI scale: Settings -> "Масштаб интерфейса" (Auto, x1..x4). Logical grid is 640x360; Auto uses floor(window height / 360), so 1280x720 and 1920x1080 give identical layouts.
+- Check: `LAMP_STAGE=ui` writes screenshots of every window (also part of `tools/run_checks.ps1`; it verifies no exceptions, not visual quality).

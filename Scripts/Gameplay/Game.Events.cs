@@ -306,16 +306,14 @@ public partial class Game
     void EventsOnDeath() { foreach (var ev in Events) if (ev.Kind == "rift" && ev.State == 1) ev.Done = true; }
 
     // ───────────────────────── интерфейс ─────────────────────────
-    bool EventIx(Ix ix)
+    bool EventIx1(GEvent ev, Ix ix)
     {
-        foreach (var ev in Events)
         {
-            float d = ev.Pos.DistanceTo(PPos);
+            float d = 0;   // доступность по расстоянию проверяет InteractionController
             if (ev.Kind == "trader" && d < 44) { ix.Lines.Add("Странствующий торговец: редкие товары"); ix.Lines.Add("[E] Торговаться"); ix.E = () => OpenTrade(ev); return true; }
             if (ev.Kind == "rift" && ev.State == 0 && d < 44) { ix.Lines.Add("Разлом Тьмы: необязательное испытание"); ix.Lines.Add("[E] Войти в разлом (временная реликвия, 3 волны)"); ix.E = () => StartTrial(ev); return true; }
             if (ev.Kind == "traveler" && ev.State == 0 && d < 44) { ix.Lines.Add("Заблудший путник просит помощи"); ix.Lines.Add("[E] Проводить к освещённой земле"); ix.E = () => { ev.State = 1; Toast("Путник идёт за вами. Доведите его до света!"); if (!Enemies.Exists(e => e.Ev == ev)) for (int i = 0; i < 2; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * 110, PoolKind(RegionAt(ev.Pos))); }; return true; }
             if (ev.Kind == "lamp" && d < 44) { ix.Lines.Add($"Осаждённый фонарь: прочность {(int)Mathf.Max(0, ev.V)}/60 · волна {ev.Wave}/4"); return true; }
-            if (ev.Kind == "rift" && ev.State == 1) { }
         }
         return false;
     }

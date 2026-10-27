@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://Scripts/Visuals/VfxDef.cs" id="vdef"]
 [ext_resource type="Material" path="res://Assets/Materials/darkness.tres" id="dark"]
 [ext_resource type="Material" path="res://Assets/Materials/glow.tres" id="glow"]
+[ext_resource type="Resource" path="res://Resources/VisualConfigs/HighlightStyle.tres" id="hl"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/player.tres" id="e0"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/villager.tres" id="e1"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/trader.tres" id="e2"]
@@ -47,3 +48,4 @@ Entities = Array[ExtResource("edef")]([ExtResource("e0"), ExtResource("e1"), Ext
 Effects = Array[ExtResource("vdef")]([ExtResource("v0"), ExtResource("v1"), ExtResource("v2"), ExtResource("v3"), ExtResource("v4"), ExtResource("v5"), ExtResource("v6"), ExtResource("v7")])
 Darkness = ExtResource("dark")
 Glow = ExtResource("glow")
+Highlight = ExtResource("hl")

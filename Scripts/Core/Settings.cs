@@ -7,12 +7,13 @@ namespace Lamplighter;
 /// <summary>Пользовательские настройки (user://settings.cfg): звук, интерфейс, окно, язык, управление.</summary>
 public static class Settings
 {
-    public static float Music = .55f, Sfx = .8f, UiScale = 1f, Shake = 1f;
+    public static float Music = .55f, Sfx = .8f, Shake = 1f;
+    public static int UiMode;                                  // 0 — авто (целое по высоте окна), 1–4 — фиксированный множитель
+    public static int UiInt(float windowH) => UiMode > 0 ? UiMode : Math.Max(1, (int)Math.Floor(windowH / 360f));
     public static bool Fullscreen, Diag;
     public static int Res = 0;
     public static string Lang = "ru";
     public static readonly Vector2I[] Resolutions = { new(1280, 720), new(1600, 900), new(1920, 1080), new(2560, 1440) };
-    public static readonly float[] UiScales = { .8f, .9f, 1f, 1.15f, 1.3f, 1.5f };
     const string Path = "user://settings.cfg";
 
     public static void Load()
@@ -20,7 +21,7 @@ public static class Settings
         var c = new ConfigFile();
         if (c.Load(Path) != Error.Ok) { Lang = DetectLang(); KeyMap.Reset(); return; }
         Music = (float)c.GetValue("audio", "music", Music); Sfx = (float)c.GetValue("audio", "sfx", Sfx);
-        UiScale = (float)c.GetValue("ui", "scale", UiScale); Shake = (float)c.GetValue("ui", "shake", Shake); Lang = (string)c.GetValue("ui", "lang", DetectLang());
+        UiMode = Math.Clamp((int)c.GetValue("ui", "mode", 0), 0, 4); Shake = (float)c.GetValue("ui", "shake", Shake); Lang = (string)c.GetValue("ui", "lang", DetectLang());
         Diag = (bool)c.GetValue("dev", "diag", false); Fullscreen = (bool)c.GetValue("window", "fullscreen", false); Res = Math.Clamp((int)c.GetValue("window", "res", 0), 0, Resolutions.Length - 1);
         KeyMap.Reset();
         foreach (var a in KeyMap.Actions) { int k = (int)c.GetValue("keys", a, (int)KeyMap.Defaults[a]); if (k > 0 && !string.IsNullOrEmpty(OS.GetKeycodeString((Key)k))) KeyMap.Map[a] = (Key)k; }
@@ -32,7 +33,7 @@ public static class Settings
     {
         var c = new ConfigFile();
         c.SetValue("audio", "music", Music); c.SetValue("audio", "sfx", Sfx);
-        c.SetValue("ui", "scale", UiScale); c.SetValue("ui", "shake", Shake); c.SetValue("ui", "lang", Lang);
+        c.SetValue("ui", "mode", UiMode); c.SetValue("ui", "shake", Shake); c.SetValue("ui", "lang", Lang);
         c.SetValue("dev", "diag", Diag); c.SetValue("window", "fullscreen", Fullscreen); c.SetValue("window", "res", Res);
         foreach (var a in KeyMap.Actions) c.SetValue("keys", a, (int)KeyMap.Map[a]);
         c.Save(Path);

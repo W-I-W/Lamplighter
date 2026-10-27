@@ -95,12 +95,13 @@ public static class GraphicsExport
         cat.Append($"[gd_resource type=\"Resource\" script_class=\"VisualCatalog\" load_steps={load} format=3]\n\n");
         cat.Append("[ext_resource type=\"Script\" path=\"res://Scripts/Visuals/VisualCatalog.cs\" id=\"cat\"]\n[ext_resource type=\"Script\" path=\"res://Scripts/Visuals/EntityVisualDef.cs\" id=\"edef\"]\n[ext_resource type=\"Script\" path=\"res://Scripts/Visuals/VfxDef.cs\" id=\"vdef\"]\n");
         cat.Append("[ext_resource type=\"Material\" path=\"res://Assets/Materials/darkness.tres\" id=\"dark\"]\n[ext_resource type=\"Material\" path=\"res://Assets/Materials/glow.tres\" id=\"glow\"]\n");
+        cat.Append("[ext_resource type=\"Resource\" path=\"res://Resources/VisualConfigs/HighlightStyle.tres\" id=\"hl\"]\n");
         for (int i = 0; i < ids.Count; i++) cat.Append($"[ext_resource type=\"Resource\" path=\"res://Resources/VisualConfigs/Entities/{ids[i]}.tres\" id=\"e{i}\"]\n");
         for (int i = 0; i < fxIds.Count; i++) cat.Append($"[ext_resource type=\"Resource\" path=\"res://Resources/VisualConfigs/Vfx/{fxIds[i]}.tres\" id=\"v{i}\"]\n");
         cat.Append("\n[resource]\nscript = ExtResource(\"cat\")\n");
         var el = new List<string>(); for (int i = 0; i < ids.Count; i++) el.Add($"ExtResource(\"e{i}\")");
         var vl = new List<string>(); for (int i = 0; i < fxIds.Count; i++) vl.Add($"ExtResource(\"v{i}\")");
-        cat.Append($"Entities = Array[ExtResource(\"edef\")]([{string.Join(", ", el)}])\nEffects = Array[ExtResource(\"vdef\")]([{string.Join(", ", vl)}])\nDarkness = ExtResource(\"dark\")\nGlow = ExtResource(\"glow\")\n");
+        cat.Append($"Entities = Array[ExtResource(\"edef\")]([{string.Join(", ", el)}])\nEffects = Array[ExtResource(\"vdef\")]([{string.Join(", ", vl)}])\nDarkness = ExtResource(\"dark\")\nGlow = ExtResource(\"glow\")\nHighlight = ExtResource(\"hl\")\n");
         Text(VisualCatalog.Path, cat.ToString());
         Text($"{SpriteLibrary.Root}README.md", Readme());
         GD.Print($"[gengfx] exported tiles={tiles} icons={icons} sheets={SpriteLibrary.Sheets.Length} entityDefs={ids.Count} vfx={fxIds.Count}");

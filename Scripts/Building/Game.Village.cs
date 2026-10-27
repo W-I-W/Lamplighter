@@ -12,7 +12,7 @@ public partial class Game
     public int PoisDone { get { int n = 0; foreach (var p in W.Pois) if (p.State == 3) n++; return n; } }
 
     public static readonly string[] BNames = { "Склад", "Лесопилка", "Шахта", "Кузница", "Автобур", "Коллектор пепла", "Перерабатывающий цех", "Узел снабжения", "Торговая лавка", "Криоэкстрактор" };
-    static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall, Tl.Cryo };
+    public static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall, Tl.Cryo };
     public const int BCount = 10;
     static readonly int[][][][] BCosts =
     {
@@ -123,16 +123,28 @@ public partial class Game
     void BuildingIx(Building b, Ix ix)
     {
         int bk = BIndex(b.Type);
-        ix.Lines.Add($"{BNames[bk]} ур.{b.Level}: {BDesc[bk][b.Level - 1]}" + (!IsProducer(b.Type) ? "" : b.Off ? " · ПАУЗА" : b.Worker ? " · работник на месте" : " · без работника (60% скорости)"));
-        if (!(b.Linked || b.Forced) && b.Type != Tl.Warehouse) ix.Lines.Add("Не подключено к складу: ставьте узлы снабжения цепочкой [B]");
+        ix.Title = $"{BNames[bk]} — уровень {b.Level}";
+        bool prod = IsProducer(b.Type);
+        ix.Lines.Add("Производство: " + BDesc[bk][b.Level - 1]);
+        if (prod)
+        {
+            string st = b.Off ? "пауза [P]" : b.Status == 0 ? (b.Worker ? "работает (работник на месте)" : "работает (без работника, 60% скорости)") : "остановлено: " + StatusText(b.Status);
+            ix.Lines.Add("Состояние: " + st);
+        }
+        if (!(b.Linked || b.Forced) && b.Type != Tl.Warehouse) ix.Lines.Add("Нет связи со складом: ставьте узлы снабжения цепочкой [B]");
         if (b.Type == Tl.Stall) { ix.Lines.Add("[E] Торговать"); ix.E = () => OpenTrade(null); }
         else
         {
             int tot = StockTotal + LocalTotal(b);
-            ix.Lines.Add(tot > 0 ? $"[E] Забрать со склада ({tot} шт.)" : "Склад пуст — производство идёт само");
-            if (tot > 0) ix.E = () => CollectFrom(b);
+            ix.Lines.Add($"Склад: {tot} шт. (лимит {StockCap} на ресурс)");
+            if (tot > 0) { ix.Lines.Add("[E] Забрать ресурсы"); ix.E = () => CollectFrom(b); }
         }
-        if (b.Level < MaxLv(bk)) { ix.Lines.Add($"[U] Улучшить до ур.{b.Level + 1}: {CostStr(BCost(bk, b.Level + 1))} → {BDesc[bk][b.Level]}"); ix.U = () => UpgradeBuilding(b); }
+        if (b.Level < MaxLv(bk))
+        {
+            var cost = BCost(bk, b.Level + 1);
+            ix.Lines.Add($"[U] Улучшить до ур.{b.Level + 1}: {CostStr(cost)}"); ix.U = () => UpgradeBuilding(b);
+            if (!Can(cost)) ix.Lines.Add("Не хватает: " + MissingStr(cost));
+        }
         else ix.Lines.Add("Максимальный уровень · [P] управление производством");
     }
 

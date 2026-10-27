@@ -18,7 +18,7 @@ function Run-Stage($name, $stage, $expect, $extraEnv = @{}, $reject = @()) {
     $dirName = if ($stage -eq 'reload') { 'final' } else { $stage }
     $dir = Join-Path $env:TEMP "lamp_check_$dirName"
     New-Item -ItemType Directory -Force $dir | Out-Null
-    if ($stage -ne 'reload') { Get-ChildItem $dir -File | Remove-Item -Force }
+    if ($stage -ne 'reload' -and $stage -ne 'interactload') { Get-ChildItem $dir -File | Remove-Item -Force }
     $env:LAMP_AUTOTEST = $dir; $env:LAMP_STAGE = $stage; $env:LAMP_LANG = ''; $env:LAMP_LOAD = ''
     foreach ($k in $extraEnv.Keys) { Set-Item "env:$k" $extraEnv[$k] }
     $out = cmd /c "`"$Godot`" --path . --resolution 1280x720 2>&1" | Out-String
@@ -39,6 +39,13 @@ Run-Stage 'localization sweep (en)' 'loc' @('SCRIPT DONE') @{ LAMP_LANG = 'en' }
 Run-Stage 'perf stress (chunks, 30 enemies)' 'perf' @('PERF: chunks=') @{} @('fps=(?:[0-9]|[1-5][0-9]) ')
 Run-Stage 'final checks: chunks, regrowth, death, save' 'final' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
 Run-Stage 'graphics: PNG textures identical to procedural, no regeneration' 'texcheck' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
+Run-Stage 'interaction: selection, hysteresis, mouse, E/U, build mode, removal' 'interact' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
+$tmpI = Join-Path $env:TEMP 'lamp_check_interactload'; New-Item -ItemType Directory -Force $tmpI | Out-Null
+Copy-Item (Join-Path (Join-Path $root 'testsaves') 'mid\save.json') $tmpI -Force
+Run-Stage 'interaction after loading a save' 'interactload' @('SUMMARY failures=0') @{ LAMP_LOAD = '1'; LAMP_DIRNAME = 'interactload' } @('\[check\] FAIL')
+$tmpU = Join-Path $env:TEMP 'lamp_check_ui'; New-Item -ItemType Directory -Force $tmpU | Out-Null
+Copy-Item (Join-Path (Join-Path $root 'testsaves') 'mid\save.json') $tmpU -Force
+Run-Stage 'ui: HUD, build menu, inventory, all windows (screenshots)' 'ui' @('UI SCREENSHOTS DONE') @{ LAMP_LOAD = '1' } @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
 Run-Stage 'economy audit (trade loops, sinks)' 'econ' @('ECON AUDIT PASSED')
 Run-Stage 'combat audit (weapons, dead effects)' 'combat' @('COMBAT AUDIT PASSED')
 Run-Stage 'soak: 100 s, all biomes, leaks/fps' 'soak' @('SUMMARY failures=0') @{} @('\[check\] FAIL')

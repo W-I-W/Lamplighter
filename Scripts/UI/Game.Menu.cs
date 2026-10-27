@@ -124,7 +124,7 @@ public partial class Game
         {
             case 0: Settings.Music = Mathf.Clamp(Settings.Music + .1f * d, 0, 1); Settings.ApplyAudio(); break;
             case 1: Settings.Sfx = Mathf.Clamp(Settings.Sfx + .1f * d, 0, 1); Settings.ApplyAudio(); Sfx.Play("pickup"); break;
-            case 2: { int i = Array.FindIndex(Settings.UiScales, x => Math.Abs(x - Settings.UiScale) < .01f); if (i < 0) i = 2; Settings.UiScale = Settings.UiScales[Math.Clamp(i + d, 0, Settings.UiScales.Length - 1)]; break; }
+            case 2: Settings.UiMode = (Settings.UiMode + d + 5) % 5; break;
             case 3: Settings.Shake = Mathf.Clamp(Settings.Shake + .25f * d, 0, 1.5f); break;
             case 4: Settings.Fullscreen = !Settings.Fullscreen; Settings.ApplyWindow(testing); break;
             case 5: Settings.Res = (Settings.Res + d + Settings.Resolutions.Length) % Settings.Resolutions.Length; Settings.ApplyWindow(testing); break;

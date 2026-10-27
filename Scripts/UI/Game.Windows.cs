@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Win { None, Equip, Journal, Prod, Build, Trade, Story, Rift }
+public enum Win { None, Equip, Journal, Prod, Build, Trade, Story, Rift, Inventory }
 
-public sealed class BuildEntry { public string Name, Cost, Lock; public bool Unlocked, Affordable; public Action Do; }
+public sealed class BuildEntry { public string Name, Cost, Lock, Hint = ""; public bool Unlocked, Affordable; public Action Do; public int Cat, Tile = -1; public int[][] CostArr; }
 
 /// <summary>Состояние и ввод окон: экипировка [C], журнал [J], производство [P], постройки [B], торговля.</summary>
 public partial class Game
@@ -27,25 +27,32 @@ public partial class Game
     public List<WeaponDef> CraftableWeapons() { var l = new List<WeaponDef>(); foreach (var w in Db.Weapons) if (w.Cost != null) l.Add(w); return l; }
     public List<Building> ProdList() => Buildings.FindAll(b => IsProducer(b.Type));
 
+    public static readonly string[] BuildCatNames = { "Всё", "Базовое", "Производство", "Декор" };
+
+    /// <summary>Все постройки с категорией и иконкой тайла (для меню строительства). Cat: 1 — базовое, 2 — производство, 3 — декор.</summary>
     public List<BuildEntry> BuildEntries()
     {
         var l = new List<BuildEntry>();
-        void E(string n, int[][] cost, bool unl, string lk, Action a) => l.Add(new BuildEntry { Name = n, Cost = cost == null ? "" : CostStr(cost), Unlocked = unl, Lock = lk, Affordable = cost == null || Can(cost), Do = a });
-        E("Печь [1]", CostFurnace, true, "", BuildFurnace);
-        E("Фонарь [2]", CostLantern, true, "", () => BuildLamp(0));
-        E("Боевой фонарь [8]", LampCost[1], Has(Tech.CombatLamp), "улучшение [T] «Боевой фонарь»", () => BuildLamp(1));
-        E("Кристальный фонарь [9]", LampCost[2], Has(Tech.Optics), "улучшение [T] «Оптика»", () => BuildLamp(2));
-        E("Зеркало [0]", MirrorCost, Has(Tech.Optics), "улучшение [T] «Оптика»", BuildMirror);
+        void E(int cat, int tile, string n, int[][] cost, bool unl, string lk, Action a, string hint = "") => l.Add(new BuildEntry { Cat = cat, Tile = tile, Name = n, Hint = hint, CostArr = cost, Cost = cost == null ? "" : CostStr(cost), Unlocked = unl, Lock = lk, Affordable = cost == null || Can(cost), Do = a });
+        E(1, Art.Furnace, "Печь", CostFurnace, true, "", BuildFurnace, "Плавит руду в слитки, улучшает кирку [1]");
+        E(1, Art.Lantern, "Фонарь", CostLantern, true, "", () => BuildLamp(0), "Постоянный свет на клетке [2]");
+        E(1, Art.CombatLantern, "Боевой фонарь", LampCost[1], Has(Tech.CombatLamp), "улучшение [T] «Боевой фонарь»", () => BuildLamp(1), "Жжёт врагов рядом [8]");
+        E(1, Art.CrystalLantern, "Кристальный фонарь", LampCost[2], Has(Tech.Optics), "улучшение [T] «Оптика»", () => BuildLamp(2), "Пускает луч света [9]");
+        E(1, Art.Mirror1, "Зеркало", MirrorCost, Has(Tech.Optics), "улучшение [T] «Оптика»", BuildMirror, "Поворачивает луч [0]");
+        E(1, Art.AmpCrystal, "Светокристалл", AmpCost, BpDone.Contains("bp_amp"), "чертёж «Светокристаллы»", BuildAmp, "Усиливает соседние фонари");
+        E(1, Art.BarrierPost, "Столб-барьер", BarrierCost, BpDone.Contains("bp_barrier"), "чертёж «Световые барьеры»", BuildBarrier, "Два столба держат теней");
         for (int bk = 0; bk < BCount; bk++)
         {
             int k = bk; bool has = HasBuilding(BTypes[k]);
-            E(BNames[k] + (has ? " (построено)" : ""), has ? null : BCost(k, 1), BUnlocked(k), BLock(k), () => BuildBuilding(k));
+            E(2, AtlasX(BTypes[k], 1), BNames[k] + (has ? " ✓" : ""), has ? null : BCost(k, 1), BUnlocked(k), BLock(k), () => BuildBuilding(k), BDesc[k][0]);
         }
-        E("Светокристалл", AmpCost, BpDone.Contains("bp_amp"), "чертёж «Светокристаллы»", BuildAmp);
-        E("Столб-барьер", BarrierCost, BpDone.Contains("bp_barrier"), "чертёж «Световые барьеры»", BuildBarrier);
-        for (int dk = 0; dk < 3; dk++) { int kk = dk; E(DecorNames[kk], DecorCostArr(kk), BeaconLevel >= 2, "улучшите Центральный маяк", () => BuildDecor(kk)); }
+        int[] dt = { Art.Statue, Art.Fountain, Art.Banner };
+        for (int dk = 0; dk < 3; dk++) { int kk = dk; E(3, dt[dk], DecorNames[kk], DecorCostArr(kk), BeaconLevel >= 2, "улучшите Центральный маяк", () => BuildDecor(kk), "Украшение: бонус к производству"); }
         return l;
     }
+
+    /// <summary>Постройки выбранной категории (BuildCat; 0 — все).</summary>
+    public List<BuildEntry> BuildEntriesFiltered() { var all = BuildEntries(); if (BuildCat == 0) return all; return all.FindAll(e => e.Cat == BuildCat); }
 
     public List<int> SellList()
     {
@@ -57,9 +64,10 @@ public partial class Game
         switch (Window)
         {
             case Win.Equip: return WinTab == 0 ? Owned.Count + 1 : WinTab == 1 ? OwnedRelics.Count : WinTab == 2 ? CraftableWeapons().Count + Db.Mods.Length : 1;
-            case Win.Journal: return WinTab == 0 ? Db.Bps.Length : Found.Count;
+            case Win.Journal: return WinTab == 0 ? Db.Bps.Length : WinTab == 2 ? Goals.Count : Found.Count;
             case Win.Prod: return ProdList().Count;
-            case Win.Build: return BuildEntries().Count;
+            case Win.Build: return BuildEntriesFiltered().Count;
+            case Win.Inventory: return It.Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
         }
         return 0;
@@ -68,6 +76,24 @@ public partial class Game
     // ───────────────────────── ввод ─────────────────────────
     bool WindowKey(Key k, bool shift)
     {
+        if (Window == Win.Build || Window == Win.Inventory)
+        {
+            int cols = Window == Win.Build ? 5 : 7, wlen = WinLen();
+            switch (k)
+            {
+                case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;
+                case Key.Right: WinCur = Math.Min(Math.Max(0, wlen - 1), WinCur + 1); return true;
+                case Key.Up: WinCur = Math.Max(0, WinCur - cols); return true;
+                case Key.Down: WinCur = Math.Min(Math.Max(0, wlen - 1), WinCur + cols); return true;
+                case Key.Tab: if (Window == Win.Build) { BuildCat = (BuildCat + 1) % 4; WinCur = 0; Sfx.Play("tick", -6, 1.3f); } return true;
+                case Key.Enter: case Key.KpEnter:
+                    if (Window == Win.Build) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else if (!e.Affordable) Fail("Не хватает ресурсов: " + MissingStr(e.CostArr)); else { var tmp = e; Window = Win.None; tmp.Do(); } } }
+                    return true;
+                case Key.Escape: CloseWindows(); return true;
+                case Key.B: if (Window == Win.Build) { CloseWindows(); return true; } break;
+                case Key.I: if (Window == Win.Inventory) { CloseWindows(); return true; } break;
+            }
+        }
         if (Window == Win.Rift)
         {
             if (k == Key.Escape) { if (RiftState == 0) CloseWindows(); return true; }
@@ -82,6 +108,7 @@ public partial class Game
             case Key.J: OpenWin(Win.Journal); return true;
             case Key.P: OpenWin(Win.Prod); return true;
             case Key.B: OpenWin(Win.Build); return true;
+            case Key.I: OpenWin(Win.Inventory); return true;
             case Key.T: CloseWindows(); TechOpen = true; return true;
             case Key.M: CloseWindows(); MapOpen = true; return true;
             case Key.F5: Save(); Toast("Игра сохранена"); return true;
@@ -92,9 +119,9 @@ public partial class Game
         switch (Window)
         {
             case Win.Equip: EquipKey(k); break;
-            case Win.Journal: if (k == Key.Left) { WinTab = 0; WinCur = 0; } else if (k == Key.Right) { WinTab = 1; WinCur = 0; } break;
+            case Win.Journal: if (k == Key.Left) { WinTab = (WinTab + 2) % 3; WinCur = 0; } else if (k == Key.Right) { WinTab = (WinTab + 1) % 3; WinCur = 0; } break;
             case Win.Prod: ProdKey(k); break;
-            case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntries(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
+            case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
             case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) CloseWindows(); break;
         }
