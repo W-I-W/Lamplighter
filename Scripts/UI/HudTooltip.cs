@@ -92,10 +92,10 @@ public partial class Hud
         curMod = old;
     }
 
-    /// <summary>Клавиша действия — просто текст в квадратных скобках: золотой и мягко пульсирует, когда действие доступно; серый, когда нет.</summary>
+    /// <summary>Клавиша действия — просто текст в квадратных скобках: золотой и мягко пульсирует, когда действие доступно; приглушённо-золотой, когда нет (цвет клавиши не теряется).</summary>
     void DrawKeyCap(string key, Vector2 baseline, bool ok, TooltipStyle st)
     {
-        var c = ok ? st.KeyColor.Lerp(Colors.White, .55f * tip.Pulse(st.KeyPulseSpeed)) : st.DimColor;
+        var c = ok ? st.KeyColor.Lerp(Colors.White, .55f * tip.Pulse(st.KeyPulseSpeed)) : st.KeyColor.Darkened(.35f);
         Txt("[" + key + "]", baseline, 9, c);
     }
 }
