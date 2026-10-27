@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_u0rre"]
+
+[resource]
+script = ExtResource("1_u0rre")
+Id = "r_rimemirror"
+Title = "Зеркало инея"
+Desc = "Шаг лёгкий, как лёд"
+Tags = PackedStringArray("ice")
+Rarity = 2
+Effects = PackedStringArray("Speed:0.06")
+Tint = Color(0.7490196, 0.9137255, 1, 1)

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_iwk3u"]
+
+[resource]
+script = ExtResource("1_iwk3u")
+Id = "r_stormclaw"
+Title = "Громовой коготь"
+Desc = "Удары бьют молнией"
+Tags = PackedStringArray("storm")
+Rarity = 2
+Effects = PackedStringArray("Chain:1")
+Tint = Color(0.8156863, 0.6901961, 1, 1)

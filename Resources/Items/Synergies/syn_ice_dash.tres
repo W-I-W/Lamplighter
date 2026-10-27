@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SynergyDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/SynergyDef.cs" id="1_4t1xm"]
+
+[resource]
+script = ExtResource("1_4t1xm")
+Id = "syn_ice_dash"
+Title = "Взрыв холода"
+Path = "Ледяной путь"
+Desc = "Лёд + рывок: рывок морозит врагов вокруг"
+Requires = PackedStringArray("tag:ice>=1", "ability:dash")
+Grants = PackedStringArray("Flag:FrostDash")
+Hint = "нужны ледяной эффект и рывок [Shift]"

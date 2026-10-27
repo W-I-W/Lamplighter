@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_skxmd"]
+
+[resource]
+script = ExtResource("1_skxmd")
+Id = "r_frostshard"
+Title = "Ледяной осколок"
+Desc = "Враги слабее держат темп"
+Tags = PackedStringArray("ice")
+Effects = PackedStringArray("Slow:0.5")
+Tint = Color(0.56078434, 0.84705883, 1, 1)

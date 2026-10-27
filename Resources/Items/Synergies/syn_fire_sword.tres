@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SynergyDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/SynergyDef.cs" id="1_b5w5i"]
+
+[resource]
+script = ExtResource("1_b5w5i")
+Id = "syn_fire_sword"
+Title = "Поджигающие удары"
+Path = "Огненный путь"
+Desc = "Огненная реликвия + меч: удары поджигают"
+Requires = PackedStringArray("tag:fire>=1", "class:sword")
+Grants = PackedStringArray("Burn:1.5")
+Hint = "нужна огненная реликвия или вставка и меч"

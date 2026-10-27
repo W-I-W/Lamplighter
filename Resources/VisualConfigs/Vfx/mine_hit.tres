@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VfxDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/VfxDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "mine_hit"
+Particles = 3
+Speed = 40
+ParticleSize = 1.5
+Tint = Color(1, 1, 1, 1)
+RingRadius = 0
+RingTime = 0.6
+RingColor = Color(1, 0.8862745, 0.47843137, 1)
+Sfx = "mine"
+SfxDb = -3
+SfxPitch = 1.1
+Shake = 0
+Flash = 0

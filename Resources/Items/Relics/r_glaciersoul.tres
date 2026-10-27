@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_rob5l"]
+
+[resource]
+script = ExtResource("1_rob5l")
+Id = "r_glaciersoul"
+Title = "Душа ледника"
+Desc = "Холод в крови: заморозка чаще"
+Tags = PackedStringArray("ice")
+Rarity = 2
+Effects = PackedStringArray("Freeze:0.8")
+Tint = Color(0.62352943, 0.84705883, 1, 1)

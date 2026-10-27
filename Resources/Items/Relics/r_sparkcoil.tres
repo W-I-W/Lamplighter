@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_ripb0"]
+
+[resource]
+script = ExtResource("1_ripb0")
+Id = "r_sparkcoil"
+Title = "Катушка искр"
+Desc = "Копит свет от ударов"
+Tags = PackedStringArray("storm")
+Rarity = 1
+Effects = PackedStringArray("Siphon:0.5")
+Tint = Color(0.6901961, 0.627451, 1, 1)

@@ -1,6 +1,6 @@
 # Lanternreach — release notes for developers
 
-Version: **1.0.0** (`Game.VersionStr` in `Game.Menu.cs`, also `application/file_version` in `export_presets.cfg`).
+Version: **1.0.0** (`Game.VersionStr` in `Scripts/UI/Game.Menu.cs`, also `application/file_version` in `export_presets.cfg`).
 
 ## Build and export (Windows)
 
@@ -45,13 +45,13 @@ Use your own AppID only in the release build pipeline — never commit a test Ap
 
 ## Audio replacement
 
-See `audio/README.txt`. Music: `audio/music/{menu,forest,mines,ash,ice,heart,boss,finale}.ogg|mp3|wav`; SFX: `audio/sfx/NAME.ogg|wav`.
+See `Assets/Audio/README.txt`. Music: `Assets/Audio/Music/{menu,forest,mines,ash,ice,heart,boss,finale}.ogg|mp3|wav`; SFX: `Assets/Audio/Sfx/NAME.ogg|wav`.
 Without files the game synthesizes everything (placeholders).
 
 ## Localization
 
 Source texts are Russian; `lang/en.json` maps them to English (exact strings and `{0}`-templates). Text is translated at draw time (`Loc.T`).
-To add a language: copy `lang/en.json` to `lang/xx.json`, translate the values, add the code to the language toggle in `Game.Menu.cs`.
+To add a language: copy `lang/en.json` to `lang/xx.json`, translate the values, add the code to the language toggle in `Scripts/UI/Game.Menu.cs`.
 `.patch/extract_strings.py` lists all Russian literals in the code; the `loc` stage finds anything that still slips through.
 
 ## Known limits (be honest with players)
@@ -59,3 +59,27 @@ To add a language: copy `lang/en.json` to `lang/xx.json`, translate the values, 
 * Balance of the full 5-biome path was tuned analytically and with scripted runs; it has **not** been play-tested end-to-end by a human.
 * Key remapping covers movement and main actions; digit/Z/X build keys and F5 are fixed. On-screen hints keep the default key names.
 * Resolution/fullscreen changes are applied immediately but were not exercised on multiple monitors.
+
+## Stage 6 notes (gameplay design pass)
+
+* Test saves for four stages live in `testsaves/{early,mid,late,post}/save.json` (seed 4242). Use: `LAMP_AUTOTEST=<copy of the folder> LAMP_LOAD=1` + any stage, or `LAMP_STAGE=savesmoke`. Regenerate with `LAMP_STAGE=mksave LAMP_SAVE=<name>`. They never touch the player's `user://` saves.
+* Diagnostics: Settings → "Diagnostics (local only)" or `LAMP_DIAG=1`. Writes `user://diagnostics.json` (first-event times, mining/dark time, deaths, ability counts, fps, nodes, chunks, memory). Nothing is sent anywhere; off by default.
+* These are technical checks, not playtests. Questions about fun/pacing need real players: watch the first 30 minutes with diagnostics on and compare `first_events_secs` with the 5/10/20/30-minute targets.
+
+## Project layout and graphics pipeline (refactor)
+
+```
+Assets/Sprites/{Tilesets,Environment,Buildings,Items,Player,Npc,Enemies}/  PNG art (16x16, Nearest) — replace in place, see Assets/Sprites/README.md
+Assets/Shaders/{Darkness,Lighting}/   .gdshader + shared .gdshaderinc        Assets/Materials/   ShaderMaterial .tres
+Assets/Audio/{Music,Sfx}/             optional replacement sounds
+Resources/VisualConfigs/              VisualCatalog.tres, Entities/*.tres (EntityVisualDef), Vfx/*.tres (VfxDef)
+Resources/Items/{Relics,Synergies}/   relic and synergy definitions
+Scenes/Main.tscn
+Scripts/Core | Gameplay | World | Combat | Building | Inventory | Rendering | Visuals | UI | Tests
+Tools/GraphicsGenerator/              procedural art generators (fallback) + GraphicsExport (LAMP_STAGE=gengfx)
+```
+
+* Game logic never loads image files: `SpriteLibrary` (Scripts/Rendering) builds the tile/icon atlases from the PNGs and assigns creature sheets from `EntityVisualDef` resources. Procedural generation runs only if PNGs are missing.
+* Drawing code lives in `Scripts/Visuals` (`Game.Visual.*.cs`) and `Scripts/Rendering` (light data for the darkness shader); effects are launched by name with `Fx("tile_break", pos, color)`.
+* Regenerate placeholders (only needed if you change the procedural generators): `LAMP_STAGE=gengfx godot --path .` then `godot --headless --path . --import`.
+* The `graphics` check in `tools/run_checks.ps1` verifies the PNG-loaded textures equal the procedural ones and that nothing is regenerated at startup.

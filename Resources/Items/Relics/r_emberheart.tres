@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_6vafu"]
+
+[resource]
+script = ExtResource("1_6vafu")
+Id = "r_emberheart"
+Title = "Сердце пламени"
+Desc = "Реликвия Пепельного стража"
+Tags = PackedStringArray("fire")
+Rarity = 3
+Effects = PackedStringArray("Burn:1")
+Tint = Color(1, 0.41568628, 0.101960786, 1)

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SynergyDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/SynergyDef.cs" id="1_yfua1"]
+
+[resource]
+script = ExtResource("1_yfua1")
+Id = "syn_fire_staff"
+Title = "Огненные шары"
+Path = "Огненный путь"
+Desc = "Огонь + посох: шары взрываются"
+Requires = PackedStringArray("tag:fire>=1", "class:staff")
+Grants = PackedStringArray("Blast:1")
+Hint = "нужен огненный эффект и посох"

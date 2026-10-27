@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_yikh7"]
+
+[resource]
+script = ExtResource("1_yikh7")
+Id = "r_firstlight"
+Title = "Первый луч"
+Desc = "Свет героя шире"
+Tags = PackedStringArray("light")
+Rarity = 2
+Effects = PackedStringArray("HeroRadius:0.1")
+Tint = Color(1, 0.9490196, 0.6901961, 1)

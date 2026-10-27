@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SynergyDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/SynergyDef.cs" id="1_5h4es"]
+
+[resource]
+script = ExtResource("1_5h4es")
+Id = "syn_ice_staff"
+Title = "Ледяные шары"
+Path = "Ледяной путь"
+Desc = "Лёд + посох: шары замораживают"
+Requires = PackedStringArray("tag:ice>=1", "class:staff")
+Grants = PackedStringArray("Freeze:1")
+Hint = "нужен ледяной эффект и посох"

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VfxDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/VfxDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "level_up"
+Particles = 16
+Speed = 90
+ParticleSize = 1.5
+Tint = Color(1, 0.8862745, 0.47843137, 1)
+RingRadius = 50
+RingTime = 0.8
+RingColor = Color(1, 0.8862745, 0.47843137, 1)
+Sfx = "levelup"
+SfxDb = 0
+SfxPitch = 1
+Shake = 0
+Flash = 0

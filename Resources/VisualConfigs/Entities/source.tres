@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EntityVisualDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/EntityVisualDef.cs" id="1"]
+[ext_resource type="Texture2D" path="res://Assets/Sprites/Enemies/source.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+Id = "source"
+Sheet = ExtResource("2")
+Frames = 2
+FrameSize = 16
+Fps = 4.0
+Scale = 3.2
+Offset = Vector2(-8, -10)
+Bob = 1.2
+Lift = 0
+ShadowRadius = 16

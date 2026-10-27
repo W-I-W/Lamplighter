@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/RelicDef.cs" id="1_85w67"]
+
+[resource]
+script = ExtResource("1_85w67")
+Id = "r_ashcrown"
+Title = "Пепельная корона"
+Desc = "Огонь и жар вредят слабее"
+Tags = PackedStringArray("fire")
+Rarity = 2
+Effects = PackedStringArray("HeatResist:0.35")
+Tint = Color(0.7529412, 0.3137255, 0.16470589, 1)

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VfxDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/VfxDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "rare_pickup_big"
+Particles = 8
+Speed = 50
+ParticleSize = 2
+Tint = Color(1, 1, 1, 1)
+RingRadius = 40
+RingTime = 0.6
+RingColor = Color(1, 1, 1, 1)
+Sfx = "chest"
+SfxDb = -8
+SfxPitch = 0.8
+Shake = 0
+Flash = 0

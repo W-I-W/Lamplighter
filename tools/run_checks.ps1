@@ -38,12 +38,13 @@ Run-Stage 'menu, slots, backup, rebind' 'menu' @('save to slot1 exists=True vali
 Run-Stage 'localization sweep (en)' 'loc' @('SCRIPT DONE') @{ LAMP_LANG = 'en' } @('loc-missing')
 Run-Stage 'perf stress (chunks, 30 enemies)' 'perf' @('PERF: chunks=') @{} @('fps=(?:[0-9]|[1-5][0-9]) ')
 Run-Stage 'final checks: chunks, regrowth, death, save' 'final' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
+Run-Stage 'graphics: PNG textures identical to procedural, no regeneration' 'texcheck' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
 Run-Stage 'economy audit (trade loops, sinks)' 'econ' @('ECON AUDIT PASSED')
 Run-Stage 'combat audit (weapons, dead effects)' 'combat' @('COMBAT AUDIT PASSED')
 Run-Stage 'soak: 100 s, all biomes, leaks/fps' 'soak' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
 foreach ($k in 'early','mid','late','post') {
     $tmp = Join-Path $env:TEMP "lamp_check_save_$k"; New-Item -ItemType Directory -Force $tmp | Out-Null
-    Copy-Item "$root	estsaves\$k\save.json" $tmp -Force
+    Copy-Item (Join-Path (Join-Path $root "testsaves") (Join-Path $k "save.json")) $tmp -Force
     $env:LAMP_AUTOTEST = $tmp; $env:LAMP_STAGE = 'savesmoke'; $env:LAMP_LOAD = '1'; $env:LAMP_LANG = ''
     $out = cmd /c "`"$Godot`" --path . --resolution 1280x720 2>&1" | Out-String
     $ok = ($out -match 'SUMMARY failures=0') -and ($out -notmatch '\[check\] FAIL') -and ($out -notmatch 'EXCEPTION')
