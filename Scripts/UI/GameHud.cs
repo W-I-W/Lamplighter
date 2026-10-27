@@ -36,6 +36,20 @@ public partial class GameHud : Control
     }
 
     /// <summary>Находится ли точка (в логических координатах интерфейса) над видимой панелью HUD.</summary>
+    /// <summary>Свободный по горизонтали промежуток между панелями слева и справа в полосе y0..y1.</summary>
+    public (float l, float r) FreeSpan(float y0, float y1, float vsX)
+    {
+        float l = 0, r = vsX;
+        if (panels == null) return (l, r);
+        foreach (var c in panels)
+        {
+            if (c == null || !c.IsVisibleInTree()) continue;
+            var g = c.GetGlobalRect(); if (g.End.Y < y0 || g.Position.Y > y1) continue;
+            if (g.GetCenter().X < vsX * .5f) l = Mathf.Max(l, g.End.X); else r = Mathf.Min(r, g.Position.X);
+        }
+        return (l, r);
+    }
+
     public bool IsOver(Vector2 p)
     {
         if (panels == null) return false;

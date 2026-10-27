@@ -198,14 +198,24 @@ public partial class Hud : Control
     void DrawToasts(Vector2 vs, float y)
     {
         y += 8; int from = Mathf.Max(0, G.Toasts.Count - 3);
+        float sl = 0, sr = vs.X;
+        if (G.GameHudNode != null) (sl, sr) = G.GameHudNode.FreeSpan(y - 8, y + 50, vs.X);
+        float cx = (sl + sr) * .5f, maxW = Mathf.Max(80, sr - sl - 24);   // центр и ширина — между боковыми панелями
         for (int i = from; i < G.Toasts.Count; i++)
         {
             var t = G.Toasts[i]; float a = Mathf.Clamp(t.Life, 0, 1);
-            float w = Mathf.Min(TextW(t.S), vs.X - 30);
+            var lines = new List<string>(); string line = "";
+            foreach (var word in Loc.T(t.S).Split(' '))
+            {
+                string n = line == "" ? word : line + " " + word;
+                if (TextW(n) > maxW && line != "") { lines.Add(line); line = word; } else line = n;
+            }
+            if (line != "") lines.Add(line);
+            float w = 0; foreach (var l in lines) w = Mathf.Max(w, TextW(l));
             var old = Modulate; Modulate = new Color(1, 1, 1, a);
-            Panel(new Rect2(Mathf.Round(vs.X * .5f - w * .5f - 5), y - 8, w + 10, 13), "PanelDark");
-            Txt(t.S, new Vector2(vs.X * .5f - w * .5f, y + 1), 9, Text);
-            Modulate = old; y += 15;
+            Panel(new Rect2(Mathf.Round(cx - w * .5f - 5), y - 8, w + 10, 4 + lines.Count * 10), "PanelDark");
+            for (int k = 0; k < lines.Count; k++) Txt(lines[k], new Vector2(cx - w * .5f, y + 1 + k * 10), 9, Text);
+            Modulate = old; y += 6 + lines.Count * 10;
         }
     }
 
