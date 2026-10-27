@@ -152,7 +152,7 @@ public partial class Game
         for (int i = 0; i < It.Count; i++)
         {
             int n = Stock[i] + b.Local[i];
-            if (n > 0) { Inv[i] += n; tot += n; Texts.Add(new FText { P = PPos + new Vector2(rng.RandfRange(-8, 8), -12 - i * 3), S = $"+{n} {It.Names[i]}", Life = 1.2f, C = It.Col[i] }); Stock[i] = 0; b.Local[i] = 0; }
+            if (n > 0) { Inv[i] += n; tot += n; Texts.Add(new FText { P = PPos + new Vector2(rng.RandfRange(-8, 8), -12 - i * 3), S = $"{It.Ic(i)}+{n} {It.Names[i]}", Life = 1.2f, C = It.Col[i] }); Stock[i] = 0; b.Local[i] = 0; }
         }
         if (tot > 0) Sfx.Play("pickup");
     }

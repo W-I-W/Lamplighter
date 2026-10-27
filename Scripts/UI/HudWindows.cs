@@ -194,7 +194,7 @@ public partial class Hud
         {
             var sl = G.SellList(); if (sl.Count == 0) wv.Text(false, "Нечего продавать.", Dim, false);
             int sc = Scroll(G.WinCur, vis);
-            for (int i = sc; i < sl.Count && i < sc + vis; i++) wv.Row(i, Sel(i), $"{Loc.T(It.Names[sl[i]])} ×{G.Inv[sl[i]]}", $"{G.SellPrice(sl[i])}", It.Col[sl[i]]);
+            for (int i = sc; i < sl.Count && i < sc + vis; i++) wv.Row(i, Sel(i), $"{It.Ic(sl[i])}{Loc.T(It.Names[sl[i]])} ×{G.Inv[sl[i]]}", $"{G.SellPrice(sl[i])}", It.Col[sl[i]]);
             string d = ""; for (int i = 0; i < G.Demand.Length; i++) d += $"{Loc.T(Game.CatNames[i])} {(int)(G.Demand[i] * 100)}%  ";
             wv.Text(false, Loc.T("Спрос: ") + d, Dim, true, 2);
         }

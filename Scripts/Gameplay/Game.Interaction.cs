@@ -109,7 +109,7 @@ public partial class Game
     /// <summary>Только недостающие ресурсы: «Дерево 3/10 · Камень 0/5».</summary>
     string MissingStr(int[][] cost)
     {
-        var l = new List<string>(); foreach (var c in cost) { int have = HaveAny(c[0]); if (have < c[1]) l.Add($"{It.Names[c[0]]} {have}/{c[1]}"); }
+        var l = new List<string>(); foreach (var c in cost) { int have = HaveAny(c[0]); if (have < c[1]) l.Add($"{It.Ic(c[0])}{It.Names[c[0]]} {have}/{c[1]}"); }
         return string.Join(" · ", l);
     }
 
@@ -117,5 +117,6 @@ public partial class Game
     public bool UiOver(Vector2 logical) => (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical)) || (buildMenu != null && buildMenu.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
     public void PressWindowKey(Key k) => WindowKey(k, false);
     public string NeedText(int[][] cost) => NeedStr(cost);
+    public string NeedShortText(int[][] cost) => NeedShort(cost);
     public string MissingText(int[][] cost) => MissingStr(cost);
 }

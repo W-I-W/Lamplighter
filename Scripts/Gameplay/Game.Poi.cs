@@ -139,7 +139,7 @@ public partial class Game
         foreach (var (item, n) in got)
         {
             Inv[item] += n; parts.Add($"{n} {It.Ab[item]}");
-            Texts.Add(new FText { P = p.Pos + new Vector2((k % 3 - 1) * 16, -10 - (k / 3) * 8), S = $"+{n} {It.Names[item]}", Life = 1.6f, C = It.Col[item] }); k++;
+            Texts.Add(new FText { P = p.Pos + new Vector2((k % 3 - 1) * 16, -10 - (k / 3) * 8), S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.6f, C = It.Col[item] }); k++;
         }
         SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); p.State = 3; GiveXp(15 + tier * 5);
         Burst(p.Pos, new Color("#ffe27a"), 18, 80);
@@ -213,21 +213,21 @@ public partial class Game
         int rescued = Villagers.Count;
         var a1 = W.Ancients[1]; var boss1 = BossLantern(1);
         bool Lv2() { foreach (var b in Buildings) if (b.Level >= 2) return true; return false; }
-        Add("Построить печь [1]", HasFurnace, NeedStr(CostFurnace));
+        Add("Построить печь [1]", HasFurnace, NeedShort(CostFurnace));
         Add("Создать оружие [C]", Owned.Count > 0, "Вкладка «Создание» у печи: меч — Медь 4, Дерево 3; лук; посох");
-        Add("Медная кирка [3] у печи", Tier >= 1, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedStr(CostPick[0]) : NeedStr(CostPick[0]));
+        Add("Медная кирка [3] у печи", Tier >= 1, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
-        Add("Построить склад [4]", HasBuilding(Tl.Warehouse), NeedStr(BCost(0, 1)));
+        Add("Построить склад [4]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
         Add("Найти забытую технологию", BpDone.Contains("bp_hub"), "Светящийся постамент даёт чертёж «Логистика» (его можно и купить в лавке)", NearestPoi(PK.TechCache, true)?.Pos);
         var cap = NearestPoi(PK.Captive, true);
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
-        Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedStr(BCost(8, 1)));
-        Add("Построить лесопилку [5]", HasBuilding(Tl.Sawmill), NeedStr(BCost(1, 1)));
-        Add("Построить шахту [6]", HasBuilding(Tl.Mine), LitCount >= 1 ? NeedStr(BCost(2, 1)) : "Сначала зажгите древний фонарь");
-        Add("Железная кирка [3]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedStr(CostPick[1]));
-        Add("Построить кузницу [7]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedStr(BCost(3, 1)) : "Нужен спасённый житель");
-        Add("Подключить производство узлами [B]", HasBuilding(Tl.Hub) || !HasBuilding(Tl.Mine), BpDone.Contains("bp_hub") ? NeedStr(BCost(7, 1)) : "Нужен чертёж «Логистика» [J]");
-        Add("Построить цех переработки [B]", HasBuilding(Tl.Refinery), BpDone.Contains("bp_refinery") ? NeedStr(BCost(6, 1)) : "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений");
+        Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedShort(BCost(8, 1)));
+        Add("Построить лесопилку [5]", HasBuilding(Tl.Sawmill), NeedShort(BCost(1, 1)));
+        Add("Построить шахту [6]", HasBuilding(Tl.Mine), LitCount >= 1 ? NeedShort(BCost(2, 1)) : "Сначала зажгите древний фонарь");
+        Add("Железная кирка [3]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
+        Add("Построить кузницу [7]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
+        Add("Подключить производство узлами [B]", HasBuilding(Tl.Hub) || !HasBuilding(Tl.Mine), BpDone.Contains("bp_hub") ? NeedShort(BCost(7, 1)) : "Нужен чертёж «Логистика» [J]");
+        Add("Построить цех переработки [B]", HasBuilding(Tl.Refinery), BpDone.Contains("bp_refinery") ? NeedShort(BCost(6, 1)) : "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)");
         Add("Улучшить здание до ур.2 [U]", Lv2(), "Подойдите к зданию и нажмите U");
         Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
@@ -239,7 +239,7 @@ public partial class Game
             var nm = NearestUnlit(1);
             Add("Зажечь фонари шахт", LitIn(1) >= 3, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
             Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник");
-            Add("Кристальная кирка [3]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedStr(CostPick[2]));
+            Add("Кристальная кирка [3]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
             Add("Изучить «Кристальную оптику» [T]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
             Add("Победить Хранителя глубин", BossDown(2), "Он в самом глубоком озере шахт — награда: Прожектор [R] и второе ядро", BossLantern(2)?.Pos);
             Add("Улучшить маяк: путь в пустоши", BeaconLevel >= 3, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
@@ -249,7 +249,7 @@ public partial class Game
             var na = NearestUnlit(2);
             Add("Зажечь фонари пустошей", LitIn(2) >= 3, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
             Add("Теплозащита или огненное лезвие [T]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
-            Add("Обсидиановая кирка [3]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedStr(CostPick[3]));
+            Add("Обсидиановая кирка [3]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
             Add("Построить коллектор пепла [X]", HasBuilding(Tl.Collector), Has(Tech.Collector) ? "Ставьте на освещённой земле пустошей" : "Изучите «Пепельный коллектор» [T]");
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);

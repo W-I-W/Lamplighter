@@ -50,7 +50,7 @@ public static class Loc
     }
 
     static readonly Regex Run = new(@"[А-Яа-яЁё][А-Яа-яЁё .,'«»…—\-:!?]*[А-Яа-яЁё.»]|[А-Яа-яЁё]", RegexOptions.Compiled);
-    static readonly Regex Bullet = new(@"^((?:[▶•★☆✓●◆○▮ ]+|\[[^\]]{1,2}\] ))(.+)$", RegexOptions.Compiled | RegexOptions.Singleline);
+    static readonly Regex Bullet = new(@"^((?:[▶•★☆✓●◆○▮ -]+|\[[^\]]{1,2}\] ))(.+)$", RegexOptions.Compiled | RegexOptions.Singleline);
     static bool HasCyr(string s) { foreach (var c in s) if (c >= 'А' && c <= 'я' || c == 'ё' || c == 'Ё') return true; return false; }
 
     public static string T(string s)

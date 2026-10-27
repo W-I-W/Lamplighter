@@ -45,7 +45,7 @@ public partial class BuildMenu : Control
         if (!s.Unlocked) { status.Text = Loc.T("Закрыто: ") + Loc.T(s.Lock); status.AddThemeColorOverride("font_color", new Color("#ffb36a")); }
         else if (!s.Affordable) { status.Text = Loc.T("Не хватает: ") + Loc.T(G.MissingText(s.CostArr)); status.AddThemeColorOverride("font_color", new Color("#ffb36a")); }
         else { status.Text = Loc.T("Можно строить"); status.AddThemeColorOverride("font_color", new Color("#9be07a")); }
-        cost.Text = s.CostArr == null ? "" : Loc.T("Цена: ") + Loc.T(G.NeedText(s.CostArr));
+        cost.Text = s.CostArr == null ? "" : Loc.T("Цена: ") + G.NeedShortText(s.CostArr);
         place.Text = Loc.T("Enter — выбрать, затем курсор на свободную клетку рядом: она подсветится зелёным");
     }
 }

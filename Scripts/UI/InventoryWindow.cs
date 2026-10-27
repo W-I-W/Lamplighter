@@ -27,7 +27,7 @@ public partial class InventoryWindow : Control
             int n = G.Inv[i]; slots[i].Set(UiIcons.Item(i), n > 0 ? (n >= 10000 ? $"{n / 1000}k" : n.ToString()) : "", "", i == G.WinCur ? SlotState.Selected : SlotState.Normal, 0, "", n > 0 ? 1f : .3f);
         }
         int c = Mathf.Clamp(G.WinCur, 0, It.Count - 1);
-        nameL.Text = $"{Loc.T(It.Names[c])} ×{G.Inv[c]}";
+        nameL.Text = $"{It.Ic(c)} {Loc.T(It.Names[c])} ×{G.Inv[c]}";
         string d = Game.Tradable(c) ? string.Format(Loc.T("Цена продажи: {0} · цена покупки: {1}"), G.SellPrice(c), G.BuyPrice(c)) : Loc.T("Не продаётся");
         if (G.Stock[c] > 0) d += "\n" + string.Format(Loc.T("На складе: {0}"), G.Stock[c]);
         desc.Text = d;

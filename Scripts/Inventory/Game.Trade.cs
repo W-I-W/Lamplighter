@@ -55,7 +55,7 @@ public partial class Game
         float mult = ev == null ? 1f : 1.3f;
         var r = new Random(ev != null ? ev.Seed : W.Seed * 13 + TradeEpoch * 977 + lvl * 31);
         var l = new List<Offer>();
-        void Item(int item, int n) => l.Add(new Offer { Key = $"i{item}x{n}", Kind = "item", Item = item, N = n, Price = (int)(BuyPrice(item) * n * mult), Title = $"{It.Names[item]} ×{n}", Desc = "Материалы без добычи", Rar = Rar.Common });
+        void Item(int item, int n) => l.Add(new Offer { Key = $"i{item}x{n}", Kind = "item", Item = item, N = n, Price = (int)(BuyPrice(item) * n * mult), Title = $"{It.Ic(item)}{It.Names[item]} ×{n}", Desc = "Материалы без добычи", Rar = Rar.Common });
         void Frag(string bp, int price, Rar rar = Rar.Uncommon)
         {
             var d = Db.Bp(bp); if (d == null || BpDone.Contains(bp)) return;

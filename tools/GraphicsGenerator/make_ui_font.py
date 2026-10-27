@@ -202,7 +202,13 @@ cap('№', ['#..#.', '##.#.', '#.##.', '#..#.', '.....', '.....', '.....'])
 codes = sorted(ord(c) for c in G)
 CW, CH, CELL_W, CELL_H, COLS = 5, 9, 8, 10, 16
 rows = (len(codes) + COLS - 1) // COLS
-W, H = COLS * CELL_W, rows * CELL_H
+# цветные значки предметов 11x11 (U+E000 + индекс предмета): уменьшены из Assets/Sprites/Items/icon_NNN_*.png, идут в тексте как обычные символы
+import glob
+from PIL import Image
+ICON_FILES = sorted(glob.glob('Assets/Sprites/Items/icon_*.png'))[:21]
+ICON_CELL, ICON_COLS = 12, 10
+icon_rows = (len(ICON_FILES) + ICON_COLS - 1) // ICON_COLS
+W, H = COLS * CELL_W, rows * CELL_H + icon_rows * ICON_CELL + 1
 px = [[(0, 0, 0, 0) for _ in range(W)] for _ in range(H)]
 chars = []
 for i, code in enumerate(codes):
@@ -212,6 +218,15 @@ for i, code in enumerate(codes):
         for x, c in enumerate(row):
             if c == '#': px[oy + y][ox + x] = (255, 255, 255, 255)
     chars.append(f'char id={code} x={ox} y={oy} width={CW} height={CH} xoffset=0 yoffset=0 xadvance=6 page=0 chnl=15')
+icon_y0 = rows * CELL_H + 1
+for i, f in enumerate(ICON_FILES):
+    im = Image.open(f).convert('RGBA').resize((11, 11), Image.LANCZOS)
+    ox, oy = (i % ICON_COLS) * ICON_CELL, icon_y0 + (i // ICON_COLS) * ICON_CELL
+    for y in range(11):
+        for x in range(11):
+            r, g, bl, a = im.getpixel((x, y))
+            if a >= 110: px[oy + y][ox + x] = (r, g, bl, 255)
+    chars.append(f'char id={0xE000 + i} x={ox} y={oy} width=11 height=11 xoffset=0 yoffset=0 xadvance=12 page=0 chnl=15')
 base = 'Assets/UI/Fonts'
 png(f'{base}/lantern.png', W, H, px)
 fnt = [f'info face="Lantern Pixel" size=9 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0 outline=0',

@@ -16,6 +16,8 @@ public static class It
     public static readonly Color[] Col = {
         new("#c9a070"), new("#c0c0cc"), new("#f0a060"), new("#c8d4e8"), new("#8ff0ff"), new("#f2b062"), new("#dfe8f6"), new("#d58cff"), new("#ffd86b"),
         new("#e8eef6"), new("#cfd6e2"), new("#bfe9ff"), new("#a890ff"), new("#ff9a2e"), new("#fff2b0"), new("#ffb0ff"), new("#ffd86b"), new("#b0b8c8"), new("#9fe8ff"), new("#bfe9ff"), new("#c070ff") };
+    /// <summary>Значок предмета как символ шрифта (цветной глиф U+E000+индекс из Assets/UI/Fonts/lantern.png): ставится в тексте перед названием или числом.</summary>
+    public static string Ic(int item) => ((char)(0xE000 + item)).ToString();
     /// <summary>Слиток, получаемый из руды (или -1).</summary>
     public static int IngotOf(int ore) => ore == CopperOre ? Copper : ore == IronOre ? Iron : ore == SilverOre ? Silver : -1;
 }
@@ -711,7 +713,7 @@ public partial class Game : Node2D
     public void Give(int item, int n, Vector2 at)
     {
         Inv[item] += n; Diag.Count("give_" + item);
-        Texts.Add(new FText { P = at, S = $"+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });
+        Texts.Add(new FText { P = at, S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });
         if (IsRareItem(item)) RareGiveFx(item, at);
         Sfx.Play("pickup", -6, 1f + .05f * (item % 5));
     }
@@ -751,11 +753,16 @@ public partial class Game : Node2D
 
     public static string CostStr(int[][] cost)
     {
-        var s = new List<string>(); foreach (var c in cost) s.Add($"{c[1]} {It.Ab[c[0]]}"); return string.Join(" ", s);
+        var s = new List<string>(); foreach (var c in cost) s.Add($"{It.Ic(c[0])}{c[1]}"); return string.Join(" ", s);
+    }
+    /// <summary>Компактная запись для целей: значок и «есть/нужно» без названий.</summary>
+    public string NeedShort(int[][] cost)
+    {
+        var s = new List<string>(); foreach (var c in cost) s.Add($"{It.Ic(c[0])}{Math.Min(Inv[c[0]], c[1])}/{c[1]}"); return string.Join(" ", s);
     }
     public string NeedStr(int[][] cost)
     {
-        var s = new List<string>(); foreach (var c in cost) s.Add($"{It.Names[c[0]]} {Math.Min(Inv[c[0]], c[1])}/{c[1]}"); return string.Join(" · ", s);
+        var s = new List<string>(); foreach (var c in cost) s.Add($"{It.Ic(c[0])}{It.Names[c[0]]} {Math.Min(Inv[c[0]], c[1])}/{c[1]}"); return string.Join(" · ", s);
     }
 
     public Vector2I? PlaceTarget(bool needLit = false)
@@ -825,7 +832,7 @@ public partial class Game : Node2D
             smeltT = 0; int ore = SmeltQ[0]; SmeltQ.RemoveAt(0);
             int ingot = It.IngotOf(ore);
             Inv[ingot]++; GiveXp(2); Sfx.Play("tick");
-            Texts.Add(new FText { P = SmeltAt + new Vector2(0, -8), S = $"+1 {It.Names[ingot]}", Life = 1.1f, C = It.Col[ingot] });
+            Texts.Add(new FText { P = SmeltAt + new Vector2(0, -8), S = $"{It.Ic(ingot)}+1 {It.Names[ingot]}", Life = 1.1f, C = It.Col[ingot] });
         }
     }
 
