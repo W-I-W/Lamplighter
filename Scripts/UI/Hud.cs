@@ -229,8 +229,7 @@ public partial class Hud : Control
         string key = G.selHasE ? "E" : G.selHasU ? "U" : "";
         if (key != "")
         {
-            Sty(new Rect2(p.X - 6, p.Y - 10, 12, 11), "Keycap");
-            Txt(key, new Vector2(p.X - 3, p.Y - 2), 9, Gold); p.Y -= 12;
+            Txt("[" + key + "]", new Vector2(p.X - TextW("[" + key + "]") / 2, p.Y - 2), 9, Gold); p.Y -= 12;
         }
         string t = Loc.T(G.selTitle); float w = TextW(t) + 8;
         Sty(new Rect2(Mathf.Round(p.X - w / 2), p.Y - 10, w, 12), "PanelDark");

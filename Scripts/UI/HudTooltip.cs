@@ -40,7 +40,7 @@ public partial class Hud
         return lines;
     }
 
-    float KeyCapW(string key) => Mathf.Max(11, TextW(key) + 6);
+    float KeyCapW(string key) => TextW("[" + key + "]");
 
     void DrawTooltip(Vector2 vs)
     {
@@ -92,12 +92,10 @@ public partial class Hud
         curMod = old;
     }
 
-    /// <summary>Клавиша-«кнопка» [E]: золотая и мягко пульсирует, когда действие доступно; серая, когда нет.</summary>
+    /// <summary>Клавиша действия — просто текст в квадратных скобках: золотой и мягко пульсирует, когда действие доступно; серый, когда нет.</summary>
     void DrawKeyCap(string key, Vector2 baseline, bool ok, TooltipStyle st)
     {
-        float w = KeyCapW(key); var cap = new Rect2(baseline.X, baseline.Y - 8, w, 11);
-        Sty(cap, st.KeycapStyle);
         var c = ok ? st.KeyColor.Lerp(Colors.White, .55f * tip.Pulse(st.KeyPulseSpeed)) : st.DimColor;
-        Txt(key, new Vector2(Mathf.Round(cap.Position.X + (w - TextW(key)) / 2), baseline.Y), 9, c);
+        Txt("[" + key + "]", baseline, 9, c);
     }
 }
