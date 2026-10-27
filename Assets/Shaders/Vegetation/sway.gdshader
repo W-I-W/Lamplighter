@@ -34,7 +34,9 @@ void fragment() {
 		float ly = fract(UV.y * atlas.y / 16.0);                 // 0 = top of the tile, 1 = bottom
 		// the base of the plant stays fixed, the tip moves most: 0 at the bottom row, 1 at the first opaque row of the sprite
 		float tr = top_row[int(col)] / 16.0;
-		float lift = pow(clamp((1.0 - ly) / max(1.0 - tr, 0.1), 0.0, 1.0), 1.4);
+		// bend curve taken from the CapyCam "Tree & Grass Motion" shader (smoothstep * power), normalised so the tip of the sprite = 1 and the root = 0
+		float yy = clamp((ly - tr) / max(1.0 - tr, 0.1), 0.0, 1.0);          // 0 at the first opaque row, 1 at the bottom
+		float lift = smoothstep(0.3, 1.3, pow(1.0 - yy, 0.5)) * pow(2.0 - yy, 1.5) / (0.784 * 2.83);
 		float shift = a * sway;
 		// pushed by the player
 		vec2 centre = (cell + 0.5) * 16.0;
