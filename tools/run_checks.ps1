@@ -38,7 +38,7 @@ Run-Stage 'menu, slots, backup, rebind' 'menu' @('save to slot1 exists=True vali
 Run-Stage 'localization sweep (en)' 'loc' @('SCRIPT DONE') @{ LAMP_LANG = 'en' } @('loc-missing')
 Run-Stage 'perf stress (chunks, 30 enemies)' 'perf' @('PERF: chunks=') @{} @('fps=(?:[0-9]|[1-5][0-9]) ')
 Run-Stage 'final checks: chunks, regrowth, death, save' 'final' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
-Run-Stage 'graphics: PNG textures identical to procedural, no regeneration' 'texcheck' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
+Run-Stage 'graphics: all sprites and effect primitives load from PNG' 'texcheck' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
 Run-Stage 'interaction: selection, hysteresis, mouse, E/U, build mode, removal' 'interact' @('SUMMARY failures=0') @{} @('\[check\] FAIL')
 $tmpI = Join-Path $env:TEMP 'lamp_check_interactload'; New-Item -ItemType Directory -Force $tmpI | Out-Null
 Copy-Item (Join-Path (Join-Path $root 'testsaves') 'mid\save.json') $tmpI -Force

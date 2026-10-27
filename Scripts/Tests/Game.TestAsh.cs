@@ -114,7 +114,7 @@ public partial class Game
             Tp(W.Ancients[0].Pos + new Vector2(0, 30)); Cur = FindIx(); Cur.E?.Invoke(); Log($"beacon level={BeaconLevel} radius={W.Ancients[0].TargetRadius}");
         });
         S(2f, () => Shot("a11_beacon4"));
-        S(.2f, () => { MapOpen = true; for (int i = 0; i < Expl.Length; i++) Expl[i] = 1; RebuildMap(); });
+        S(.2f, () => { MapOpen = true; for (int i = 0; i < Expl.Length; i++) Expl[i] = 1; });
         S(.6f, () => { Shot("a12_map"); MapOpen = false; TechOpen = true; TechPage = 2; });
         S(.5f, () => { Shot("a13_tech_ash"); TechOpen = false; });
     }

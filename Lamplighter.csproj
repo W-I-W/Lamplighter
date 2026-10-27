@@ -4,4 +4,8 @@
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Архив процедурного генератора заглушек: в игру не входит, графика берётся только из PNG -->
+    <Compile Remove="tools/GraphicsGenerator/**/*.cs" />
+  </ItemGroup>
 </Project>

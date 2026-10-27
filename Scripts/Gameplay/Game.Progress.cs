@@ -145,15 +145,10 @@ public partial class Game
 
     // ───────────────────────── карта ─────────────────────────
     public byte[] Expl = new byte[(World.Wd / 4) * (World.Ht / 4)];
-    Image mapImg; public ImageTexture MapTex; bool mapDirty = true; public bool MapOpen; float mapT;
+    public bool MapOpen; float mapT;
     const int CW = World.Wd / 4;
 
-    void InitMap()
-    {
-        mapImg = Image.CreateEmpty(World.Wd, World.Ht, false, Image.Format.Rgba8);
-        mapImg.Fill(new Color(0, 0, 0, 0));
-        MapTex = ImageTexture.CreateFromImage(mapImg);
-    }
+    void InitMap() { }
 
     void Reveal(Vector2 p, float rad)
     {
@@ -162,7 +157,7 @@ public partial class Game
             for (int cx = Math.Max(0, cx0); cx <= Math.Min(CW - 1, cx1); cx++)
             {
                 var cc = new Vector2((cx * 4 + 2) * TS, (cy * 4 + 2) * TS);
-                if (cc.DistanceTo(p) <= rad && Expl[cy * CW + cx] == 0) { Expl[cy * CW + cx] = 1; mapDirty = true; }
+                if (cc.DistanceTo(p) <= rad && Expl[cy * CW + cx] == 0) Expl[cy * CW + cx] = 1;
             }
     }
 
@@ -172,67 +167,51 @@ public partial class Game
         Reveal(PPos, 9 * TS);
         foreach (var a in W.Ancients) if (a.Lit) Reveal(a.Pos, AncientR(a));
         foreach (var l in Lamps) Reveal(l.Pos, 5 * TS);
-        if (mapDirty && (MapOpen || mapImg == null)) RebuildMap();
-        else if (mapDirty && Time % 4f < .6f) RebuildMap();
     }
 
     public bool IsExplored(Vector2 p) { int cx = (int)(p.X / TS / 4), cy = (int)(p.Y / TS / 4); return cx >= 0 && cy >= 0 && cx < CW && cy < World.Ht / 4 && Expl[cy * CW + cx] != 0; }
 
-    public void RebuildMap()
-    {
-        mapDirty = false;
-        var data = new byte[World.Wd * World.Ht * 4];
-        for (int y = 0; y < World.Ht; y++)
-            for (int x = 0; x < World.Wd; x++)
-            {
-                if (Expl[(y / 4) * CW + x / 4] == 0) continue;
-                var c = MapColor(x, y); int i = (y * World.Wd + x) * 4;
-                data[i] = (byte)(c.R * 255); data[i + 1] = (byte)(c.G * 255); data[i + 2] = (byte)(c.B * 255); data[i + 3] = 255;
-            }
-        mapImg = Image.CreateFromData(World.Wd, World.Ht, false, Image.Format.Rgba8, data);
-        MapTex.Update(mapImg);
-    }
-
-    Color MapColor(int x, int y)
+    /// <summary>Индекс цвета клетки на карте в палитре Assets/UI/Map/map_palette.png (порядок цветов — в tools/GraphicsGenerator/make_map_palette.py).</summary>
+    public int MapIdx(int x, int y)
     {
         var t = W.Get(x, y); int reg = World.RegionOf(x); byte g = W.Ground[World.Key(x, y)];
         switch (t)
         {
-            case Tl.Cliff: return new Color("#1c2420");
-            case Tl.Pine: return new Color("#2a5a4a");
-            case Tl.IceRuin: case Tl.IceBlock: return new Color("#9fb8d0");
-            case Tl.FrostOre: return new Color("#e8faff");
-            case Tl.Void: return new Color("#0a0612");
-            case Tl.Fragment: return new Color("#3a3050");
-            case Tl.Monolith: case Tl.Pylon: case Tl.PylonOn: return new Color("#8a6ac0");
-            case Tl.Tablet: return new Color("#ffd86b");
-            case Tl.FalseLantern: return new Color("#ffe27a");
-            case Tl.LightBridge: return new Color("#ffe27a");
-            case Tl.Cryo: return new Color("#d9b27c");
-            case Tl.CaveWall: return new Color("#1a2030");
-            case Tl.Seal: return new Color("#d58cff");
-            case Tl.Tree: return new Color("#2d6a30");
-            case Tl.DeadTree: return new Color("#3a2c26");
-            case Tl.Deep: return new Color("#17365a");
-            case Tl.Bridge: case Tl.BridgeBroken: return new Color("#a8743d");
-            case Tl.AncOn: case Tl.BossOn: return new Color("#ffe27a");
-            case Tl.AncOff: case Tl.BossOff: return new Color("#ffffff");
-            case Tl.Chest: return new Color("#ffd86b");
-            case Tl.Lantern: case Tl.CombatLantern: case Tl.CrystalLantern: return new Color("#ffd86b");
-            case Tl.Warehouse: case Tl.Sawmill: case Tl.Mine: case Tl.Forge: case Tl.Drill: case Tl.Collector: case Tl.Furnace: return new Color("#d9b27c");
-            case Tl.Machine: case Tl.MachineOn: case Tl.Mirror1: case Tl.Mirror2: case Tl.Receiver: case Tl.ReceiverOn: case Tl.Emitter: return new Color("#8ff0ff");
-            case Tl.CrystalOre: case Tl.SilverOre: return new Color("#e4f4ff");
-            case Tl.Obsidian: case Tl.Ember: return new Color("#ff9a2e");
-            case Tl.Shrine: case Tl.Obelisk: return new Color("#8ff0ff");
-            case Tl.Stone: case Tl.Copper: case Tl.Iron: case Tl.Lumen: case Tl.Aether: return new Color("#8a8f98");
+            case Tl.Cliff: return 0;
+            case Tl.Pine: return 1;
+            case Tl.IceRuin: case Tl.IceBlock: return 2;
+            case Tl.FrostOre: return 3;
+            case Tl.Void: return 4;
+            case Tl.Fragment: return 5;
+            case Tl.Monolith: case Tl.Pylon: case Tl.PylonOn: return 6;
+            case Tl.Tablet: return 7;
+            case Tl.FalseLantern: return 8;
+            case Tl.LightBridge: return 8;
+            case Tl.Cryo: return 9;
+            case Tl.CaveWall: return 10;
+            case Tl.Seal: return 11;
+            case Tl.Tree: return 12;
+            case Tl.DeadTree: return 13;
+            case Tl.Deep: return 14;
+            case Tl.Bridge: case Tl.BridgeBroken: return 15;
+            case Tl.AncOn: case Tl.BossOn: return 8;
+            case Tl.AncOff: case Tl.BossOff: return 16;
+            case Tl.Chest: return 7;
+            case Tl.Lantern: case Tl.CombatLantern: case Tl.CrystalLantern: return 7;
+            case Tl.Warehouse: case Tl.Sawmill: case Tl.Mine: case Tl.Forge: case Tl.Drill: case Tl.Collector: case Tl.Furnace: return 9;
+            case Tl.Machine: case Tl.MachineOn: case Tl.Mirror1: case Tl.Mirror2: case Tl.Receiver: case Tl.ReceiverOn: case Tl.Emitter: return 17;
+            case Tl.CrystalOre: case Tl.SilverOre: return 18;
+            case Tl.Obsidian: case Tl.Ember: return 19;
+            case Tl.Shrine: case Tl.Obelisk: return 17;
+            case Tl.Stone: case Tl.Copper: case Tl.Iron: case Tl.Lumen: case Tl.Aether: return 20;
         }
-        if (g == Art.WaterG) return new Color("#2a5d8a");
-        if (g == Art.HotAsh) return new Color("#c0501e");
-        if (reg == 3) return g >= Art.IceFloor && g < Art.IceFloor + 2 ? new Color("#8fc4e0") : new Color("#dfe8f2");
-        if (reg == 4) return g == Art.VoidG ? new Color("#06030c") : new Color("#3a2a52");
-        if (reg == 1) return new Color("#3a3f4d");
-        if (reg == 2) return new Color("#5b5754");
-        return g == Art.Dirt ? new Color("#6b4f33") : new Color("#3f7a3a");
+        if (g == Art.WaterG) return 21;
+        if (g == Art.HotAsh) return 22;
+        if (reg == 3) return g >= Art.IceFloor && g < Art.IceFloor + 2 ? 25 : 26;
+        if (reg == 4) return g == Art.VoidG ? 27 : 28;
+        if (reg == 1) return 23;
+        if (reg == 2) return 24;
+        return g == Art.Dirt ? 29 : 30;
     }
 
 }

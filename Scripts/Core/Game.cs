@@ -119,7 +119,6 @@ public partial class Game : Node2D
     public override void _Ready()
     {
         rng.Randomize();
-        if (OS.GetEnvironment("LAMP_STAGE") == "gengfx") { GraphicsExport.Run(); GetTree().Quit(); return; }
         Diag.Enabled = OS.GetEnvironment("LAMP_DIAG") != "";
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != ""; testDir = OS.GetEnvironment("LAMP_AUTOTEST");
         Settings.Load(); if (testing && OS.GetEnvironment("LAMP_LANG") != "") { Settings.Lang = OS.GetEnvironment("LAMP_LANG"); Loc.LogMissing = true; }

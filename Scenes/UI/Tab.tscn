@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[node name="Tab" type="PanelContainer"]
+mouse_filter = 2
+theme_type_variation = &"TabNormal"
+
+[node name="Text" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"PlainLabel"

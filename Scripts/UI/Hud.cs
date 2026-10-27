@@ -10,7 +10,7 @@ public partial class Hud : Control
 {
     public Game G;
     public const string ThemePath = "res://Resources/UI/LanternTheme.tres";
-    Theme theme; Font font;
+    Theme theme; Font font; WindowView wv; MenuView mv;
 
     static readonly Color Dim = new("#8a96b0"), Good = new("#9be07a"), Warn = new("#ffb36a"), Gold = new("#ffe08a"), Cyan = new("#8ff0ff"), Text = new("#d8e0f0"), Bad = new("#f06a5e");
     readonly List<Rect2> panelRects = new();
@@ -18,6 +18,8 @@ public partial class Hud : Control
     public override void _Ready()
     {
         theme = GD.Load<Theme>(ThemePath); font = theme.DefaultFont ?? ThemeDB.FallbackFont; Theme = theme;
+        wv = GD.Load<PackedScene>("res://Scenes/UI/Window.tscn").Instantiate<WindowView>(); wv.G = G; wv.ZIndex = 4050; AddChild(wv);
+        mv = GD.Load<PackedScene>("res://Scenes/UI/Menu.tscn").Instantiate<MenuView>(); mv.G = G; mv.ZIndex = 4060; AddChild(mv);
     }
 
     // ───────────────────────── примитивы ─────────────────────────
@@ -56,53 +58,13 @@ public partial class Hud : Control
         n.Position = r.Position.Round(); n.Size = r.Size.Round(); n.Modulate = curMod;
     }
 
-    /// <summary>Окно: рамка, заголовок и подсказка клавиш внизу. Возвращает внутреннюю область.</summary>
-    Rect2 Frame(Rect2 r, string title, string footer = null, Color? accent = null)
-    {
-        Rect(new Rect2(Vector2.Zero, Size), new Color(0, 0, .03f, .55f));
-        Panel(r, "PanelContainer");
-        Txt(title, new Vector2(r.Position.X + 8, r.Position.Y + 14), 9, accent ?? Gold);
-        Rect(new Rect2(r.Position.X + 6, r.Position.Y + 19, r.Size.X - 12, 2), new Color("#090c14"));
-        if (footer != null) Txt(footer, new Vector2(r.Position.X + 8, r.End.Y - 6), 9, Dim, HorizontalAlignment.Left, r.Size.X - 16);
-        return new Rect2(r.Position.X + 8, r.Position.Y + 26, r.Size.X - 16, r.Size.Y - 26 - 14);
-    }
+    public int RowHit(Vector2 p) => wv.RowHit(p);
+    public int TabHit(Vector2 p) => wv.TabHit(p);
 
-    /// <summary>Ряд вкладок; возвращает y под ними.</summary>
-    float Tabs(float x, float y, string[] names, int cur)
-    {
-        for (int i = 0; i < names.Length; i++)
-        {
-            float w = TextW(names[i]) + 10; var r = new Rect2(x, y, w, 12); tabRects.Add((r, i));
-            Sty(r, i == cur ? "TabActive" : "TabNormal");
-            Txt(names[i], new Vector2(x + 5, y + 9), 9, i == cur ? Gold : Dim);
-            x += w + 2;
-        }
-        return y + 16;
-    }
-
-    /// <summary>Строка списка с курсором. Возвращает y следующей строки.</summary>
-    readonly List<(Rect2 r, int i)> winRects = new(), tabRects = new();
-    int curRow = -1;
-    bool Sel(int i) { curRow = i; return G.WinCur == i; }
-
-    static int HitIn(List<(Rect2 r, int i)> l, Vector2 p) { foreach (var (r, i) in l) if (r.HasPoint(p)) return i; return -1; }
-    public int RowHit(Vector2 p) => HitIn(winRects, p);
-    public int TabHit(Vector2 p) => HitIn(tabRects, p);
-
-    float Row(Rect2 a, float y, bool selected, string left, string right, Color col, float h = 11)
-    {
-        if (curRow >= 0) { winRects.Add((new Rect2(a.Position.X - 2, y - 8, a.Size.X + 4, h), curRow)); curRow = -1; }
-        if (selected) Sty(new Rect2(a.Position.X - 2, y - 8, a.Size.X + 4, h), "BtnSelected");
-        Txt(left, new Vector2(a.Position.X + 2, y), 9, col, HorizontalAlignment.Left, a.Size.X - (right != null ? TextW(right) + 6 : 0));
-        if (right != null) Txt(right, new Vector2(a.Position.X, y), 9, selected ? Gold : col, HorizontalAlignment.Right, a.Size.X - 2);
-        return y + h;
-    }
-
-    int Scroll(int cur, int visible) => Mathf.Max(0, cur - visible + 1);
     Vector2 ToScreen(Vector2 w) => ((w - G.CamCenter) * Game.Zoom + G.ViewSize * .5f) / G.UiScaleVp;
 
     /// <summary>Находится ли точка (логические координаты) над панелью интерфейса.</summary>
-    public bool IsOverUi(Vector2 logical) { foreach (var r in panelRects) if (r.HasPoint(logical)) return true; return G.GameHudNode != null && G.GameHudNode.IsOver(logical); }
+    public bool IsOverUi(Vector2 logical) { if (wv != null && wv.IsOver(logical) || mv != null && mv.IsOver(logical)) return true; foreach (var r in panelRects) if (r.HasPoint(logical)) return true; return G.GameHudNode != null && G.GameHudNode.IsOver(logical); }
 
     public override void _Process(double delta)
     {
@@ -112,18 +74,22 @@ public partial class Hud : Control
 
     void Compose()
     {
-        panelRects.Clear(); menuRects.Clear(); winRects.Clear(); tabRects.Clear();
+        panelRects.Clear();
         var vs = Size; if (vs.X < 100 || vs.Y < 60) return;
-        if (G.Menu == Mn.Main) { DrawMenu(vs); return; }
+        if (G.Menu == Mn.Main) { DrawMenu(vs); FinishViews(); return; }
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
         DrawMarkers(vs); DrawEventMarkers(vs); DrawStatusLabels(); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
         float y = DrawBanners(vs); DrawToasts(vs, y);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);
-        if (G.TechOpen) DrawTech(vs);
-        if (G.MapOpen) DrawMap(vs);
-        DrawWindows(vs); DrawEndgameHud(vs); DrawFinale(vs); DrawMenu(vs);
+        DrawEndgameHud(vs);
+        if (G.Menu != Mn.None) DrawMenu(vs);
+        else if (G.FinStage >= 1) DrawFinale(vs);
+        else if (G.TechOpen) DrawTech(vs);
+        else if (G.MapOpen) DrawMap(vs);
+        else DrawWindows(vs);
+        FinishViews();
         if (G.Hp / G.MaxHp < .3f) Rect(new Rect2(Vector2.Zero, vs), new Color(.6f, 0, 0, .12f + .06f * Mathf.Sin(G.Time * 6f)));
     }
 
@@ -277,5 +243,12 @@ public partial class Hud : Control
             var p = ToScreen(b.Pos + new Vector2(0, -15 - 1.5f * Mathf.Sin(G.Time * 5f)));
             Txt(Game.StatusText(b.Status), p + new Vector2(-30, -4), 9, col, HorizontalAlignment.Center, 60);
         }
+    }
+
+    /// <summary>Скрывает вид, который в этом кадре не использовался, и закрывает кадр у использованного.</summary>
+    void FinishViews()
+    {
+        if (wv.Started) { wv.End(); wv.Started = false; } else if (wv.Visible) wv.Hide2();
+        if (mv.Started) { mv.End(); mv.Started = false; } else if (mv.Visible) mv.Visible = false;
     }
 }

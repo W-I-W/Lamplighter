@@ -163,6 +163,78 @@ texture_margin_top = 1
 texture_margin_right = 1
 texture_margin_bottom = 1
 
+[sub_resource type="StyleBoxEmpty" id="sb_empty"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_row_sel"]
+texture = ExtResource("13")
+texture_margin_left = 4
+texture_margin_top = 4
+texture_margin_right = 4
+texture_margin_bottom = 4
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_tab_n2"]
+texture = ExtResource("14")
+texture_margin_left = 4
+texture_margin_top = 4
+texture_margin_right = 4
+texture_margin_bottom = 4
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_tab_s2"]
+texture = ExtResource("15")
+texture_margin_left = 4
+texture_margin_top = 4
+texture_margin_right = 4
+texture_margin_bottom = 4
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_btn_n2"]
+texture = ExtResource("9")
+texture_margin_left = 4
+texture_margin_top = 4
+texture_margin_right = 4
+texture_margin_bottom = 4
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxTexture" id="sb_btn_s2"]
+texture = ExtResource("13")
+texture_margin_left = 4
+texture_margin_top = 4
+texture_margin_right = 4
+texture_margin_bottom = 4
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxTexture" id="sb_btn_d2"]
+texture = ExtResource("12")
+texture_margin_left = 4
+texture_margin_top = 4
+texture_margin_right = 4
+texture_margin_bottom = 4
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+
 
 
 [resource]
@@ -239,15 +311,19 @@ GoodLabel/base_type = &"Label"
 GoodLabel/colors/font_color = Color(0.608, 0.878, 0.478, 1)
 HSeparator/constants/separation = 3
 BtnNormal/base_type = &"PanelContainer"
-BtnNormal/styles/panel = SubResource("sb_button_normal")
+BtnNormal/styles/panel = SubResource("sb_btn_n2")
 BtnSelected/base_type = &"PanelContainer"
-BtnSelected/styles/panel = SubResource("sb_button_selected")
+BtnSelected/styles/panel = SubResource("sb_btn_s2")
 BtnDisabled/base_type = &"PanelContainer"
-BtnDisabled/styles/panel = SubResource("sb_button_disabled")
+BtnDisabled/styles/panel = SubResource("sb_btn_d2")
 TabNormal/base_type = &"PanelContainer"
-TabNormal/styles/panel = SubResource("sb_tab_normal")
+TabNormal/styles/panel = SubResource("sb_tab_n2")
 TabActive/base_type = &"PanelContainer"
-TabActive/styles/panel = SubResource("sb_tab_selected")
+TabActive/styles/panel = SubResource("sb_tab_s2")
+RowNormal/base_type = &"PanelContainer"
+RowNormal/styles/panel = SubResource("sb_empty")
+RowSelected/base_type = &"PanelContainer"
+RowSelected/styles/panel = SubResource("sb_row_sel")
 PlainLabel/base_type = &"Label"
 PlainLabel/colors/font_color = Color(1, 1, 1, 1)
 BigLabel/base_type = &"Label"

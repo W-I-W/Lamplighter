@@ -270,7 +270,7 @@ public partial class Game
             Log($"beacon level={BeaconLevel} seal2Open={W.Get(252, 64) == Tl.None}");
         });
         S(.8f, () => Shot("16_boss_lit_map"));
-        S(.2f, () => { MapOpen = true; for (int i = 0; i < Expl.Length; i += 3) Expl[i] = 1; RebuildMap(); });
+        S(.2f, () => { MapOpen = true; for (int i = 0; i < Expl.Length; i += 3) Expl[i] = 1; });
         S(.6f, () => { Shot("17_map"); MapOpen = false; });
         S(.2f, () => { TechOpen = true; TechPage = 1; });
         S(.5f, () => { Shot("18_tech_mines"); TechOpen = false; });

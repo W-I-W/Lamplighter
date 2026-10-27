@@ -77,7 +77,9 @@ public partial class Hud
         if (n.Text != s) n.Text = s;
         if (n.HorizontalAlignment != al) n.HorizontalAlignment = al;
         float tw = TextW(s, big ? 14 : 9) + 3, asc = big ? 14 : 7, width = w > 0 ? w : tw, x = p.X;
-        if (tw > width) { if (al == HorizontalAlignment.Center) x -= (tw - width) * .5f; else if (al == HorizontalAlignment.Right) x -= tw - width; width = tw; }   // текст не обрезается
+        n.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        if (tw > width && al == HorizontalAlignment.Left && w > 0) { /* длинный текст слева обрезается многоточием, а не налезает на значение справа */ }
+        else if (tw > width) { if (al == HorizontalAlignment.Center) x -= (tw - width) * .5f; else if (al == HorizontalAlignment.Right) x -= tw - width; width = tw; }   // текст не обрезается
         n.Position = new Vector2(Mathf.Round(x), Mathf.Round(p.Y) - asc); n.Size = new Vector2(width, big ? 22 : 11); n.Modulate = c * curMod;
         return n;
     }

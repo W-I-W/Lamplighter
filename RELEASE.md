@@ -95,4 +95,8 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 
 ## No code-drawn graphics
 
-World effects use `Scripts/Visuals/Gfx.cs` (places and tints the PNGs from `Assets/Sprites/Vfx/`). Windows and menus (`Scripts/UI/Hud*.cs`) are composed each frame from pooled Control nodes (`HudNodes.cs`: Label, PanelContainer, ProgressBar, ColorRect, TextureRect) styled by `Resources/UI/LanternTheme.tres` - there is no `_Draw`/`DrawString`/`DrawRect` left in the game code. Still generated at runtime: the minimap texture (from world data) and the procedural fallback sprites used only when a PNG is missing (and by the `texcheck` test).
+- World effects: `Scripts/Visuals/Gfx.cs` places and tints the PNGs from `Assets/Sprites/Vfx/` (px, line, disc, arrow, diamond, crack_0..3). No shapes are drawn from code.
+- Windows and menus are real scenes: `Scenes/UI/Window.tscn` (frame, title, tabs, list, detail pane, key hints, map area), `Row.tscn`, `Tab.tscn`, `Chip.tscn`, `Menu.tscn` (main menu, pause, credits, finale). Layout is done by containers; `Scripts/UI/Hud*.cs` only fills them with data. Regenerate or edit them: `python tools/GraphicsGenerator/make_ui_windows.py`, or in the Godot editor.
+- Overlays that follow the world (markers, floating numbers, toasts, banners, tooltip, boss bar) are pooled Label/PanelContainer/ProgressBar/TextureRect nodes created by `HudNodes.cs` (still positioned from code because they track world positions).
+- The world map is a `TileMapLayer` whose colours come from `Assets/UI/Map/map_palette.png` (`tools/GraphicsGenerator/make_map_palette.py`); `Game.MapIdx` picks the palette index per tile.
+- Sprites are loaded only from PNG. The old procedural sprite generator was moved out of the build (`tools/GraphicsGenerator/*.cs` is excluded in `Lamplighter.csproj`); missing PNGs are reported as an error instead of being drawn from code. `LAMP_STAGE=texcheck` verifies every sprite sheet and effect primitive loads.

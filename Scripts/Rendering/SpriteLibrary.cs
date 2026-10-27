@@ -69,10 +69,9 @@ public static class SpriteLibrary
         var icons = ScanIndexed(IconFolder, "icon_");
         bool entsOk = cat != null;
         if (entsOk) foreach (var s in Sheets) if (cat.Entity(s.id)?.Sheet == null) { entsOk = false; break; }
-        bool tilesOk = tiles.Count >= Art.TileCount, iconsOk = icons.Count >= Art.IconCount;
-        if (!(tilesOk && iconsOk && entsOk)) Art.BuildProcedural();        // запасной вариант: рисуем кодом только недостающее
-        if (tiles.Count > 0) Art.TileTex = ImageTexture.CreateFromImage(Compose(tilesOk ? null : Art.ProcTiles, tiles, Art.TileCount));
-        if (icons.Count > 0) Art.IconTex = ImageTexture.CreateFromImage(Compose(iconsOk ? null : Art.ProcIcons, icons, Art.IconCount));
+        if (tiles.Count < Art.TileCount || icons.Count < Art.IconCount || !entsOk) GD.PushError($"Не хватает PNG: тайлы {tiles.Count}/{Art.TileCount}, иконки {icons.Count}/{Art.IconCount}, листы существ {(entsOk ? "ok" : "нет")} (см. Assets/Sprites/README.md)");
+        Art.TileTex = ImageTexture.CreateFromImage(Compose(null, tiles, Art.TileCount));
+        Art.IconTex = ImageTexture.CreateFromImage(Compose(null, icons, Art.IconCount));
         if (cat != null) foreach (var s in Sheets) { var sh = cat.Entity(s.id)?.Sheet; if (sh != null) s.set(sh); }
     }
 
