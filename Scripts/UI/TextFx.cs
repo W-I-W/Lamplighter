@@ -9,7 +9,7 @@ namespace Lamplighter;
 public static class TextFx
 {
     static readonly Regex Rx = new(
-        @"(?<key>\[[^\[\]]{1,9}\])|(?<hero>[Фф]онарщик\w*|lamplighter)|(?<dark>Источник\w* Тьмы|Тьм\w+|погасил\w*|Source of Darkness|Darkness|extinguished)|(?<bad>опасн\w*|смерт\w*|враг\w*|монстр\w*|danger\w*|enem(?:y|ies)|deadly)|(?<light>Сеть Маяков|Центральн\w+ маяк\w*|ядер света|ядр\w+|свет\w*|фонар\w+|маяк\w*|Beacon Network|Central Beacon|cores? of light|light|lanterns?|beacon\w*)",
+        @"(?<key>\[[^\[\]]{1,9}\])|(?<level>Уровень \d+|Level \d+|level \d+)|(?<good>\+\d+(?:[.,]\d+)?%?|выросл\w+|повыс\w+|restored|increased)|(?<hero>[Фф]онарщик\w*|lamplighter)|(?<dark>Источник\w* Тьмы|Тьм\w+|погасил\w*|Source of Darkness|Darkness|extinguished)|(?<bad>опасн\w*|смерт\w*|враг\w*|монстр\w*|danger\w*|enem(?:y|ies)|deadly)|(?<hp>здоров\w+|health)|(?<stat>добыч\w+|урон\w*|damage|mining|скорост\w+|speed)|(?<light>Сеть Маяков|Центральн\w+ маяк\w*|ядер света|ядр\w+|свет\w*|фонар\w+|маяк\w*|Beacon Network|Central Beacon|cores? of light|light|lanterns?|beacon\w*)|(?<num>\d+(?:/\d+)?)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     static string Esc(string s) => s.Replace("[", "[lb]");
@@ -23,6 +23,11 @@ public static class TextFx
             if (m.Groups["key"].Success) sb.Append($"[color=#ffe08a]{v}[/color]");
             else if (m.Groups["hero"].Success) sb.Append($"[color=#8ff0ff]{v}[/color]");
             else if (m.Groups["dark"].Success) sb.Append($"[pulse freq=1.2 color=#c070ff55 ease=-2][color=#c070ff]{v}[/color][/pulse]");
+            else if (m.Groups["level"].Success) sb.Append($"[pulse freq=1.4 color=#ffffff77 ease=-2][color=#ffd86b]{v}[/color][/pulse]");
+            else if (m.Groups["good"].Success) sb.Append($"[color=#9be07a]{v}[/color]");
+            else if (m.Groups["hp"].Success) sb.Append($"[color=#f06a5e]{v}[/color]");
+            else if (m.Groups["stat"].Success) sb.Append($"[color=#ffb36a]{v}[/color]");
+            else if (m.Groups["num"].Success) sb.Append($"[color=#ffd86b]{v}[/color]");
             else if (m.Groups["bad"].Success) sb.Append($"[color=#f06a5e]{v}[/color]");
             else sb.Append($"[pulse freq=1.6 color=#ffe08a66 ease=-2][color=#ffe08a]{v}[/color][/pulse]");
         }

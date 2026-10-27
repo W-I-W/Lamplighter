@@ -13,7 +13,7 @@ public partial class Game
         {
             Inv[It.Coins] = 120; Inv[It.Core] = 0; Tp(PPos); Hp = MaxHp * .8f; noHeal = true; Menu = Mn.None; TestAim(new Vector2(900, 900));
             var wh = Buildings.Find(b => b.Type == Tl.Warehouse); if (wh != null) { PPos = wh.Pos + new Vector2(0, 22); cam.ResetSmoothing(); }
-            for (int i = 0; i < 3; i++) Toast("Тестовое уведомление " + i); Announce("Открыта постройка: Лесопилка", "Производит дерево само [5]", new Color("#ffe27a"), "tech");
+            for (int i = 0; i < 3; i++) Toast(i == 0 ? "Уровень 3! Здоровье +10, добыча и урон выросли" : "Тестовое уведомление " + i); Announce("Открыта постройка: Лесопилка", "Производит дерево само [5]", new Color("#ffe27a"), "tech");
         });
         S(1.6f, () => { aimOverride = Aim = PPos + new Vector2(0, -22); });
         S(.8f, () => Shot("ui_hud"));
