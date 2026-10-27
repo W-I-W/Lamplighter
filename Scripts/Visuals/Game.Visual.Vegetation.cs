@@ -16,6 +16,14 @@ public partial class Game
         var cfg = VisualFxConfig.Get(); var amp = new float[140];
         for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] >= 0 && cfg.SwayTiles[i] < 140) amp[cfg.SwayTiles[i]] = cfg.SwayAmp[i];
         swayMat.SetShaderParameter("amp", amp);
+        var tops = new float[140]; var img = Art.TileTex?.GetImage();
+        if (img != null)
+            for (int c = 0; c < 140 && (c + 1) * 16 <= img.GetWidth(); c++)
+            {
+                tops[c] = 0;
+                for (int y = 0; y < 16; y++) { bool any = false; for (int x = 0; x < 16 && !any; x++) any = img.GetPixel(c * 16 + x, y).A > .1f; if (any) { tops[c] = y; break; } }
+            }
+        swayMat.SetShaderParameter("top_row", tops);
         var glow = new float[140]; for (int i = 0; i < cfg.GlowTiles.Length && i < cfg.GlowAmount.Length; i++) if (cfg.GlowTiles[i] >= 0 && cfg.GlowTiles[i] < 140) glow[cfg.GlowTiles[i]] = cfg.GlowAmount[i];
         swayMat.SetShaderParameter("glow", glow);
         waterMat = GD.Load<ShaderMaterial>("res://Assets/Materials/water.tres"); waterMat.SetShaderParameter("water_col", Art.WaterG);

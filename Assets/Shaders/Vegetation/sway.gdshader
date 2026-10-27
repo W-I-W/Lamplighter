@@ -4,6 +4,7 @@
 shader_type canvas_item;
 
 uniform sampler2D noise_tex : filter_linear, repeat_enable;
+uniform float top_row[140];         // first opaque pixel row of each tile (the sprite top), measured from the atlas at startup
 uniform float amp[140];            // max sway in pixels per atlas column (0 = static tile)
 uniform float wind = 1.0;          // overall wind strength (config * player setting)
 uniform float time_s = 0.0;
@@ -31,8 +32,9 @@ void fragment() {
 		float strength = wind * (0.45 + 1.1 * smoothstep(0.35, 0.8, gust));
 		float sway = sin(time_s * 1.7 * sv + ph + wpos.x * 0.015) * strength + 0.35 * sin(time_s * 3.1 * sv + ph * 1.7) * strength;
 		float ly = fract(UV.y * atlas.y / 16.0);                 // 0 = top of the tile, 1 = bottom
-		// grass and bushes (columns >= 130) bend over the whole sprite height, taller plants move their tips further
-		float lift = col >= 130.0 ? pow(clamp(1.0 - ly, 0.0, 1.0), 1.1) : pow(clamp(1.0 - ly / 0.7, 0.0, 1.0), 1.5);
+		// the base of the plant stays fixed, the tip moves most: 0 at the bottom row, 1 at the first opaque row of the sprite
+		float tr = top_row[int(col)] / 16.0;
+		float lift = pow(clamp((1.0 - ly) / max(1.0 - tr, 0.1), 0.0, 1.0), 1.4);
 		float shift = a * sway;
 		// pushed by the player
 		vec2 centre = (cell + 0.5) * 16.0;
