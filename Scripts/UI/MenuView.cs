@@ -8,7 +8,7 @@ public partial class MenuView : Control
 {
     public Game G; public bool Started;
     ColorRect dim; TextureRect flame; VBoxContainer box; Label title, sub, foot, version; PanelContainer panel; VBoxContainer items; Control lines; Control centerWrap;
-    readonly List<WindowRow> rows = new(); readonly List<Label> labels = new(); PackedScene rowScene; int nRow, nLabel;
+    readonly List<WindowRow> rows = new(); readonly List<Label> labels = new(); readonly List<RichTextLabel> riches = new(); int nRich; PackedScene rowScene; int nRow, nLabel;
 
     public override void _Ready()
     {
@@ -20,7 +20,7 @@ public partial class MenuView : Control
     /// <summary>Начало кадра. withMenu: показывать заголовок, пламя и панель с пунктами (главное меню / пауза).</summary>
     public void Begin(bool withMenu, float dimAlpha, string footer, bool showVersion)
     {
-        nRow = nLabel = 0; Visible = true; Started = true; dim.Color = new Color(.02f, .03f, .06f, dimAlpha);
+        nRow = nLabel = nRich = 0; Visible = true; Started = true; dim.Color = new Color(.02f, .03f, .06f, dimAlpha);
         flame.Visible = box.Visible = withMenu;
         foot.Text = footer == null ? "" : Loc.T(footer); version.Visible = showVersion; if (showVersion) version.Text = $"v{Game.VersionStr} · {Game.BuildStr}";
     }
@@ -48,10 +48,19 @@ public partial class MenuView : Control
         l.Position = new Vector2(Mathf.Round(pos.X), Mathf.Round(pos.Y)); l.Size = new Vector2(width, big ? 22 : wrap ? 100 : 11);
     }
 
+    /// <summary>Абзац с раскраской ключевых слов и «печатной машинкой» (visible — сколько символов показано, -1 — все).</summary>
+    public void RichLine(string plain, Vector2 pos, float width, Color baseCol, int visible)
+    {
+        RichTextLabel l; if (nRich < riches.Count) l = riches[nRich]; else { l = new RichTextLabel { MouseFilter = MouseFilterEnum.Ignore, FitContent = true }; riches.Add(l); lines.AddChild(l); }
+        nRich++; l.Visible = true; TextFx.Apply(l, plain, baseCol, 0); l.VisibleCharacters = visible;
+        l.Position = new Vector2(Mathf.Round(pos.X), Mathf.Round(pos.Y)); l.Size = new Vector2(width, 100);
+    }
+
     public void End()
     {
         for (int i = nRow; i < rows.Count; i++) rows[i].Visible = false;
         for (int i = nLabel; i < labels.Count; i++) labels[i].Visible = false;
+        for (int i = nRich; i < riches.Count; i++) riches[i].Visible = false;
     }
 
     bool Inside(Control c, Vector2 p) => c.Visible && new Rect2(Vector2.Zero, c.Size).HasPoint(c.GetGlobalTransform().AffineInverse() * p);

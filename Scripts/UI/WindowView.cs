@@ -84,6 +84,7 @@ public partial class WindowView : Control
     /// <summary>Абзац или строка текста в списке (detail=false) или в панели подробностей.</summary>
     public void Text(bool detail, string s, Color c, bool wrap = true, int maxLines = 0)
     {
+        if (wrap) { TextFx.Apply(TakeRich(detail), Loc.T(s), c, 220f); return; }
         Label l; if (nText < texts.Count) l = texts[nText]; else { l = new Label { ThemeTypeVariation = "PlainLabel", MouseFilter = MouseFilterEnum.Ignore }; texts.Add(l); }
         nText++; l.Visible = true; if (detail) Place(l, detailBox, ref posDetail); else Place(l, listBox, ref posList);
         s = Loc.T(s); if (l.Text != s) l.Text = s; l.Modulate = c;
@@ -91,15 +92,19 @@ public partial class WindowView : Control
         l.TextOverrunBehavior = wrap ? TextServer.OverrunBehavior.NoTrimming : TextServer.OverrunBehavior.TrimEllipsis; l.CustomMinimumSize = new Vector2(wrap ? (detail ? detailW : 1) : 0, 0);
     }
 
-    /// <summary>Текст с BBCode-раскраской и «печатной машинкой»: visible — сколько символов уже показано (-1 — все).</summary>
-    public void Rich(string bbcode, int visible)
+    RichTextLabel TakeRich(bool detail)
     {
         RichTextLabel l;
         if (nRich < riches.Count) l = riches[nRich];
-        else { l = new RichTextLabel { BbcodeEnabled = true, FitContent = true, ScrollActive = false, MouseFilter = MouseFilterEnum.Ignore, AutowrapMode = TextServer.AutowrapMode.WordSmart }; riches.Add(l); }
-        nRich++; l.Visible = true; Place(l, listBox, ref posList);
-        if (l.Text != bbcode) l.Text = bbcode;
-        l.VisibleCharacters = visible; l.CustomMinimumSize = new Vector2(frameSize.X - 30, 0);
+        else { l = new RichTextLabel { FitContent = true, MouseFilter = MouseFilterEnum.Ignore }; riches.Add(l); }
+        nRich++; l.Visible = true; if (detail) Place(l, detailBox, ref posDetail); else Place(l, listBox, ref posList);
+        l.CustomMinimumSize = new Vector2(detail ? detailW : frameSize.X - 30, 0); return l;
+    }
+
+    /// <summary>Текст с раскраской ключевых слов и «печатной машинкой»: visible — сколько символов показано (-1 — все).</summary>
+    public void Rich(string plain, int visible)
+    {
+        var l = TakeRich(false); TextFx.Apply(l, plain, new Color("#d8e0f0"), 0); l.VisibleCharacters = visible;
     }
 
     /// <summary>Конец кадра: прячет неиспользованные узлы.</summary>

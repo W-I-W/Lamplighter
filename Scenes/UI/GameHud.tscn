@@ -108,18 +108,21 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Title" type="Label" parent="TopLeft/Goal/V"]
+[node name="Title" type="RichTextLabel" parent="TopLeft/Goal/V"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"GoldLabel"
-text = "Goal"
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 autowrap_mode = 3
 custom_minimum_size = Vector2(160, 0)
 
-[node name="Needs" type="Label" parent="TopLeft/Goal/V"]
+[node name="Needs" type="RichTextLabel" parent="TopLeft/Goal/V"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"DimLabel"
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 autowrap_mode = 3
 custom_minimum_size = Vector2(160, 0)
 

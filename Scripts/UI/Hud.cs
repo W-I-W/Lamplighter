@@ -166,7 +166,7 @@ public partial class Hud : Control
         var old = curMod; curMod = new Color(1, 1, 1, a);
         Panel(r, "PanelGold");
         Txt(b.Title, new Vector2(r.Position.X, r.Position.Y + 10), 9, new Color(b.C.R, b.C.G, b.C.B), HorizontalAlignment.Center, w);
-        Txt(b.Sub, new Vector2(r.Position.X, r.Position.Y + 20), 9, Text, HorizontalAlignment.Center, w);
+        { string sub = Loc.T(b.Sub); RichLine(sub, new Vector2(r.Position.X, r.Position.Y + 20), w, Text, TextFx.Typed(sub, 3.5f - b.Life, 70f), true); }
         curMod = old;
         return y + 28;
     }
@@ -190,7 +190,12 @@ public partial class Hud : Control
             float w = 0; foreach (var l in lines) w = Mathf.Max(w, TextW(l));
             var old = curMod; curMod = new Color(1, 1, 1, a);
             Panel(new Rect2(Mathf.Round(cx - w * .5f - 5), y - 8, w + 10, 4 + lines.Count * 10), "PanelDark");
-            for (int k = 0; k < lines.Count; k++) Txt(lines[k], new Vector2(cx - w * .5f, y + 1 + k * 10), 9, Text);
+            int typed = (int)((3.4f - t.Life) * 90f), off = 0;
+            for (int k = 0; k < lines.Count; k++)
+            {
+                int vis = Mathf.Clamp(typed - off, 0, lines[k].Length); off += lines[k].Length + 1;
+                RichLine(lines[k], new Vector2(cx - w * .5f, y + 1 + k * 10), w + 4, Text, vis >= lines[k].Length ? -1 : vis);
+            }
             curMod = old; y += 6 + lines.Count * 10;
         }
     }

@@ -10,14 +10,16 @@ public partial class Hud
 {
     readonly List<Label> labels = new(); readonly List<ColorRect> rects = new(); readonly List<PanelContainer> panels = new();
     readonly List<ProgressBar> bars = new(); readonly List<TextureRect> texs = new();
+    readonly List<RichTextLabel> richLbls = new(); int nRichLbl;
     int nLabel, nRect, nPanel, nBar, nTex, seq; Color curMod = Colors.White;
     static Texture2D arrowTex, diamondTex, diamondLineTex, discTex, lineTex;
     static Texture2D Vfx(ref Texture2D t, string n) => t ??= GD.Load<Texture2D>("res://Assets/Sprites/Vfx/" + n + ".png");
 
-    void BeginFrame() { nLabel = nRect = nPanel = nBar = nTex = seq = 0; curMod = Colors.White; }
+    void BeginFrame() { nRichLbl = 0; nLabel = nRect = nPanel = nBar = nTex = seq = 0; curMod = Colors.White; }
 
     void EndFrame()
     {
+        for (int i = nRichLbl; i < richLbls.Count; i++) richLbls[i].Visible = false;
         for (int i = nLabel; i < labels.Count; i++) labels[i].Visible = false;
         for (int i = nRect; i < rects.Count; i++) rects[i].Visible = false;
         for (int i = nPanel; i < panels.Count; i++) panels[i].Visible = false;
@@ -82,5 +84,15 @@ public partial class Hud
         else if (tw > width) { if (al == HorizontalAlignment.Center) x -= (tw - width) * .5f; else if (al == HorizontalAlignment.Right) x -= tw - width; width = tw; }   // текст не обрезается
         n.Position = new Vector2(Mathf.Round(x), Mathf.Round(p.Y) - asc); n.Size = new Vector2(width, big ? 22 : 11); n.Modulate = c * curMod;
         return n;
+    }
+
+    /// <summary>Строка с раскраской ключевых слов; visible — сколько символов показано (-1 — все). Положение — как у Txt (линия текста).</summary>
+    void RichLine(string plain, Vector2 p, float width, Color baseCol, int visible, bool center = false)
+    {
+        RichTextLabel n;
+        if (nRichLbl < richLbls.Count) n = richLbls[nRichLbl]; else { n = new RichTextLabel { MouseFilter = MouseFilterEnum.Ignore, FitContent = false, AutowrapMode = TextServer.AutowrapMode.Off }; richLbls.Add(n); AddChild(n); }
+        nRichLbl++; n.Visible = true; n.ZIndex = Mathf.Min(seq++, 4000);
+        TextFx.Apply(n, plain, baseCol, 0, center); n.AutowrapMode = TextServer.AutowrapMode.Off; n.VisibleCharacters = visible;
+        n.Position = new Vector2(Mathf.Round(p.X), Mathf.Round(p.Y) - 7); n.Size = new Vector2(width, 11); n.Modulate = curMod;
     }
 }

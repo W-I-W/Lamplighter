@@ -11,7 +11,7 @@ public partial class GameHud : Control
 {
     public Game G;
     Control status, goal, world, hint, detail, abilities;
-    Label level, lvCap, hpLabel, goalTitle, goalNeeds, goalMore, biome, lLabel, beacon, hintLabel, dTitle, dBody;
+    RichTextLabel goalTitle, goalNeeds; Label level, lvCap, hpLabel, goalMore, biome, lLabel, beacon, hintLabel, dTitle, dBody;
     ProgressBar hp, xp, goalBar, lBar;
     UiSlot weapon; readonly UiSlot[] hot = new UiSlot[8]; readonly UiSlot[] abil = new UiSlot[5];
     readonly Control[] chips = new Control[5];
@@ -24,7 +24,7 @@ public partial class GameHud : Control
     public override void _Ready()
     {
         status = GetNode<Control>("%Status"); goal = GetNode<Control>("%Goal"); world = GetNode<Control>("%World"); hint = GetNode<Control>("%Hint"); detail = GetNode<Control>("%Detail"); abilities = GetNode<Control>("%Abilities");
-        level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<Label>("%Title"); goalNeeds = GetNode<Label>("%Needs"); goalMore = GetNode<Label>("%More");
+        level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<RichTextLabel>("%Title"); goalNeeds = GetNode<RichTextLabel>("%Needs"); goalMore = GetNode<Label>("%More");
         biome = GetNode<Label>("%Biome"); lLabel = GetNode<Label>("%LLabel"); beacon = GetNode<Label>("%Beacon"); hintLabel = GetNode<Label>("%HintLabel"); dTitle = GetNode<Label>("%DTitle"); dBody = GetNode<Label>("%DBody");
         hp = GetNode<ProgressBar>("%HpBar"); xp = GetNode<ProgressBar>("%XpBar"); goalBar = GetNode<ProgressBar>("%Bar"); lBar = GetNode<ProgressBar>("%LBar");
         weapon = GetNode<UiSlot>("%Weapon");
@@ -80,8 +80,8 @@ public partial class GameHud : Control
     void UpdateGoal()
     {
         var goals = G.Goals; var g = goals.Count > 0 ? goals[0] : null;
-        goalTitle.Text = g == null ? T("Все цели выполнены!") : T(g.Title);
-        goalNeeds.Text = g == null ? "" : T(g.Needs);
+        TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), new Color("#ffe08a"), 90f);
+        TextFx.Apply(goalNeeds, g == null ? "" : T(g.Needs), new Color("#8a96b0"), 0);
         goalNeeds.Visible = g != null && (GoalsOpen || true);
         var m = g != null ? Frac.Match(g.Needs ?? "") : null;
         goalBar.Visible = m != null && m.Success && int.Parse(m.Groups[2].Value) > 0;
