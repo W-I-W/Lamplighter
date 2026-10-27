@@ -35,6 +35,7 @@ void fragment() {
 		// bend curve taken from the CapyCam "Tree & Grass Motion" shader (smoothstep * power), normalised so the tip of the sprite = 1 and the root = 0
 		float yy = clamp((ly - tr) / max(1.0 - tr, 0.1), 0.0, 1.0);          // 0 at the first opaque row, 1 at the bottom
 		float lift = smoothstep(0.3, 1.3, pow(1.0 - yy, 0.5)) * pow(2.0 - yy, 1.5) / (0.784 * 2.83);
+
 		float shift = a * sway;
 		// pushed by the player
 		vec2 centre = (cell + 0.5) * 16.0;
@@ -46,7 +47,7 @@ void fragment() {
 			vec4 s = shakes[i];
 			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) shift += s.z * sin(TIME * 48.0 + s.w);
 		}
-		float px = floor(shift * lift + 0.5);
+		float px = shift * lift;          // fractional on purpose: with nearest sampling and a 3x zoom the blade edges then move in single screen pixels (smooth), not in 3-pixel jumps
 		uv.x = UV.x - px / atlas.x;
 		float lo = col * 16.0 / atlas.x + 0.5 / atlas.x;
 		float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;

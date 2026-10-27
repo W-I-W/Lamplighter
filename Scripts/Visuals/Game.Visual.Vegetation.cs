@@ -38,7 +38,7 @@ public partial class Game
         tileShakes.Add((new Vector2I(x, y), 0f, amt));
     }
 
-    bool TileSways(Tl t) => t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.CrystalOre || t == Tl.SilverOre;
+    bool TileSways(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.CrystalOre || t == Tl.SilverOre;
     bool TileIsPlant(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;
 
     void UpdateVegetation(float dt)
