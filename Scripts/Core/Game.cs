@@ -138,7 +138,7 @@ public partial class Game : Node2D
 
         BuildTileMaps();
         ents = new EntityLayer { G = this };
-        AddChild(ents); InitEnemyFx();
+        AddChild(ents); InitEnemyFx(); InitAmbient();
 
         cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = true, PositionSmoothingSpeed = 9f, Position = PPos };
         cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.Wd * TS; cam.LimitBottom = World.Ht * TS;
@@ -528,7 +528,7 @@ public partial class Game : Node2D
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
         cam.Position = PPos;
         cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
-        UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt);
+        UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt); UpdatePlayerFx(dt); UpdateWorldLife(dt); ambientLayer?.QueueRedraw();
         ents.QueueRedraw(); hud.QueueRedraw();
     }
 
@@ -842,7 +842,7 @@ public partial class Game : Node2D
     {
         if (a.Boss && !BossDown(a.BossId)) { Fail("Фонарь охраняет страж — сначала победите его"); return; }
         if (Inv[It.Shard] < a.Cost) { Fail($"Для зажигания нужно осколков света: {a.Cost} (у вас {Inv[It.Shard]}). Их роняют тени и люмен-руда"); return; }
-        Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0; Diag.Mark("first_lantern"); Diag.Count("lanterns_lit");
+        Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0; OnAncientLit(a); Diag.Mark("first_lantern"); Diag.Count("lanterns_lit");
         SetObj(a.Tile.X, a.Tile.Y, a.Boss ? Tl.BossOn : Tl.AncOn);
         var ex = new List<string>(); var seen = new HashSet<Tl>();
         foreach (var v in a.Veins)
@@ -871,6 +871,7 @@ public partial class Game : Node2D
     // ───────────────────────── эффекты ─────────────────────────
     public void Burst(Vector2 p, Color c, int n, float speed)
     {
+        n = n > 0 ? Mathf.Max(Settings.Particles > .05f ? 1 : 0, Mathf.RoundToInt(n * Settings.Particles)) : 0;
         for (int i = 0; i < n; i++)
         {
             float a = rng.Randf() * Mathf.Tau, s = rng.RandfRange(.3f, 1f) * speed;

@@ -7,7 +7,7 @@ namespace Lamplighter;
 /// остальные тайлы слоя не деформируются. Логика сообщает лишь о событиях (TileShake — удар по тайлу); ветер и амплитуды — в Resources/VisualConfigs/VisualFx.tres.</summary>
 public partial class Game
 {
-    ShaderMaterial swayMat; Node2D foliageRoot; readonly List<(Vector2I tile, float age)> tileShakes = new();
+    ShaderMaterial swayMat, waterMat; Node2D foliageRoot; readonly List<(Vector2I tile, float age, float amt)> tileShakes = new();
     const int FoliageTuft = 130, FoliageBush = 131, FoliageFlowers = 132, FoliageTall = 133;
 
     void InitVegetation()
@@ -16,18 +16,22 @@ public partial class Game
         var cfg = VisualFxConfig.Get(); var amp = new float[140];
         for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] >= 0 && cfg.SwayTiles[i] < 140) amp[cfg.SwayTiles[i]] = cfg.SwayAmp[i];
         swayMat.SetShaderParameter("amp", amp);
+        var glow = new float[140]; for (int i = 0; i < cfg.GlowTiles.Length && i < cfg.GlowAmount.Length; i++) if (cfg.GlowTiles[i] >= 0 && cfg.GlowTiles[i] < 140) glow[cfg.GlowTiles[i]] = cfg.GlowAmount[i];
+        swayMat.SetShaderParameter("glow", glow);
+        waterMat = GD.Load<ShaderMaterial>("res://Assets/Materials/water.tres"); waterMat.SetShaderParameter("water_col", Art.WaterG);
     }
 
     /// <summary>Событие: по тайлу ударили (дерево встряхивается и плавно успокаивается).</summary>
     public void TileShake(int x, int y)
     {
-        if (!TileSways(W.Get(x, y))) return;
-        for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == new Vector2I(x, y)) { tileShakes[i] = (tileShakes[i].tile, 0f); return; }
+        var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = TileIsPlant(tt) ? 1f : .35f;
+        for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == new Vector2I(x, y)) { tileShakes[i] = (tileShakes[i].tile, 0f, amt); return; }
         if (tileShakes.Count >= 8) tileShakes.RemoveAt(0);
-        tileShakes.Add((new Vector2I(x, y), 0f));
+        tileShakes.Add((new Vector2I(x, y), 0f, amt));
     }
 
-    bool TileSways(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;
+    bool TileSways(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.CrystalOre || t == Tl.SilverOre;
+    bool TileIsPlant(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;
 
     void UpdateVegetation(float dt)
     {
@@ -36,14 +40,15 @@ public partial class Game
         var arr = new Vector4[8]; int n = 0;
         for (int i = tileShakes.Count - 1; i >= 0; i--)
         {
-            var (t, age) = tileShakes[i]; age += dt; if (age >= cfg.HitShakeTime) { tileShakes.RemoveAt(i); continue; }
-            tileShakes[i] = (t, age);
-            float k = 1f - age / cfg.HitShakeTime; arr[n++] = new Vector4(t.X, t.Y, cfg.HitShakePx * k * k * Settings.Fx, t.X * 1.7f);
+            var (t, age, am) = tileShakes[i]; age += dt; if (age >= cfg.HitShakeTime) { tileShakes.RemoveAt(i); continue; }
+            tileShakes[i] = (t, age, am);
+            float k = 1f - age / cfg.HitShakeTime; arr[n++] = new Vector4(t.X, t.Y, cfg.HitShakePx * am * k * k * Settings.Fx, t.X * 1.7f);
         }
         swayMat.SetShaderParameter("shakes", arr);
         swayMat.SetShaderParameter("time_s", Time);
         swayMat.SetShaderParameter("wind", cfg.Wind * Settings.Wind);
         swayMat.SetShaderParameter("player", PPos);
+        waterMat.SetShaderParameter("time_s", Time); waterMat.SetShaderParameter("strength", Settings.Fx);
     }
 
     static uint FoliageHash(int x, int y, int seed)

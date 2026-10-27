@@ -199,6 +199,7 @@ public partial class Game
     {
         var col = kind == 2 ? (E(Fxk.Burn) > 0 ? new Color("#ff8a2a") : new Color("#fff2b0")) : ElemColor();
         PProjs.Add(new PProj { Pos = PPos + dir * 8, Vel = dir * speed, Dmg = dmg, Life = kind == 2 ? .35f : life, Pierce = pierce, Kind = kind, C = col, Blast = blast });
+        OnWeaponFired(kind, PPos + dir * 8, dir, col);
     }
 
     void FireRanged(WeaponDef w, Vector2 dir)

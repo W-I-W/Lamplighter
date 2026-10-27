@@ -11,6 +11,8 @@ public partial class VisualFxConfig : Resource
     // ветер и растительность
     [Export] public int[] SwayTiles = { 5, 111, 79, 130, 131, 132, 133 };          // колонки атласа тайлов, которые качаются
     [Export] public float[] SwayAmp = { 2.4f, 1.8f, 1.0f, 1.6f, 1.2f, 1.8f, 2.4f };   // амплитуда у верхушки, пикселей
+    [Export] public int[] GlowTiles = { 9, 22, 50, 51, 100, 110 };               // редкие ресурсы: Люмен, Эфир, Кристалл, Серебро, Метеорит, Морозная руда
+    [Export] public float[] GlowAmount = { .35f, .35f, .3f, .15f, .4f, .3f };
     [Export] public float Wind = 1f;
     [Export] public float HitShakePx = 2.4f;               // встряска дерева при ударе
     [Export] public float HitShakeTime = .5f;

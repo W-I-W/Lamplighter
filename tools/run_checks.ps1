@@ -46,6 +46,7 @@ Run-Stage 'interaction after loading a save' 'interactload' @('SUMMARY failures=
 $tmpU = Join-Path $env:TEMP 'lamp_check_ui'; New-Item -ItemType Directory -Force $tmpU | Out-Null
 Copy-Item (Join-Path (Join-Path $root 'testsaves') 'mid\save.json') $tmpU -Force
 Run-Stage 'ui: HUD, build menu, inventory, all windows (screenshots)' 'ui' @('UI SCREENSHOTS DONE') @{ LAMP_LOAD = '1' } @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
+Run-Stage 'fx: enemy attack stages, hit feedback, deaths (screenshots)' 'fx' @('FX SCREENSHOTS DONE') @{} @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
 Run-Stage 'economy audit (trade loops, sinks)' 'econ' @('ECON AUDIT PASSED')
 Run-Stage 'combat audit (weapons, dead effects)' 'combat' @('COMBAT AUDIT PASSED')
 Run-Stage 'soak: 100 s, all biomes, leaks/fps' 'soak' @('SUMMARY failures=0') @{} @('\[check\] FAIL')

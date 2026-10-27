@@ -30,7 +30,7 @@ public partial class Game
         float fl = 1f + .05f * Mathf.Sin(Time * 11f) + .03f * Mathf.Sin(Time * 23f + 1f);
         arr[n++] = new Vector4(PPos.X, PPos.Y, PlayerLightR * fl, 0);
         foreach (var a in W.Ancients) if (a.Lit && n < LightLimit) arr[n++] = new Vector4(a.Pos.X, a.Pos.Y, AncientR(a), Mathf.Max(a.Anim < 1 ? 1 - a.Anim : 0, a.Pulse));
-        foreach (var l in Lamps) if (n < LightLimit) arr[n++] = new Vector4(l.Pos.X, l.Pos.Y, LampRad(l) * (1f + .02f * Mathf.Sin(Time * 9f + l.Pos.X)), 0);
+        foreach (var l in Lamps) if (n < LightLimit) arr[n++] = new Vector4(l.Pos.X, l.Pos.Y, LampRad(l) * (1f + .02f * Mathf.Sin(Time * 9f + l.Pos.X) + .012f * Mathf.Sin(Time * 23f + l.Pos.Y * 1.3f)), 0);
         foreach (var b in Beacons) if (n < LightLimit) arr[n++] = new Vector4(b.Pos.X, b.Pos.Y, BeaconR(b), b.Ring * (1 - b.T / b.Dur));
         foreach (var p in BeamLights) if (n < LightLimit - 26) arr[n++] = new Vector4(p.X, p.Y, 34, 0);
         foreach (var z in ZoneLights()) if (n < LightLimit - 12) arr[n++] = z;

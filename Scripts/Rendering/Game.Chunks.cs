@@ -40,7 +40,7 @@ public partial class Game
         var sw = Stopwatch.StartNew();
         var c = new Chunk
         {
-            G = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS) },
+            G = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = waterMat },
             F = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
             O = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat }
         };

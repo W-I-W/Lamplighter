@@ -25,7 +25,7 @@ public partial class Game
 
     public static readonly string[] MainItems = { "Продолжить", "Новая игра", "Загрузить игру", "Настройки", "Достижения", "Титры", "Выход" };
     public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Загрузить игру", "Настройки", "Достижения", "Титры", "В главное меню", "Выход" };
-    public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Управление", "Назад" };
+    public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Ветер", "Частицы", "Вспышки", "Доп. эффекты", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Управление", "Назад" };
 
     public bool HasSave => File.Exists(SavePath) || File.Exists(BakPath);
     string SaveDir => testing ? testDir : ProjectSettings.GlobalizePath("user://");
@@ -90,7 +90,7 @@ public partial class Game
                 break;
             case MouseButton.Right:
                 if (RebindAction != null) { MenuKey(Key.Escape); break; }
-                if (Menu == Mn.Settings && hit >= 0 && hit < 8) { MenuCur = hit; MenuKey(Key.Left); }
+                if (Menu == Mn.Settings && hit >= 0 && hit < 12) { MenuCur = hit; MenuKey(Key.Left); }
                 else MenuBackKey();
                 break;
         }
@@ -103,7 +103,7 @@ public partial class Game
             case Mn.Main: break;
             case Mn.Pause: CloseMenu(); break;
             case Mn.Settings: Settings.Save(); OpenMenu(MenuBack); break;
-            case Mn.Keys: OpenMenu(Mn.Settings); MenuCur = 8; break;
+            case Mn.Keys: OpenMenu(Mn.Settings); MenuCur = 12; break;
             default: OpenMenu(MenuBack); break;
         }
     }
@@ -150,12 +150,16 @@ public partial class Game
             case 1: Settings.Sfx = Mathf.Clamp(Settings.Sfx + .1f * d, 0, 1); Settings.ApplyAudio(); Sfx.Play("pickup"); break;
             case 2: Settings.UiMode = (Settings.UiMode + d + 5) % 5; break;
             case 3: Settings.Shake = Mathf.Clamp(Settings.Shake + .25f * d, 0, 1.5f); break;
-            case 4: Settings.Fullscreen = !Settings.Fullscreen; Settings.ApplyWindow(testing); break;
-            case 5: Settings.Res = (Settings.Res + d + Settings.Resolutions.Length) % Settings.Resolutions.Length; Settings.ApplyWindow(testing); break;
-            case 6: Settings.Lang = Settings.Lang == "ru" ? "en" : "ru"; Loc.SetLang(Settings.Lang); break;
-            case 7: Settings.Diag = !Settings.Diag; Diag.Enabled = Settings.Diag; if (Settings.Diag) Diag.Reset(); break;
-            case 8: if (enter) { OpenMenu(Mn.Keys); } break;
-            case 9: if (enter) { Settings.Save(); OpenMenu(MenuBack); } break;
+            case 4: Settings.Wind = Mathf.Clamp(Settings.Wind + .25f * d, 0, 1.5f); break;
+            case 5: Settings.Particles = Mathf.Clamp(Settings.Particles + .25f * d, 0, 1.5f); break;
+            case 6: Settings.Flash = Mathf.Clamp(Settings.Flash + .25f * d, 0, 1.5f); break;
+            case 7: Settings.Fx = Mathf.Clamp(Settings.Fx + .25f * d, 0, 1.5f); break;
+            case 8: Settings.Fullscreen = !Settings.Fullscreen; Settings.ApplyWindow(testing); break;
+            case 9: Settings.Res = (Settings.Res + d + Settings.Resolutions.Length) % Settings.Resolutions.Length; Settings.ApplyWindow(testing); break;
+            case 10: Settings.Lang = Settings.Lang == "ru" ? "en" : "ru"; Loc.SetLang(Settings.Lang); break;
+            case 11: Settings.Diag = !Settings.Diag; Diag.Enabled = Settings.Diag; if (Settings.Diag) Diag.Reset(); break;
+            case 12: if (enter) { OpenMenu(Mn.Keys); } break;
+            case 13: if (enter) { Settings.Save(); OpenMenu(MenuBack); } break;
         }
         Sfx.Play("tick", -6, 1.2f);
     }
@@ -165,7 +169,7 @@ public partial class Game
         if (!enter) return;
         if (MenuCur < KeyMap.Actions.Length) { RebindAction = KeyMap.Actions[MenuCur]; return; }
         if (MenuCur == KeyMap.Actions.Length) { KeyMap.Reset(); Settings.Save(); Toast("Управление сброшено"); return; }
-        OpenMenu(Mn.Settings); MenuCur = 8;
+        OpenMenu(Mn.Settings); MenuCur = 12;
     }
 
     // ───────────────────────── слоты ─────────────────────────

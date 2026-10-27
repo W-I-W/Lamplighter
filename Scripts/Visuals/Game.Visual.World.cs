@@ -75,7 +75,7 @@ public partial class Game
         DrawHazards(c);
         DrawHeartWorld(c);
         DrawBeams(c);
-        DrawRings(c); DrawSparks(c);
+        DrawRings(c); DrawSparks(c); DrawPlayerGhosts(c);
         DrawWeaponFx(c);
         DrawBarriers(c);
         DrawEvents(c);
@@ -325,8 +325,14 @@ public partial class Game
         if (swArcT > 0)
         {
             float k = swArcT / .2f; var col = ElemColor(); col.A = k;
-            Gfx.Arc(c, PPos, swArcReach * (1.1f - .2f * k), swArcDir - swArcHalf, swArcDir + swArcHalf, 18, col, 2.5f);
-            Gfx.Arc(c, PPos, swArcReach * (.9f - .2f * k), swArcDir - swArcHalf * .8f, swArcDir + swArcHalf * .8f, 14, new Color(1, 1, 1, k * .6f), 1.2f);
+            // дуга удара «проносится» слева направо: яркая голова и затухающий хвост из нескольких отрезков
+            float sweep = Mathf.Clamp((1f - k) * 1.6f, 0f, 1f), a0 = swArcDir - swArcHalf, span = swArcHalf * 2f, reach = swArcReach * (1.05f - .1f * k);
+            for (int i = 0; i < 6; i++)
+            {
+                float t0 = Mathf.Max(0, sweep - (i + 1) * .09f), t1 = Mathf.Max(0, sweep - i * .09f); if (t1 <= t0) continue;
+                Gfx.Arc(c, PPos, reach, a0 + span * t0, a0 + span * t1, 4, new Color(col.R, col.G, col.B, k * (1f - i * .16f)), i == 0 ? 3f : 2f);
+            }
+            Gfx.Arc(c, PPos, reach * .86f, a0, a0 + span * sweep, 14, new Color(1, 1, 1, k * .45f), 1f);
         }
     }
 }

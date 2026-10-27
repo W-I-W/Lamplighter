@@ -100,3 +100,14 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 - Overlays that follow the world (markers, floating numbers, toasts, banners, tooltip, boss bar) are pooled Label/PanelContainer/ProgressBar/TextureRect nodes created by `HudNodes.cs` (still positioned from code because they track world positions).
 - The world map is a `TileMapLayer` whose colours come from `Assets/UI/Map/map_palette.png` (`tools/GraphicsGenerator/make_map_palette.py`); `Game.MapIdx` picks the palette index per tile.
 - Sprites are loaded only from PNG. The old procedural sprite generator was moved out of the build (`tools/GraphicsGenerator/*.cs` is excluded in `Lamplighter.csproj`); missing PNGs are reported as an error instead of being drawn from code. `LAMP_STAGE=texcheck` verifies every sprite sheet and effect primitive loads.
+
+## Living world (stage 7)
+
+- **Wind**: `Assets/Shaders/Vegetation/sway.gdshader` + `Assets/Materials/sway.tres` sway only the tiles listed in `Resources/VisualConfigs/VisualFx.tres` (trees, pines, dead trees, foliage); the top of a sprite moves most, the bottom stays; shifts are whole pixels. One shared material and one set of uniforms for every chunk. Axe/pickaxe hits shake the tile (`Game.TileShake`), grass bends away from the player. Rare ores pulse (`GlowTiles`).
+- **Foliage**: visual-only `TileMapLayer` per chunk with tufts, tall grass, flowers and bushes (tiles 130-133, `tools/GraphicsGenerator/make_foliage.py`); never saved, no collision.
+- **Water**: `Assets/Shaders/Water/water.gdshader` on the ground layer animates only the water tile (3-step pixel waves, sparkles).
+- **Combat visuals** (`Scripts/Visuals/Game.Visual.EnemyAnim.cs`, `...WeaponFx.cs`): every enemy has a style (squash, lunge, shoot, caster, stomp, bomb, boss) with anticipation, attack and recovery poses derived from existing `Tele/Dash/Atk` fields (damage and timings unchanged), lunge trails, aim dots, caster particles. Hit feedback: additive white flash layer (`Assets/Shaders/Combat/flash_white.gdshader`), impact sparks, shake, pixel-dissolve deaths; normal/strong/boss profiles and crit scaling in `VisualFx.tres`. Player: sword sweep trail, arrow/orb trails, muzzle puffs, dash afterimages, light-wave rings.
+- **Lanterns and buildings** (`Game.Visual.Ambient.cs`): flames/dust on lamps, ignition sequence (flash, wave, golden motes) for ancient lanterns and the Central Beacon, smoke/sparks/chips for working buildings.
+- **Biomes**: ambient particle layer above the darkness (leaves, fireflies, pollen / drops / ash and embers / snow / dark motes), capped at 90 particles and spawned only around the camera.
+- **Settings**: wind, particles, flashes, extra effects (0-150%) in Settings; screen shake already existed. `Settings.Particles` also scales `Game.Burst`.
+- Not done: moving parts of machines (tiles are single sprites), heat-haze distortion, tree-fall tilt.

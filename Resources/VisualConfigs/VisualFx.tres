@@ -6,6 +6,8 @@
 script = ExtResource("1")
 SwayTiles = PackedInt32Array(5, 111, 79, 130, 131, 132, 133)
 SwayAmp = PackedFloat32Array(2.4, 1.8, 1.0, 1.6, 1.2, 1.8, 2.4)
+GlowTiles = PackedInt32Array(9, 22, 50, 51, 100, 110)
+GlowAmount = PackedFloat32Array(0.35, 0.35, 0.3, 0.15, 0.4, 0.3)
 Wind = 1.0
 HitShakePx = 2.4
 HitShakeTime = 0.5

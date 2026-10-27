@@ -26,7 +26,7 @@ public partial class Game
         if (BeaconLevel == 5 && !BossDown(5)) { Fail("Для окончательной активации нужно победить Источник Тьмы в Сердце Тьмы"); return; }
         if (Inv[It.Core] < 1) { Fail("Нужно ядро света — его даёт победа над стражем биома"); return; }
         Inv[It.Core]--; BeaconLevel++;
-        var a = W.Ancients[0]; a.TargetRadius = BeaconRadius(BeaconLevel); a.Pulse = 1f;
+        var a = W.Ancients[0]; a.TargetRadius = BeaconRadius(BeaconLevel); a.Pulse = 1f; OnAncientLit(a, true);
         Flash = .6f; Shake = 6; Burst(a.Pos, new Color("#fff2b0"), 40, 160); Sfx.Play("ancient");
         GiveXp(80);
         TradeEpoch++;

@@ -47,7 +47,7 @@ public partial class Game
         if (!Has(Tech.Dash) || DashCd > 0 || DashT > 0) return;
         var d = LastMoveDir.LengthSquared() > .01f ? LastMoveDir : (Aim - PPos).Normalized();
         if (d.LengthSquared() < .01f) d = new Vector2(Facing, 0);
-        DashDir = d; DashT = .18f; DashCd = 1.6f; Invuln = Mathf.Max(Invuln, .3f); Sfx.Play("dash"); RelicOnDash();
+        DashDir = d; DashT = .18f; DashCd = 1.6f; Invuln = Mathf.Max(Invuln, .3f); Sfx.Play("dash"); RelicOnDash(); OnDash(PPos, d);
     }
 
     void TrySpin()
@@ -72,7 +72,7 @@ public partial class Game
     {
         if (PulseCd <= 0) Diag.Count("pulse");
         if (!Has(Tech.Pulse) || PulseCd > 0) return;
-        PulseCd = 12f; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0; RelicOnPulse();
+        PulseCd = 12f; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0; RelicOnPulse(); OnPulse(PPos);
         Beacons.Add(new Beacon { Pos = PPos, Dur = 1.8f, R = 170, Ring = 1f });
         foreach (var e in new List<Enemy>(Enemies))
             if (!e.Hidden && e.Pos.DistanceTo(PPos) < 170)

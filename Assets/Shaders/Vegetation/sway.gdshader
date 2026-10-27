@@ -8,6 +8,7 @@ uniform float amp[140];            // max sway in pixels per atlas column (0 = s
 uniform float wind = 1.0;          // overall wind strength (config * player setting)
 uniform float time_s = 0.0;
 uniform vec2 player = vec2(-99999.0);   // world position of the player (grass bends away)
+uniform float glow[140];            // pulse of rare resources (brightness boost per atlas column)
 uniform vec4 shakes[8];            // x, y = tile coords, z = amplitude (px, already decayed), w = phase
 varying vec2 wpos;
 
@@ -50,5 +51,12 @@ void fragment() {
 		else { COLOR = texture(TEXTURE, uv); }
 	} else {
 		COLOR = texture(TEXTURE, UV);
+	}
+	float g = glow[int(col)];
+	if (g > 0.0) {
+		float ph = hash(floor(wpos / 16.0)) * 6.2831;
+		float pulse = 0.5 + 0.5 * sin(time_s * 2.0 + ph);
+		COLOR.rgb *= 1.0 + g * (0.25 + 0.75 * pulse);
+		COLOR.rgb += vec3(0.10, 0.09, 0.05) * g * pulse * COLOR.a;
 	}
 }
