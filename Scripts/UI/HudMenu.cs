@@ -10,13 +10,23 @@ public partial class Hud
     static string BarStr(float v) { int n = Mathf.RoundToInt(v * 10); return new string('█', n) + new string('░', 10 - n); }
 
     /// <summary>Кнопка меню: состояния обычная / выбранная / недоступная берутся из темы (Button, ButtonSelected).</summary>
-    void MenuButton(float cx, float y, float w, string text, bool sel, string value = null, bool disabled = false)
+    void MenuButton(float cx, float y, float w, string text, bool sel, string value = null, bool disabled = false, int idx = -1)
     {
-        var r = new Rect2(Mathf.Round(cx - w / 2), Mathf.Round(y), w, 15); panelRects.Add(r);
+        var r = new Rect2(Mathf.Round(cx - w / 2), Mathf.Round(y), w, 15); panelRects.Add(r); if (idx >= 0 && !disabled) menuRects.Add((r, idx));
         theme.GetStylebox(disabled ? "disabled" : "normal", disabled ? "Button" : sel ? "ButtonSelected" : "Button").Draw(GetCanvasItem(), r);
         var col = disabled ? new Color("#5a6278") : sel ? Gold : Text;
         Txt(text, new Vector2(r.Position.X + 6, y + 11), 9, col, HorizontalAlignment.Left, w - 12);
         if (value != null) Txt(value, new Vector2(r.Position.X, y + 11), 9, sel ? Gold : Dim, HorizontalAlignment.Right, w - 6);
+    }
+
+    readonly List<(Rect2 r, int i)> menuRects = new();
+
+    /// <summary>Индекс пункта меню под точкой (логические координаты) или -1.</summary>
+    public int MenuHit(Vector2 p)
+    {
+        int best = -1; float bd = float.MaxValue;
+        foreach (var (r, i) in menuRects) if (r.HasPoint(p)) { float d = Mathf.Abs(p.Y - r.GetCenter().Y); if (d < bd) { bd = d; best = i; } }
+        return best;
     }
 
     void DrawMenu(Vector2 vs)
@@ -31,7 +41,7 @@ public partial class Hud
             float fl = .8f + .2f * Mathf.Sin(G.UiTime * 9f); DrawRect(new Rect2(cx - 3, 24, 6, 6), new Color(1f, .8f, .3f, .35f * fl)); DrawRect(new Rect2(cx - 2, 25, 4, 4), new Color(1f, .9f, .5f)); DrawRect(new Rect2(cx - 1, 26, 2, 2), Colors.White);
             var items = G.Menu == Mn.Main ? Game.MainItems : Game.PauseItems; float y0 = 92;
             Panel(new Rect2(cx - w / 2 - 8, y0 - 8, w + 16, items.Length * 17 + 10), "PanelContainer");
-            for (int i = 0; i < items.Length; i++) MenuButton(cx, y0 + i * 17, w, items[i], G.MenuCur == i, null, G.Menu == Mn.Main && i == 0 && !G.HasSave);
+            for (int i = 0; i < items.Length; i++) MenuButton(cx, y0 + i * 17, w, items[i], G.MenuCur == i, null, G.Menu == Mn.Main && i == 0 && !G.HasSave, i);
             Txt($"v{Game.VersionStr} · {Game.BuildStr}", new Vector2(0, vs.Y - 5), 9, Dim, HorizontalAlignment.Right, vs.X - 6);
             Txt("↑/↓ выбор · Enter" + (G.Menu == Mn.Pause ? " · Esc — продолжить" : ""), new Vector2(0, vs.Y - 5), 9, Dim, HorizontalAlignment.Center, vs.X);
             return;
@@ -43,7 +53,7 @@ public partial class Hud
                     var r = WinRect(vs, 300, 226); var a = Frame(r, "Настройки", "←/→ изменить · Enter · Esc — назад");
                     string[] modes = { "Авто", "×1", "×2", "×3", "×4" };
                     string[] v = { BarStr(Settings.Music), BarStr(Settings.Sfx), modes[Settings.UiMode], $"{Settings.Shake * 100:0}%", Settings.Fullscreen ? "да" : "нет", Settings.Fullscreen ? "—" : $"{Settings.Resolutions[Settings.Res].X}×{Settings.Resolutions[Settings.Res].Y}", Settings.Lang == "ru" ? "Русский" : "English", Settings.Diag ? "вкл" : "выкл", "", "" };
-                    for (int i = 0; i < Game.SettingsItems.Length; i++) MenuButton(a.Position.X + a.Size.X / 2, a.Position.Y + 6 + i * 16, a.Size.X - 4, Game.SettingsItems[i], G.MenuCur == i, v[i] == "" ? null : v[i]);
+                    for (int i = 0; i < Game.SettingsItems.Length; i++) MenuButton(a.Position.X + a.Size.X / 2, a.Position.Y + 6 + i * 16, a.Size.X - 4, Game.SettingsItems[i], G.MenuCur == i, v[i] == "" ? null : v[i], false, i);
                     break;
                 }
             case Mn.Keys:
@@ -53,7 +63,7 @@ public partial class Hud
                     for (int i = 0; i < n + 2; i++)
                     {
                         string name = i < n ? KeyMap.Labels[i] : i == n ? "Сбросить" : "Назад"; string val = i < n ? (G.RebindAction == KeyMap.Actions[i] ? "нажмите…" : KeyMap.Name(KeyMap.Actions[i])) : null;
-                        MenuButton(a.Position.X + a.Size.X / 2, a.Position.Y + 4 + i * 12, a.Size.X - 4, name, G.MenuCur == i, val);
+                        MenuButton(a.Position.X + a.Size.X / 2, a.Position.Y + 4 + i * 12, a.Size.X - 4, name, G.MenuCur == i, val, false, i);
                     }
                     break;
                 }
@@ -64,7 +74,7 @@ public partial class Hud
                     {
                         var s = G.Slots[i]; string name = i == 0 ? "Автосохранение" : $"Слот {i}";
                         string info = s.Exists ? $"ур.{s.Level} · маяк {s.Beacon}/6 · {(int)(s.Secs / 3600)}ч {(int)(s.Secs % 3600 / 60)}м" + (s.Finished ? " · пройдена" : "") : "пусто";
-                        float y = a.Position.Y + 4 + i * 36; var rr = new Rect2(a.Position.X, y, a.Size.X, 32); panelRects.Add(rr);
+                        float y = a.Position.Y + 4 + i * 36; var rr = new Rect2(a.Position.X, y, a.Size.X, 32); panelRects.Add(rr); menuRects.Add((rr, i));
                         theme.GetStylebox("normal", G.MenuCur == i ? "ButtonSelected" : "Button").Draw(GetCanvasItem(), rr);
                         Txt(name, new Vector2(rr.Position.X + 6, y + 11), 9, G.SlotSaveMode && i == 0 ? Dim : Text); Txt(info, new Vector2(rr.Position.X + 6, y + 23), 9, Dim, HorizontalAlignment.Left, rr.Size.X - 12);
                         if (s.Stamp != "") Txt(s.Stamp, new Vector2(rr.Position.X, y + 11), 9, Dim, HorizontalAlignment.Right, rr.Size.X - 6);
@@ -75,7 +85,7 @@ public partial class Hud
                 {
                     var r = WinRect(vs, 300, 100); var a = Frame(r, "Подтверждение", null, Warn);
                     Para(G.ConfirmText, a.Position.X + 4, a.Position.Y + 10, a.Size.X - 8, Text);
-                    MenuButton(cx - 50, r.End.Y - 24, 80, "Да", G.MenuCur == 0); MenuButton(cx + 50, r.End.Y - 24, 80, "Нет", G.MenuCur == 1);
+                    MenuButton(cx - 50, r.End.Y - 24, 80, "Да", G.MenuCur == 0, null, false, 0); MenuButton(cx + 50, r.End.Y - 24, 80, "Нет", G.MenuCur == 1, null, false, 1);
                     break;
                 }
             case Mn.Credits:
@@ -96,6 +106,7 @@ public partial class Hud
                     for (int i = sc; i < Ach.All.Length && i < sc + vis; i++)
                     {
                         var d = Ach.All[i]; bool got = Ach.Got.Contains(d.Id); float y = a.Position.Y + 6 + (i - sc) * 22;
+                        menuRects.Add((new Rect2(a.Position.X, y - 2, a.Size.X, 21), i));
                         if (G.MenuCur == i) theme.GetStylebox("normal", "ButtonSelected").Draw(GetCanvasItem(), new Rect2(a.Position.X, y - 2, a.Size.X, 21));
                         Txt((got ? "★ " : "☆ ") + d.Name, new Vector2(a.Position.X + 4, y + 8), 9, got ? Gold : Dim, HorizontalAlignment.Left, a.Size.X - 8);
                         Txt(d.Desc, new Vector2(a.Position.X + 14, y + 17), 9, got ? Text : new Color("#6a7288"), HorizontalAlignment.Left, a.Size.X - 18);

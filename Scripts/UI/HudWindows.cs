@@ -54,8 +54,8 @@ public partial class Hud
         {
             case 0:
                 {
-                    ly = Row(list, ly, G.WinCur == 0, "Кирка", G.CurW == -1 ? "в руках" : null, G.CurW == -1 ? Gold : Text);
-                    for (int i = 0; i < G.Owned.Count; i++) { var d = Db.Weapon(G.Owned[i].Id); ly = Row(list, ly, G.WinCur == i + 1, d.Name, (G.CurW == i ? "★ " : "") + Db.ClassNames[(int)d.Cls], Db.RarCol[(int)d.Rar]); }
+                    ly = Row(list, ly, Sel(0), "Кирка", G.CurW == -1 ? "в руках" : null, G.CurW == -1 ? Gold : Text);
+                    for (int i = 0; i < G.Owned.Count; i++) { var d = Db.Weapon(G.Owned[i].Id); ly = Row(list, ly, Sel(i + 1), d.Name, (G.CurW == i ? "★ " : "") + Db.ClassNames[(int)d.Cls], Db.RarCol[(int)d.Rar]); }
                     int sel = G.WinCur - 1; var w = sel >= 0 && sel < G.Owned.Count ? Db.Weapon(G.Owned[sel].Id) : null;
                     if (w == null) { y = Para("Кирка: добыча руды и слабый удар. Оружие даёт классовое поведение: меч — дуга по области, лук — стрелы, посох — магические шары.", dx, y + 8, dw, Dim); break; }
                     Txt($"{w.Name} · {Db.RarName[(int)w.Rar]}", new Vector2(dx, y + 8), 9, Db.RarCol[(int)w.Rar], HorizontalAlignment.Left, dw); y += 11; y = Para(w.Desc, dx, y + 8, dw, Dim);
@@ -70,7 +70,7 @@ public partial class Hud
             case 1:
                 {
                     Txt($"Слоты: {G.EquippedRelics.Count}/{G.RelicSlots}", new Vector2(list.Position.X + 2, ly + 6), 9, Dim); ly += 12; int sc = Scroll(G.WinCur, 14);
-                    for (int i = sc; i < G.OwnedRelics.Count && i < sc + 14; i++) { var d = Db.Relic(G.OwnedRelics[i]); if (d == null) continue; bool eq = G.EquippedRelics.Contains(d.Id); ly = Row(list, ly + 6, G.WinCur == i, (eq ? "✓ " : "  ") + d.Title, null, eq ? Good : Db.RarCol[d.Rarity]) - 6; }
+                    for (int i = sc; i < G.OwnedRelics.Count && i < sc + 14; i++) { var d = Db.Relic(G.OwnedRelics[i]); if (d == null) continue; bool eq = G.EquippedRelics.Contains(d.Id); ly = Row(list, ly + 6, Sel(i), (eq ? "✓ " : "  ") + d.Title, null, eq ? Good : Db.RarCol[d.Rarity]) - 6; }
                     if (G.OwnedRelics.Count == 0) { Para("Реликвий пока нет: ищите их в сундуках, тайниках, у торговцев и за боссов", list.Position.X + 2, ly + 8, list.Size.X - 4, Dim); }
                     if (G.WinCur < G.OwnedRelics.Count)
                     {
@@ -90,7 +90,7 @@ public partial class Hud
                         string nm, cost; Color col;
                         if (i < ws.Count) { var w = ws[i]; bool have = G.HasWeapon(w.Id), okb = G.BpOk(w.Bp); nm = w.Name; cost = have ? "есть" : !okb ? "чертёж" : ""; col = have ? Dim : !okb ? new Color("#6a7288") : G.Can(w.Cost) ? Good : Warn; }
                         else { var m = Db.Mods[i - ws.Count]; nm = "Вставка: " + m.Name; cost = !G.BpOk(m.Bp) ? "чертёж" : ""; col = !G.BpOk(m.Bp) ? new Color("#6a7288") : G.Can(m.Cost) ? Good : Warn; }
-                        ly = Row(list, ly + 6, G.WinCur == i, nm, cost == "" ? null : cost, col) - 6;
+                        ly = Row(list, ly + 6, Sel(i), nm, cost == "" ? null : cost, col) - 6;
                     }
                     if (G.WinCur < ws.Count)
                     {
@@ -131,20 +131,20 @@ public partial class Hud
         if (G.WinTab == 0)
         {
             Txt($"Собрано чертежей: {G.BpDone.Count}/{Db.Bps.Length}. Недостающие фрагменты — в лавке.", new Vector2(a.Position.X + 2, y), 9, Dim, HorizontalAlignment.Left, a.Size.X); y += 12; int sc = Scroll(G.WinCur, vis);
-            for (int i = sc; i < Db.Bps.Length && i < sc + vis; i++) { var b = Db.Bps[i]; bool ok = G.BpDone.Contains(b.Id); int fr = G.Frag.GetValueOrDefault(b.Id); y = Row(a, y, G.WinCur == i, (ok ? "✓ " : "  ") + b.Name, ok ? "изучен" : $"{fr}/{b.Need}", ok ? Good : fr > 0 ? Warn : Dim, h); }
+            for (int i = sc; i < Db.Bps.Length && i < sc + vis; i++) { var b = Db.Bps[i]; bool ok = G.BpDone.Contains(b.Id); int fr = G.Frag.GetValueOrDefault(b.Id); y = Row(a, y, Sel(i), (ok ? "✓ " : "  ") + b.Name, ok ? "изучен" : $"{fr}/{b.Need}", ok ? Good : fr > 0 ? Warn : Dim, h); }
             if (G.WinCur < Db.Bps.Length) Para(Db.Bps[G.WinCur].Desc, a.Position.X + 2, a.End.Y - 8, a.Size.X, new Color("#ffe9a0"), 1);
         }
         else if (G.WinTab == 2)
         {
             int per = Math.Max(1, vis / 2); int sc = Scroll(G.WinCur, per);
-            for (int i = sc; i < G.Goals.Count && i < sc + per; i++) { var gl = G.Goals[i]; y = Row(a, y, G.WinCur == i, (i == 0 ? "▶ " : "• ") + gl.Title, null, i == 0 ? Gold : Text, h); y = Para(gl.Needs, a.Position.X + 10, y, a.Size.X - 12, Dim, 1); }
+            for (int i = sc; i < G.Goals.Count && i < sc + per; i++) { var gl = G.Goals[i]; y = Row(a, y, Sel(i), (i == 0 ? "▶ " : "• ") + gl.Title, null, i == 0 ? Gold : Text, h); y = Para(gl.Needs, a.Position.X + 10, y, a.Size.X - 12, Dim, 1); }
             if (G.Goals.Count == 0) Txt("Все цели выполнены!", new Vector2(a.Position.X + 2, y + 8), 9, Good);
         }
         else
         {
             if (G.Found.Count == 0) Para("Редких находок пока нет — исследуйте сундуки, тайники, обелиски и события.", a.Position.X + 2, y + 8, a.Size.X, Dim);
             int sc = Scroll(G.WinCur, vis);
-            for (int i = sc; i < G.Found.Count && i < sc + vis; i++) { var s = G.Found[i]; Color col = Text; for (int k = 0; k < 5; k++) if (s.StartsWith(Db.RarName[k])) col = Db.RarCol[k]; y = Row(a, y, G.WinCur == i, s, null, col, h); }
+            for (int i = sc; i < G.Found.Count && i < sc + vis; i++) { var s = G.Found[i]; Color col = Text; for (int k = 0; k < 5; k++) if (s.StartsWith(Db.RarName[k])) col = Db.RarCol[k]; y = Row(a, y, Sel(i), s, null, col, h); }
         }
     }
 
@@ -164,6 +164,7 @@ public partial class Hud
         for (int i = sc; i < list.Count && i < sc + vis; i++)
         {
             var b = list[i]; int bk = Game.BIndex(b.Type); y += 12; bool lk = b.Linked || b.Forced;
+            winRects.Add((new Rect2(a.Position.X, y - 8, a.Size.X, 11), i));
             if (i == G.WinCur) theme.GetStylebox("normal", "ButtonSelected").Draw(GetCanvasItem(), new Rect2(a.Position.X, y - 8, a.Size.X, 11));
             Txt(Game.BNames[bk], new Vector2(a.Position.X + 4, y), 9, b.Off ? Dim : Text, HorizontalAlignment.Left, 96);
             Txt(b.Level.ToString(), new Vector2(a.Position.X + 4 + xs[1], y), 9, Gold);
@@ -191,14 +192,14 @@ public partial class Hud
         {
             if (G.CurOffers.Count == 0) Para("Сегодня нет товаров. Улучшайте лавку и продвигайтесь по миру — ассортимент растёт.", a.Position.X + 2, y + 8, a.Size.X, Dim);
             int sc = Scroll(G.WinCur, vis);
-            for (int i = sc; i < G.CurOffers.Count && i < sc + vis; i++) { var o = G.CurOffers[i]; bool bought = G.OfferBought(o); y = Row(a, y + 8, G.WinCur == i, (bought ? "✓ " : "") + o.Title, bought ? "куплено" : $"{o.Price}", bought ? Dim : G.Inv[It.Coins] >= o.Price ? Db.RarCol[(int)o.Rar] : Warn) - 8; }
+            for (int i = sc; i < G.CurOffers.Count && i < sc + vis; i++) { var o = G.CurOffers[i]; bool bought = G.OfferBought(o); y = Row(a, y + 8, Sel(i), (bought ? "✓ " : "") + o.Title, bought ? "куплено" : $"{o.Price}", bought ? Dim : G.Inv[It.Coins] >= o.Price ? Db.RarCol[(int)o.Rar] : Warn) - 8; }
             if (G.WinCur < G.CurOffers.Count) Para(G.CurOffers[G.WinCur].Desc, a.Position.X + 2, a.End.Y - 22, a.Size.X, new Color("#ffe9a0"), 2);
         }
         else
         {
             var sl = G.SellList(); if (sl.Count == 0) Txt("Нечего продавать.", new Vector2(a.Position.X + 2, y + 8), 9, Dim);
             int sc = Scroll(G.WinCur, vis);
-            for (int i = sc; i < sl.Count && i < sc + vis; i++) y = Row(a, y + 8, G.WinCur == i, $"{It.Names[sl[i]]} ×{G.Inv[sl[i]]}", $"{G.SellPrice(sl[i])}", It.Col[sl[i]]) - 8;
+            for (int i = sc; i < sl.Count && i < sc + vis; i++) y = Row(a, y + 8, Sel(i), $"{It.Names[sl[i]]} ×{G.Inv[sl[i]]}", $"{G.SellPrice(sl[i])}", It.Col[sl[i]]) - 8;
             string d = ""; for (int i = 0; i < G.Demand.Length; i++) d += $"{Game.CatNames[i]} {(int)(G.Demand[i] * 100)}%  ";
             Para("Спрос: " + d, a.Position.X + 2, a.End.Y - 22, a.Size.X, Dim, 2);
         }
@@ -215,6 +216,7 @@ public partial class Hud
         {
             int i = all[k]; var t = Game.Techs[i]; bool own = G.Has((Tech)i), ok = t.Ok(G), can = ok && !t.Reward && G.Can(t.Cost);
             var col = own ? Cyan : can ? Good : ok ? Warn : new Color("#6a7288"); string key = t.Reward ? "[★]" : $"[{++num}]";
+            if (!t.Reward) winRects.Add((new Rect2(a.Position.X, y + 1, a.Size.X, 23), num));
             y += 10; Txt($"{key} {t.Name}", new Vector2(a.Position.X + 2, y), 9, col, HorizontalAlignment.Left, 250);
             string right = own ? "✓" : !ok ? "нужно: " + t.Req : t.Reward ? "награда" : Game.CostStr(t.Cost);
             Txt(right, new Vector2(a.Position.X, y), 9, col, HorizontalAlignment.Right, a.Size.X - 2);
@@ -290,17 +292,17 @@ public partial class Hud
         if (G.RiftState == 1)
         {
             float yy = a.Position.Y + 8;
-            for (int i = 0; i < G.RiftOffer.Count; i++) { var d = Db.Relic(G.RiftOffer[i]); yy = Row(a, yy + 8, G.WinCur == i, $"[{i + 1}] {d.Title}", null, new Color("#e8d8ff"), 11) - 8; yy = Para(d.Desc, a.Position.X + 14, yy + 8, a.Size.X - 16, Dim, 2) + 2; }
+            for (int i = 0; i < G.RiftOffer.Count; i++) { var d = Db.Relic(G.RiftOffer[i]); yy = Row(a, yy + 8, Sel(i), $"[{i + 1}] {d.Title}", null, new Color("#e8d8ff"), 11) - 8; yy = Para(d.Desc, a.Position.X + 14, yy + 8, a.Size.X - 16, Dim, 2) + 2; }
             return;
         }
         float y = Tabs(a.Position.X, a.Position.Y + 2, Game.RiftTabs, G.WinTab) + 8;
         Icon(It.RiftShard, new Vector2(a.End.X - 40, a.Position.Y - 4)); Txt($"{G.Inv[It.RiftShard]}", new Vector2(a.End.X - 22, a.Position.Y + 8), 9, It.Col[It.RiftShard]);
         if (G.WinTab == 0)
-            for (int i = 0; i < Game.MaxRiftTier; i++) { bool open = G.RiftTierOpen(i + 1), done = (G.RiftFirst & (1 << (i + 1))) != 0; y = Row(a, y + 8, G.WinCur == i, $"Уровень {i + 1}" + (done ? " ✓" : ""), open ? $"×{1 + .22f * (i + 1):0.0} · {3 + 2 * (i + 1)}" : "закрыт", open ? Text : new Color("#6a7288")) - 8; }
+            for (int i = 0; i < Game.MaxRiftTier; i++) { bool open = G.RiftTierOpen(i + 1), done = (G.RiftFirst & (1 << (i + 1))) != 0; y = Row(a, y + 8, Sel(i), $"Уровень {i + 1}" + (done ? " ✓" : ""), open ? $"×{1 + .22f * (i + 1):0.0} · {3 + 2 * (i + 1)}" : "закрыт", open ? Text : new Color("#6a7288")) - 8; }
         else if (G.WinTab == 1)
-            for (int i = 0; i < Game.Legends.Length; i++) { var l = Game.Legends[i]; bool has = G.HasLegend(i); y = Row(a, y + 8, G.WinCur == i, l.Name + (has ? " ✓" : ""), has ? "получено" : null, has ? Good : G.Can(l.Cost) ? Gold : Dim) - 8; y = Para(has ? l.Desc : l.Desc + " · " + Game.CostStr(l.Cost), a.Position.X + 10, y + 8, a.Size.X - 12, Dim, 2); }
+            for (int i = 0; i < Game.Legends.Length; i++) { var l = Game.Legends[i]; bool has = G.HasLegend(i); y = Row(a, y + 8, Sel(i), l.Name + (has ? " ✓" : ""), has ? "получено" : null, has ? Good : G.Can(l.Cost) ? Gold : Dim) - 8; y = Para(has ? l.Desc : l.Desc + " · " + Game.CostStr(l.Cost), a.Position.X + 10, y + 8, a.Size.X - 12, Dim, 2); }
         else
-            for (int i = 0; i < Game.CosmNames.Length; i++) { bool own = (G.CosmMask & (1 << i)) != 0; y = Row(a, y + 8, G.WinCur == i, Game.CosmNames[i] + (G.CosmSel == i ? " (надет)" : ""), own ? null : "закрыт", own ? Text : new Color("#6a7288")) - 8; }
+            for (int i = 0; i < Game.CosmNames.Length; i++) { bool own = (G.CosmMask & (1 << i)) != 0; y = Row(a, y + 8, Sel(i), Game.CosmNames[i] + (G.CosmSel == i ? " (надет)" : ""), own ? null : "закрыт", own ? Text : new Color("#6a7288")) - 8; }
     }
 
     void DrawEndgameHud(Vector2 vs)

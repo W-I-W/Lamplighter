@@ -410,7 +410,8 @@ public partial class Game : Node2D
     // ───────────────────────── ввод ─────────────────────────
     public override void _Input(InputEvent e)
     {
-        if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); return; }
+        if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
+        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
         if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0) { OverUi = UiOver(cb.Position / UiScaleVp); ClickWorld(); }
         if (FinStage > 0) { if (e is InputEventKey fk && fk.Pressed && !fk.Echo) FinaleKey(fk.Keycode); return; }
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right && Window == Win.None) TrySpin();

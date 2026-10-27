@@ -133,7 +133,16 @@ public partial class Game
         if (Swing > 0)
         {
             var d = (Aim - PPos); d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0);
-            float t = 1 - Swing / .22f; float ang = d.Angle() - 1.0f + t * 2.0f;
+            bool mining = MineTile.X >= 0 && MineProg > 0 && AtkCd <= 0;
+            float t = 1 - Swing / .22f, ang, sg = d.X < 0 ? -1 : 1;   // зеркалим замах при прицеле влево
+            if (mining)
+            {
+                // цикл долбления: замах назад (медленно) и резкий удар вперёд
+                float ph = (Time * 4.5f) % 1f; if (ph < mineLastPh) MineStrikeFx(); mineLastPh = ph;
+                float k = ph < .65f ? ph / .65f : 1f - (ph - .65f) / .35f;
+                ang = d.Angle() + sg * Mathf.Lerp(.55f, -1.45f, k * k);
+            }
+            else ang = d.Angle() + sg * (-1.0f + t * 2.0f);
             var a = PPos + new Vector2(0, -3); var b = a + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 13;
             Color head = Tier == 0 ? new Color("#c9b08a") : Tier == 1 ? new Color("#e58a3d") : Tier == 2 ? new Color("#dfe8f6") : Tier == 3 ? new Color("#9fe4ff") : new Color("#a890ff");
             var pp = new Vector2(Mathf.Cos(ang + 1.57f), Mathf.Sin(ang + 1.57f));
@@ -157,6 +166,15 @@ public partial class Game
             c.DrawRect(new Rect2(p - new Vector2(3, 3), new Vector2(6, 6)), new Color(0, 0, 0, .7f)); c.DrawRect(new Rect2(p - new Vector2(2, 2), new Vector2(4, 4)), col);
             if (b.Pos.DistanceTo(PPos) < 70) c.DrawString(ThemeDB.FallbackFont, p + new Vector2(-30, -6), Loc.T(StatusText(b.Status)), HorizontalAlignment.Center, 60, 9, col);
         }
+    }
+
+    float mineLastPh;
+    void MineStrikeFx()
+    {
+        if (MineTile.X < 0) return;
+        var p = TileCenter(MineTile.X, MineTile.Y); var col = new Color(1f, .9f, .6f);
+        for (int i = 0; i < 4; i++)
+            Parts.Add(new Particle { P = p + new Vector2(rng.RandfRange(-4, 4), rng.RandfRange(-4, 4)), V = Vector2.FromAngle(rng.Randf() * Mathf.Tau) * rng.RandfRange(18, 40), Life = .3f, Max = .3f, C = col, Size = 1.4f });
     }
 
     void DrawMineFx(EntityLayer c)

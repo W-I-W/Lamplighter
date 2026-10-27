@@ -128,6 +128,47 @@ public partial class Game
         return true;
     }
 
+    /// <summary>Мышь в окнах: наведение выбирает строку, ЛКМ — действие (Enter), ПКМ — закрыть (в лавке при продаже — ×10), колесо — прокрутка, клик по вкладке — переход.</summary>
+    bool WinMouse(InputEventMouse e)
+    {
+        if (hud == null) return false;
+        var p = e.Position / UiScaleVp; int row = hud.RowHit(p), tab = hud.TabHit(p);
+        if (e is InputEventMouseMotion) { if (row >= 0 && row != WinCur) { WinCur = row; Sfx.Play("tick", -6, 1.4f); } return false; }
+        if (e is not InputEventMouseButton mb || !mb.Pressed) return false;
+        switch (mb.ButtonIndex)
+        {
+            case MouseButton.WheelUp: WindowKey(Key.Up, false); return true;
+            case MouseButton.WheelDown: WindowKey(Key.Down, false); return true;
+            case MouseButton.Left:
+                if (tab >= 0 && Window != Win.Story)
+                {
+                    for (int n = 0; n < 5 && (Window == Win.Trade ? TradeTab : WinTab) != tab; n++) WindowKey(Key.Right, false);
+                    return true;
+                }
+                if (Window == Win.Story) { WindowKey(Key.Enter, false); return true; }
+                if (row >= 0) { WinCur = row; WindowKey(Key.Enter, false); }
+                return true;
+            case MouseButton.Right:
+                if (Window == Win.Trade && TradeTab == 1 && row >= 0) { WinCur = row; WindowKey(Key.Enter, true); }
+                else WindowKey(Key.Escape, false);
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Мышь в окне улучшений [T]: вкладки, клик по строке — изучить, ПКМ — закрыть.</summary>
+    bool TechMouse(InputEventMouse e)
+    {
+        if (hud == null || e is not InputEventMouseButton mb || !mb.Pressed) return false;
+        var p = e.Position / UiScaleVp;
+        if (mb.ButtonIndex == MouseButton.Right) { CloseWindows(); return true; }
+        if (mb.ButtonIndex != MouseButton.Left) return false;
+        int tab = hud.TabHit(p), row = hud.RowHit(p);
+        if (tab >= 0) { TechPage = tab; Sfx.Play("tick"); return true; }
+        if (row >= 1) { Digit(row); return true; }
+        return false;
+    }
+
     void EquipKey(Key k)
     {
         if (k == Key.Left) { WinTab = (WinTab + 3) % 4; WinCur = 0; return; }

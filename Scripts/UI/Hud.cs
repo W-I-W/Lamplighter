@@ -74,7 +74,7 @@ public partial class Hud : Control
         foreach (var t in new[] { 0 }) { }
         for (int i = 0; i < names.Length; i++)
         {
-            float w = TextW(names[i]) + 10; var r = new Rect2(x, y, w, 12);
+            float w = TextW(names[i]) + 10; var r = new Rect2(x, y, w, 12); tabRects.Add((r, i));
             theme.GetStylebox(i == cur ? "normal" : "normal", i == cur ? "TabSelected" : "Tab").Draw(GetCanvasItem(), r);
             Txt(names[i], new Vector2(x + 5, y + 9), 9, i == cur ? Gold : Dim);
             x += w + 2;
@@ -83,8 +83,17 @@ public partial class Hud : Control
     }
 
     /// <summary>Строка списка с курсором. Возвращает y следующей строки.</summary>
+    readonly List<(Rect2 r, int i)> winRects = new(), tabRects = new();
+    int curRow = -1;
+    bool Sel(int i) { curRow = i; return G.WinCur == i; }
+
+    static int HitIn(List<(Rect2 r, int i)> l, Vector2 p) { foreach (var (r, i) in l) if (r.HasPoint(p)) return i; return -1; }
+    public int RowHit(Vector2 p) => HitIn(winRects, p);
+    public int TabHit(Vector2 p) => HitIn(tabRects, p);
+
     float Row(Rect2 a, float y, bool selected, string left, string right, Color col, float h = 11)
     {
+        if (curRow >= 0) { winRects.Add((new Rect2(a.Position.X - 2, y - 8, a.Size.X + 4, h), curRow)); curRow = -1; }
         if (selected) { theme.GetStylebox("normal", "ButtonSelected").Draw(GetCanvasItem(), new Rect2(a.Position.X - 2, y - 8, a.Size.X + 4, h)); }
         Txt(left, new Vector2(a.Position.X + 2, y), 9, col, HorizontalAlignment.Left, a.Size.X - (right != null ? TextW(right) + 6 : 0));
         if (right != null) Txt(right, new Vector2(a.Position.X, y), 9, selected ? Gold : col, HorizontalAlignment.Right, a.Size.X - 2);
@@ -100,7 +109,7 @@ public partial class Hud : Control
     public override void _Draw()
     {
         if (G == null || theme == null) return;
-        panelRects.Clear();
+        panelRects.Clear(); menuRects.Clear(); winRects.Clear(); tabRects.Clear();
         var vs = Size; if (vs.X < 100 || vs.Y < 60) return;
         if (G.Menu == Mn.Main) { DrawMenu(vs); return; }
         if (G.LightBlockT > 0) DrawRect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
@@ -199,7 +208,7 @@ public partial class Hud : Control
     {
         y += 8; int from = Mathf.Max(0, G.Toasts.Count - 3);
         float sl = 0, sr = vs.X;
-        if (G.GameHudNode != null) (sl, sr) = G.GameHudNode.FreeSpan(y - 8, y + 50, vs.X);
+        if (G.GameHudNode != null) (sl, sr) = G.GameHudNode.FreeSpan(y - 8, y + 50, vs.X, G.UiScaleVp);
         float cx = (sl + sr) * .5f, maxW = Mathf.Max(80, sr - sl - 24);   // центр и ширина — между боковыми панелями
         for (int i = from; i < G.Toasts.Count; i++)
         {

@@ -72,6 +72,30 @@ public partial class Game
         }
     }
 
+    /// <summary>Мышь в меню: наведение выбирает пункт, ЛКМ — действие, ПКМ — «влево» в настройках или назад, колесо — вверх/вниз.</summary>
+    void MenuMouse(InputEventMouse e)
+    {
+        if (hud == null) return;
+        int hit = hud.MenuHit(e.Position / UiScaleVp);
+        if (e is InputEventMouseMotion) { if (hit >= 0 && hit != MenuCur && RebindAction == null) { MenuCur = hit; Sfx.Play("tick", -6, 1.4f); } return; }
+        if (e is not InputEventMouseButton mb || !mb.Pressed) return;
+        switch (mb.ButtonIndex)
+        {
+            case MouseButton.WheelUp: if (RebindAction == null) MenuKey(Key.Up); break;
+            case MouseButton.WheelDown: if (RebindAction == null) MenuKey(Key.Down); break;
+            case MouseButton.Left:
+                if (RebindAction != null) { MenuKey(Key.Escape); break; }
+                if (Menu == Mn.Credits) { MenuBackKey(); break; }
+                if (hit >= 0) { MenuCur = hit; MenuKey(Key.Enter); }
+                break;
+            case MouseButton.Right:
+                if (RebindAction != null) { MenuKey(Key.Escape); break; }
+                if (Menu == Mn.Settings && hit >= 0 && hit < 8) { MenuCur = hit; MenuKey(Key.Left); }
+                else MenuBackKey();
+                break;
+        }
+    }
+
     void MenuBackKey()
     {
         switch (Menu)
