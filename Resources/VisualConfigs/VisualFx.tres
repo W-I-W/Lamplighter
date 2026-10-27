@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="VisualFxConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/VisualFxConfig.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+SwayTiles = PackedInt32Array(5, 111, 79, 130, 131, 132, 133)
+SwayAmp = PackedFloat32Array(2.4, 1.8, 1.0, 1.6, 1.2, 1.8, 2.4)
+Wind = 1.0
+HitShakePx = 2.4
+HitShakeTime = 0.5
+FoliageDensity = 0.17
+FoliageActiveRadius = 640.0

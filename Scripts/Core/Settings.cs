@@ -8,6 +8,7 @@ namespace Lamplighter;
 public static class Settings
 {
     public static float Music = .55f, Sfx = .8f, Shake = 1f;
+    public static float Wind = 1f, Particles = 1f, Flash = 1f, Fx = 1f;   // интенсивность ветра, частиц, вспышек и дополнительных эффектов (0..1.5)
     public static int UiMode;                                  // 0 — авто (целое по высоте окна), 1–4 — фиксированный множитель
     public static int UiInt(float windowH) => UiMode > 0 ? UiMode : Math.Max(1, (int)Math.Floor(windowH / 360f));
     public static bool Fullscreen, Diag;
@@ -21,7 +22,7 @@ public static class Settings
         var c = new ConfigFile();
         if (c.Load(Path) != Error.Ok) { Lang = DetectLang(); KeyMap.Reset(); return; }
         Music = (float)c.GetValue("audio", "music", Music); Sfx = (float)c.GetValue("audio", "sfx", Sfx);
-        UiMode = Math.Clamp((int)c.GetValue("ui", "mode", 0), 0, 4); Shake = (float)c.GetValue("ui", "shake", Shake); Lang = (string)c.GetValue("ui", "lang", DetectLang());
+        UiMode = Math.Clamp((int)c.GetValue("ui", "mode", 0), 0, 4); Shake = (float)c.GetValue("ui", "shake", Shake); Wind = (float)c.GetValue("fx", "wind", 1f); Particles = (float)c.GetValue("fx", "particles", 1f); Flash = (float)c.GetValue("fx", "flash", 1f); Fx = (float)c.GetValue("fx", "extra", 1f); Lang = (string)c.GetValue("ui", "lang", DetectLang());
         Diag = (bool)c.GetValue("dev", "diag", false); Fullscreen = (bool)c.GetValue("window", "fullscreen", false); Res = Math.Clamp((int)c.GetValue("window", "res", 0), 0, Resolutions.Length - 1);
         KeyMap.Reset();
         foreach (var a in KeyMap.Actions) { int k = (int)c.GetValue("keys", a, (int)KeyMap.Defaults[a]); if (k > 0 && !string.IsNullOrEmpty(OS.GetKeycodeString((Key)k))) KeyMap.Map[a] = (Key)k; }
@@ -33,7 +34,7 @@ public static class Settings
     {
         var c = new ConfigFile();
         c.SetValue("audio", "music", Music); c.SetValue("audio", "sfx", Sfx);
-        c.SetValue("ui", "mode", UiMode); c.SetValue("ui", "shake", Shake); c.SetValue("ui", "lang", Lang);
+        c.SetValue("ui", "mode", UiMode); c.SetValue("ui", "shake", Shake); c.SetValue("fx", "wind", Wind); c.SetValue("fx", "particles", Particles); c.SetValue("fx", "flash", Flash); c.SetValue("fx", "extra", Fx); c.SetValue("ui", "lang", Lang);
         c.SetValue("dev", "diag", Diag); c.SetValue("window", "fullscreen", Fullscreen); c.SetValue("window", "res", Res);
         foreach (var a in KeyMap.Actions) c.SetValue("keys", a, (int)KeyMap.Map[a]);
         c.Save(Path);

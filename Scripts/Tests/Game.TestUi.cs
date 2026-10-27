@@ -16,7 +16,7 @@ public partial class Game
             for (int i = 0; i < 3; i++) Toast(i == 0 ? "Уровень 3! Здоровье +10, добыча и урон выросли" : "Тестовое уведомление " + i); Announce("Открыта постройка: Лесопилка", "Производит дерево само [5]", new Color("#ffe27a"), "tech");
         });
         S(1.6f, () => { aimOverride = Aim = PPos + new Vector2(0, -22); });
-        S(.8f, () => Shot("ui_hud"));
+        S(.8f, () => Shot("ui_hud")); S(.4f, () => Shot("ui_wind_a")); S(.9f, () => Shot("ui_wind_b"));
         Win1(Win.Build, 0, "ui_build");
         S(.2f, () => { BuildCat = 2; WinCur = 1; }); S(.5f, () => Shot("ui_build2")); S(.1f, () => BuildCat = 0);
         Win1(Win.Inventory, 0, "ui_inventory");

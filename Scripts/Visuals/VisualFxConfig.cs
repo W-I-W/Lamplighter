@@ -1,0 +1,22 @@
+using Godot;
+
+namespace Lamplighter;
+
+/// <summary>Настройки «живого мира»: ветер, качание растений, реакция на попадания и т.д. Ресурс Resources/VisualConfigs/VisualFx.tres, правится в Inspector.
+/// Игровые настройки пользователя (Settings.Wind, Settings.Particles, Settings.Flash, Settings.Fx, Settings.Shake) умножаются на эти значения.</summary>
+[GlobalClass]
+public partial class VisualFxConfig : Resource
+{
+    public const string Path = "res://Resources/VisualConfigs/VisualFx.tres";
+    // ветер и растительность
+    [Export] public int[] SwayTiles = { 5, 111, 79, 130, 131, 132, 133 };          // колонки атласа тайлов, которые качаются
+    [Export] public float[] SwayAmp = { 2.4f, 1.8f, 1.0f, 1.6f, 1.2f, 1.8f, 2.4f };   // амплитуда у верхушки, пикселей
+    [Export] public float Wind = 1f;
+    [Export] public float HitShakePx = 2.4f;               // встряска дерева при ударе
+    [Export] public float HitShakeTime = .5f;
+    [Export] public float FoliageDensity = .17f;            // доля свободных клеток травы с кустиками и цветами
+    [Export] public float FoliageActiveRadius = 640f;       // дальше от камеры растительность не обновляется (экономия)
+
+    static VisualFxConfig inst;
+    public static VisualFxConfig Get() => inst ??= (ResourceLoader.Exists(Path) ? ResourceLoader.Load<VisualFxConfig>(Path) : null) ?? new VisualFxConfig();
+}

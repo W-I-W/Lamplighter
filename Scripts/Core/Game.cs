@@ -217,6 +217,7 @@ public partial class Game : Node2D
         if (ch != null)
         {
             var lc = new Vector2I(x % CS, y % CS);
+            if (t != Tl.None) ch.F.EraseCell(lc);
             if (t == Tl.None || t == Tl.SecretCache) ch.O.EraseCell(lc); else ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
         }
     }
@@ -527,7 +528,7 @@ public partial class Game : Node2D
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
         cam.Position = PPos;
         cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
-        UpdateShaders(dt);
+        UpdateShaders(dt); UpdateVegetation(dt);
         ents.QueueRedraw(); hud.QueueRedraw();
     }
 
@@ -655,7 +656,7 @@ public partial class Game : Node2D
         MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 1.1f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         float before = MineProg;
         MineProg += dt * MineSpeed; Swing = .2f; Diag.Add("mine_secs", dt);
-        if ((int)(before * 5) != (int)(MineProg * 5)) { Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; }
+        if ((int)(before * 5) != (int)(MineProg * 5)) { Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; TileShake(tile.X, tile.Y); }
         if (MineProg >= MineNeed) BreakTile(tile, t, true);
     }
 

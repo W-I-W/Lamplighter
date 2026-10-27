@@ -6,7 +6,7 @@ namespace Lamplighter;
 public static partial class Art
 {
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
-        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 130, IconCount = 24;
+        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 134, IconCount = 24;
     public static Texture2D TileTex, PlayerTex, ShadeTex, WraithTex, IconTex;
     public const int Chest = 15, ChestOpen = 16, Ruin = 17, House = 18, Tent = 19, Shrine = 20, ShrineUsed = 21,
         AetherOre = 22, Cage = 23, BossOff = 24, BossOn = 25, Obelisk = 26, ObeliskUsed = 27,
