@@ -31,7 +31,7 @@ void fragment() {
 		float strength = wind * (0.45 + 1.1 * smoothstep(0.35, 0.8, gust));
 		float sway = sin(time_s * 1.7 * sv + ph + wpos.x * 0.015) * strength + 0.35 * sin(time_s * 3.1 * sv + ph * 1.7) * strength;
 		float ly = fract(UV.y * atlas.y / 16.0);                 // 0 = top of the tile, 1 = bottom
-		float lift = pow(clamp(1.0 - ly, 0.0, 1.0), 1.6);
+		float lift = pow(clamp(1.0 - ly / 0.7, 0.0, 1.0), 1.5);   // only the crown moves; the widest row and the trunk barely move
 		float shift = a * sway;
 		// pushed by the player
 		vec2 centre = (cell + 0.5) * 16.0;
@@ -45,10 +45,10 @@ void fragment() {
 		}
 		float px = floor(shift * lift + 0.5);
 		uv.x = UV.x - px / atlas.x;
-		float lo = col * 16.0 / atlas.x;
-		float hi = (col + 1.0) * 16.0 / atlas.x;
-		if (uv.x < lo || uv.x >= hi) { COLOR = vec4(0.0); }
-		else { COLOR = texture(TEXTURE, uv); }
+		float lo = col * 16.0 / atlas.x + 0.5 / atlas.x;
+		float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
+		uv.x = clamp(uv.x, lo, hi);                                // edge pixels are repeated instead of cut off, so the silhouette never gets sliced
+		COLOR = texture(TEXTURE, uv);
 	} else {
 		COLOR = texture(TEXTURE, UV);
 	}
