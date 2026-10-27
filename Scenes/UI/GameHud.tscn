@@ -145,10 +145,12 @@ max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="More" type="Label" parent="TopLeft/Goal/V"]
+[node name="More" type="RichTextLabel" parent="TopLeft/Goal/V"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"DimLabel"
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 
 [node name="TopRight" type="VBoxContainer" parent="."]
 layout_mode = 1

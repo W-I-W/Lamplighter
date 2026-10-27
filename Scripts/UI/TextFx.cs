@@ -9,7 +9,7 @@ namespace Lamplighter;
 public static class TextFx
 {
     static readonly Regex Rx = new(
-        @"(?<key>\[[^\[\]]{1,9}\])|(?<level>Уровень \d+|Level \d+|level \d+)|(?<good>\+\d+(?:[.,]\d+)?%?|выросл\w+|повыс\w+|restored|increased)|(?<hero>[Фф]онарщик\w*|lamplighter)|(?<dark>Источник\w* Тьмы|Тьм\w+|погасил\w*|Source of Darkness|Darkness|extinguished)|(?<bad>опасн\w*|смерт\w*|враг\w*|монстр\w*|danger\w*|enem(?:y|ies)|deadly)|(?<hp>здоров\w+|health)|(?<stat>добыч\w+|урон\w*|damage|mining|скорост\w+|speed)|(?<light>Сеть Маяков|Центральн\w+ маяк\w*|ядер света|ядр\w+|свет\w*|фонар\w+|маяк\w*|Beacon Network|Central Beacon|cores? of light|light|lanterns?|beacon\w*)|(?<num>\d+(?:/\d+)?)",
+        @"(?<key>\[[^\[\]]{1,9}\]|[A-Z]{1,2}/Esc|\b(?:Enter|Esc|Tab|Shift|Space|Backspace)\b|[←→↑↓]/[←→↑↓])|(?<level>Уровень \d+|Level \d+|level \d+)|(?<good>\+\d+(?:[.,]\d+)?%?|выросл\w+|повыс\w+|restored|increased)|(?<hero>[Фф]онарщик\w*|lamplighter)|(?<dark>Источник\w* Тьмы|Тьм\w+|погасил\w*|Source of Darkness|Darkness|extinguished)|(?<bad>опасн\w*|смерт\w*|враг\w*|монстр\w*|danger\w*|enem(?:y|ies)|deadly)|(?<hp>здоров\w+|health)|(?<stat>добыч\w+|урон\w*|damage|mining|скорост\w+|speed)|(?<light>Сеть Маяков|Центральн\w+ маяк\w*|ядер света|ядр\w+|свет\w*|фонар\w+|маяк\w*|Beacon Network|Central Beacon|cores? of light|light|lanterns?|beacon\w*)|(?<num>\d+(?:/\d+)?)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     static string Esc(string s) => s.Replace("[", "[lb]");

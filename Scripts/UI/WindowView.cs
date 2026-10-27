@@ -8,7 +8,7 @@ namespace Lamplighter;
 public partial class WindowView : Control
 {
     public Game G; public bool Started;
-    ColorRect dim; PanelContainer frame, listPanel, detailPanel; Label title, foot; HBoxContainer chips, tabs, body; VBoxContainer listBox, detailBox; Control mapArea;
+    ColorRect dim; PanelContainer frame, listPanel, detailPanel; Label title; RichTextLabel foot; HBoxContainer chips, tabs, body; VBoxContainer listBox, detailBox; Control mapArea;
     readonly List<WindowRow> rows = new(); readonly List<Label> texts = new(); readonly List<RichTextLabel> riches = new(); int nRich; readonly List<PanelContainer> tabNodes = new(); readonly List<Control> chipNodes = new();
     PackedScene rowScene, tabScene, chipScene;
     int nRow, nText, nTab, nChip, posList, posDetail; bool hasTabs; Vector2 frameSize; float detailW;
@@ -17,7 +17,7 @@ public partial class WindowView : Control
 
     public override void _Ready()
     {
-        dim = GetNode<ColorRect>("%Dim"); frame = GetNode<PanelContainer>("%Frame"); title = GetNode<Label>("%Title"); foot = GetNode<Label>("%Foot");
+        dim = GetNode<ColorRect>("%Dim"); frame = GetNode<PanelContainer>("%Frame"); title = GetNode<Label>("%Title"); foot = GetNode<RichTextLabel>("%Foot");
         chips = GetNode<HBoxContainer>("%Chips"); tabs = GetNode<HBoxContainer>("%Tabs"); body = GetNode<HBoxContainer>("%Body");
         listPanel = GetNode<PanelContainer>("%ListPanel"); detailPanel = GetNode<PanelContainer>("%DetailPanel");
         listBox = GetNode<VBoxContainer>("%ListBox"); detailBox = GetNode<VBoxContainer>("%DetailBox"); mapArea = GetNode<Control>("%MapArea");
@@ -32,7 +32,7 @@ public partial class WindowView : Control
         dim.Color = new Color(0, 0, .03f, dimAlpha);
         frame.CustomMinimumSize = size; frame.Size = size; frame.Position = new Vector2(Mathf.Round(vs.X * .5f - size.X * .5f), Mathf.Round(vs.Y * .5f - size.Y * .5f - 4));
         title.Text = Loc.T(titleText); title.Modulate = accent;
-        foot.Visible = footer != null; if (footer != null) foot.Text = Loc.T(footer);
+        foot.Visible = footer != null; if (footer != null) TextFx.Apply(foot, Loc.T(footer), new Color("#8a96b0"), 0);
         mapArea.Visible = listW < 0; listPanel.Visible = listW >= 0; detailPanel.Visible = listW > 0;
         listPanel.CustomMinimumSize = new Vector2(listW > 0 ? listW : 0, 0); listPanel.SizeFlagsHorizontal = listW > 0 ? SizeFlags.ShrinkBegin : SizeFlags.ExpandFill;
         Visible = true; Started = true;

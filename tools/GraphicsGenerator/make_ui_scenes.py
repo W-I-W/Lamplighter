@@ -256,10 +256,12 @@ max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="More" type="Label" parent="TopLeft/Goal/V"]
+[node name="More" type="RichTextLabel" parent="TopLeft/Goal/V"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"DimLabel"
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 
 [node name="TopRight" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -461,12 +463,13 @@ layout_mode = 2
 theme_type_variation = &"GoldLabel"
 text = "Строительство"
 
-[node name="Keys" type="Label" parent="Panel/V/Head"]
+[node name="Keys" type="RichTextLabel" parent="Panel/V/Head"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"DimLabel"
-text = "[Tab] [Enter] [Esc]"
-horizontal_alignment = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[right][color=#ffe08a][lb]Tab][/color] [color=#ffe08a][lb]Enter][/color] [color=#ffe08a][lb]Esc][/color][/right]"
 
 [node name="Tabs" type="HBoxContainer" parent="Panel/V"]
 layout_mode = 2
@@ -578,12 +581,13 @@ layout_mode = 2
 theme_type_variation = &"GoldLabel"
 text = "Инвентарь"
 
-[node name="Keys" type="Label" parent="Panel/V/Head"]
+[node name="Keys" type="RichTextLabel" parent="Panel/V/Head"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"DimLabel"
-text = "[I] / [Esc] — закрыть"
-horizontal_alignment = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[right][color=#ffe08a][lb]I][/color] / [color=#ffe08a][lb]Esc][/color] — закрыть[/right]"
 
 [node name="Grid" type="GridContainer" parent="Panel/V"]
 unique_name_in_owner = true

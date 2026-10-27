@@ -38,12 +38,13 @@ layout_mode = 2
 theme_type_variation = &"GoldLabel"
 text = "Строительство"
 
-[node name="Keys" type="Label" parent="Panel/V/Head"]
+[node name="Keys" type="RichTextLabel" parent="Panel/V/Head"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"DimLabel"
-text = "[Tab] [Enter] [Esc]"
-horizontal_alignment = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[right][color=#ffe08a][lb]Tab][/color] [color=#ffe08a][lb]Enter][/color] [color=#ffe08a][lb]Esc][/color][/right]"
 
 [node name="Tabs" type="HBoxContainer" parent="Panel/V"]
 layout_mode = 2

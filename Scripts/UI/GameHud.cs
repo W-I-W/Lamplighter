@@ -11,7 +11,7 @@ public partial class GameHud : Control
 {
     public Game G;
     Control status, goal, world, hint, detail, abilities;
-    RichTextLabel goalTitle, goalNeeds; Label level, lvCap, hpLabel, goalMore, biome, lLabel, beacon, hintLabel, dTitle, dBody;
+    RichTextLabel goalTitle, goalNeeds, goalMore; Label level, lvCap, hpLabel, biome, lLabel, beacon, hintLabel, dTitle, dBody;
     ProgressBar hp, xp, goalBar, lBar;
     UiSlot weapon; readonly UiSlot[] hot = new UiSlot[8]; readonly UiSlot[] abil = new UiSlot[5];
     readonly Control[] chips = new Control[5];
@@ -24,7 +24,7 @@ public partial class GameHud : Control
     public override void _Ready()
     {
         status = GetNode<Control>("%Status"); goal = GetNode<Control>("%Goal"); world = GetNode<Control>("%World"); hint = GetNode<Control>("%Hint"); detail = GetNode<Control>("%Detail"); abilities = GetNode<Control>("%Abilities");
-        level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<RichTextLabel>("%Title"); goalNeeds = GetNode<RichTextLabel>("%Needs"); goalMore = GetNode<Label>("%More");
+        level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<RichTextLabel>("%Title"); goalNeeds = GetNode<RichTextLabel>("%Needs"); goalMore = GetNode<RichTextLabel>("%More");
         biome = GetNode<Label>("%Biome"); lLabel = GetNode<Label>("%LLabel"); beacon = GetNode<Label>("%Beacon"); hintLabel = GetNode<Label>("%HintLabel"); dTitle = GetNode<Label>("%DTitle"); dBody = GetNode<Label>("%DBody");
         hp = GetNode<ProgressBar>("%HpBar"); xp = GetNode<ProgressBar>("%XpBar"); goalBar = GetNode<ProgressBar>("%Bar"); lBar = GetNode<ProgressBar>("%LBar");
         weapon = GetNode<UiSlot>("%Weapon");
@@ -89,7 +89,7 @@ public partial class GameHud : Control
         string more = "";
         if (GoalsOpen) for (int i = 1; i < Math.Min(4, goals.Count); i++) more += "• " + T(goals[i].Title) + "\n";
         if (goals.Count > 1) more += GoalsOpen ? T("[G] свернуть · [J] журнал") : string.Format(T("ещё {0} · [G] развернуть"), goals.Count - 1);
-        goalMore.Text = more.TrimEnd('\n'); goalMore.Visible = goals.Count > 1;
+        TextFx.Apply(goalMore, more.TrimEnd('\n'), new Color("#8a96b0"), 0); goalMore.Visible = goals.Count > 1;
     }
 
     void UpdateWorld(float dt)

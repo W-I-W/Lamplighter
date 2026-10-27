@@ -194,12 +194,12 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 1
 
-[node name="Foot" type="Label" parent="Frame/Box"]
+[node name="Foot" type="RichTextLabel" parent="Frame/Box"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"DimLabel"
-clip_text = true
-text_overrun_behavior = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
 ''')
 
 # ── Menu: полноэкранный слой (главное меню / пауза / титры / финал) ──
@@ -275,7 +275,7 @@ theme_override_constants/separation = 2
 unique_name_in_owner = true
 {FULL}mouse_filter = 2
 
-[node name="Foot" type="Label" parent="."]
+[node name="Foot" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 7
@@ -289,8 +289,9 @@ offset_right = 160.0
 offset_bottom = -3.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_type_variation = &"DimLabel"
-horizontal_alignment = 1
+bbcode_enabled = true
+fit_content = false
+scroll_active = false
 
 [node name="Version" type="Label" parent="."]
 unique_name_in_owner = true

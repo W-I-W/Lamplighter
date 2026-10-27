@@ -41,12 +41,13 @@ layout_mode = 2
 theme_type_variation = &"GoldLabel"
 text = "Инвентарь"
 
-[node name="Keys" type="Label" parent="Panel/V/Head"]
+[node name="Keys" type="RichTextLabel" parent="Panel/V/Head"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"DimLabel"
-text = "[I] / [Esc] — закрыть"
-horizontal_alignment = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[right][color=#ffe08a][lb]I][/color] / [color=#ffe08a][lb]Esc][/color] — закрыть[/right]"
 
 [node name="Grid" type="GridContainer" parent="Panel/V"]
 unique_name_in_owner = true

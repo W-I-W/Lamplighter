@@ -7,13 +7,13 @@ namespace Lamplighter;
 public partial class MenuView : Control
 {
     public Game G; public bool Started;
-    ColorRect dim; TextureRect flame; VBoxContainer box; Label title, sub, foot, version; PanelContainer panel; VBoxContainer items; Control lines; Control centerWrap;
+    ColorRect dim; TextureRect flame; VBoxContainer box; Label title, sub, version; RichTextLabel foot; PanelContainer panel; VBoxContainer items; Control lines; Control centerWrap;
     readonly List<WindowRow> rows = new(); readonly List<Label> labels = new(); readonly List<RichTextLabel> riches = new(); int nRich; PackedScene rowScene; int nRow, nLabel;
 
     public override void _Ready()
     {
         dim = GetNode<ColorRect>("%Dim"); flame = GetNode<TextureRect>("%Flame"); box = GetNode<VBoxContainer>("%Box"); title = GetNode<Label>("%Title"); sub = GetNode<Label>("%Sub");
-        panel = GetNode<PanelContainer>("%Panel"); items = GetNode<VBoxContainer>("%Items"); lines = GetNode<Control>("%Lines"); foot = GetNode<Label>("%Foot"); version = GetNode<Label>("%Version");
+        panel = GetNode<PanelContainer>("%Panel"); items = GetNode<VBoxContainer>("%Items"); lines = GetNode<Control>("%Lines"); foot = GetNode<RichTextLabel>("%Foot"); version = GetNode<Label>("%Version");
         centerWrap = panel.GetParent<Control>(); rowScene = GD.Load<PackedScene>("res://Scenes/UI/Row.tscn");
     }
 
@@ -22,7 +22,7 @@ public partial class MenuView : Control
     {
         nRow = nLabel = nRich = 0; Visible = true; Started = true; dim.Color = new Color(.02f, .03f, .06f, dimAlpha);
         flame.Visible = box.Visible = withMenu;
-        foot.Text = footer == null ? "" : Loc.T(footer); version.Visible = showVersion; if (showVersion) version.Text = $"v{Game.VersionStr} · {Game.BuildStr}";
+        TextFx.Apply(foot, footer == null ? "" : Loc.T(footer), new Color("#8a96b0"), 0, true); version.Visible = showVersion; if (showVersion) version.Text = $"v{Game.VersionStr} · {Game.BuildStr}";
     }
 
     public void Titles(string t, string s, Color gold, Color blue)
