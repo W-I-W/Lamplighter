@@ -10,6 +10,8 @@ public sealed class Enemy
 {
     public EK Kind; public Vector2 Pos, Kb, DashDir, Face = new(1, 0); public Vector2? Home; public Poi Guard;
     public float Hp, MaxHp, Atk, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
+    // визуальное состояние (только отрисовка): стадии атаки, попадание, след рывка
+    public float VTele0, VAtk = 9f, VPrevAtk, VPrevTele, VPrevDash, VHit = 9f, VHitMul = 1f, VTrailT; public Vector2 VHitDir; public Vector2[] VTrail = new Vector2[3];
     public int State; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
     public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden || Kind == EK.WinterWarden || Kind == EK.Source;
     public float Radius => Kind switch
@@ -277,9 +279,8 @@ public partial class Game
         if (e.Kind == EK.Golem && rng.Randf() < .6f) AddZone(e.Pos, 40, 0, 3.5f, 0f, true);
         if (melee && Has(Tech.FlameEdge)) e.Burn = 3f;
         if (melee && Tier >= 4) e.Burn = Mathf.Max(e.Burn, 2f);
-        Fx("enemy_hit", e.Pos);
+        Fx("enemy_hit", e.Pos); OnEnemyHit(e, dmg, dir);
         Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), S = ((int)Mathf.Round(dmg)).ToString(), Life = .6f, C = m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
-        Shake = Mathf.Max(Shake, 1.2f);
     }
 
     public void HurtPlayer(float dmg, Vector2 kb, bool fire = false)
@@ -309,6 +310,7 @@ public partial class Game
 
     void KillEnemy(Enemy e)
     {
+        OnEnemyDeath(e);
         Kills++;
         if (e.Ev != null) EvEnemyKilled(e);
         if (e.IsBoss) { BossKilled(e); return; }

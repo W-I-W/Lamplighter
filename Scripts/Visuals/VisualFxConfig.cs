@@ -17,6 +17,15 @@ public partial class VisualFxConfig : Resource
     [Export] public float FoliageDensity = .17f;            // доля свободных клеток травы с кустиками и цветами
     [Export] public float FoliageActiveRadius = 640f;       // дальше от камеры растительность не обновляется (экономия)
 
+    // попадания: профили для обычных врагов [0], сильных противников [1] и боссов [2]
+    [Export] public float[] HitFlashTime = { .09f, .11f, .13f };         // белая вспышка спрайта, секунд
+    [Export] public float[] HitShakePxEnemy = { 1.8f, 1.1f, .5f };       // встряска врага, пикселей
+    [Export] public int[] HitParticles = { 6, 9, 12 };                   // пиксельные искры
+    [Export] public float[] HitCamShake = { 1.0f, .8f, .4f };            // вклад в тряску камеры (умножается на Settings.Shake)
+    [Export] public float CritMul = 1.6f;                                // усиление эффекта при критическом попадании (удар ≥ 30% здоровья)
+    [Export] public float DeathTime = .5f;
+    [Export] public int MaxParticles = 700;
+
     static VisualFxConfig inst;
     public static VisualFxConfig Get() => inst ??= (ResourceLoader.Exists(Path) ? ResourceLoader.Load<VisualFxConfig>(Path) : null) ?? new VisualFxConfig();
 }

@@ -25,9 +25,9 @@ public partial class Game
     EntityVisualDef EnemyDef(EK k) => Def(k.ToString().ToLowerInvariant());
 
     /// <summary>Рисует кадр листа в текущей трансформации; height позволяет обрезать нижнюю часть (персонаж по пояс в воде).</summary>
-    static void DrawFrame(EntityLayer c, EntityVisualDef d, int frame, Color mod, float height = -1)
+    static void DrawFrame(EntityLayer c, EntityVisualDef d, int frame, Color mod, float height = -1, Vector2 shift = default)
     {
         float h = height < 0 ? d.FrameSize : height; var sh = d.Sheet; if (sh == null) return;
-        c.DrawTextureRectRegion(sh, new Rect2(d.Offset, new Vector2(d.FrameSize, h)), new Rect2(frame * d.FrameSize, 0, d.FrameSize, h), mod);
+        c.DrawTextureRectRegion(sh, new Rect2(d.Offset + shift, new Vector2(d.FrameSize, h)), new Rect2(frame * d.FrameSize, 0, d.FrameSize, h), mod);
     }
 }

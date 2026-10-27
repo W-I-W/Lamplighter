@@ -138,7 +138,7 @@ public partial class Game : Node2D
 
         BuildTileMaps();
         ents = new EntityLayer { G = this };
-        AddChild(ents);
+        AddChild(ents); InitEnemyFx();
 
         cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = true, PositionSmoothingSpeed = 9f, Position = PPos };
         cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.Wd * TS; cam.LimitBottom = World.Ht * TS;
@@ -528,7 +528,7 @@ public partial class Game : Node2D
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
         cam.Position = PPos;
         cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
-        UpdateShaders(dt); UpdateVegetation(dt);
+        UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt);
         ents.QueueRedraw(); hud.QueueRedraw();
     }
 

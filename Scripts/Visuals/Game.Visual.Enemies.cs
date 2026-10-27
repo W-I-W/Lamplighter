@@ -39,14 +39,19 @@ public partial class Game
         int f = (int)(Time * vd.Fps + e.Phase) % vd.Frames;
         float bob = Mathf.Sin(Time * 4 + e.Phase) * vd.Bob - vd.Lift;
         float a = Mathf.Clamp(e.Age * 2f, 0, 1);
-        Color mod = e.Flash > 0 ? new Color(1.8f, .6f, .6f, a) : e.Freeze > 0 ? new Color(.6f, .9f, 1.6f, a) : e.Slow > 0 ? new Color(.75f, .95f, 1.25f, a) : e.Elite ? new Color(1.3f, 1.15f, .7f, a) : new Color(1, 1, 1, a);
+        Color mod = e.VHit < .09f ? new Color(1.25f, 1.1f, 1.1f, a) : e.Freeze > 0 ? new Color(.6f, .9f, 1.6f, a) : e.Slow > 0 ? new Color(.75f, .95f, 1.25f, a) : e.Elite ? new Color(1.3f, 1.15f, .7f, a) : new Color(1, 1, 1, a);
         if (e.Kind == EK.Warden && e.Flash <= 0) mod = new Color(1.2f, .6f, .9f, a);
         if ((e.Tele > 0 || (e.Kind == EK.Warden && (e.State == 1 || e.State == 2 || e.State == 5)) || (e.Kind == EK.DepthWarden && (e.State == 4 || e.State == 5 || e.State == 6))) && ((int)(Time * 25) % 2 == 0)) mod = new Color(1.6f, 1.6f, 2f, a);
         if (WaterAt(e.Pos) && e.Kind != EK.DepthWarden) mod.A *= .85f;
         int face = e.Kind == EK.Beetle ? (e.Face.X < 0 ? -1 : 1) : (PPos.X < e.Pos.X ? -1 : 1);
-        c.DrawSetTransform(e.Pos + new Vector2(0, bob), 0, new Vector2(face * sc, sc));
-        DrawFrame(c, vd, f, mod);
-        c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+        if (StyleOf(e.Kind) == EStyle.Lunge) DrawTrail(c, e);
+        DrawAim(c, e);
+        if (EnemyDraw(e, out var evd, out var at, out var escale, out int ef, out float fy))
+        {
+            c.DrawSetTransform(at, 0, escale);
+            DrawFrame(c, evd, ef, mod, -1, new Vector2(0, -fy));
+            c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+        }
         if (e.Kind == EK.Warden)
         {
             if (e.State == 1) { float k = 1 - e.T2 / .9f; Gfx.Ring(c, e.Pos, 64, 40, new Color(.85f, .5f, 1f, .4f + .4f * k), 2f); Gfx.Ring(c, e.Pos, 64 * k, 40, new Color(1f, .8f, 1f, .5f), 1f); }

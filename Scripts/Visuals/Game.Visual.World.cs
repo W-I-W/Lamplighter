@@ -75,13 +75,14 @@ public partial class Game
         DrawHazards(c);
         DrawHeartWorld(c);
         DrawBeams(c);
-        DrawRings(c);
+        DrawRings(c); DrawSparks(c);
         DrawWeaponFx(c);
         DrawBarriers(c);
         DrawEvents(c);
 
         var list = new List<(float y, Action a)>();
         foreach (var e in Enemies) { var ee = e; list.Add((e.Pos.Y, () => DrawEnemy(c, ee))); }
+        foreach (var d in deaths) { var dd = d; list.Add((d.Pos.Y, () => DrawDeath(c, dd))); }
         foreach (var v in Villagers) { var vv = v; list.Add((v.Pos.Y, () => DrawVillager(c, vv))); }
         list.Add((PPos.Y, () => { DrawCosmetic(c); DrawPlayer(c); }));
         list.Sort((a, b) => a.y.CompareTo(b.y));
