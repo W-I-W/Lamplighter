@@ -8,7 +8,7 @@ public sealed class Puzzle
 {
     public List<Vector2I> Receivers = new(), Doors = new(), Mirrors = new();
     public List<Vector2I> Emitters = new();
-    public Poi Poi;
+    public Poi Poi; public bool Bridge;
 }
 
 public sealed class BeamTrace
@@ -25,7 +25,7 @@ public sealed partial class World
     readonly List<(Vector2I p, int r)> taken = new();
 
     public static readonly Vector2I[] D4 = { new(1, 0), new(-1, 0), new(0, 1), new(0, -1) };
-    public bool Walkable(int x, int y) { var t = Get(x, y); return t == Tl.None || t == Tl.Bridge; }
+    public bool Walkable(int x, int y) { var t = Get(x, y); return t == Tl.None || t == Tl.Bridge || t == Tl.LightBridge; }
 
     // ───────────────────────── лучи света ─────────────────────────
     public static Vector2I Reflect(Tl m, Vector2I d) => m == Tl.Mirror1 ? new Vector2I(-d.Y, -d.X) : new Vector2I(d.Y, d.X);

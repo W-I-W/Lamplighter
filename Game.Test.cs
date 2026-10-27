@@ -39,13 +39,14 @@ public partial class Game
     {
         if (OS.GetEnvironment("LAMP_STAGE") == "genres") { Db.SaveDefaults(); GetTree().Quit(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "makeold") { MakeOldSave(); GetTree().Quit(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "makev4") { BeaconLevel = 4; Save(); GetTree().Quit(); return; }
         if (!noHeal) Hp = MaxHp;
-        if (OS.GetEnvironment("LAMP_LOAD") != "")
+        if (OS.GetEnvironment("LAMP_LOAD") != "" && OS.GetEnvironment("LAMP_STAGE") != "reload" && OS.GetEnvironment("LAMP_STAGE") != "savesmoke")
         {
             sw -= dt; if (sw > 0) return;
             if (si == 0)
             {
-                Log($"LOAD: buildings={Buildings.Count} levels=[{string.Join(",", Buildings.ConvertAll(b => b.Level))}] villagers={Villagers.Count} tech={TechMask} bossMask={BossMask} beacon={BeaconLevel} lit={LitCount}/{LitIn(1)}/{LitIn(2)} done={PoisDone} puzzles={PuzzlesSolved} lamps={Lamps.Count} kinds=[{string.Join(",", Lamps.ConvertAll(l => l.Kind))}] machines={MachinesRestored} weapons=[{string.Join(",", Owned.ConvertAll(o => o.Id + ":" + o.Mods.Count))}] cur={CurW} relics={OwnedRelics.Count}/{EquippedRelics.Count} bps={BpDone.Count} frag={Frag.Count} mods=[{string.Join(",", ModInv)}] hero={HeroLampLv} epoch={TradeEpoch} bought={Bought.Count} extraV={ExtraVillagers} found={Found.Count} syn={ActiveSyn.Count} sealOpen={W.Get(125, 64) == Tl.None} expl={Array.FindAll(Expl, b => b != 0).Length} inv=[{string.Join(",", Inv)}] tier={Tier} lvl={Level}");
+                Log($"LOAD: buildings={Buildings.Count} levels=[{string.Join(",", Buildings.ConvertAll(b => b.Level))}] villagers={Villagers.Count} tech={TechMask} bossMask={BossMask} beacon={BeaconLevel} lit={LitCount}/{LitIn(1)}/{LitIn(2)} done={PoisDone} puzzles={PuzzlesSolved} lamps={Lamps.Count} kinds=[{string.Join(",", Lamps.ConvertAll(l => l.Kind))}] machines={MachinesRestored} weapons=[{string.Join(",", Owned.ConvertAll(o => o.Id + ":" + o.Mods.Count))}] cur={CurW} relics={OwnedRelics.Count}/{EquippedRelics.Count} bps={BpDone.Count} frag={Frag.Count} mods=[{string.Join(",", ModInv)}] hero={HeroLampLv} epoch={TradeEpoch} bought={Bought.Count} extraV={ExtraVillagers} found={Found.Count} syn={ActiveSyn.Count} sealOpen={W.Get(125, 64) == Tl.None} seal3={W.Get(W.Seal3[0].X, W.Seal3[0].Y) == Tl.None} seal4={W.Get(W.Seal4[0].X, W.Seal4[0].Y) == Tl.None} expl={Array.FindAll(Expl, b => b != 0).Length} inv=[{string.Join(",", Inv)}] tier={Tier} lvl={Level}");
                 Shot("load"); si++; sw = .8f;
             }
             else GetTree().Quit();
@@ -53,7 +54,7 @@ public partial class Game
         }
         if (script == null) { script = new(); BuildScript(); }
         sw -= dt; if (sw > 0) return;
-        if (si >= script.Count) { GD.Print("[test] SCRIPT DONE"); Save(); GetTree().Quit(); return; }
+        if (si >= script.Count) { foreach (var m in Loc.Missing) GD.Print("[loc-missing] " + m.Replace((char)10, (char)126)); GD.Print("[test] SCRIPT DONE"); Save(); GetTree().Quit(); return; }
         var s = script[si++]; try { s.act(); } catch (Exception e) { GD.Print("[test] EXCEPTION: " + e); }
         sw = s.wait;
     }
@@ -83,6 +84,19 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "s4") { BuildS4Script(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "s4b") { BuildS4bScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "perf") { BuildPerfScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "world") { BuildWorldScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "ice") { BuildIceScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "heart") { BuildHeartScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "end") { BuildEndScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "menu") { BuildMenuScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "loc") { BuildLocScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "econ") { BuildEconScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "soak") { BuildSoakScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "combat") { BuildCombatScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "mksave") { BuildMkSaveScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "savesmoke") { BuildSaveSmokeScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "final") { BuildFinalScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "reload") { BuildReloadScript(); return; }
         var spawn = TileCenter(W.Spawn.X, W.Spawn.Y);
         var ent = new Vector2I(World.MX0 + 8, 64);
         Puzzle pz0 = null;

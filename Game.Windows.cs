@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Win { None, Equip, Journal, Prod, Build, Trade }
+public enum Win { None, Equip, Journal, Prod, Build, Trade, Story, Rift }
 
 public sealed class BuildEntry { public string Name, Cost, Lock; public bool Unlocked, Affordable; public Action Do; }
 
@@ -43,6 +43,7 @@ public partial class Game
         }
         E("Светокристалл", AmpCost, BpDone.Contains("bp_amp"), "чертёж «Светокристаллы»", BuildAmp);
         E("Столб-барьер", BarrierCost, BpDone.Contains("bp_barrier"), "чертёж «Световые барьеры»", BuildBarrier);
+        for (int dk = 0; dk < 3; dk++) { int kk = dk; E(DecorNames[kk], DecorCostArr(kk), BeaconLevel >= 2, "улучшите Центральный маяк", () => BuildDecor(kk)); }
         return l;
     }
 
@@ -67,6 +68,13 @@ public partial class Game
     // ───────────────────────── ввод ─────────────────────────
     bool WindowKey(Key k, bool shift)
     {
+        if (Window == Win.Rift)
+        {
+            if (k == Key.Escape) { if (RiftState == 0) CloseWindows(); return true; }
+            if (k == Key.Up) { WinCur = Math.Max(0, WinCur - 1); return true; }
+            if (k == Key.Down) { WinCur = Math.Min(Math.Max(0, RiftWinLen - 1), WinCur + 1); return true; }
+            return RiftKey(k);
+        }
         switch (k)
         {
             case Key.Escape: CloseWindows(); return true;
@@ -88,6 +96,7 @@ public partial class Game
             case Win.Prod: ProdKey(k); break;
             case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntries(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
+            case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) CloseWindows(); break;
         }
         return true;
     }

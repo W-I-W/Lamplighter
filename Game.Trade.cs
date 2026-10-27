@@ -13,11 +13,11 @@ public partial class Game
     public int TradeTab, TradeCur; public GEvent TradeEv; public List<Offer> CurOffers = new(); public string TradeMsg = "";
     public static readonly string[] CatNames = { "Простые", "Руда", "Слитки и детали", "Редкое", "Свет" };
 
-    static readonly int[] BasePrice = { 2, 2, 4, 6, 7, 10, 16, 40, 45, 10, 28, 30, 26, 24, 0, 90, 0, 60, 85 };
+    static readonly int[] BasePrice = { 2, 2, 4, 6, 7, 10, 16, 40, 45, 10, 28, 30, 26, 24, 0, 90, 0, 60, 85, 34, 0 };
     static int Cat(int item) => item switch
     {
         It.Wood or It.Stone => 0, It.CopperOre or It.IronOre or It.SilverOre => 1, It.Copper or It.Iron or It.Silver or It.Gear or It.Lens => 2,
-        It.Crystal or It.Obsidian or It.Ember or It.Aether or It.AncCrystal => 3, It.Shard or It.Relic => 4, _ => -1
+        It.Crystal or It.Obsidian or It.Ember or It.Aether or It.AncCrystal or It.Frost => 3, It.Shard or It.Relic => 4, _ => -1
     };
     public static bool Tradable(int item) => Cat(item) >= 0;
     public int StallLevel { get { int l = 0; foreach (var b in Buildings) if (b.Type == Tl.Stall) l = Math.Max(l, b.Level); return l; } }
@@ -36,7 +36,9 @@ public partial class Game
     void UpdateTrade(float dt)
     {
         for (int i = 0; i < Demand.Length; i++) Demand[i] = Mathf.Min(1.05f, Demand[i] + .0015f * dt);
+        epochT += dt; if (epochT > 600f) { epochT = 0; TradeEpoch++; if (StallLevel > 0 && Window != Win.Trade) Toast("Лавка обновила ассортимент"); }
     }
+    float epochT;
 
     public void OpenTrade(GEvent ev)
     {
@@ -73,10 +75,10 @@ public partial class Game
         }
         if (lvl >= 2)
         {
-            Item(It.Crystal, 2); Item(It.Silver, 2);
+            Item(It.Crystal, 2); Item(It.Silver, 2); Item(It.Aether, 1);
             foreach (var bp in new[] { "bp_sword2", "bp_bow2", "bp_staff2" }) Frag(bp, 180);
             var adv = new List<string>(); foreach (var b in new[] { "bp_mod_ignite", "bp_mod_frost", "bp_mod_shock", "bp_mod_siphon", "bp_barrier" }) if (!BpDone.Contains(b)) adv.Add(b);
-            for (int i = 0; i < 2 && adv.Count > 0; i++) { int k = r.Next(adv.Count); Frag(adv[k], 230, Rar.Rare); adv.RemoveAt(k); }
+            for (int i = 0; i < 2 && adv.Count > 0; i++) { int k = (ev != null ? r.Next(adv.Count) : (TradeEpoch + i) % adv.Count); Frag(adv[k], 230, Rar.Rare); adv.RemoveAt(k); }
             Mod(r.Next(3), 230); Mod(5, 260);
             l.Add(new Offer { Key = "anc", Kind = "item", Item = It.AncCrystal, N = 1, Price = (int)(BuyPrice(It.AncCrystal) * 1.1f * mult), Title = "Древний кристалл ×1", Desc = "Для улучшений света и зданий", Rar = Rar.Rare });
         }
@@ -86,6 +88,7 @@ public partial class Game
             for (int i = 0; i < 2 && pool.Count > 0; i++) { int k = r.Next(pool.Count); Relic(pool[k]); pool.RemoveAt(k); }
             Item(It.Gear, 2); Item(It.Lens, 2);
             if (BeaconLevel >= 3) { Item(It.Obsidian, 2); Item(It.Ember, 2); }
+            if (BeaconLevel >= 4) { Item(It.Frost, 2); Frag("bp_cryo", 260, Rar.Rare); }
             foreach (var bp in new[] { "bp_sword3", "bp_bow3", "bp_staff3", "bp_herolamp" }) Frag(bp, 300, Rar.Rare);
         }
         if (ev != null) { Mod(6, 280); Mod(0, 240); }

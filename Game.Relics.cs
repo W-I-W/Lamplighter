@@ -54,6 +54,7 @@ public partial class Game
         }
         foreach (var id in EquippedRelics) ApplyRelic(id, Tag);
         foreach (var id in TempRelics) ApplyRelic(id, Tag);
+        ApplyEndgameEffects();
         foreach (var s in Db.Synergies)
         {
             bool ok = true; foreach (var r in s.Requires) if (!SynReq(r)) { ok = false; break; }

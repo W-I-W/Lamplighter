@@ -11,9 +11,9 @@ public partial class Game
     public int[] Stock = new int[It.Count];
     public int PoisDone { get { int n = 0; foreach (var p in W.Pois) if (p.State == 3) n++; return n; } }
 
-    public static readonly string[] BNames = { "Склад", "Лесопилка", "Шахта", "Кузница", "Автобур", "Коллектор пепла", "Перерабатывающий цех", "Узел снабжения", "Торговая лавка" };
-    static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall };
-    public const int BCount = 9;
+    public static readonly string[] BNames = { "Склад", "Лесопилка", "Шахта", "Кузница", "Автобур", "Коллектор пепла", "Перерабатывающий цех", "Узел снабжения", "Торговая лавка", "Криоэкстрактор" };
+    static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall, Tl.Cryo };
+    public const int BCount = 10;
     static readonly int[][][][] BCosts =
     {
         new[] { C(It.Wood, 15, It.Stone, 10), C(It.Wood, 20, It.Stone, 20, It.Copper, 4), C(It.Iron, 6, It.Relic, 1), C(It.Silver, 6, It.Crystal, 3), C(It.Gear, 4, It.Lens, 2, It.Crystal, 4) },
@@ -25,20 +25,22 @@ public partial class Game
         new[] { C(It.Iron, 8, It.Copper, 10, It.Stone, 15), C(It.Iron, 8, It.Silver, 4), C(It.Silver, 8, It.Crystal, 4), C(It.Gear, 4, It.Lens, 2), C(It.Gear, 6, It.Lens, 4, It.Crystal, 6) },
         new[] { C(It.Copper, 6, It.Iron, 3, It.Wood, 8), C(It.Iron, 5, It.Silver, 3), C(It.Silver, 6, It.Crystal, 3) },
         new[] { C(It.Wood, 20, It.Stone, 15, It.Copper, 6), C(It.Silver, 4, It.Coins, 100), C(It.Crystal, 4, It.Coins, 300) },
+        new[] { C(It.Frost, 4, It.Silver, 4, It.Crystal, 3), C(It.Frost, 4, It.Gear, 2), C(It.Frost, 6, It.Lens, 2), C(It.Frost, 8, It.Lens, 3, It.Crystal, 4), C(It.Gear, 4, It.Lens, 4, It.AncCrystal, 1) },
     };
     static readonly string[][] BDesc =
     {
         new[] { "хранит 60 каждого ресурса, связь 14", "хранит 120, связь 18", "хранит 250, связь 24, передаёт ресурсы вам рядом", "хранит 500, связь 32", "хранит 800, связь 40" },
-        new[] { "1 дерево / 8 с", "1 дерево / 5 с", "2 дерева / 3 с", "3 дерева / 2,5 с", "3 дерева / 1,8 с" },
-        new[] { "камень и медная руда / 9 с", "+ железная руда / 7 с", "+ осколки света / 5 с", "+ серебряная руда / 4 с", "очень быстро / 3 с" },
+        new[] { "2 дерева / 6 с", "2 дерева / 4 с", "3 дерева / 3 с", "4 дерева / 2,2 с", "5 деревьев / 1,6 с" },
+        new[] { "камень и медная руда / 6 с", "+ железная руда / 5 с", "+ осколки света / 3,6 с", "+ серебряная руда / 2,8 с", "очень быстро / 2 с" },
         new[] { "плавит руду со склада / 4 с", "плавка / 2,5 с", "плавка / 1,5 с", "плавка / 1 с", "плавка / 0,7 с" },
         new[] { "серебряная руда и кристаллы / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "обсидиан и уголь пепла / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "делает шестерни и линзы / 8 с", "быстрее / 6 с", "быстрее / 4,5 с", "быстрее / 3,5 с", "быстрее / 2,5 с" },
         new[] { "связь 14: подключает здания к складу", "связь 20", "связь 28" },
         new[] { "торговля: базовые товары, чертежи", "торговля: редкие материалы и вставки", "торговля: реликвии и снаряжение" },
+        new[] { "ледяной кристалл и серебро / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
     };
-    static readonly float[][] BInterval = { null, new[] { 8f, 5f, 3.2f, 2.5f, 1.8f }, new[] { 9f, 7f, 5f, 4f, 3f }, new[] { 4f, 2.5f, 1.5f, 1f, .7f }, new[] { 12f, 9f, 6f, 4.5f, 3f }, new[] { 12f, 9f, 6f, 4.5f, 3f }, new[] { 8f, 6f, 4.5f, 3.5f, 2.5f }, null, null };
+    static readonly float[][] BInterval = { null, new[] { 6f, 4f, 3f, 2.2f, 1.6f }, new[] { 6f, 5f, 3.6f, 2.8f, 2f }, new[] { 4f, 2.5f, 1.5f, 1f, .7f }, new[] { 12f, 9f, 6f, 4.5f, 3f }, new[] { 12f, 9f, 6f, 4.5f, 3f }, new[] { 8f, 6f, 4.5f, 3.5f, 2.5f }, null, null, new[] { 12f, 9f, 6f, 4.5f, 3f } };
     static readonly int[] WhCap = { 20, 60, 120, 250, 500, 800 };
     static readonly int[] WhLink = { 14, 18, 24, 32, 40 };
     static readonly int[] HubLink = { 14, 20, 28 };
@@ -46,7 +48,7 @@ public partial class Game
     {
         null, new[] { "Авто" }, new[] { "Авто", "Камень", "Медная руда", "Железная руда", "Серебряная руда", "Осколки света" },
         new[] { "Авто", "Медь", "Железо", "Серебро" }, new[] { "Авто", "Серебряная руда", "Кристаллы" }, new[] { "Авто", "Обсидиан", "Уголь пепла" },
-        new[] { "Авто", "Шестерни", "Линзы" }, null, null
+        new[] { "Авто", "Шестерни", "Линзы" }, null, null, new[] { "Авто", "Ледяной кристалл", "Серебряная руда" }
     };
     public static readonly string[] PrioNames = { "Высокий", "Обычный", "Низкий" };
     public static float BIntervalOf(int bk, int lv) => BInterval[bk] != null ? BInterval[bk][lv - 1] : 1f;
@@ -56,12 +58,12 @@ public partial class Game
     public bool BUnlocked(int bk) => bk switch
     {
         0 => HasFurnace, 1 => HasBuilding(Tl.Warehouse), 2 => LitCount >= 1, 3 => Villagers.Count >= 1, 4 => Has(Tech.AutoDrill), 5 => Has(Tech.Collector),
-        6 => BpDone.Contains("bp_refinery"), 7 => BpDone.Contains("bp_hub"), _ => BpDone.Contains("bp_stall")
+        6 => BpDone.Contains("bp_refinery"), 7 => BpDone.Contains("bp_hub"), 8 => BpDone.Contains("bp_stall"), _ => BpDone.Contains("bp_cryo")
     };
     public static string BLock(int bk) => bk switch
     {
         0 => "Постройте печь", 1 => "Постройте склад", 2 => "Зажгите древний фонарь", 3 => "Спасите жителя", 4 => "Изучите «Автобур» [T]", 5 => "Изучите «Коллектор» [T]",
-        6 => "Чертёж «Цех» [J]", 7 => "Чертёж «Логистика» [J]", _ => "Чертёж «Лавка» (даёт житель)"
+        6 => "Чертёж «Цех» [J]", 7 => "Чертёж «Логистика» [J]", 8 => "Чертёж «Лавка» (даёт житель)", _ => "Чертёж «Криоэкстрактор» [J]"
     };
 
     public bool HasBuilding(Tl t) { foreach (var b in Buildings) if (b.Type == t) return true; return false; }
@@ -95,6 +97,7 @@ public partial class Game
         var t = PlaceTarget(true); if (t == null) return;
         int reg = World.RegionOf(t.Value.X);
         if (bk == 4 && reg != 1) { Fail("Автобур можно ставить только в Затопленных шахтах (на освещённой земле)"); return; }
+        if (bk == 9 && reg != 3) { Fail("Криоэкстрактор можно ставить только в Ледяном монастыре (на освещённой земле)"); return; }
         if (bk == 5 && reg != 2) { Fail("Коллектор можно ставить только в Пепельных пустошах (на освещённой земле)"); return; }
         Pay(cost);
         var b = new Building { Type = BTypes[bk], X = t.Value.X, Y = t.Value.Y };
@@ -111,7 +114,7 @@ public partial class Game
         var cost = BCost(bk, b.Level + 1);
         if (!Can(cost)) { Fail($"Улучшение: нужно {CostStr(cost)}"); return; }
         Pay(cost); b.Level++; SetObj(b.X, b.Y, b.Type); netT = 0;
-        Burst(b.Pos, new Color("#ffe27a"), 22, 90); Sfx.Play("upgrade"); GiveXp(40); Shake = 2;
+        Burst(b.Pos, new Color("#ffe27a"), 22, 90); AddRing(b.Pos, 44, 1f, new Color("#ffe27a")); Sfx.Play("upgrade"); GiveXp(40); Shake = 2;
         if (b.Type == Tl.Stall) TradeEpoch++;
         Announce($"{BNames[bk]}: уровень {b.Level}", "Новое: " + BDesc[bk][b.Level - 1], new Color("#ffe27a"), "upgrade");
         Save();
@@ -120,7 +123,7 @@ public partial class Game
     void BuildingIx(Building b, Ix ix)
     {
         int bk = BIndex(b.Type);
-        ix.Lines.Add($"{BNames[bk]} ур.{b.Level}: {BDesc[bk][b.Level - 1]}" + (!IsProducer(b.Type) ? "" : b.Off ? " · ПАУЗА" : b.Worker ? " · работник на месте" : " · без работника (40% скорости)"));
+        ix.Lines.Add($"{BNames[bk]} ур.{b.Level}: {BDesc[bk][b.Level - 1]}" + (!IsProducer(b.Type) ? "" : b.Off ? " · ПАУЗА" : b.Worker ? " · работник на месте" : " · без работника (60% скорости)"));
         if (!(b.Linked || b.Forced) && b.Type != Tl.Warehouse) ix.Lines.Add("Не подключено к складу: ставьте узлы снабжения цепочкой [B]");
         if (b.Type == Tl.Stall) { ix.Lines.Add("[E] Торговать"); ix.E = () => OpenTrade(null); }
         else
@@ -133,7 +136,7 @@ public partial class Game
         else ix.Lines.Add("Максимальный уровень · [P] управление производством");
     }
 
-    static bool IsProducer(Tl t) => t == Tl.Sawmill || t == Tl.Mine || t == Tl.Forge || t == Tl.Drill || t == Tl.Collector || t == Tl.Refinery;
+    static bool IsProducer(Tl t) => t == Tl.Sawmill || t == Tl.Mine || t == Tl.Forge || t == Tl.Drill || t == Tl.Collector || t == Tl.Refinery || t == Tl.Cryo;
     static int LocalTotal(Building b) { int n = 0; foreach (var x in b.Local) n += x; return n; }
 
     void CollectFrom(Building b)
@@ -193,7 +196,7 @@ public partial class Game
             int bk = BIndex(b.Type);
             if (b.Off) { b.Status = 4; continue; }
             bool linked = b.Linked || b.Forced;
-            float rate = (b.Worker ? 1f : .4f) * ProdMul * (b.Type == Tl.Forge && Has(Tech.ForgeHeat) ? 2f : 1f);
+            float rate = (b.Worker ? 1f : .6f) * ProdMul * (b.Type == Tl.Forge && Has(Tech.ForgeHeat) ? 2f : 1f);
             float interval = BInterval[bk][b.Level - 1];
             bool working = false;
             switch (b.Type)
@@ -201,7 +204,7 @@ public partial class Game
                 case Tl.Sawmill:
                     if (!Room(b, It.Wood)) { b.Status = 2; break; }
                     b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
-                    if (b.Prog >= interval) { b.Prog = 0; Produce(It.Wood, b.Level == 3 ? 2 : b.Level >= 4 ? 3 : 1, b); }
+                    if (b.Prog >= interval) { b.Prog = 0; Produce(It.Wood, b.Level <= 2 ? 2 : b.Level == 3 ? 3 : b.Level == 4 ? 4 : 5, b); }
                     break;
                 case Tl.Mine:
                     b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
@@ -213,7 +216,7 @@ public partial class Game
                         else item = b.Mode switch { 1 => It.Stone, 2 => It.CopperOre, 3 => It.IronOre, 4 => It.SilverOre, _ => It.Shard };
                         bool allowed = b.Mode == 0 || (b.Mode == 3 && b.Level >= 2) || (b.Mode == 5 && b.Level >= 3) || (b.Mode == 4 && b.Level >= 4) || b.Mode == 1 || b.Mode == 2;
                         if (!allowed) { b.Status = 5; break; }
-                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 5 ? 2 : 1, b);
+                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 5 ? 3 : b.Level >= 3 ? 2 : 1, b);
                     }
                     break;
                 case Tl.Drill:
@@ -221,6 +224,14 @@ public partial class Game
                     if (b.Prog >= interval)
                     {
                         b.Prog = 0; int item = b.Mode == 1 ? It.SilverOre : b.Mode == 2 ? It.Crystal : ((b.Count++ % 3) == 2 ? It.Crystal : It.SilverOre);
+                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 3 ? 2 : 1, b);
+                    }
+                    break;
+                case Tl.Cryo:
+                    b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
+                    if (b.Prog >= interval)
+                    {
+                        b.Prog = 0; int item = b.Mode == 2 ? It.SilverOre : b.Mode == 1 ? It.Frost : ((b.Count++ % 3) == 2 ? It.SilverOre : It.Frost);
                         if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 3 ? 2 : 1, b);
                     }
                     break;
@@ -372,7 +383,7 @@ public partial class Game
     {
         unlockT -= dt; if (unlockT > 0) return; unlockT = .4f;
         string[] hint = { "Хранилище и центр производства [4]", "Производит дерево само [5]", "Добывает руду сама [6]", "Плавит руду со склада [7]", "Добывает серебро и кристаллы [Z]", "Добывает обсидиан и уголь пепла [X]",
-            "Шестерни и линзы из слитков [B]", "Подключает здания к складу [B]", "Торговля и покупка чертежей [B]" };
+            "Шестерни и линзы из слитков [B]", "Подключает здания к складу [B]", "Торговля и покупка чертежей [B]", "Добывает ледяной кристалл [B]" };
         for (int bk = 0; bk < BCount; bk++)
             if ((Ann & (1L << bk)) == 0 && BUnlocked(bk))
             {

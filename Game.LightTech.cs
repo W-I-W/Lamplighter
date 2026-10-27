@@ -64,7 +64,7 @@ public partial class Game
         {
             int n = 0;
             for (int y = l.Y - 5; y <= l.Y + 5; y++) for (int x = l.X - 5; x <= l.X + 5; x++) if (W.Get(x, y) == Tl.AmpCrystal && TileCenter(x, y).DistanceTo(l.Pos) <= 82) n++;
-            l.Amp = Math.Min(3, n);
+            l.Amp = Math.Min(Has(Tech.Prism) ? 4 : 3, n);
         }
         Posts.RemoveAll(p => W.Get(p.X, p.Y) != Tl.BarrierPost);
         Barriers.Clear();

@@ -148,6 +148,7 @@ public static partial class Art
         int[] baseIdx = { Warehouse, Sawmill, Mine, Forge }; int[] l4 = { Wh4, Saw4, Mine4, Forge4 };
         for (int k = 0; k < 4; k++) DrawBuilding(new Cv(img, l4[k] * 16, 0), k, 4, r);
         ExtraTiles3(img, r);
+        ExtraTiles4(img, r);
 
         // ── пустоши: объекты ──
         var dt = new Cv(img, DeadTree * 16, 0);

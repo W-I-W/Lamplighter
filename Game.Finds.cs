@@ -37,7 +37,7 @@ public partial class Game
     }
 
     static readonly string[] BasicBps = { "bp_mod_multi", "bp_sword2", "bp_bow2", "bp_staff2", "bp_hub", "bp_refinery", "bp_stall", "bp_amp" };
-    static readonly string[] AdvBps = { "bp_mod_ignite", "bp_mod_frost", "bp_mod_shock", "bp_mod_siphon", "bp_sword3", "bp_bow3", "bp_staff3", "bp_barrier", "bp_herolamp" };
+    static readonly string[] AdvBps = { "bp_mod_ignite", "bp_mod_frost", "bp_mod_shock", "bp_mod_siphon", "bp_sword3", "bp_bow3", "bp_staff3", "bp_barrier", "bp_herolamp", "bp_cryo" };
     static readonly string[] CommonRelics = { "r_embersp", "r_frostshard", "r_beaconwick", "r_sparkcoil", "r_minercharm", "r_luckycoin", "r_merchant" };
     static readonly string[] RareRelics = { "r_ashcrown", "r_rimemirror", "r_firstlight", "r_stormclaw", "r_shadowblood" };
 

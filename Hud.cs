@@ -18,6 +18,7 @@ public partial class Hud : Control
 
     void Txt(string s, Vector2 p, int size = 14, Color? c = null, HorizontalAlignment al = HorizontalAlignment.Left, float w = -1)
     {
+        s = Loc.T(s);
         DrawString(font, p + new Vector2(1, 1), s, al, w, size, new Color(0, 0, 0, .7f));
         DrawString(font, p, s, al, w, size, c ?? Colors.White);
     }
@@ -30,16 +31,19 @@ public partial class Hud : Control
         DrawRect(new Rect2(r.Position, new Vector2(r.Size.X * Mathf.Clamp(f, 0, 1), r.Size.Y)), c);
     }
 
-    Vector2 ToScreen(Vector2 w) => (w - G.CamCenter) * Game.Zoom + G.ViewSize * .5f;
-    float TextW(string s, int size) => font.GetStringSize(s, HorizontalAlignment.Left, -1, size).X;
+    Vector2 ToScreen(Vector2 w) => ((w - G.CamCenter) * Game.Zoom + G.ViewSize * .5f) / Settings.UiScale;
+    float TextW(string s, int size) => font.GetStringSize(Loc.T(s), HorizontalAlignment.Left, -1, size).X;
 
     public override void _Draw()
     {
         if (G == null) return;
         Size = G.ViewSize; Position = Vector2.Zero;
-        var vs = G.ViewSize;
+        float us = Settings.UiScale; var vs = G.ViewSize / us;
+        DrawSetTransform(Vector2.Zero, 0, new Vector2(us, us));
 
         if (G.LightBlockT > 0) DrawRect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
+        if (G.Menu == Mn.Main) { DrawMenu(vs); return; }
+        if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); DrawRect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
         DrawMarkers(vs);
         DrawEventMarkers(vs);
         DrawStatus();
@@ -59,6 +63,9 @@ public partial class Hud : Control
         if (G.TechOpen) DrawTech(vs);
         if (G.MapOpen) DrawMap(vs);
         DrawWindows(vs);
+        DrawEndgameHud(vs);
+        DrawFinale(vs);
+        DrawMenu(vs);
         if (G.Hp / G.MaxHp < .3f) DrawRect(new Rect2(Vector2.Zero, vs), new Color(.6f, 0, 0, .12f + .06f * Mathf.Sin(G.Time * 6f)));
     }
 
@@ -94,7 +101,7 @@ public partial class Hud : Control
         int reg = G.RegionAt(G.PPos);
         Box(new Rect2(vs.X - 220, 10, 210, 44));
         string line = reg == 0 ? $"Фонари: {G.LitCount}/5" : $"Фонари: {G.LitIn(reg)}/3";
-        Txt(Game.RegionNames[reg], new Vector2(vs.X - 212, 27), 12, reg == 1 ? new Color("#7ac8ff") : reg == 2 ? new Color("#ff9a5a") : new Color("#7ad45a"));
+        Txt(Game.RegionNames[reg], new Vector2(vs.X - 212, 27), 12, Game.RegionCol(reg));
         Txt(line, new Vector2(vs.X - 212, 46), 13, new Color("#ffe9a0"));
         Txt($"Маяк {G.BeaconLevel} · [M]", new Vector2(vs.X - 212, 46), 11, Dim, HorizontalAlignment.Right, 194);
 
@@ -125,7 +132,7 @@ public partial class Hud : Control
 
     void DrawInventory(Vector2 vs)
     {
-        float ix = 10, iy = vs.Y - 52, sw = 40;
+        float ix = 10, iy = vs.Y - 52, sw = 37;
         Box(new Rect2(ix, iy, It.Count * sw + 8, 44));
         for (int i = 0; i < It.Count; i++)
         {
@@ -207,8 +214,9 @@ public partial class Hud : Control
         foreach (var t in G.Texts)
         {
             var p = ToScreen(t.P); var col = t.C; col.A = Mathf.Clamp(t.Life * 2, 0, 1);
-            DrawString(font, p - new Vector2(59, -1), t.S, HorizontalAlignment.Center, 120, 13, new Color(0, 0, 0, col.A * .8f));
-            DrawString(font, p - new Vector2(60, 0), t.S, HorizontalAlignment.Center, 120, 13, col);
+            var ts = Loc.T(t.S);
+            DrawString(font, p - new Vector2(59, -1), ts, HorizontalAlignment.Center, 120, 13, new Color(0, 0, 0, col.A * .8f));
+            DrawString(font, p - new Vector2(60, 0), ts, HorizontalAlignment.Center, 120, 13, col);
         }
     }
 
@@ -307,7 +315,7 @@ public partial class Hud : Control
         DrawRect(new Rect2(Vector2.Zero, vs), new Color(0, 0, 0, .45f));
         Box(r, new Color("#8ff0ff"));
         Txt("Улучшения · цифра — изучить · ←/→ вкладка · T/Esc — закрыть", new Vector2(r.Position.X + 16, r.Position.Y + 22), 13, new Color("#8ff0ff"));
-        for (int pg = 0; pg < 3; pg++)
+        for (int pg = 0; pg < 4; pg++)
         {
             var tr = new Rect2(r.Position.X + 16 + pg * 150, r.Position.Y + 32, 144, 24);
             DrawRect(tr, pg == G.TechPage ? new Color(.2f, .4f, .5f, .9f) : new Color(.1f, .12f, .18f, .9f));
@@ -332,7 +340,7 @@ public partial class Hud : Control
 
     void DrawMap(Vector2 vs)
     {
-        float s = 2.6f; float mw = World.Wd * s, mh = World.Ht * s;
+        float s = Mathf.Min(2.6f, (vs.X - 140) / World.Wd); float mw = World.Wd * s, mh = World.Ht * s;
         var o = new Vector2(vs.X * .5f - mw * .5f, vs.Y * .5f - mh * .5f - 6);
         DrawRect(new Rect2(Vector2.Zero, vs), new Color(0, 0, 0, .6f));
         Box(new Rect2(o - new Vector2(10, 40), new Vector2(mw + 20, mh + 76)), new Color("#8ff0ff"));
@@ -340,14 +348,14 @@ public partial class Hud : Control
         DrawRect(new Rect2(o, new Vector2(mw, mh)), new Color(.03f, .04f, .07f));
         DrawTextureRect(G.MapTex, new Rect2(o, new Vector2(mw, mh)), false);
         // границы и названия биомов
-        for (int i = 1; i < 3; i++) DrawLine(o + new Vector2(i * 128 * s, 0), o + new Vector2(i * 128 * s, mh), new Color(1, 1, 1, .25f), 1);
-        for (int i = 0; i < 3; i++) Txt(Game.RegionNames[i], o + new Vector2(i * 128 * s, mh + 16), 12, i == 1 ? new Color("#7ac8ff") : i == 2 ? new Color("#ff9a5a") : new Color("#7ad45a"), HorizontalAlignment.Center, 128 * s);
+        for (int i = 1; i < 5; i++) DrawLine(o + new Vector2(i * 128 * s, 0), o + new Vector2(i * 128 * s, mh), new Color(1, 1, 1, .25f), 1);
+        for (int i = 0; i < 5; i++) Txt(Game.RegionNames[i], o + new Vector2(i * 128 * s, mh + 16), 12, Game.RegionCol(i), HorizontalAlignment.Center, 128 * s);
         // освобождённые территории — тёплое свечение
         foreach (var a in G.W.Ancients)
             if (a.Lit) DrawCircle(o + a.Pos / 16f * s, G.AncientR(a) / 16f * s, new Color(1f, .85f, .4f, .18f));
         foreach (var l in G.Lamps) DrawCircle(o + l.Pos / 16f * s, 5 * s, new Color(1f, .85f, .4f, .16f));
         // печати
-        foreach (var seal in new[] { G.W.Seal1, G.W.Seal2 })
+        foreach (var seal in new[] { G.W.Seal1, G.W.Seal2, G.W.Seal3, G.W.Seal4 })
             if (seal.Count > 0 && G.W.Get(seal[0].X, seal[0].Y) == Tl.Seal)
                 DrawRect(new Rect2(o + new Vector2(seal[0].X, seal[0].Y - 1) * s, new Vector2(2 * s, 9 * s)), new Color("#d58cff"));
         // фонари

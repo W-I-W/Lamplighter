@@ -8,7 +8,8 @@ public enum Tech
 {
     Lens, Dash, Reaper, WideSwing, FarLanterns, Spin, Searing, Flare, Sight, Pulse,
     SilverEdge, Optics, CombatLamp, HeroLamp, SilverGears, AutoDrill, Boots, Beam,
-    FlameEdge, HeatShield, Collector, ForgeHeat, FireLens, Fireproof
+    FlameEdge, HeatShield, Collector, ForgeHeat, FireLens, Fireproof,
+    Prism, SpikeBoots, FrostEdge, FrostArmor
 }
 
 public sealed class TechDef
@@ -25,7 +26,7 @@ public partial class Game
         return r;
     }
 
-    public static readonly string[] TechPages = { "Основные", "Глубины", "Пепел" };
+    public static readonly string[] TechPages = { "Основные", "Глубины", "Пепел", "Лёд" };
 
     public static readonly TechDef[] Techs =
     {
@@ -55,6 +56,11 @@ public partial class Game
         new() { Name = "Раскалённые горны", Desc = "Кузница работает в 2 раза быстрее", Req = "Кузница и путь в пустоши", Cost = C(It.Ember, 6, It.Obsidian, 4), Ok = g => g.BeaconLevel >= 3 && g.HasBuilding(Tl.Forge), Page = 2 },
         new() { Name = "Огненные линзы", Desc = "Фонари светят на 30% дальше, боевые поджигают", Req = "Зажгите фонарь в пустошах", Cost = C(It.Ember, 5, It.Crystal, 4, It.Obsidian, 3), Ok = g => g.LitIn(2) >= 1, Page = 2 },
         new() { Name = "Огнестойкость", Desc = "Награда Пепельного стража: иммунитет к огню и дыму", Req = "Победите Пепельного стража", Cost = C(), Ok = g => g.BossDown(3), Page = 2, Reward = true },
+
+        new() { Name = "Усиленные световые кристаллы", Desc = "Награда Хранителя Зимы: светокристаллы +22% (до 4), кристальные лучи длиннее и мощнее", Req = "Победите Хранителя Зимы", Cost = C(), Ok = g => g.BossDown(4), Page = 3, Reward = true },
+        new() { Name = "Ледяные шипы", Desc = "Лёд больше не скользит под ногами", Req = "Откройте путь в монастырь", Cost = C(It.Frost, 3, It.Silver, 3), Ok = g => g.BeaconLevel >= 4, Page = 3 },
+        new() { Name = "Морозное лезвие", Desc = "Удары замедляют и замораживают врагов", Req = "Откройте путь в монастырь", Cost = C(It.Frost, 4, It.Iron, 4), Ok = g => g.BeaconLevel >= 4, Page = 3 },
+        new() { Name = "Тёплые меха", Desc = "Холод вредит на 60% меньше", Req = "Откройте путь в монастырь", Cost = C(It.Frost, 4, It.Obsidian, 2), Ok = g => g.BeaconLevel >= 4, Page = 3 },
     };
 
     public int TechCount { get { int n = 0; for (int i = 0; i < Techs.Length; i++) if (Has((Tech)i)) n++; return n; } }

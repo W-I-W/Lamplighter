@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace Lamplighter;
 
 /// <summary>Огонь на земле: предупреждение (Warn), затем горение (Dur) с уроном (Dps). Smoke — скрыто под дымом.</summary>
-public sealed class FireZone { public Vector2 Pos; public float R, T, Warn, Dur, Dps; public bool Smoke, Friendly; }
+public sealed class FireZone { public Vector2 Pos; public float R, T, Warn, Dur, Dps; public bool Smoke, Friendly, Cold, Dark; }
 public sealed class SmokeCloud { public Vector2 Pos, Vel; public float R, Phase; }
 
 /// <summary>Механики Пепельных пустошей: горячий пепел, дым, огонь, пепельные враги и страж.</summary>
@@ -49,9 +49,9 @@ public partial class Game
         return a;
     }
 
-    public void AddZone(Vector2 p, float r, float warn, float dur, float dps, bool smoke = false, bool friendly = false)
+    public void AddZone(Vector2 p, float r, float warn, float dur, float dps, bool smoke = false, bool friendly = false, bool cold = false, bool dark = false)
     {
-        Zones.Add(new FireZone { Pos = p, R = r, Warn = warn, Dur = dur, Dps = dps, Smoke = smoke, Friendly = friendly });
+        Zones.Add(new FireZone { Pos = p, R = r, Warn = warn, Dur = dur, Dps = dps, Smoke = smoke, Friendly = friendly, Cold = cold, Dark = dark });
         if (Zones.Count > 70) Zones.RemoveAt(0);
     }
 
@@ -61,6 +61,14 @@ public partial class Game
         float cyc = (t + ph) % 6.5f;
         warn = cyc > 3.4f && cyc <= 4.4f;
         return cyc > 4.4f;
+    }
+
+    public void ColdDot(float amt)
+    {
+        if (Has(Tech.FrostArmor)) amt *= .4f;
+        Hp -= amt; regenDelay = 3f; Chill(.6f);
+        if (rng.Randf() < .1f) Burst(PPos, new Color("#e8faff"), 2, 40);
+        if (Hp <= 0) Die();
     }
 
     public void DotDamage(float amt, bool fire)
@@ -93,8 +101,8 @@ public partial class Game
             if (z.T >= z.Warn + z.Dur) { Zones.RemoveAt(i); continue; }
             if (z.T < z.Warn || z.Dps <= 0) continue;
             if (z.Friendly) { foreach (var e in Enemies) if (!e.Hidden && e.Kind != EK.Imp && e.Kind != EK.AshWarden && e.Pos.DistanceTo(z.Pos) < z.R + e.Radius) { e.Hp -= z.Dps * dt; e.Burn = Mathf.Max(e.Burn, 1f); e.Flash = Mathf.Max(e.Flash, .04f); } }
-            else if (PPos.DistanceTo(z.Pos) < z.R) DotDamage(z.Dps * dt, true);
-            if (rng.Randf() < dt * 14) Parts.Add(new Particle { P = z.Pos + new Vector2(rng.RandfRange(-z.R, z.R) * .7f, rng.RandfRange(-z.R, z.R) * .5f), V = new Vector2(rng.RandfRange(-4, 4), -rng.RandfRange(14, 30)), Life = .6f, Max = .6f, C = rng.Randf() < .5f ? new Color("#ff7a2a") : new Color("#ffd04a"), Size = 1.8f });
+            else if (PPos.DistanceTo(z.Pos) < z.R) { if (z.Dark) DarkDot(z.Dps * dt); else if (z.Cold) ColdDot(z.Dps * dt); else DotDamage(z.Dps * dt, true); }
+            if (rng.Randf() < dt * 14) Parts.Add(new Particle { P = z.Pos + new Vector2(rng.RandfRange(-z.R, z.R) * .7f, rng.RandfRange(-z.R, z.R) * .5f), V = new Vector2(rng.RandfRange(-4, 4), -rng.RandfRange(14, 30)), Life = .6f, Max = .6f, C = z.Dark ? new Color("#7a3aff") : z.Cold ? new Color("#e8faff") : rng.Randf() < .5f ? new Color("#ff7a2a") : new Color("#ffd04a"), Size = 1.8f });
         }
         // огненный след рывка (награда Пепельного стража)
         if (DashT > 0 && Has(Tech.Fireproof)) { trailT -= dt; if (trailT <= 0) { trailT = .05f; AddZone(PPos, 10, 0, 2.5f, 12f, false, true); } }
@@ -104,7 +112,7 @@ public partial class Game
     {
         int n = 0;
         foreach (var z in Zones)
-            if (z.T >= z.Warn && z.T < z.Warn + z.Dur && z.Dps > 0) { yield return new Vector4(z.Pos.X, z.Pos.Y, z.R * 2.2f, 0); if (++n >= 12) yield break; }
+            if (z.T >= z.Warn && z.T < z.Warn + z.Dur && z.Dps > 0 && !z.Cold && !z.Dark) { yield return new Vector4(z.Pos.X, z.Pos.Y, z.R * 2.2f, 0); if (++n >= 12) yield break; }
     }
 
     void DrawHazards(EntityLayer c)
@@ -129,15 +137,15 @@ public partial class Game
                 if (z.Smoke) { if ((int)(Time * 6) % 3 == 0) c.DrawRect(new Rect2(z.Pos + new Vector2(rng.RandfRange(-z.R, z.R) * .6f, rng.RandfRange(-z.R, z.R) * .6f), new Vector2(1.5f, 1.5f)), new Color(1f, .5f, .2f, .5f)); }
                 else
                 {
-                    c.DrawCircle(z.Pos, z.R, new Color(1f, .4f, .1f, .12f + .1f * Mathf.Sin(Time * 16f)));
-                    c.DrawArc(z.Pos, z.R, 0, Mathf.Tau, 28, new Color(1f, .6f, .2f, .8f), 1.5f);
+                    c.DrawCircle(z.Pos, z.R, z.Dark ? new Color(.45f, .15f, .9f, .14f + .1f * Mathf.Sin(Time * 16f)) : z.Cold ? new Color(.5f, .85f, 1f, .12f + .1f * Mathf.Sin(Time * 16f)) : new Color(1f, .4f, .1f, .12f + .1f * Mathf.Sin(Time * 16f)));
+                    c.DrawArc(z.Pos, z.R, 0, Mathf.Tau, 28, z.Dark ? new Color(.75f, .45f, 1f, .85f) : z.Cold ? new Color(.7f, .95f, 1f, .8f) : new Color(1f, .6f, .2f, .8f), 1.5f);
                     c.DrawArc(z.Pos, z.R * (1 - k), 0, Mathf.Tau, 24, new Color(1f, .9f, .5f, .6f), 1f);
                 }
             }
             else if (z.Dps > 0)
             {
                 float fade = Mathf.Min(1f, (z.Warn + z.Dur - z.T) * 2f);
-                c.DrawCircle(z.Pos, z.R, z.Friendly ? new Color(1f, .8f, .3f, .3f * fade) : new Color(1f, .3f, .08f, .38f * fade));
+                c.DrawCircle(z.Pos, z.R, z.Dark ? new Color(.3f, .08f, .6f, .5f * fade) : z.Cold ? new Color(.6f, .9f, 1f, .38f * fade) : z.Friendly ? new Color(1f, .8f, .3f, .3f * fade) : new Color(1f, .3f, .08f, .38f * fade));
                 c.DrawCircle(z.Pos, z.R * .6f, new Color(1f, .75f, .2f, .3f * fade));
                 c.DrawArc(z.Pos, z.R, 0, Mathf.Tau, 24, new Color(1f, .6f, .2f, .7f * fade), 1.2f);
             }
@@ -151,6 +159,16 @@ public partial class Game
     }
 
     // ───────────────────────── пепельные враги ─────────────────────────
+    Vector2 UpdateOtherEnemy(Enemy e, float dt, Vector2 dir, float dist, Vector2 perp, float k)
+    {
+        switch (e.Kind)
+        {
+            case EK.IceWolf: case EK.FrostPriest: case EK.Sentinel: case EK.WinterWarden: return UpdateIceEnemy(e, dt, dir, dist, perp, k);
+            case EK.Mirage: case EK.Decoy: case EK.Weaver: case EK.Stalker: case EK.Source: return UpdateHeartEnemy(e, dt, dir, dist, perp, k);
+        }
+        return UpdateAshEnemy(e, dt, dir, dist, perp, k);
+    }
+
     Vector2 UpdateAshEnemy(Enemy e, float dt, Vector2 dir, float dist, Vector2 perp, float k)
     {
         Vector2 vel = Vector2.Zero;

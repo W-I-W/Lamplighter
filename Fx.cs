@@ -12,6 +12,7 @@ uniform float time;
 uniform int count;
 uniform float flash;
 uniform vec3 tint;
+uniform float dawn;
 uniform vec4 lights[96];
 uniform vec4 smokes[16];
 float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -46,7 +47,7 @@ void fragment(){
     float dd = distance(w, S.xy) + (vn(w * 0.09 + vec2(time * 0.3, float(j))) - 0.5) * S.z * 0.6;
     haze = max(haze, (1.0 - smoothstep(S.z * 0.2, S.z, dd)) * S.w);
   }
-  float a = max(dark * 0.965, haze * (0.3 + 0.5 * lit));
+  float a = max(dark * 0.965 * (1.0 - dawn), haze * (0.3 + 0.5 * lit));
   vec3 outc = mix(col, vec3(0.2, 0.18, 0.17), haze * lit);
   COLOR = vec4(outc, a);
 }";

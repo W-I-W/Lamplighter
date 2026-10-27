@@ -12,10 +12,11 @@ public enum Tl : byte
     CaveWall, CrystalOre, SilverOre, Machine, MachineOn, Mirror1, Mirror2, Receiver, ReceiverOn, Emitter,
     CrystalLantern, CombatLantern, Rubble, BridgeBroken, Bridge, Deep, Seal, SecretDoor, Drill, Collector,
     DeadTree, Obsidian, Ember, AshRuin, Vent,
-    TechCache, Spire, Altar, AltarOn, SecretCache, Stall, Hub, Refinery, AmpCrystal, BarrierPost, MeteorOre
+    TechCache, Spire, Altar, AltarOn, SecretCache, Stall, Hub, Refinery, AmpCrystal, BarrierPost, MeteorOre,
+    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge
 }
 
-public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret }
+public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret, Lore }
 
 /// <summary>Место интереса. State: 0 нетронуто, 1 стража вышла, 2 стража побеждена, 3 завершено.</summary>
 public sealed class Poi
@@ -39,14 +40,15 @@ public sealed class Ancient
 public sealed partial class World
 {
     public const int N = 128, TS = 16;          // N — сторона области леса
-    public const int Wd = 384, Ht = 128;        // весь мир: лес, шахты, пустоши
-    public const int MX0 = 128, MX1 = 255, AX0 = 256, AX1 = 383;
+    public const int Wd = 640, Ht = 128;        // весь мир: лес, шахты, пустоши, монастырь, Сердце Тьмы
+    public const int MX0 = 128, MX1 = 255, AX0 = 256, AX1 = 383, IX0 = 384, IX1 = 511, HX0 = 512, HX1 = 639;
     public int Seed;
     public byte[] Obj = new byte[Wd * Ht];
+    public byte[] GenObj;
     public byte[] Ground = new byte[Wd * Ht];
     public static int Key(int x, int y) => y * Wd + x;
-    public static bool Blocks(Tl t) => t != Tl.None && t != Tl.Bridge && t != Tl.SecretCache;
-    public static int RegionOf(int tx) => tx < MX0 ? 0 : tx <= MX1 ? 1 : 2;
+    public static bool Blocks(Tl t) => t != Tl.None && t != Tl.Bridge && t != Tl.SecretCache && t != Tl.LightBridge;
+    public static int RegionOf(int tx) => tx < MX0 ? 0 : tx <= MX1 ? 1 : tx <= AX1 ? 2 : tx <= IX1 ? 3 : 4;
     public List<Ancient> Ancients = new();
     public Vector2I Spawn = new(N / 2, N / 2 + 2);
 
@@ -133,7 +135,13 @@ public sealed partial class World
         w.GenPois(seed);
         w.GenMines(seed);
         w.GenAsh(seed);
-        w.GenFinds(seed);
+        w.GenFinds(seed, 0, 2);
+        w.GenIce(seed);
+        w.GenHeart(seed);
+        w.GenFinds(seed, 3, 4);
+        w.GenLore(seed);
+        w.EnsureStoryReachable();
+        w.GenObj = (byte[])w.Obj.Clone();
         return w;
     }
 

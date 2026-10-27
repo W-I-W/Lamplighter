@@ -118,7 +118,7 @@ public partial class Game
         S(3f, () =>
         {
             var tp = Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000; var fps = Engine.GetFramesPerSecond();
-            Log($"PERF: fps={fps:F0} processMs={tp:F2} enemies={Enemies.Count} parts={Parts.Count} lamps={Lamps.Count} objects={Performance.GetMonitor(Performance.Monitor.ObjectCount)} mem={Performance.GetMonitor(Performance.Monitor.MemoryStatic) / 1048576:F0}MB");
+            Log($"PERF: chunks={LoadedChunks} lastChunkMs={LastChunkMs:F2} fps={fps:F0} processMs={tp:F2} enemies={Enemies.Count} parts={Parts.Count} lamps={Lamps.Count} objects={Performance.GetMonitor(Performance.Monitor.ObjectCount)} mem={Performance.GetMonitor(Performance.Monitor.MemoryStatic) / 1048576:F0}MB");
         });
     }
     float perfT0;

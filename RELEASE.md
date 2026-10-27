@@ -1,0 +1,61 @@
+# Lanternreach — release notes for developers
+
+Version: **1.0.0** (`Game.VersionStr` in `Game.Menu.cs`, also `application/file_version` in `export_presets.cfg`).
+
+## Build and export (Windows)
+
+```
+dotnet build Lamplighter.csproj -c ExportRelease       # release compile check
+godot --headless --path . --export-release "Windows Desktop" build/Lanternreach.exe
+```
+
+* The preset is in `export_presets.cfg`. `lang/*.json` and `audio/*` are included through `include_filter`.
+* Output: `build/Lanternreach.exe` + `.pck` + `data_Lamplighter_windows_x86_64/` (keep them together). `build/` is git-ignored.
+* The export was run on the dev machine with the Godot install that is used here; code signing is disabled.
+
+## Automated checks
+
+`powershell -File tools\run_checks.ps1` builds (Debug and ExportRelease) and runs scripted stages in the real engine:
+
+| Stage (`LAMP_STAGE`) | What it verifies |
+|---|---|
+| `world` | 10 seeds: every ancient lantern / boss / POI reachable (with seals opened and Heart bridges lit); every blueprint is obtainable |
+| `ice` | Ice Monastery reachability, ice enemies, slippery ice, Winter Warden phases and rewards |
+| `heart` | Heart of Darkness riddles/traps/enemies, Source of Darkness (3 phases), 5th core, finale cinematic, credits |
+| `end` | Rift Gate, waves, temporary relics, rewards/unlocks, legendary upgrades, decorations |
+| `menu` | menus, save slots, atomic save + `save.bak` recovery, key remapping |
+| `loc` (+`LAMP_LANG=en`) | every window/menu rendered in English; reports any untranslated Russian string |
+| `perf` | stress scene (30 enemies, lamps, buildings) — fails below 60 fps |
+| `final` / `reload` | chunk borders, production while chunks are unloaded, resource regrowth, death + save, no duplicate unique rewards, finished-save reload (no finale re-trigger, bosses stay dead) |
+
+Migration of pre-stage-5 saves (world width 384 → 640): `LAMP_STAGE=makev4` writes a save, `.patch/crop4.py` crops it to the old format, `LAMP_LOAD=1` loads it.
+
+## Saves
+
+`user://save.json` (current), `user://save.bak` (last valid previous save), `user://slot1..3.json` (manual), `save_prev.json` (created by *New game* / loading a slot).
+Writes are atomic (temp file → replace) and the previous file is copied to `save.bak` only if it parses. A damaged `save.json` falls back to `save.bak`.
+Versions 2–4 load and migrate to 5 (new regions are generated from the seed; unlocked seals are re-applied from the beacon level).
+
+## Steam
+
+No Steamworks code, no AppID and no `steam_appid.txt` are shipped. Achievements are stored locally (`user://achievements.json`);
+to forward them to Steam, set `Ach.Backend = id => /* SteamUserStats.SetAchievement(id) */;` after initialising your Steamworks wrapper
+(e.g. GodotSteam) and map the 19 ids in `Achievements.cs` to the achievement API names configured in Steamworks.
+Use your own AppID only in the release build pipeline — never commit a test AppID (480).
+
+## Audio replacement
+
+See `audio/README.txt`. Music: `audio/music/{menu,forest,mines,ash,ice,heart,boss,finale}.ogg|mp3|wav`; SFX: `audio/sfx/NAME.ogg|wav`.
+Without files the game synthesizes everything (placeholders).
+
+## Localization
+
+Source texts are Russian; `lang/en.json` maps them to English (exact strings and `{0}`-templates). Text is translated at draw time (`Loc.T`).
+To add a language: copy `lang/en.json` to `lang/xx.json`, translate the values, add the code to the language toggle in `Game.Menu.cs`.
+`.patch/extract_strings.py` lists all Russian literals in the code; the `loc` stage finds anything that still slips through.
+
+## Known limits (be honest with players)
+
+* Balance of the full 5-biome path was tuned analytically and with scripted runs; it has **not** been play-tested end-to-end by a human.
+* Key remapping covers movement and main actions; digit/Z/X build keys and F5 are fixed. On-screen hints keep the default key names.
+* Resolution/fullscreen changes are applied immediately but were not exercised on multiple monitors.

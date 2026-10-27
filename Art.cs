@@ -8,7 +8,7 @@ public static partial class Art
 {
     // Индексы тайлов в атласе (колонки)
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
-        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 101;
+        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 130;
 
     public static ImageTexture TileTex, PlayerTex, ShadeTex, WraithTex, IconTex;
 
@@ -214,7 +214,7 @@ public static partial class Art
     static void BuildIcons()
     {
         // 0 дерево 1 камень 2 медная руда 3 железная руда 4 осколок 5 медь 6 железо 7 кирка
-        var img = NewImg(16 * 20);
+        var img = NewImg(16 * 24);
         var r = new Random(77);
         var c = new Cv(img, 0, 0);
         c.R(2, 4, 12, 4, H("#8a5a2e")); c.R(2, 4, 12, 1, H("#a8743d")); c.R(1, 5, 1, 2, H("#d9b27c")); c.R(14, 5, 1, 2, H("#d9b27c"));
@@ -237,7 +237,7 @@ public static partial class Art
         c.R(3, 6, 10, 5, H("#a9b6cc")); c.R(4, 5, 8, 1, H("#dfe8f6")); c.R(3, 11, 10, 1, H("#6a7690")); c.R(5, 7, 4, 1, H("#ffffff"));
         c.Outline(H("#1c2438"));
         ExtraIcons(img);
-        c = new Cv(img, 304, 0);
+        c = new Cv(img, 368, 0);
         c.R(7, 4, 2, 11, H("#8a5a2e")); c.R(2, 3, 12, 2, H("#cfd6e2")); c.R(1, 4, 2, 2, H("#cfd6e2")); c.R(13, 4, 2, 2, H("#cfd6e2")); c.R(3, 2, 10, 1, H("#ffffff"));
         c.Outline(H("#1a1a22"));
         IconTex = ImageTexture.CreateFromImage(img);

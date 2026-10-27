@@ -184,12 +184,12 @@ public static partial class Art
             c.Outline(H("#1a0606"));
         }
         BomberTex = ImageTexture.CreateFromImage(img);
-        ExtraEntities2(); ExtraEntities3();
+        ExtraEntities2(); ExtraEntities3(); ExtraEntities4();
     }
 
     static void ExtraIcons(Image img)
     {
-        ExtraIcons2(img);
+        ExtraIcons2(img); ExtraIcons4(img);
         // 7 эфир, 8 реликвия
         var c = new Cv(img, 7 * 16, 0);
         for (int y = 2; y < 14; y++) { int w = y < 8 ? 1 + (y - 2) / 2 : 3 - (y - 8) / 2; c.R(8 - w, y, w * 2, 1, H("#c070ff")); }

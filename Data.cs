@@ -38,13 +38,14 @@ public static class Db
         new() { Id = "sword3", Name = "Серебряный клинок", Cls = WClass.Sword, Tier = 3, Dmg = 12, Cd = .4f, Reach = 30, Slots = 3, Bp = "bp_sword3", Cost = C(It.Silver, 6, It.Crystal, 2, It.Iron, 3), Desc = "Почти круговая дуга", Rar = Rar.Rare },
         new() { Id = "sword_u", Name = "Клинок Хранителя", Cls = WClass.Sword, Tier = 3, Dmg = 11, Cd = .4f, Reach = 29, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Arc, 1f), (Fxk.Siphon, .5f) }, Tags = new[] { "light" }, Desc = "Каждый удар посылает световую дугу и копит свет" },
         new() { Id = "storm_u", Name = "Грозовой клинок", Cls = WClass.Sword, Tier = 3, Dmg = 10, Cd = .42f, Reach = 28, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Chain, 2f) }, Tags = new[] { "storm" }, Desc = "Удары перескакивают молнией на других врагов" },
-        new() { Id = "bow1", Name = "Короткий лук", Cls = WClass.Bow, Tier = 1, Dmg = 4, Cd = .55f, Speed = 230, Slots = 1, Cost = C(It.Wood, 6, It.Copper, 2), Desc = "Стрелы летят далеко; добыча — на ЛКМ по руде" },
-        new() { Id = "bow2", Name = "Составной лук", Cls = WClass.Bow, Tier = 2, Dmg = 7, Cd = .5f, Speed = 250, Slots = 2, Bp = "bp_bow2", Cost = C(It.Iron, 4, It.Wood, 4), Desc = "Быстрее и точнее", Rar = Rar.Uncommon },
+        new() { Id = "bow1", Name = "Короткий лук", Cls = WClass.Bow, Tier = 1, Dmg = 5, Cd = .5f, Speed = 230, Slots = 1, Cost = C(It.Wood, 6, It.Copper, 2), Desc = "Стрелы летят далеко; добыча — на ЛКМ по руде" },
+        new() { Id = "bow2", Name = "Составной лук", Cls = WClass.Bow, Tier = 2, Dmg = 8, Cd = .46f, Speed = 250, Slots = 2, Bp = "bp_bow2", Cost = C(It.Iron, 4, It.Wood, 4), Desc = "Быстрее и точнее", Rar = Rar.Uncommon },
         new() { Id = "bow3", Name = "Кристальный лук", Cls = WClass.Bow, Tier = 3, Dmg = 10, Cd = .45f, Speed = 270, Slots = 3, Pierce = 1, Bp = "bp_bow3", Cost = C(It.Crystal, 4, It.Silver, 4), Desc = "Стрелы пробивают врага насквозь", Rar = Rar.Rare },
         new() { Id = "bow_u", Name = "Лук глубин", Cls = WClass.Bow, Tier = 3, Dmg = 9, Cd = .46f, Speed = 260, Slots = 2, Pierce = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Slow, 1f) }, Tags = new[] { "ice" }, Desc = "Ледяные стрелы замедляют и пробивают" },
-        new() { Id = "staff1", Name = "Посох искр", Cls = WClass.Staff, Tier = 1, Dmg = 6, Cd = .8f, Speed = 130, Slots = 1, Inherent = new[] { (Fxk.Chain, 1f) }, Tags = new[] { "storm" }, Cost = C(It.Wood, 4, It.Shard, 4), Desc = "Искровой шар взрывается и бьёт молнией" },
-        new() { Id = "staff2", Name = "Кристальный посох", Cls = WClass.Staff, Tier = 2, Dmg = 9, Cd = .75f, Speed = 135, Slots = 2, Bp = "bp_staff2", Inherent = new[] { (Fxk.Slow, 1f), (Fxk.Freeze, .5f) }, Tags = new[] { "ice" }, Cost = C(It.Crystal, 3, It.Shard, 6, It.Wood, 2), Desc = "Ледяные шары замедляют и замораживают", Rar = Rar.Uncommon },
+        new() { Id = "staff1", Name = "Посох искр", Cls = WClass.Staff, Tier = 1, Dmg = 7, Cd = .8f, Speed = 130, Slots = 1, Inherent = new[] { (Fxk.Chain, 1f) }, Tags = new[] { "storm" }, Cost = C(It.Wood, 4, It.Shard, 4), Desc = "Искровой шар взрывается и бьёт молнией" },
+        new() { Id = "staff2", Name = "Кристальный посох", Cls = WClass.Staff, Tier = 2, Dmg = 10, Cd = .75f, Speed = 135, Slots = 2, Bp = "bp_staff2", Inherent = new[] { (Fxk.Slow, 1f), (Fxk.Freeze, .5f) }, Tags = new[] { "ice" }, Cost = C(It.Crystal, 3, It.Shard, 6, It.Wood, 2), Desc = "Ледяные шары замедляют и замораживают", Rar = Rar.Uncommon },
         new() { Id = "staff3", Name = "Посох пепла", Cls = WClass.Staff, Tier = 3, Dmg = 13, Cd = .7f, Speed = 140, Slots = 3, Bp = "bp_staff3", Inherent = new[] { (Fxk.Burn, 2f) }, Tags = new[] { "fire" }, Cost = C(It.Ember, 4, It.Obsidian, 3, It.Shard, 4), Desc = "Огненные шары поджигают", Rar = Rar.Rare },
+        new() { Id = "staff_w", Name = "Посох Зимы", Cls = WClass.Staff, Tier = 3, Dmg = 14, Cd = .7f, Speed = 145, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Freeze, 2f), (Fxk.Slow, 1f) }, Tags = new[] { "ice" }, Desc = "Ледяные шары замораживают врагов; лёд и свет — две стороны одной силы" },
         new() { Id = "staff_u", Name = "Посох Пепельного стража", Cls = WClass.Staff, Tier = 3, Dmg = 12, Cd = .68f, Speed = 150, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Burn, 2f), (Fxk.Blast, 1f) }, Tags = new[] { "fire" }, Desc = "Огненные шары взрываются при гибели врагов" },
     };
 
@@ -77,6 +78,7 @@ public static class Db
         new() { Id = "bp_stall", Name = "Торговая лавка", Desc = "Постройка: Лавка торговца", Need = 1 },
         new() { Id = "bp_barrier", Name = "Световые барьеры", Desc = "Постройка: столбы, задерживающие тени", Need = 2 },
         new() { Id = "bp_amp", Name = "Светокристаллы", Desc = "Постройка: усилители соседних фонарей", Need = 2 },
+        new() { Id = "bp_cryo", Name = "Криоэкстрактор", Desc = "Постройка: добывает ледяной кристалл автоматически", Need = 2 },
         new() { Id = "bp_herolamp", Name = "Фонарь героя", Desc = "Улучшение переносного фонаря в окне экипировки", Need = 2 },
     };
 
@@ -112,6 +114,9 @@ public static class Db
         R("r_luckycoin", "Монета удачи", "Редкие находки случаются чаще", Rar.Uncommon, new string[0], new[] { "Luck:0.15" }, "#ffd86b"),
         R("r_shadowblood", "Кровь тени", "Убийство лечит", Rar.Rare, new string[0], new[] { "KillHeal:2" }, "#a060ff"),
         R("r_merchant", "Печать торговца", "Лучшие цены у торговцев", Rar.Uncommon, new string[0], new[] { "Trade:0.1" }, "#e0c080"),
+        R("r_glaciersoul", "Душа ледника", "Холод в крови: заморозка чаще", Rar.Rare, new[] { "ice" }, new[] { "Freeze:0.8" }, "#9fd8ff"),
+        R("r_prismcore", "Ядро призмы", "Реликвия Хранителя Зимы: свет фонарей усиливается", Rar.Epic, new[] { "light" }, new[] { "LampRadius:0.08", "Arc:1" }, "#e8faff"),
+        R("r_voidlens", "Линза пустоты", "Видит сквозь иллюзии: фонарь шире, помечает настоящий свет, показывает руны и иллюзии", Rar.Rare, new[] { "light" }, new[] { "HeroRadius:0.1", "Reveal:1" }, "#d8b8ff"),
         // временные: только для испытаний Тьмы
         R("t_flame", "Пламя испытания", "Временно: огонь на всех ударах", Rar.Rare, new[] { "fire" }, new[] { "Burn:1.5" }, "#ff7a2a", false),
         R("t_frost", "Иней испытания", "Временно: заморозка на всех ударах", Rar.Rare, new[] { "ice" }, new[] { "Slow:1", "Freeze:0.6" }, "#7ad0ff", false),

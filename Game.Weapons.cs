@@ -30,7 +30,7 @@ public partial class Game
     public OwnedWeapon CurOw => CurDef == null ? null : Owned[CurW];
     public float E(Fxk k) => EffP[(int)k];
     public float N(string k) => Num.TryGetValue(k, out var v) ? v : 0f;
-    public float WeaponDmg(WeaponDef w) => w.Dmg + .35f * (Level - 1);
+    public float WeaponDmg(WeaponDef w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg"));
     public bool HasWeapon(string id) { foreach (var o in Owned) if (o.Id == id) return true; return false; }
 
     public void GiveWeapon(string id, bool announce = true)
@@ -123,10 +123,10 @@ public partial class Game
         FireRanged(w, dir);
     }
 
-    public void HitEnemy(Enemy e, float dmg, Vector2 dir, bool melee, int depth = 0)
+    public void HitEnemy(Enemy e, float dmg, Vector2 dir, bool melee, int depth = 0, bool light = false)
     {
         if (e.Hidden) return;
-        Hurt(e, dmg, dir, melee);
+        Hurt(e, dmg, dir, melee, light);
         OnHit(e, dmg, dir, depth);
     }
 
@@ -235,7 +235,9 @@ public partial class Game
             foreach (var e in new List<Enemy>(Enemies))
             {
                 if (e.Hidden || p.Hit.Contains(e) || e.Pos.DistanceTo(p.Pos) > e.Radius + 3) continue;
-                p.Hit.Add(e); HitEnemy(e, p.Dmg, dir, false);
+                p.Hit.Add(e);
+                if (p.Kind == 2 && e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { ReflectLight(e); p.Pierce = -1; dead = true; break; }
+                HitEnemy(e, p.Dmg, dir, false, 0, p.Kind == 2);
                 if (p.Kind == 1) OrbBurst(p, e);
                 if (p.Pierce-- <= 0) { dead = true; break; }
             }

@@ -9,7 +9,7 @@ public partial class Sfx : Node
 {
     const int SR = 22050;
     static Sfx inst;
-    readonly Dictionary<string, AudioStreamWav> bank = new();
+    readonly Dictionary<string, AudioStream> bank = new();
     AudioStreamPlayer[] pool;
     int next;
     readonly Random rnd = new(7);
@@ -21,7 +21,7 @@ public partial class Sfx : Node
     {
         inst = this; prng.Randomize();
         pool = new AudioStreamPlayer[14];
-        for (int i = 0; i < pool.Length; i++) { pool[i] = new AudioStreamPlayer { VolumeDb = -6 }; AddChild(pool[i]); }
+        for (int i = 0; i < pool.Length; i++) { pool[i] = new AudioStreamPlayer { VolumeDb = -6, Bus = AudioServer.GetBusIndex("SFX") >= 0 ? "SFX" : "Master" }; AddChild(pool[i]); }
 
         bank["mine"] = Wav(Tone(900, 500, .06f, 1, .4f, 6));
         bank["break"] = Wav(Tone(220, 60, .16f, 2, .8f, 5));
@@ -45,6 +45,13 @@ public partial class Sfx : Node
         bank["flare"] = Wav(Tone(300, 1200, .25f, 0, .4f, 4));
         bank["pulse"] = Wav(Add(Tone(80, 300, .6f, 3, 0, 2), Tone(0, 0, .6f, 0, 1f, 4)));
         bank["discover"] = Wav(Seq(new float[] { 587, 740, 880 }, .12f, 0));
+        // замена файлами: res://audio/sfx/NAME.ogg|wav (или user://sfx/NAME.*) — синтезированные звуки остаются запасными
+        foreach (var name in new List<string>(bank.Keys))
+            foreach (var ext in new[] { "ogg", "wav" })
+            {
+                var path = $"res://audio/sfx/{name}.{ext}";
+                if (ResourceLoader.Exists(path)) { var st = ResourceLoader.Load<AudioStream>(path); if (st != null) { bank[name] = st; break; } }
+            }
     }
 
     void P(string name, float db, float pitch)

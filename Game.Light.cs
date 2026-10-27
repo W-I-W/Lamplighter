@@ -33,7 +33,7 @@ public partial class Game
         float b = l.Kind == 0 ? 96 : l.Kind == 1 ? 72 : 64;
         float lv = l.Level == 1 ? 1f : l.Level == 2 ? 1.35f : 1.7f;
         float f = b * lv * (Has(Tech.FarLanterns) ? 1.5f : 1f) * (Has(Tech.FireLens) ? 1.3f : 1f);
-        f *= (LightBlockT > 0 ? .4f : 1f) * (1f - .55f * SmokeAt(l.Pos)) * (1f + .12f * l.Amp) * (1f + N("LampRadius")) * (Surge > 0 ? 1.25f : 1f);
+        f *= (LightBlockT > 0 ? .4f : 1f) * (1f - .55f * SmokeAt(l.Pos)) * (1f + (Has(Tech.Prism) ? .22f : .12f) * l.Amp) * (1f + N("LampRadius")) * (Surge > 0 ? 1.25f : 1f);
         return f * Ease(l.Anim);
     }
 
@@ -140,10 +140,10 @@ public partial class Game
         foreach (var (t, d) in W.Emitters) AddBeam(t, d, 26, 4f, new Color("#ffe27a"), rec);
         if (!blocked)
             foreach (var l in Lamps)
-                if (l.Kind == 2 && l.Anim >= 1) AddBeam(new Vector2I(l.X, l.Y), Dirs[l.Dir], 10 + 4 * (l.Level - 1), 8f + 4f * (l.Level - 1), new Color("#bfe9ff"), rec);
+                if (l.Kind == 2 && l.Anim >= 1) AddBeam(new Vector2I(l.X, l.Y), Dirs[l.Dir], 10 + 4 * (l.Level - 1) + (Has(Tech.Prism) ? 6 : 0), (8f + 4f * (l.Level - 1)) * (Has(Tech.Prism) ? 1.5f : 1f), new Color("#bfe9ff"), rec);
 
         // личный луч героя (награда Хранителя глубин)
-        bool want = Has(Tech.Beam) && !blocked && (Input.IsKeyPressed(Key.R) || (testing && beamTest));
+        bool want = Has(Tech.Beam) && !blocked && (KeyMap.Held("Beam") || (testing && beamTest));
         if (BeamE <= 0) beamLock = true; if (BeamE >= 25) beamLock = false;
         BeamOn = want && !beamLock;
         if (BeamOn)
@@ -163,10 +163,12 @@ public partial class Game
                     if (e.Hidden) continue;
                     if (DistToSeg(e.Pos, bp.Pts[i], bp.Pts[i + 1]) < e.Radius + 3)
                     {
+                        if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source) && bp.C == Colors.White) { ReflectLight(e); continue; }
                         e.Hp -= bp.Dps * dt * (e.IsBoss ? .35f : 1f); e.Flash = Mathf.Max(e.Flash, .05f);
                         if (rng.Randf() < dt * 15) Burst(e.Pos, bp.C, 1, 30);
                     }
                 }
+        LitRec = rec; UpdateArenaPrisms(); UpdateReflect(dt); UpdateSourceDevices(rec, dt);
         puzzleT -= dt;
         if (puzzleT <= 0) { puzzleT = .1f; UpdatePuzzles(rec); RevealSecrets(); }
     }
@@ -208,9 +210,10 @@ public partial class Game
     {
         pz.Poi.State = 3; pz.Poi.Seen = true;
         if (pz.Poi.Kind == PK.Altar) { SetObj(pz.Poi.Tile.X, pz.Poi.Tile.Y, Tl.AltarOn); Announce("Алтарь лучей пробуждён!", "Сундук сокровищницы открыт", new Color("#ffe27a"), "ancient"); Flash = .4f; GiveXp(80); Save(); return; }
-        foreach (var d in pz.Doors) { SetObj(d.X, d.Y, Tl.None); Burst(TileCenter(d.X, d.Y), new Color("#8ff0ff"), 14, 70); }
+        foreach (var d in pz.Doors) { SetObj(d.X, d.Y, pz.Bridge ? Tl.LightBridge : Tl.None); Burst(TileCenter(d.X, d.Y), new Color("#8ff0ff"), 14, 70); }
         GiveXp(60); Shake = 3; Flash = .25f;
-        Announce("Загадка света решена!", "Тайная дверь открылась — внутри хранилище", new Color("#ffe27a"), "tech");
+        if (pz.Bridge) Announce("Мост света построен!", "Острова соединены — путь продолжается", new Color("#ffe27a"), "tech");
+        else Announce("Загадка света решена!", "Тайная дверь открылась — внутри хранилище", new Color("#ffe27a"), "tech");
         Save();
     }
 

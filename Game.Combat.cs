@@ -4,17 +4,17 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum EK { Shade, Wraith, Spitter, Swarm, Bomber, Warden, Eel, Leech, Beetle, DepthWarden, Imp, Golem, Spirit, AshWarden }
+public enum EK { Shade, Wraith, Spitter, Swarm, Bomber, Warden, Eel, Leech, Beetle, DepthWarden, Imp, Golem, Spirit, AshWarden, IceWolf, FrostPriest, Sentinel, WinterWarden, Mirage, Decoy, Weaver, Stalker, Source }
 
 public sealed class Enemy
 {
     public EK Kind; public Vector2 Pos, Kb, DashDir, Face = new(1, 0); public Vector2? Home; public Poi Guard;
     public float Hp, MaxHp, Atk, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
-    public int State; public bool Hidden, Elite, Carrier; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
-    public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden;
+    public int State; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
+    public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden || Kind == EK.WinterWarden || Kind == EK.Source;
     public float Radius => Kind switch
     {
-        EK.Warden => 14, EK.DepthWarden => 15, EK.AshWarden => 15, EK.Swarm => 3, EK.Bomber => 6, EK.Shade => 6, EK.Beetle => 7, EK.Golem => 9, EK.Leech => 4, _ => 5
+        EK.Warden => 14, EK.DepthWarden => 15, EK.AshWarden => 15, EK.WinterWarden => 15, EK.Source => 16, EK.Sentinel => 8, EK.Weaver => 6, EK.Swarm => 3, EK.Bomber => 6, EK.Shade => 6, EK.Beetle => 7, EK.Golem => 9, EK.Leech => 4, _ => 5
     };
 }
 
@@ -28,18 +28,20 @@ public partial class Game
     Vector2 DashDir, LastMoveDir;
     float spawnT = 4;
 
-    float DangerScale => 1f + .18f * LitCount + .12f * LitIn(1) + .12f * LitIn(2) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0);
+    float DangerScale => 1f + .18f * LitCount + .12f * LitIn(1) + .12f * LitIn(2) + .12f * LitIn(3) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0) + (BossDown(3) ? .1f : 0) + (BossDown(4) ? .1f : 0);
 
     public static string EnemyName(EK k) => k switch
     {
         EK.Shade => "Тень", EK.Wraith => "Призрак", EK.Spitter => "Плевун", EK.Swarm => "Мрак-рой", EK.Bomber => "Подрывник", EK.Warden => "Хранитель Тёмного леса",
         EK.Eel => "Глубинный угорь", EK.Leech => "Светоед", EK.Beetle => "Кристальный жук", EK.DepthWarden => "Хранитель глубин",
-        EK.Imp => "Огненный бес", EK.Golem => "Пепельный голем", EK.Spirit => "Дух пепла", _ => "Пепельный страж"
+        EK.Imp => "Огненный бес", EK.Golem => "Пепельный голем", EK.Spirit => "Дух пепла", EK.IceWolf => "Ледяной волк", EK.FrostPriest => "Ледяной жрец", EK.Sentinel => "Зеркальный страж",
+        EK.WinterWarden => "Хранитель Зимы", EK.Mirage => "Иллюзорник", EK.Decoy => "Мираж", EK.Weaver => "Ткач Тьмы", EK.Stalker => "Пустотный охотник", EK.Source => "Источник Тьмы", _ => "Пепельный страж"
     };
 
     // ───────────────────────── способности ─────────────────────────
     void TryDash()
     {
+        if (Has(Tech.Dash) && DashCd <= 0 && DashT <= 0) Diag.Count("dash");
         if (!Has(Tech.Dash) || DashCd > 0 || DashT > 0) return;
         var d = LastMoveDir.LengthSquared() > .01f ? LastMoveDir : (Aim - PPos).Normalized();
         if (d.LengthSquared() < .01f) d = new Vector2(Facing, 0);
@@ -57,6 +59,7 @@ public partial class Game
 
     void TryFlare()
     {
+        if (FlareCd <= 0) Diag.Count("flare");
         if (!Has(Tech.Flare) || FlareCd > 0) return;
         var d = Aim - PPos; if (d.Length() > 110) d = d.Normalized() * 110;
         Beacons.Add(new Beacon { Pos = PPos + d, Dur = 10f, R = 72, Burn = 6f });
@@ -65,6 +68,7 @@ public partial class Game
 
     void TryPulse()
     {
+        if (PulseCd <= 0) Diag.Count("pulse");
         if (!Has(Tech.Pulse) || PulseCd > 0) return;
         PulseCd = 12f; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0; RelicOnPulse();
         Beacons.Add(new Beacon { Pos = PPos, Dur = 1.8f, R = 170, Ring = 1f });
@@ -106,8 +110,9 @@ public partial class Game
 
     void UpdateSpawning(float dt)
     {
-        if (IsLit(PPos)) return;
+        if (IsLit(PPos) || RiftOn) return;
         int reg = RegionAt(PPos);
+        if (Finished && reg < 4) return;
         float nearUnlit = float.MaxValue;
         for (int i = 1; i < W.Ancients.Count; i++) if (!W.Ancients[i].Lit && !W.Ancients[i].Boss && W.Ancients[i].Region == reg) nearUnlit = Mathf.Min(nearUnlit, W.Ancients[i].Pos.DistanceTo(PPos));
         bool guarded = nearUnlit < 9 * TS;
@@ -146,6 +151,16 @@ public partial class Game
             kinds = new[] { EK.Imp, EK.Golem, EK.Spirit, EK.Bomber };
             w = new float[] { 4, 2.5f, 3, 1 };
         }
+        else if (reg == 3)
+        {
+            kinds = new[] { EK.IceWolf, EK.FrostPriest, EK.Sentinel, EK.Spitter };
+            w = new float[] { 4, 3, 2.5f, 1 };
+        }
+        else if (reg == 4)
+        {
+            kinds = new[] { EK.Mirage, EK.Weaver, EK.Stalker };
+            w = new float[] { 3, 3, 3 };
+        }
         else
         {
             float distC = p.DistanceTo(TileCenter(World.N / 2, World.N / 2)) / TS;
@@ -168,13 +183,14 @@ public partial class Game
     static float BaseHp(EK k) => k switch
     {
         EK.Shade => 7f, EK.Wraith => 3.5f, EK.Spitter => 4.5f, EK.Swarm => 1.3f, EK.Bomber => 5f, EK.Warden => 170f,
-        EK.Eel => 6f, EK.Leech => 4f, EK.Beetle => 12f, EK.DepthWarden => 260f, EK.Imp => 5f, EK.Golem => 22f, EK.Spirit => 6f, _ => 300f
+        EK.Eel => 6f, EK.Leech => 4f, EK.Beetle => 12f, EK.DepthWarden => 260f, EK.Imp => 5f, EK.Golem => 22f, EK.Spirit => 6f, EK.IceWolf => 9f, EK.FrostPriest => 8f, EK.Sentinel => 20f,
+        EK.WinterWarden => 420f, EK.Mirage => 7f, EK.Decoy => 1f, EK.Weaver => 10f, EK.Stalker => 12f, EK.Source => 560f, _ => 300f
     };
 
     public Enemy SpawnEnemy(Vector2 p, EK k, Poi guard = null, float scale = -1)
     {
         if (scale < 0) scale = DangerScale;
-        bool boss = k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden;
+        bool boss = k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden || k == EK.WinterWarden || k == EK.Source;
         float hp = BaseHp(k) * (boss ? 1f : scale);
         var e = new Enemy { Kind = k, Pos = p, Hp = hp, MaxHp = hp, Phase = rng.Randf() * 6.28f, Scale = scale, Guard = guard, Cd = rng.RandfRange(.8f, 2f) };
         if (guard != null) e.Home = p;
@@ -191,13 +207,13 @@ public partial class Game
         foreach (var a in W.Ancients)
         {
             if (!a.Boss || a.Lit || BossDown(a.BossId)) continue;
-            EK k = a.BossId == 1 ? EK.Warden : a.BossId == 2 ? EK.DepthWarden : EK.AshWarden;
+            EK k = a.BossId == 1 ? EK.Warden : a.BossId == 2 ? EK.DepthWarden : a.BossId == 3 ? EK.AshWarden : a.BossId == 4 ? EK.WinterWarden : EK.Source;
             bool exists = false; foreach (var e in Enemies) if (e.Kind == k) { exists = true; break; }
             if (exists) continue;
             if (PPos.DistanceTo(a.Pos) < 13 * TS)
             {
                 Boss = SpawnEnemy(a.Pos + new Vector2(0, -36), k, null, DangerScale);
-                Announce(EnemyName(k) + " пробудился!", a.BossId == 2 ? "Вода и тьма — его стихия. Береги свет!" : a.BossId == 3 ? "Огонь и дым — его оружие" : "Он охраняет особый древний фонарь. Побеждай — и получишь силу света", new Color("#d58cff"), "boss");
+                Announce(EnemyName(k) + " пробудился!", a.BossId == 2 ? "Вода и тьма — его стихия. Береги свет!" : a.BossId == 3 ? "Огонь и дым — его оружие" : a.BossId == 4 ? "Зеркальный щит, лёд и метель. Свет призм сломит его защиту" : a.BossId == 5 ? "Он поглощает свет мира. Ставьте фонари и ищите настоящие источники света" : "Он охраняет особый древний фонарь. Побеждай — и получишь силу света", new Color("#d58cff"), "boss");
                 Shake = 4;
             }
         }
@@ -206,10 +222,11 @@ public partial class Game
 
     void BossKilled(Enemy e)
     {
-        int id = e.Kind == EK.Warden ? 1 : e.Kind == EK.DepthWarden ? 2 : 3;
+        int id = e.Kind == EK.Warden ? 1 : e.Kind == EK.DepthWarden ? 2 : e.Kind == EK.AshWarden ? 3 : e.Kind == EK.WinterWarden ? 4 : 5;
         BossMask |= 1 << (id - 1); if (Boss == e) Boss = null;
-        GiveWeapon(id == 1 ? "sword_u" : id == 2 ? "bow_u" : "staff_u");
-        GiveRelic(id == 1 ? "r_dawnprism" : id == 2 ? "r_winterheart" : "r_emberheart");
+        GiveWeapon(id == 1 ? "sword_u" : id == 2 ? "bow_u" : id == 3 ? "staff_u" : id == 4 ? "staff_w" : "");
+        GiveRelic(id == 1 ? "r_dawnprism" : id == 2 ? "r_winterheart" : id == 3 ? "r_emberheart" : id == 4 ? "r_prismcore" : null);
+        if (id == 5) { FinalBossKilled(e); return; }
         Give(It.Core, 1, e.Pos + new Vector2(0, -20));
         Give(It.Shard, 6, e.Pos); Give(It.Relic, 2, e.Pos + new Vector2(0, -8));
         string title, sub;
@@ -223,12 +240,17 @@ public partial class Game
             TechMask |= 1 << (int)Tech.Beam; Give(It.Crystal, 4, e.Pos + new Vector2(0, -16)); Give(It.Silver, 3, e.Pos + new Vector2(0, -24));
             title = "Хранитель глубин повержен!"; sub = "Второе ядро света и ПРОЖЕКТОР [R]: луч, что отражается зеркалами. Улучшите маяк — откроются пустоши";
         }
+        else if (id == 4)
+        {
+            TechMask |= 1 << (int)Tech.Prism; Give(It.Frost, 6, e.Pos + new Vector2(0, -16)); Give(It.Crystal, 6, e.Pos + new Vector2(0, -24)); ClearIceBlocks();
+            title = "Хранитель Зимы повержен!"; sub = "Четвёртое ядро света и усиленные световые кристаллы. Улучшите маяк — откроется Сердце Тьмы";
+        }
         else
         {
             TechMask |= 1 << (int)Tech.Fireproof; Give(It.Ember, 4, e.Pos + new Vector2(0, -16)); Give(It.Obsidian, 3, e.Pos + new Vector2(0, -24));
             title = "Пепельный страж повержен!"; sub = "Третье ядро света и огнестойкость: пепел и дым больше не вредят";
         }
-        GiveXp(150 + 50 * id); Flash = .8f; Shake = 8;
+        GiveXp(150 + 50 * id); Flash = .8f; Shake = 8; VictoryFx(e.Pos, id == 4 ? new Color("#bfe9ff") : id == 3 ? new Color("#ff9a5a") : id == 2 ? new Color("#7ac8ff") : new Color("#d58cff"));
         Burst(e.Pos, new Color("#d58cff"), 50, 180);
         Announce(title, sub, new Color("#ffe9a0"), "ancient");
         Save();
@@ -237,10 +259,13 @@ public partial class Game
     // ───────────────────────── урон ─────────────────────────
     static bool SoulKind(EK k) => k == EK.Shade || k == EK.Wraith || k == EK.Swarm || k == EK.Leech || k == EK.Eel || k == EK.Spirit || k == EK.Spitter;
 
-    public void Hurt(Enemy e, float dmg, Vector2 dir, bool melee = false)
+    public void Hurt(Enemy e, float dmg, Vector2 dir, bool melee = false, bool light = false)
     {
         if (e.Hidden) return;
+        if (e.Kind == EK.Decoy) { e.Hp = 0; Burst(e.Pos, new Color("#c080ff"), 8, 60); return; }
         float m = 1f;
+        if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { m *= .06f; if (rng.Randf() < .5f) Burst(e.Pos + (PPos - e.Pos).Normalized() * 14, new Color("#ffffff"), 3, 70); }
+        if (e.Kind == EK.Sentinel && !light) { m *= .3f; Burst(e.Pos, new Color("#e8faff"), 3, 60); }
         if (melee && Has(Tech.SilverEdge) && SoulKind(e.Kind)) m *= 1.5f;
         if (melee && e.Kind == EK.Beetle)
         {
@@ -273,11 +298,12 @@ public partial class Game
 
     void Die()
     {
-        EventsOnDeath();
-        Enemies.Clear(); Projs.Clear(); Boss = null; LightBlockT = 0; LeechT = 0; Zones.Clear();
-        int lost = Inv[It.Shard] / 2; Inv[It.Shard] -= lost;
-        PPos = new Vector2((W.Spawn.X + .5f) * TS, (W.Spawn.Y + .5f) * TS); Hp = MaxHp; Invuln = 1.5f;
-        Toast(lost > 0 ? $"Тьма поглотила вас. Вы очнулись у маяка (потеряно осколков: {lost})" : "Тьма поглотила вас. Вы очнулись у маяка");
+        EventsOnDeath(); RiftOnDeath();
+        Enemies.Clear(); Projs.Clear(); Boss = null; LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
+        Diag.Count("deaths");
+        int lost = Math.Min(25, Inv[It.Shard] / 4); Inv[It.Shard] -= lost;
+        PPos = RespawnPos(); Hp = MaxHp; Invuln = 2f; Save();
+        Toast(lost > 0 ? $"Тьма поглотила вас. Вы очнулись у ближайшего фонаря (потеряно осколков: {lost}); всё остальное сохранено" : "Тьма поглотила вас. Вы очнулись у ближайшего фонаря; весь прогресс сохранён");
         cam.ResetSmoothing();
     }
 
@@ -286,8 +312,9 @@ public partial class Game
         Kills++;
         if (e.Ev != null) EvEnemyKilled(e);
         if (e.IsBoss) { BossKilled(e); return; }
-        float xp = e.Kind switch { EK.Shade => 15, EK.Wraith => 12, EK.Spitter => 18, EK.Bomber => 16, EK.Eel => 22, EK.Leech => 14, EK.Beetle => 26, EK.Imp => 24, EK.Golem => 40, EK.Spirit => 26, _ => 3 };
-        float chance = e.Kind switch { EK.Shade => .7f, EK.Wraith => .45f, EK.Spitter => .6f, EK.Bomber => .5f, EK.Eel => .6f, EK.Leech => .5f, EK.Beetle => .7f, EK.Imp => .6f, EK.Golem => .9f, EK.Spirit => .6f, _ => .12f };
+        float xp = e.Kind switch { EK.IceWolf => 28, EK.FrostPriest => 30, EK.Sentinel => 50, EK.Mirage => 34, EK.Weaver => 36, EK.Stalker => 40, EK.Decoy => 0, EK.Shade => 15, EK.Wraith => 12, EK.Spitter => 18, EK.Bomber => 16, EK.Eel => 22, EK.Leech => 14, EK.Beetle => 26, EK.Imp => 24, EK.Golem => 40, EK.Spirit => 26, _ => 3 };
+        float chance = e.Kind switch { EK.IceWolf => .55f, EK.FrostPriest => .6f, EK.Sentinel => .9f, EK.Mirage => .5f, EK.Weaver => .7f, EK.Stalker => .6f, EK.Decoy => 0f, EK.Shade => .7f, EK.Wraith => .45f, EK.Spitter => .6f, EK.Bomber => .5f, EK.Eel => .6f, EK.Leech => .5f, EK.Beetle => .7f, EK.Imp => .6f, EK.Golem => .9f, EK.Spirit => .6f, _ => .12f };
+        xp *= 1f + .3f * RegionAt(e.Pos);
         GiveXp(xp);
         Burst(e.Pos, new Color("#a060ff"), e.Kind == EK.Swarm ? 5 : 14, 90);
         if (E(Fxk.Blast) > 0 && !inBlast) BlastAt(e.Pos, CurDef != null ? WeaponDmg(CurDef) : PlayerDamage);
@@ -295,6 +322,8 @@ public partial class Game
         if (Has(Tech.Reaper)) { Hp = Mathf.Min(MaxHp, Hp + 3); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+3", Life = .7f, C = new Color("#7ad45a") }); }
         if (rng.Randf() < chance) Give(It.Shard, e.Kind == EK.Golem ? 2 : 1, e.Pos);
         if (e.Kind == EK.Beetle && rng.Randf() < .3f) Give(It.Crystal, 1, e.Pos + new Vector2(0, -8));
+        if ((e.Kind == EK.IceWolf || e.Kind == EK.Sentinel || e.Kind == EK.FrostPriest) && rng.Randf() < .3f) Give(It.Frost, 1, e.Pos + new Vector2(0, -8));
+        if (e.Kind == EK.Weaver || e.Kind == EK.Stalker) { if (rng.Randf() < .5f) Give(It.Shard, 1, e.Pos + new Vector2(0, -10)); }
         if (e.Kind == EK.Eel && rng.Randf() < .25f) Give(It.SilverOre, 1, e.Pos + new Vector2(0, -8));
         if ((e.Kind == EK.Imp || e.Kind == EK.Golem) && rng.Randf() < .3f) Give(It.Ember, 1, e.Pos + new Vector2(0, -8));
     }
@@ -312,7 +341,7 @@ public partial class Game
             if (e.Burn > 0) { e.Burn -= dt; e.Hp -= 3f * dt * (e.IsBoss ? .3f : 1f); if (rng.Randf() < dt * 12) Burst(e.Pos, new Color("#ff9a2e"), 1, 25); }
             var to = PPos - e.Pos; float dist = to.Length(); var dir = dist > .01f ? to / dist : Vector2.Zero;
             var perp = new Vector2(-dir.Y, dir.X);
-            bool guard = e.Guard != null || e.IsBoss || e.Ev != null;
+            bool guard = e.Guard != null || e.IsBoss || (e.Ev != null && e.Ev.Kind != "riftx");
             if (!guard && dist > 380) { Enemies.RemoveAt(i); continue; }
 
             bool lit = !e.IsBoss && IsLit(e.Pos);
@@ -428,10 +457,10 @@ public partial class Game
                         if (dist < 14 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(11f * e.Scale, -dir); }
                     }
                     break;
-                default: vel = UpdateAshEnemy(e, dt, dir, dist, perp, k); break;
+                default: vel = UpdateOtherEnemy(e, dt, dir, dist, perp, k); break;
             }
             if (e.Kind == EK.Leech && e.State == 1) { }
-            else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit);
+            else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
                 if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }
 
             if (!e.IsBoss && e.Kind != EK.Leech)
@@ -588,10 +617,11 @@ public partial class Game
         {
             var p = Projs[i]; p.Life -= dt; p.Pos += p.Vel * dt;
             var t = ToTile(p.Pos);
+            if (p.Dark && IsLit(p.Pos)) { Burst(p.Pos, new Color("#ffe27a"), 4, 40); Projs.RemoveAt(i); continue; }
             if (p.Life <= 0 || World.Blocks(W.Get(t.X, t.Y)) && W.Get(t.X, t.Y) != Tl.Deep) { Burst(p.Pos, p.C, 3, 30); if (p.Zone) AddZone(p.Pos, 22, .3f, 4f, 6f); Projs.RemoveAt(i); continue; }
             if (p.Pos.DistanceTo(PPos) < 6f)
             {
-                if (Invuln <= 0) { HurtPlayer(p.Dmg, p.Vel.Normalized() * .8f, p.Fire); if (p.Zone) AddZone(p.Pos, 22, .3f, 4f, 6f); Projs.RemoveAt(i); }
+                if (Invuln <= 0) { HurtPlayer(p.Dmg, p.Vel.Normalized() * .8f, p.Fire); if (p.Cold) Chill(2.2f); if (p.Zone) AddZone(p.Pos, 22, .3f, 4f, 6f); Projs.RemoveAt(i); }
             }
         }
     }
@@ -599,7 +629,7 @@ public partial class Game
     // ───────────────────────── рисование врагов ─────────────────────────
     void DrawEnemy(EntityLayer c, Enemy e)
     {
-        float sc = (e.Elite ? 1.25f : 1f) * e.Kind switch { EK.Warden => 2.6f, EK.DepthWarden => 2.8f, EK.AshWarden => 2.8f, EK.Swarm => .6f, EK.Golem => 1.5f, EK.Beetle => 1.15f, EK.Leech => .8f, _ => 1f };
+        float sc = (e.Elite ? 1.25f : 1f) * e.Kind switch { EK.Warden => 2.6f, EK.DepthWarden => 2.8f, EK.AshWarden => 2.8f, EK.WinterWarden => 2.8f, EK.Source => 3.2f, EK.Sentinel => 1.2f, EK.Swarm => .6f, EK.Golem => 1.5f, EK.Beetle => 1.15f, EK.Leech => .8f, _ => 1f };
         if (e.Hidden)
         {
             // под водой видна только рябь
@@ -613,7 +643,8 @@ public partial class Game
         {
             EK.Wraith => Art.WraithTex, EK.Spitter => Art.SpitterTex, EK.Bomber => Art.BomberTex, EK.Eel => Art.EelTex, EK.Leech => Art.LeechTex,
             EK.Beetle => Art.BeetleTex, EK.DepthWarden => Art.DeepTex, EK.Imp => Art.ImpTex, EK.Golem => Art.GolemTex, EK.Spirit => Art.SpiritTex,
-            EK.AshWarden => Art.AshBossTex, _ => Art.ShadeTex
+            EK.AshWarden => Art.AshBossTex, EK.IceWolf => Art.WolfTex, EK.FrostPriest => Art.PriestTex, EK.Sentinel => Art.SentinelTex, EK.WinterWarden => Art.WinterTex,
+            EK.Mirage => Art.MirageTex, EK.Decoy => Art.MirageTex, EK.Weaver => Art.WeaverTex, EK.Stalker => Art.StalkerTex, EK.Source => Art.SourceTex, _ => Art.ShadeTex
         };
         int f = (int)(Time * 4 + e.Phase) % 2;
         float bob = Mathf.Sin(Time * 4 + e.Phase) * 1.2f - (e.Kind == EK.Wraith || e.Kind == EK.Spirit ? 2 : 0);
@@ -636,7 +667,7 @@ public partial class Game
             if (e.State == 4) { float k = 1 - e.T2 / 1f; c.DrawArc(e.Mark, 52, 0, Mathf.Tau, 40, new Color(.4f, .8f, 1f, .4f + .4f * k), 2f); c.DrawArc(e.Mark, 52 * k, 0, Mathf.Tau, 40, new Color(.8f, .95f, 1f, .5f), 1f); }
             if (e.State == 3) c.DrawArc(e.Pos, 10, 0, Mathf.Tau, 12, new Color(1f, 1f, .5f, .6f), 1f);
         }
-        DrawAshTelegraph(c, e);
+        DrawAshTelegraph(c, e); DrawIceTelegraph(c, e); DrawHeartTelegraph(c, e);
         if (!e.IsBoss && e.Hp < e.MaxHp)
         {
             var o = e.Pos + new Vector2(-6, -14 * sc);

@@ -14,7 +14,7 @@ public partial class Game
     {
         PK.Chest => "Сундук путника", PK.Ruins => "Древние руины", PK.House => "Заброшенный дом", PK.Camp => "Лагерь теней",
         PK.Shrine => "Святилище света", PK.Captive => "Пленник Тьмы", PK.Obelisk => "Обелиск", PK.Workshop => "Заброшенная мастерская", PK.Puzzle => "Хранилище света", PK.BridgeSite => "Разрушенный мост",
-        PK.TechCache => "Забытая технология", PK.Spire => "Древний кристалл", PK.Altar => "Алтарь лучей", PK.Secret => "Скрытый тайник", _ => "Эфирная роща"
+        PK.TechCache => "Забытая технология", PK.Spire => "Древний кристалл", PK.Altar => "Алтарь лучей", PK.Secret => "Скрытый тайник", PK.Lore => "Записка", _ => "Эфирная роща"
     };
 
     static string PoiHint(PK k) => k switch
@@ -26,7 +26,7 @@ public partial class Game
         PK.Workshop => "Древний механизм можно починить — он ускорит деревню", PK.Puzzle => "Направьте луч света на приёмник зеркалами — откроется хранилище",
         PK.BridgeSite => "Почините мост [E] и пройдите на ту сторону",
         PK.TechCache => "Постамент хранит чертёж — коснитесь [E]", PK.Spire => "Шпиль древнего света: возьмите кристалл [E]",
-        PK.Altar => "Направьте три луча на приёмники — откроется сокровищница", PK.Secret => "Тайник проявился!", _ => "Редкие кристаллы эфира — нужна железная кирка"
+        PK.Altar => "Направьте три луча на приёмники — откроется сокровищница", PK.Secret => "Тайник проявился!", PK.Lore => "Прочтите [E]: следы прошлого", _ => "Редкие кристаллы эфира — нужна железная кирка"
     };
 
     public static Color PoiColor(PK k) => k switch
@@ -78,7 +78,9 @@ public partial class Game
                 if (W.Get(t.X, t.Y) != Tl.None) continue;
                 EK k;
                 int reg = World.RegionOf(p.Tile.X);
-                if (reg == 1) { float r = rng.Randf(); k = r < .35f ? EK.Beetle : r < .7f ? EK.Leech : r < .85f ? EK.Spitter : EK.Bomber; }
+                if (reg == 3) { float r = rng.Randf(); k = r < .4f ? EK.IceWolf : r < .7f ? EK.FrostPriest : r < .9f ? EK.Sentinel : EK.Spitter; }
+                else if (reg == 4) { float r = rng.Randf(); k = r < .35f ? EK.Mirage : r < .7f ? EK.Weaver : EK.Stalker; }
+                else if (reg == 1) { float r = rng.Randf(); k = r < .35f ? EK.Beetle : r < .7f ? EK.Leech : r < .85f ? EK.Spitter : EK.Bomber; }
                 else if (reg == 2) { float r = rng.Randf(); k = r < .4f ? EK.Imp : r < .65f ? EK.Spirit : r < .9f ? EK.Golem : EK.Bomber; }
                 else if (p.Kind == PK.Captive) k = i == 2 ? EK.Wraith : EK.Shade;
                 else { float r = rng.Randf(); k = r < .4f ? EK.Shade : r < .65f ? EK.Spitter : r < .85f ? EK.Wraith : EK.Bomber; }
@@ -175,7 +177,8 @@ public partial class Game
         SetObj(p.Tile.X, p.Tile.Y, Tl.None); p.State = 3;
         var wh = Buildings.Find(b => b.Type == Tl.Warehouse);
         Villagers.Add(new Villager { Pos = p.Pos, Wander = wh != null ? wh.Pos : TileCenter(W.Spawn.X + 2, W.Spawn.Y) });
-        GiveXp(50); Burst(p.Pos, new Color("#7ad45a"), 24, 100);
+        GiveXp(50); Burst(p.Pos, new Color("#7ad45a"), 24, 100); if (BpDone.Add("bp_stall")) Frag["bp_stall"] = 1;
+        Toast(Story.Rescued[(p.Tile.X * 7 + p.Tile.Y * 3) % Story.Rescued.Length]);
         Announce("Житель освобождён!", Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница [7]" : "Ещё один работник в деревне", new Color("#7ad45a"), "rescue");
         Save();
     }
@@ -250,6 +253,27 @@ public partial class Game
             Add("Построить коллектор пепла [X]", HasBuilding(Tl.Collector), Has(Tech.Collector) ? "Ставьте на освещённой земле пустошей" : "Изучите «Пепельный коллектор» [T]");
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
+        }
+        if (BeaconLevel >= 4)
+        {
+            var ni = NearestUnlit(3);
+            Add("Зажечь фонари монастыря", LitIn(3) >= 3, $"Зажжено {LitIn(3)}/3 — осколки света {Inv[It.Shard]}", ni?.Pos);
+            Add("Ледяные шипы или тёплые меха [T]", Has(Tech.SpikeBoots) || Has(Tech.FrostArmor), "Вкладка «Лёд»: нужны ледяные кристаллы");
+            Add("Построить криоэкстрактор [B]", HasBuilding(Tl.Cryo), BpDone.Contains("bp_cryo") ? "Ставьте в Ледяном монастыре на освещённой земле" : "Нужен чертёж «Криоэкстрактор» [J]");
+            Add("Победить Хранителя Зимы", BossDown(4), "Он на ледяном озере монастыря — награда: усиленные кристаллы и четвёртое ядро", BossLantern(4)?.Pos);
+            Add("Улучшить маяк: путь в Сердце Тьмы", BeaconLevel >= 5, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
+        }
+        if (BeaconLevel >= 5)
+        {
+            Add("Победить Источник Тьмы", BossDown(5), "Он в сердце тёмного мира — награда: пятое ядро света", BossLantern(5)?.Pos);
+            Add("Окончательно зажечь Центральный маяк", BeaconLevel >= 6, "Нажмите E у маяка: волна света очистит мир", W.Ancients[0].Pos);
+        }
+        if (Finished)
+        {
+            var gt = RiftGateTile(); Vector2? gp = gt.X >= 0 ? TileCenter(gt.X, gt.Y) : null;
+            Add("Пройти Разлом Тьмы", RiftClears >= 1, "Врата у Центрального маяка: волны врагов и награды", gp);
+            Add("Получить легендарное улучшение", LegendMask != 0, "Осколки разломов меняют на легенды у врат", gp);
+            Add("Украсить земли [B]", DecorCount >= 3, "Статуи, фонтаны, знамёна: производство +1,5% за каждое");
         }
         return g;
     }

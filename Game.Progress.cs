@@ -17,11 +17,12 @@ public partial class Game
         var a = W.Ancients[0]; a.RadiusTiles = BeaconRadius(BeaconLevel); a.TargetRadius = a.RadiusTiles;
     }
 
-    static readonly string[] BeaconGain = { "", "Откроется путь в Затопленные шахты", "Откроется путь в Пепельные пустоши", "Маяк станет ярче: радиус света ещё больше" };
+    static readonly string[] BeaconGain = { "", "Откроется путь в Затопленные шахты", "Откроется путь в Пепельные пустоши", "Откроется путь в Ледяной монастырь", "Откроется путь в Сердце Тьмы", "Окончательная активация: волна света очистит мир" };
 
     void UpgradeBeacon()
     {
-        if (BeaconLevel >= 4) { Fail("Центральный маяк уже на максимальном уровне"); return; }
+        if (BeaconLevel >= 6) { Fail("Центральный маяк уже активирован окончательно"); return; }
+        if (BeaconLevel == 5 && !BossDown(5)) { Fail("Для окончательной активации нужно победить Источник Тьмы в Сердце Тьмы"); return; }
         if (Inv[It.Core] < 1) { Fail("Нужно ядро света — его даёт победа над стражем биома"); return; }
         Inv[It.Core]--; BeaconLevel++;
         var a = W.Ancients[0]; a.TargetRadius = BeaconRadius(BeaconLevel); a.Pulse = 1f;
@@ -30,7 +31,9 @@ public partial class Game
         TradeEpoch++;
         if (BeaconLevel == 2) { OpenSeal(W.Seal1, "Затопленные шахты"); }
         else if (BeaconLevel == 3) { OpenSeal(W.Seal2, "Пепельные пустоши"); }
-        else Announce("Центральный маяк: уровень " + BeaconLevel, BeaconGain[BeaconLevel - 1], new Color("#fff2b0"), "ancient");
+        else if (BeaconLevel == 4) { OpenSeal(W.Seal3, "Ледяной монастырь"); }
+        else if (BeaconLevel == 5) { OpenSeal(W.Seal4, "Сердце Тьмы"); }
+        else StartFinale();
         Save();
     }
 
@@ -43,8 +46,9 @@ public partial class Game
     // ───────────────────────── взаимодействие ─────────────────────────
     void BeaconIx(Ix ix)
     {
-        ix.Lines.Add($"Центральный маяк · уровень {BeaconLevel}/4 · радиус {(int)BeaconRadius(BeaconLevel)}");
-        if (BeaconLevel < 4)
+        FastTravelIx(W.Ancients[0], ix);
+        ix.Lines.Add($"Центральный маяк · уровень {BeaconLevel}/6 · радиус {(int)BeaconRadius(BeaconLevel)}");
+        if (BeaconLevel < 6)
         {
             ix.Lines.Add($"[E] Улучшить за 1 ядро света (есть {Inv[It.Core]}): {BeaconGain[BeaconLevel]}");
             ix.E = UpgradeBeacon;
@@ -54,12 +58,13 @@ public partial class Game
     Ix FindIx()
     {
         var ix = new Ix();
+        if (RiftOn) { RiftIx(ix); return ix; }
         for (int i = 0; i < W.Ancients.Count; i++)
         {
             var a = W.Ancients[i]; int idx = i;
             if (a.Pos.DistanceTo(PPos) >= 44) continue;
             if (i == 0) { BeaconIx(ix); return ix; }
-            if (a.Lit) continue;
+            if (a.Lit) { if (FastOk(a)) { var tix = new Ix(); FastTravelIx(a, tix); if (tix.U != null) { ix.Lines.Add("Древний фонарь горит"); ix.Lines.AddRange(tix.Lines); ix.U = tix.U; return ix; } } continue; }
             if (a.Boss && !BossDown(a.BossId)) ix.Lines.Add("Фонарь стража: победите стража, чтобы зажечь его");
             else { ix.Lines.Add($"[E] Зажечь древний фонарь ({a.Cost} осколков света)"); ix.E = () => Activate(a, idx); }
             return ix;
@@ -70,7 +75,8 @@ public partial class Game
             {
                 var t = W.Get(x, y);
                 if (t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
-                    || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn)
+                    || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn
+                    || t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn || t == Tl.RiftGate)
                 { float d = TileCenter(x, y).DistanceTo(PPos); if (d < bd) { bd = d; best = new Vector2I(x, y); bt = t; } }
             }
         if (bt != Tl.None && TileIx(best.X, best.Y, bt, ix)) return ix;
@@ -86,6 +92,8 @@ public partial class Game
     bool TileIx(int x, int y, Tl t, Ix ix)
     {
         W.ByTile.TryGetValue(World.Key(x, y), out var p);
+        if (t == Tl.RiftGate) { RiftGateIx(ix); return true; }
+        if (t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn) return HeartIx(x, y, t, ix);
         switch (t)
         {
             case Tl.Chest: case Tl.Shrine: case Tl.Obelisk: case Tl.Cage: case Tl.TechCache: case Tl.Spire: return p != null && PoiIx(p, ix);
@@ -105,7 +113,7 @@ public partial class Game
                 ix.Lines.Add($"[E] Починить мост: {CostStr(BridgeCost)}"); ix.E = () => RepairBridge(x, y);
                 return true;
             case Tl.Seal:
-                ix.Lines.Add(x < 200 ? "Древняя печать. Её снимет только улучшенный Центральный маяк (ядро света)" : "Печать пепла. Её снимет второе улучшение Центрального маяка");
+                ix.Lines.Add(x < 200 ? "Древняя печать. Её снимет только улучшенный Центральный маяк (ядро света)" : x < 300 ? "Печать пепла. Её снимет второе улучшение Центрального маяка" : x < 450 ? "Ледяная печать. Её снимет третье улучшение Центрального маяка" : "Печать пустоты. Её снимет четвёртое улучшение маяка");
                 return true;
             case Tl.Receiver: ix.Lines.Add("Приёмник света: направьте на него луч через зеркала"); return true;
             case Tl.ReceiverOn: ix.Lines.Add("Приёмник светится"); return true;
@@ -116,7 +124,7 @@ public partial class Game
     static readonly int[][] MachineCost = C(It.Crystal, 3, It.Silver, 2, It.Relic, 1);
     static readonly int[][] BridgeCost = C(It.Wood, 8);
     public int MachinesRestored { get { int n = 0; foreach (var p in W.Pois) if (p.Kind == PK.Workshop && p.State == 3) n++; return n; } }
-    public float ProdMul => (Has(Tech.SilverGears) ? 1.5f : 1f) * (1f + .15f * MachinesRestored);
+    public float ProdMul => (Has(Tech.SilverGears) ? 1.5f : 1f) * (1f + .15f * MachinesRestored) * (1f + N("Prod"));
 
     void RestoreMachine(int x, int y, Poi p)
     {
@@ -145,11 +153,12 @@ public partial class Game
     }
 
     // ───────────────────────── биомы ─────────────────────────
-    public static readonly string[] RegionNames = { "Тёмный лес", "Затопленные шахты", "Пепельные пустоши" };
+    public static readonly string[] RegionNames = { "Тёмный лес", "Затопленные шахты", "Пепельные пустоши", "Ледяной монастырь", "Сердце Тьмы" };
+    public static Color RegionCol(int r) => r == 1 ? new Color("#7ac8ff") : r == 2 ? new Color("#ff9a5a") : r == 3 ? new Color("#bfe9ff") : r == 4 ? new Color("#c070ff") : new Color("#7ad45a");
     static readonly string[] RegionFlavor = {
         "Древний лес, где всё началось",
         "Вода замедляет шаг, кристаллы направляют свет",
-        "Горячий пепел жжёт, дым гасит свет" };
+        "Горячий пепел жжёт, дым гасит свет", "Лёд скользит, зеркала направляют свет", "Здесь свет лжёт: ищите настоящий" };
 
     void UpdateRegion(float dt)
     {
@@ -159,7 +168,7 @@ public partial class Game
         {
             if (lastRegion >= 0 && regionT <= 0)
             {
-                Announce(RegionNames[r], RegionFlavor[r], r == 1 ? new Color("#7ac8ff") : r == 2 ? new Color("#ff9a5a") : new Color("#7ad45a"), "discover");
+                Announce(RegionNames[r], RegionFlavor[r], RegionCol(r), "discover");
                 regionT = 6;
             }
             lastRegion = r;
@@ -222,6 +231,16 @@ public partial class Game
         switch (t)
         {
             case Tl.Cliff: return new Color("#1c2420");
+            case Tl.Pine: return new Color("#2a5a4a");
+            case Tl.IceRuin: case Tl.IceBlock: return new Color("#9fb8d0");
+            case Tl.FrostOre: return new Color("#e8faff");
+            case Tl.Void: return new Color("#0a0612");
+            case Tl.Fragment: return new Color("#3a3050");
+            case Tl.Monolith: case Tl.Pylon: case Tl.PylonOn: return new Color("#8a6ac0");
+            case Tl.Tablet: return new Color("#ffd86b");
+            case Tl.FalseLantern: return new Color("#ffe27a");
+            case Tl.LightBridge: return new Color("#ffe27a");
+            case Tl.Cryo: return new Color("#d9b27c");
             case Tl.CaveWall: return new Color("#1a2030");
             case Tl.Seal: return new Color("#d58cff");
             case Tl.Tree: return new Color("#2d6a30");
@@ -241,6 +260,8 @@ public partial class Game
         }
         if (g == Art.WaterG) return new Color("#2a5d8a");
         if (g == Art.HotAsh) return new Color("#c0501e");
+        if (reg == 3) return g >= Art.IceFloor && g < Art.IceFloor + 2 ? new Color("#8fc4e0") : new Color("#dfe8f2");
+        if (reg == 4) return g == Art.VoidG ? new Color("#06030c") : new Color("#3a2a52");
         if (reg == 1) return new Color("#3a3f4d");
         if (reg == 2) return new Color("#5b5754");
         return g == Art.Dirt ? new Color("#6b4f33") : new Color("#3f7a3a");

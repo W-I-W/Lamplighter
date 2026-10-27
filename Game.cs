@@ -9,13 +9,13 @@ namespace Lamplighter;
 public static class It
 {
     public const int Wood = 0, Stone = 1, CopperOre = 2, IronOre = 3, Shard = 4, Copper = 5, Iron = 6, Aether = 7, Relic = 8,
-        SilverOre = 9, Silver = 10, Crystal = 11, Obsidian = 12, Ember = 13, Core = 14, AncCrystal = 15, Coins = 16, Gear = 17, Lens = 18, Count = 19;
+        SilverOre = 9, Silver = 10, Crystal = 11, Obsidian = 12, Ember = 13, Core = 14, AncCrystal = 15, Coins = 16, Gear = 17, Lens = 18, Frost = 19, RiftShard = 20, Count = 21;
     public static readonly string[] Names = { "Дерево", "Камень", "Медная руда", "Железная руда", "Осколок света", "Медь", "Железо", "Эфир", "Реликвия",
-        "Серебряная руда", "Серебро", "Кристалл", "Обсидиан", "Уголь пепла", "Ядро света", "Древний кристалл", "Монеты", "Шестерня", "Линза" };
-    public static readonly string[] Ab = { "дер.", "кам.", "м.руда", "ж.руда", "оск.", "мед.", "жел.", "эфир", "рел.", "с.руда", "сер.", "крист.", "обсид.", "угол.", "ядро", "др.крист.", "мон.", "шест.", "линза" };
+        "Серебряная руда", "Серебро", "Кристалл", "Обсидиан", "Уголь пепла", "Ядро света", "Древний кристалл", "Монеты", "Шестерня", "Линза", "Ледяной кристалл", "Осколок разлома" };
+    public static readonly string[] Ab = { "дер.", "кам.", "м.руда", "ж.руда", "оск.", "мед.", "жел.", "эфир", "рел.", "с.руда", "сер.", "крист.", "обсид.", "угол.", "ядро", "др.крист.", "мон.", "шест.", "линза", "лед.крист.", "оск.разл." };
     public static readonly Color[] Col = {
         new("#c9a070"), new("#c0c0cc"), new("#f0a060"), new("#c8d4e8"), new("#8ff0ff"), new("#f2b062"), new("#dfe8f6"), new("#d58cff"), new("#ffd86b"),
-        new("#e8eef6"), new("#cfd6e2"), new("#bfe9ff"), new("#a890ff"), new("#ff9a2e"), new("#fff2b0"), new("#ffb0ff"), new("#ffd86b"), new("#b0b8c8"), new("#9fe8ff") };
+        new("#e8eef6"), new("#cfd6e2"), new("#bfe9ff"), new("#a890ff"), new("#ff9a2e"), new("#fff2b0"), new("#ffb0ff"), new("#ffd86b"), new("#b0b8c8"), new("#9fe8ff"), new("#bfe9ff"), new("#c070ff") };
     /// <summary>Слиток, получаемый из руды (или -1).</summary>
     public static int IngotOf(int ore) => ore == CopperOre ? Copper : ore == IronOre ? Iron : ore == SilverOre ? Silver : -1;
 }
@@ -24,7 +24,7 @@ public sealed class Particle { public Vector2 P, V; public float Life, Max, Size
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
 public sealed class Toast { public string S; public float Life = 4.5f; }
 public sealed class Banner { public string Title, Sub; public Color C; public float Life = 5f; }
-public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone; }
+public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
@@ -32,7 +32,7 @@ public sealed class Ix { public List<string> Lines = new(); public Action E, U; 
 
 public sealed class SaveData
 {
-    public int Version = 4, Seed; public string Obj; public bool[] Lit;
+    public int Version = 5, Seed; public string Obj; public bool[] Lit;
     public float Px, Py, Hp, MaxHp, Xp; public int Level, Tier, Tech, Ann, Kills, BossMask, Beacon; public long Ann2;
     public int[] Inv, Stock;
     public int[] BT, BX, BY, BL; public byte[] PoiState; public bool Boss;
@@ -43,16 +43,19 @@ public sealed class SaveData
     public int[] BPrio, BMode; public bool[] BOff, BForced; public int[] BLocal;
     public int TradeEpoch, ExtraV; public string[] Bought; public float[] Demand; public float EvNext;
     public string[] EvK; public float[] EvX, EvY, EvT, EvL, EvV; public int[] EvS, EvW, EvSeed;
+    // этап 5
+    public bool Finished; public int LoreMask; public string Stamp; public float PlaySecs; public string[] Hints;
+    public int RiftUnlocked = 1, RiftFirst, LegendMask, CosmMask = 1, CosmSel, RiftClears;
 }
 
 public partial class Game : Node2D
 {
     public const int TS = 16;
     public const float Zoom = 3f;
-    static bool forceNew;
+    static bool forceNew, showPrologue;
 
     public World W;
-    TileMapLayer groundL, objL; int srcId;
+    int srcId;
     EntityLayer ents; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud;
     public readonly RandomNumberGenerator rng = new();
 
@@ -107,9 +110,13 @@ public partial class Game : Node2D
     public override void _Ready()
     {
         rng.Randomize();
+        Diag.Enabled = OS.GetEnvironment("LAMP_DIAG") != "";
+        testing = OS.GetEnvironment("LAMP_AUTOTEST") != ""; testDir = OS.GetEnvironment("LAMP_AUTOTEST");
+        Settings.Load(); if (testing && OS.GetEnvironment("LAMP_LANG") != "") { Settings.Lang = OS.GetEnvironment("LAMP_LANG"); Loc.LogMissing = true; }
+        Settings.Apply(testing); Ach.Load(); if (Settings.Diag) Diag.Enabled = true; if (Diag.Enabled && testing) Diag.OutPath = System.IO.Path.Combine(testDir, "diagnostics.json");
         Art.Build();
         Db.Init();
-        AddChild(new Sfx());
+        AddChild(new Sfx()); AddChild(new Music());
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != "";
         testDir = OS.GetEnvironment("LAMP_AUTOTEST");
         if (!LoadGame()) NewWorld(testing ? 4242 : (int)(rng.Randi() % 1000000));
@@ -143,6 +150,8 @@ public partial class Game : Node2D
         InitLightTech();
         foreach (var ev in pendingEvents) { InitEventState(ev); Events.Add(ev); }
         EventsEnabled = !testing;
+        StartMenuOnLaunch();
+        if (showPrologue || (!testing && !HasSave && Menu == Mn.None)) { showPrologue = false; OpenStory("Фонарщик", string.Join("\n\n", Story.Prologue), "Пролог"); }
         GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count} pois={W.Pois.Count}");
     }
 
@@ -154,21 +163,10 @@ public partial class Game : Node2D
 
     void BuildTileMaps()
     {
-        var ts = new TileSet { TileSize = new Vector2I(TS, TS) };
-        var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS) };
-        for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
-        srcId = ts.AddSource(src);
-        groundL = new TileMapLayer { TileSet = ts }; objL = new TileMapLayer { TileSet = ts };
-        AddChild(groundL); AddChild(objL);
+        InitChunks();
         HasFurnace = false;
-        for (int y = 0; y < World.Ht; y++)
-            for (int x = 0; x < World.Wd; x++)
-            {
-                groundL.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[y * World.Wd + x], 0));
-                var t = W.Get(x, y);
-                if (t != Tl.None && t != Tl.SecretCache) objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
-                if (t == Tl.Furnace) HasFurnace = true;
-            }
+        for (int k = 0; k < W.Obj.Length; k++) if (W.Obj[k] == (byte)Tl.Furnace) { HasFurnace = true; break; }
+        UpdateChunks(0, true);
     }
 
     static int AtlasX(Tl t, int lv = 1) => t switch
@@ -187,6 +185,9 @@ public partial class Game : Node2D
         Tl.BridgeBroken => Art.BridgeBroken, Tl.Bridge => Art.Bridge, Tl.Deep => Art.Deep, Tl.Seal => Art.Seal, Tl.SecretDoor => Art.SecretDoor,
         Tl.DeadTree => Art.DeadTree, Tl.Obsidian => Art.Obsidian, Tl.Ember => Art.Ember, Tl.AshRuin => Art.AshRuin, Tl.Vent => Art.Vent,
         Tl.TechCache => Art.TechCache, Tl.Spire => Art.Spire, Tl.Altar => Art.Altar, Tl.AltarOn => Art.AltarOn, Tl.AmpCrystal => Art.AmpCrystal, Tl.BarrierPost => Art.BarrierPost, Tl.MeteorOre => Art.MeteorOre,
+        Tl.FrostOre => Art.FrostOre, Tl.Pine => Art.Pine, Tl.IceRuin => Art.IceRuin, Tl.IceBlock => Art.IceBlock, Tl.Void => Art.VoidObj, Tl.Monolith => Art.Monolith,
+        Tl.Tablet => Art.Tablet, Tl.FalseLantern => Art.FalseLantern, Tl.Pylon => Art.Pylon, Tl.PylonOn => Art.PylonOn, Tl.ShadowPillar => Art.ShadowPillar, Tl.Fragment => Art.Fragment,
+        Tl.RiftGate => Art.RiftGate, Tl.Statue => Art.Statue, Tl.Fountain => Art.Fountain, Tl.Banner => Art.Banner, Tl.Cryo => Art.Cryo + Math.Min(lv, 3) - 1, Tl.LightBridge => Art.LightBridge,
         Tl.Stall => Art.Stall + Math.Min(lv, 3) - 1, Tl.Hub => Art.Hub + Math.Min(lv, 3) - 1, Tl.Refinery => Art.Refinery + Math.Min(lv, 3) - 1,
         _ => Art.Cliff
     };
@@ -197,14 +198,33 @@ public partial class Game : Node2D
     public void SetObj(int x, int y, Tl t)
     {
         W.Set(x, y, t);
-        if (t == Tl.None || t == Tl.SecretCache) objL.EraseCell(new Vector2I(x, y));
-        else objL.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
+        var ch = ChunkAt(x, y);
+        if (ch != null)
+        {
+            var lc = new Vector2I(x % CS, y % CS);
+            if (t == Tl.None || t == Tl.SecretCache) ch.O.EraseCell(lc); else ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
+        }
     }
 
     // ───────────────────────── сохранение ─────────────────────────
     string pendingMsg, pendingMsg2; readonly List<GEvent> pendingEvents = new();
     static int[] Flat(List<Building> bs) { var a = new int[bs.Count * It.Count]; for (int i = 0; i < bs.Count; i++) Array.Copy(bs[i].Local, 0, a, i * It.Count, It.Count); return a; }
-    string SavePath => testing ? Path.Combine(testDir, "save.json") : ProjectSettings.GlobalizePath("user://save.json");
+    string SavePath => SlotPath(0);
+
+    static bool ValidSave(string path)
+    {
+        try { if (!File.Exists(path)) return false; using var doc = JsonDocument.Parse(File.ReadAllText(path)); return doc.RootElement.TryGetProperty("Version", out var v) && v.GetInt32() >= 2 && doc.RootElement.TryGetProperty("Obj", out _); }
+        catch { return false; }
+    }
+
+    /// <summary>Атомарная запись: во временный файл, затем замена; перед заменой последний корректный файл сохраняется как save.bak.</summary>
+    void WriteSave(string json)
+    {
+        var path = SavePath; var tmp = path + ".tmp";
+        File.WriteAllText(tmp, json);
+        try { if (ValidSave(path)) File.Copy(path, BakPath, true); } catch { }
+        File.Move(tmp, path, true);
+    }
 
     public void Save()
     {
@@ -223,7 +243,7 @@ public partial class Game : Node2D
                 BPrio = Buildings.ConvertAll(b => b.Prio).ToArray(), BMode = Buildings.ConvertAll(b => b.Mode).ToArray(), BOff = Buildings.ConvertAll(b => b.Off).ToArray(), BForced = Buildings.ConvertAll(b => b.Forced).ToArray(),
                 BLocal = Flat(Buildings), TradeEpoch = TradeEpoch, ExtraV = ExtraVillagers, Bought = new List<string>(Bought).ToArray(), Demand = Demand, EvNext = evNext,
                 EvK = Events.ConvertAll(e => e.Kind).ToArray(), EvX = Events.ConvertAll(e => e.Pos.X).ToArray(), EvY = Events.ConvertAll(e => e.Pos.Y).ToArray(), EvT = Events.ConvertAll(e => e.T).ToArray(), EvL = Events.ConvertAll(e => e.Life).ToArray(),
-                EvV = Events.ConvertAll(e => e.V).ToArray(), EvS = Events.ConvertAll(e => e.State).ToArray(), EvW = Events.ConvertAll(e => e.Wave).ToArray(), EvSeed = Events.ConvertAll(e => e.Seed).ToArray(),
+                Finished = Finished, LoreMask = LoreMask, Hints = new List<string>(HintsShown).ToArray(), RiftUnlocked = RiftUnlocked, RiftFirst = RiftFirst, LegendMask = LegendMask, CosmMask = CosmMask, CosmSel = CosmSel, RiftClears = RiftClears, EvV = Events.ConvertAll(e => e.V).ToArray(), EvS = Events.ConvertAll(e => e.State).ToArray(), EvW = Events.ConvertAll(e => e.Wave).ToArray(), EvSeed = Events.ConvertAll(e => e.Seed).ToArray(),
                 LX = new int[Lamps.Count], LY = new int[Lamps.Count], LK = new int[Lamps.Count], LL = new int[Lamps.Count], LD = new int[Lamps.Count]
             };
             for (int i = 0; i < W.Ancients.Count; i++) d.Lit[i] = W.Ancients[i].Lit;
@@ -234,24 +254,46 @@ public partial class Game : Node2D
                 var p = W.Pois[i];
                 d.PoiState[i] = (byte)((p.State == 1 ? 0 : p.State) | (p.Seen ? 16 : 0) | (p.Revealed ? 32 : 0));
             }
-            File.WriteAllText(SavePath, JsonSerializer.Serialize(d, new JsonSerializerOptions { IncludeFields = true }));
+            d.Stamp = DateTime.Now.ToString("dd.MM.yyyy HH:mm"); d.PlaySecs = PlaySecs;
+            WriteSave(JsonSerializer.Serialize(d, new JsonSerializerOptions { IncludeFields = true }));
         }
         catch (Exception e) { GD.PushWarning("save failed: " + e.Message); }
     }
 
+    const int OldWd = 384;
     bool LoadGame()
     {
         if (forceNew) { forceNew = false; return false; }
         if (testing && OS.GetEnvironment("LAMP_LOAD") == "") return false;
+        if (LoadFrom(SavePath)) return true;
+        if (ValidSave(BakPath) && LoadFrom(BakPath)) { pendingMsg = "Основное сохранение повреждено — загружена резервная копия"; return true; }
+        return false;
+    }
+
+    bool LoadFrom(string path)
+    {
         try
         {
-            if (!File.Exists(SavePath)) return false;
-            var d = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SavePath), new JsonSerializerOptions { IncludeFields = true });
-            if (d.Version < 2) return false;
+            if (!File.Exists(path)) return false;
+            var d = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(path), new JsonSerializerOptions { IncludeFields = true });
+            if (d == null || d.Version < 2 || string.IsNullOrEmpty(d.Obj)) return false;
+            PlaySecs = d.PlaySecs;
             W = World.Generate(d.Seed);
             var obj = Convert.FromBase64String(d.Obj);
             bool legacy = d.Version < 3; var genObj = (byte[])W.Obj.Clone();
-            if (!legacy) { if (obj.Length != W.Obj.Length) return false; W.Obj = obj; }
+            bool wide = false;
+            if (!legacy)
+            {
+                if (obj.Length == OldWd * World.Ht)
+                {
+                    // сохранение до этапа 5: мир был шириной 384 — переносим его в новый, остальное берём из генерации
+                    wide = true;
+                    for (int y = 0; y < World.Ht; y++) Array.Copy(obj, y * OldWd, W.Obj, y * World.Wd, OldWd);
+                    for (int y = W.IceGateY - 3; y <= W.IceGateY + 3; y++) for (int x = 358; x < OldWd; x++) W.Obj[y * World.Wd + x] = genObj[y * World.Wd + x];
+                }
+                else if (obj.Length != W.Obj.Length) return false;
+                else W.Obj = obj;
+            }
             else
             {
                 if (obj.Length != World.N * World.N) return false;
@@ -264,6 +306,7 @@ public partial class Game : Node2D
                     }
             }
             OverlayNewFinds(genObj, d.PoiState != null ? d.PoiState.Length : 0, legacy);
+            { int lv = legacy ? 1 : Math.Max(1, d.Beacon); if (lv >= 2) foreach (var t in W.Seal1) W.Set(t.X, t.Y, Tl.None); if (lv >= 3) foreach (var t in W.Seal2) W.Set(t.X, t.Y, Tl.None); if (lv >= 4) foreach (var t in W.Seal3) W.Set(t.X, t.Y, Tl.None); if (lv >= 5) foreach (var t in W.Seal4) W.Set(t.X, t.Y, Tl.None); }
             for (int i = 0; i < W.Ancients.Count && i < d.Lit.Length; i++) if (d.Lit[i]) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
             PPos = new Vector2(d.Px, d.Py); Hp = d.Hp; MaxHp = d.MaxHp; Xp = d.Xp; Level = d.Level; Tier = d.Tier;
             TechMask = d.Tech; Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
@@ -308,7 +351,15 @@ public partial class Game : Node2D
             if (d.BpDone != null) foreach (var b in d.BpDone) BpDone.Add(b);
             if (d.FragK != null && d.FragV != null) for (int i = 0; i < d.FragK.Length && i < d.FragV.Length; i++) Frag[d.FragK[i]] = d.FragV[i];
             if (d.Found != null) Found.AddRange(d.Found);
-            if (d.Explored != null) { var e = Convert.FromBase64String(d.Explored); if (e.Length == Expl.Length) Expl = e; }
+            if (d.Hints != null) foreach (var h in d.Hints) HintsShown.Add(h); else HintsShown.Add("move");
+            Finished = d.Finished; LoreMask = d.LoreMask; if (Finished) Dawn = 1;
+            RiftUnlocked = Math.Max(1, d.RiftUnlocked); RiftFirst = d.RiftFirst; LegendMask = d.LegendMask; CosmMask = d.CosmMask | 1; CosmSel = d.CosmSel; RiftClears = d.RiftClears;
+            if (d.Explored != null)
+            {
+                var e = Convert.FromBase64String(d.Explored);
+                if (e.Length == Expl.Length) Expl = e;
+                else if (e.Length == (OldWd / 4) * (World.Ht / 4)) for (int y = 0; y < World.Ht / 4; y++) Array.Copy(e, y * (OldWd / 4), Expl, y * (World.Wd / 4), OldWd / 4);
+            }
             return true;
         }
         catch (Exception e) { GD.PushWarning("load failed: " + e.Message); return false; }
@@ -331,24 +382,27 @@ public partial class Game : Node2D
 
     public override void _Notification(int what)
     {
-        if (what == NotificationWMCloseRequest) Save();
+        if (what == NotificationWMCloseRequest) { Save(); Diag.Write(this); }
     }
 
     void NewGame()
     {
-        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
-        forceNew = true;
+        try { if (File.Exists(SavePath)) { File.Copy(SavePath, Path.Combine(SaveDir, "save_prev.json"), true); File.Delete(SavePath); } if (File.Exists(BakPath)) File.Delete(BakPath); } catch { }
+        forceNew = true; skipMenu = true; showPrologue = true;
         GetTree().ReloadCurrentScene();
     }
 
     // ───────────────────────── ввод ─────────────────────────
     public override void _Input(InputEvent e)
     {
+        if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); return; }
+        if (FinStage > 0) { if (e is InputEventKey fk && fk.Pressed && !fk.Echo) FinaleKey(fk.Keycode); return; }
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right && Window == Win.None) TrySpin();
         if (e is InputEventKey k && k.Pressed && !k.Echo)
         {
-            if (Window != Win.None && k.Keycode != Key.F9) { WindowKey(k.Keycode, k.ShiftPressed); return; }
-            switch (k.Keycode)
+            var key = KeyMap.Translate(k.Keycode); if (key == Key.None) return;
+            if (Window != Win.None) { WindowKey(key, k.ShiftPressed); return; }
+            switch (key)
             {
                 case Key.E: if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
                 case Key.U: if (Cur.U != null) Cur.U(); else Fail("Рядом нет здания или фонаря для улучшения"); break;
@@ -366,9 +420,9 @@ public partial class Game : Node2D
                 case Key.X: if (!TechOpen) BuildBuilding(5); break;
                 case Key.T: { bool o = !TechOpen; CloseWindows(); TechOpen = o; Sfx.Play("tick"); break; }
                 case Key.M: { bool o = !MapOpen; CloseWindows(); MapOpen = o; Sfx.Play("tick"); break; }
-                case Key.Left: if (TechOpen) { TechPage = (TechPage + 2) % 3; Sfx.Play("tick"); } break;
-                case Key.Right: if (TechOpen) { TechPage = (TechPage + 1) % 3; Sfx.Play("tick"); } break;
-                case Key.Escape: CloseWindows(); break;
+                case Key.Left: if (TechOpen) { TechPage = (TechPage + 3) % 4; Sfx.Play("tick"); } break;
+                case Key.Right: if (TechOpen) { TechPage = (TechPage + 1) % 4; Sfx.Play("tick"); } break;
+                case Key.Escape: if (TechOpen || MapOpen) CloseWindows(); else OpenMenu(Mn.Pause); break;
                 case Key.Shift: TryDash(); break;
                 case Key.Q: TryFlare(); break;
                 case Key.V: CycleWeapon(); break;
@@ -378,7 +432,6 @@ public partial class Game : Node2D
                 case Key.B: OpenWin(Win.Build); break;
                 case Key.F: TryPulse(); break;
                 case Key.F5: Save(); Toast("Игра сохранена"); break;
-                case Key.F9: NewGame(); break;
             }
         }
     }
@@ -410,12 +463,24 @@ public partial class Game : Node2D
         Time += dt;
         Aim = aimOverride ?? GetGlobalMousePosition();
         if (testing) AutoTest(dt);
+        UiTime += dt; UpdateMusic(dt);
+        if (Menu != Mn.None) { UpdateShaders(dt); ents.QueueRedraw(); hud.QueueRedraw(); return; }
+        PlaySecs += dt; achT -= dt; if (achT <= 0) { achT = 2f; Ach.Check(this); }
+        if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); hud.QueueRedraw(); return; }
+        if (FinStage == 1) UpdateFinale(dt);
 
         UpdatePlayer(dt);
         UpdateAncients(dt);
         UpdateLamps(dt);
         UpdateBeams(dt);
         UpdateWeaponFx(dt);
+        UpdateIceBlocks(dt);
+        UpdateHeart(dt);
+        UpdateEndgame(dt);
+        UpdateRegrow(dt);
+        UpdatePolish(dt);
+        UpdateDesign(dt);
+        UpdateChunks(dt);
         UpdateEvents(dt);
         UpdateTrade(dt);
         UpdateLightTech(dt);
@@ -438,7 +503,7 @@ public partial class Game : Node2D
 
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
         cam.Position = PPos;
-        cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake : Vector2.Zero;
+        cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
         UpdateShaders(dt);
         ents.QueueRedraw(); hud.QueueRedraw();
     }
@@ -455,6 +520,8 @@ public partial class Game : Node2D
         return false;
     }
 
+    float dawn, achT;
+    public int TotalLit { get { int n = 0; for (int i = 1; i < W.Ancients.Count; i++) if (W.Ancients[i].Lit) n++; return n; } }
     void UpdateShaders(float dt)
     {
         var vs = ViewSize;
@@ -468,10 +535,13 @@ public partial class Game : Node2D
         foreach (var p in BeamLights) if (n < Fx.MaxLights - 26) arr[n++] = new Vector4(p.X, p.Y, 34, 0);
         foreach (var z in ZoneLights()) if (n < Fx.MaxLights - 12) arr[n++] = z;
         foreach (var z in EventLights()) if (n < Fx.MaxLights - 6) arr[n++] = z;
+        foreach (var z in HeartLights()) if (n < Fx.MaxLights - 6) arr[n++] = z;
+        if (FinStage == 1 && n < Fx.MaxLights) arr[n++] = new Vector4(W.Ancients[0].Pos.X, W.Ancients[0].Pos.Y, Mathf.Max(1f, FinT * 900f), FinT < 10 ? 1f : 0f);
         // силуэты: слабая подсветка интересных объектов сквозь тьму
         foreach (var m in Marks()) if (n < Fx.MaxLights) arr[n++] = m;
-        var target = RegionAt(PPos) switch { 1 => new Vector3(.0f, .03f, .075f), 2 => new Vector3(.075f, .03f, .016f), _ => new Vector3(.012f, .016f, .045f) };
+        var target = RegionAt(PPos) switch { 1 => new Vector3(.0f, .03f, .075f), 2 => new Vector3(.075f, .03f, .016f), 3 => new Vector3(.03f, .05f, .09f), 4 => new Vector3(.05f, .012f, .07f), _ => new Vector3(.012f, .016f, .045f) };
         tint = tint.Lerp(target, Mathf.Min(1, dt * 1.5f));
+        dawn = Mathf.Lerp(dawn, DawnTarget, Mathf.Min(1, dt * (FinStage == 1 ? 6f : 1.2f)));
         var sm = SmokeUniform();
         foreach (var m in new[] { darkMat, glowMat })
         {
@@ -483,12 +553,13 @@ public partial class Game : Node2D
             m.SetShaderParameter("lights", arr);
             m.SetShaderParameter("flash", Flash);
             m.SetShaderParameter("tint", tint);
+            m.SetShaderParameter("dawn", dawn);
             m.SetShaderParameter("smokes", sm);
         }
     }
 
     // ───────────────────────── игрок ─────────────────────────
-    public static bool IsWall(Tl t) => t == Tl.Cliff || t == Tl.CaveWall || t == Tl.Seal;
+    public static bool IsWall(Tl t) => t == Tl.Cliff || t == Tl.CaveWall || t == Tl.Seal || t == Tl.Void;
     bool Solid(int tx, int ty, bool phase) { var t = W.Get(tx, ty); return phase ? IsWall(t) : World.Blocks(t); }
     public bool Collides(Vector2 p, float r, bool phase)
     {
@@ -515,10 +586,10 @@ public partial class Game : Node2D
         if (!testing || aimOverride == null)
         {
             bool arrows = Window == Win.None && !TechOpen;
-            if (Input.IsKeyPressed(Key.W) || (arrows && Input.IsKeyPressed(Key.Up))) dir.Y -= 1;
-            if (Input.IsKeyPressed(Key.S) || (arrows && Input.IsKeyPressed(Key.Down))) dir.Y += 1;
-            if (Input.IsKeyPressed(Key.A) || (arrows && Input.IsKeyPressed(Key.Left))) dir.X -= 1;
-            if (Input.IsKeyPressed(Key.D) || (arrows && Input.IsKeyPressed(Key.Right))) dir.X += 1;
+            if (KeyMap.Held("Up") || (arrows && Input.IsKeyPressed(Key.Up))) dir.Y -= 1;
+            if (KeyMap.Held("Down") || (arrows && Input.IsKeyPressed(Key.Down))) dir.Y += 1;
+            if (KeyMap.Held("Left") || (arrows && Input.IsKeyPressed(Key.Left))) dir.X -= 1;
+            if (KeyMap.Held("Right") || (arrows && Input.IsKeyPressed(Key.Right))) dir.X += 1;
         }
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
@@ -528,7 +599,13 @@ public partial class Game : Node2D
             DashT -= dt; pVel = DashDir * 260f;
             if (rng.Randf() < dt * 60) Burst(PPos, new Color("#8ff0ff"), 1, 20);
         }
-        else pVel = pVel.Lerp(dir * speed, Mathf.Min(1, dt * 16f));
+        else
+        {
+            if (ChillT > 0) { ChillT -= dt; speed *= .62f; }
+            bool slick = OnIce(PPos) && !Has(Tech.SpikeBoots);
+            pVel = pVel.Lerp(dir * speed, Mathf.Min(1, dt * (slick ? 2.4f : 16f)));
+            if (slick && dir.LengthSquared() < .01f && pVel.LengthSquared() > 16 && rng.Randf() < dt * 20) Burst(PPos + new Vector2(0, 5), new Color("#e8faff"), 1, 20);
+        }
         PPos = Move(PPos, pVel * dt, 5f, false);
         if (pVel.LengthSquared() > 100) Walk += dt * 9f * (water ? .6f : 1f);
         if (water && pVel.LengthSquared() > 100) { rippleT -= dt; if (rippleT <= 0) { rippleT = .12f; Burst(PPos + new Vector2(0, 4), new Color("#9fd8ff"), 2, 25); } }
@@ -541,20 +618,20 @@ public partial class Game : Node2D
             else if (regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + .5f * dt);
         }
 
-        bool act = Input.IsMouseButtonPressed(MouseButton.Left) || Input.IsKeyPressed(Key.Space);
+        bool act = Input.IsMouseButtonPressed(MouseButton.Left) || KeyMap.Held("Attack");
         if (testing && aimOverride != null) act = false;
         if (act) Act(dt); else { MineProg = 0; MineTile = new Vector2I(-1, -1); }
     }
 
-    float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1));
-    public float PlayerDamage => 2f + 2f * Tier + .4f * (Level - 1);
+    float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));
+    public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg"));
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
-        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre;
+        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar;
 
     static int TierNeed(Tl t) => t switch
     {
-        Tl.Iron => 1, Tl.MeteorOre => 1, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
+        Tl.Iron => 1, Tl.MeteorOre => 1, Tl.FrostOre => 3, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
     };
 
     void ActPick(float dt, bool melee)
@@ -571,7 +648,7 @@ public partial class Game : Node2D
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (AtkCd <= 0) { AtkCd = .42f; Swing = .22f; Hurt(best, PlayerDamage, dir, true); Sfx.Play("hit"); }
+            if (AtkCd <= 0) { AtkCd = .42f; Swing = .22f; Hurt(best, PlayerDamage, dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
             return;
         }
         var tile = ToTile(Aim);
@@ -588,10 +665,10 @@ public partial class Game : Node2D
             MineProg = 0; return;
         }
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
-        MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, _ => 4f };
+        MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 1.1f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         float before = MineProg;
-        MineProg += dt * MineSpeed; Swing = .2f;
-        if ((int)(before * 5) != (int)(MineProg * 5)) { Burst(TileCenter(tile.X, tile.Y), TileColor(t), 3, 40); Sfx.Play("mine", -3, t == Tl.Tree ? .8f : 1.1f); }
+        MineProg += dt * MineSpeed; Swing = .2f; Diag.Add("mine_secs", dt);
+        if ((int)(before * 5) != (int)(MineProg * 5)) { Burst(TileCenter(tile.X, tile.Y), TileColor(t), 3, 40); Sfx.Play("mine", -3, t == Tl.Tree ? .8f : 1.1f); hitFlash = 1f; }
         if (MineProg >= MineNeed) BreakTile(tile, t, true);
     }
 
@@ -600,7 +677,7 @@ public partial class Game : Node2D
         Tl.Tree => new Color("#3b8a3a"), Tl.Stone => new Color("#a0a0ac"), Tl.Copper => new Color("#e58a3d"), Tl.Ruin => new Color("#9a9fae"),
         Tl.Iron => new Color("#cbd6e8"), Tl.Lumen => new Color("#5fe4ff"), Tl.Aether => new Color("#d58cff"),
         Tl.CrystalOre => new Color("#bfe9ff"), Tl.SilverOre => new Color("#e8eef6"), Tl.Rubble => new Color("#8a8f9c"), Tl.DeadTree => new Color("#5a4a44"),
-        Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), Tl.MeteorOre => new Color("#fff2b0"), _ => Colors.White
+        Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), Tl.MeteorOre => new Color("#fff2b0"), Tl.FrostOre => new Color("#bfe9ff"), Tl.Pine => new Color("#2a5a3a"), Tl.IceBlock => new Color("#bfe9ff"), Tl.ShadowPillar => new Color("#8a40c0"), _ => Colors.White
     };
 
     int ChainLimit => (Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0) + (int)N("MineChain");
@@ -626,6 +703,9 @@ public partial class Game : Node2D
             case Tl.CrystalOre: Give(It.Crystal, rng.RandiRange(1, 2), c); GiveXp(20); break;
             case Tl.Obsidian: Give(It.Obsidian, 1, c); GiveXp(24); break;
             case Tl.Ember: Give(It.Ember, rng.RandiRange(1, 2), c); GiveXp(24); break;
+            case Tl.FrostOre: Give(It.Frost, rng.RandiRange(1, 2), c); GiveXp(26); break;
+            case Tl.Pine: Give(It.Wood, rng.RandiRange(2, 3), c); GiveXp(3); break;
+            case Tl.IceBlock: case Tl.ShadowPillar: GiveXp(1); break;
             case Tl.MeteorOre: Give(It.AncCrystal, 1, c); Give(It.Shard, 3, c + new Vector2(0, -6)); Give(It.Crystal, 1, c + new Vector2(0, -12)); GiveXp(40); Found.Add("Осколок светового метеорита"); break;
         }
         if (chain && ChainLimit > 0)
@@ -645,8 +725,9 @@ public partial class Game : Node2D
 
     public void Give(int item, int n, Vector2 at)
     {
-        Inv[item] += n;
+        Inv[item] += n; Diag.Count("give_" + item);
         Texts.Add(new FText { P = at, S = $"+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });
+        if (IsRareItem(item)) RareGiveFx(item, at);
         Sfx.Play("pickup", -6, 1f + .05f * (item % 5));
     }
 
@@ -658,7 +739,7 @@ public partial class Game : Node2D
             Xp -= XpNeed; Level++; MaxHp += 10; Hp = MaxHp;
             Toast($"Уровень {Level}! Здоровье +10, добыча и урон выросли");
             Texts.Add(new FText { P = PPos + new Vector2(0, -16), S = "УРОВЕНЬ!", Life = 1.6f, C = new Color("#ffe27a") });
-            Burst(PPos, new Color("#ffe27a"), 16, 90); Sfx.Play("levelup");
+            Burst(PPos, new Color("#ffe27a"), 16, 90); Sfx.Play("levelup"); AddRing(PPos, 50, .8f, new Color("#ffe27a"));
         }
     }
 
@@ -677,8 +758,8 @@ public partial class Game : Node2D
 
     // ───────────────────────── крафт и строительство ─────────────────────────
     public static bool CanPay(int[] inv, int[][] cost) { foreach (var c in cost) if (inv[c[0]] < c[1]) return false; return true; }
-    public void Pay(int[][] cost) { foreach (var c in cost) Inv[c[0]] -= c[1]; }
-    public bool Can(int[][] cost) => CanPay(Inv, cost);
+    public void Pay(int[][] cost) { Diag.Mark("first_spend"); PayPool(cost); }
+    public bool Can(int[][] cost) => CanPool(cost);
     public static int[][] FurnaceCost => CostFurnace;
     public static int[][] LanternCost => CostLantern;
     public int[][] NextPickCost => Tier < 4 ? CostPick[Tier] : null;
@@ -729,7 +810,7 @@ public partial class Game : Node2D
         if (!FurnaceNear(56, out _) && BuildingNear(PPos, 56) == null) { Fail("Улучшать кирку можно только рядом с печью или кузницей"); return; }
         var cost = CostPick[Tier];
         if (!Can(cost)) { Fail($"Для «{PickNames[Tier + 1]}» нужно: {NeedStr(cost)}"); return; }
-        Pay(cost); Tier++; GiveXp(40 + 20 * Tier); Shake = 3;
+        Pay(cost); Tier++; Diag.Mark("first_tool_upgrade"); GiveXp(40 + 20 * Tier); Shake = 3;
         Burst(PPos, new Color("#ffe27a"), 18, 90); Sfx.Play("upgrade");
         Announce(PickNames[Tier], PickGain[Tier], new Color("#ffe27a"), "upgrade");
         Save();
@@ -768,7 +849,7 @@ public partial class Game : Node2D
     {
         if (a.Boss && !BossDown(a.BossId)) { Fail("Фонарь охраняет страж — сначала победите его"); return; }
         if (Inv[It.Shard] < a.Cost) { Fail($"Для зажигания нужно осколков света: {a.Cost} (у вас {Inv[It.Shard]}). Их роняют тени и люмен-руда"); return; }
-        Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0;
+        Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0; Diag.Mark("first_lantern"); Diag.Count("lanterns_lit");
         SetObj(a.Tile.X, a.Tile.Y, a.Boss ? Tl.BossOn : Tl.AncOn);
         var ex = new List<string>(); var seen = new HashSet<Tl>();
         foreach (var v in a.Veins)
@@ -822,6 +903,8 @@ public partial class Game : Node2D
         {
             var p = PPos + new Vector2(rng.RandfRange(-190, 190), rng.RandfRange(-110, 110));
             if (reg == 1) Parts.Add(new Particle { P = p, V = new Vector2(rng.RandfRange(-4, 4), -rng.RandfRange(4, 12)), Life = 2f, Max = 2f, C = new Color(.55f, .85f, 1f), Size = 1.2f });
+            else if (reg == 3) Parts.Add(new Particle { P = p, V = new Vector2(rng.RandfRange(-14, -4), rng.RandfRange(8, 20)), Life = 2.6f, Max = 2.6f, C = new Color(.92f, .97f, 1f), Size = 1.5f });
+            else if (reg == 4) Parts.Add(new Particle { P = p, V = new Vector2(rng.RandfRange(-5, 5), -rng.RandfRange(3, 9)), Life = 2.4f, Max = 2.4f, C = rng.Randf() < .5f ? new Color(.75f, .5f, 1f) : new Color(1f, .85f, .4f), Size = 1.3f });
             else Parts.Add(new Particle { P = p, V = new Vector2(rng.RandfRange(-6, 6), rng.Randf() < .25f ? -rng.RandfRange(10, 22) : rng.RandfRange(6, 14)), Life = 2.5f, Max = 2.5f, C = rng.Randf() < .25f ? new Color(1f, .55f, .2f) : new Color(.6f, .58f, .55f), Size = 1.4f });
         }
     }
@@ -846,8 +929,12 @@ public partial class Game : Node2D
             c.DrawRect(new Rect2(o, new Vector2(16 * SmeltProg, 2)), new Color("#ff9a2e"));
         }
         DrawBuildings(c);
+        DrawStatusMarkers(c);
+        DrawMineFx(c);
         DrawHazards(c);
+        DrawHeartWorld(c);
         DrawBeams(c);
+        DrawRings(c);
         DrawWeaponFx(c);
         DrawBarriers(c);
         DrawEvents(c);
@@ -855,7 +942,7 @@ public partial class Game : Node2D
         var list = new List<(float y, Action a)>();
         foreach (var e in Enemies) { var ee = e; list.Add((e.Pos.Y, () => DrawEnemy(c, ee))); }
         foreach (var v in Villagers) { var vv = v; list.Add((v.Pos.Y, () => DrawVillager(c, vv))); }
-        list.Add((PPos.Y, () => DrawPlayer(c)));
+        list.Add((PPos.Y, () => { DrawCosmetic(c); DrawPlayer(c); }));
         list.Sort((a, b) => a.y.CompareTo(b.y));
         foreach (var l in list) l.a();
 

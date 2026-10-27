@@ -8,7 +8,7 @@ public partial class Hud
 {
     Rect2 Frame(Rect2 r, string title, Color border, string footer = null)
     {
-        DrawRect(new Rect2(Vector2.Zero, G.ViewSize), new Color(0, 0, 0, .35f));
+        DrawRect(new Rect2(Vector2.Zero, G.ViewSize / Settings.UiScale), new Color(0, 0, 0, .35f));
         DrawRect(r, new Color(.035f, .045f, .08f, .985f));
         Box(r, border);
         Txt(title, new Vector2(r.Position.X + 16, r.Position.Y + 24), 17, border);
@@ -47,6 +47,8 @@ public partial class Hud
             case Win.Prod: DrawProd(vs); break;
             case Win.Build: DrawBuildWin(vs); break;
             case Win.Trade: DrawTrade(vs); break;
+            case Win.Story: DrawStory(vs); break;
+            case Win.Rift: DrawRiftWin(vs); break;
         }
     }
 
