@@ -104,7 +104,7 @@ public partial class Game
             GD.Print($"[check] SUMMARY failures={fails}");
         });
         // снимки: игрок за деревом с замахом и перед деревом
-        S(.2f, () => { Invuln = 0; OwnedTools.Add("axe"); CurTool = "axe"; EquipNone(); Tp(TileCenter(tree.X, tree.Y - 1)); Aim = TileCenter(tree.X, tree.Y); Swing = .2f; MineTile = tree; MineProg = .5f; UpdateTreeOcclusion(); });
+        S(.2f, () => { TestKeepMine = true; Invuln = 0; OwnedTools.Add("axe"); CurTool = "axe"; EquipNone(); Tp(TileCenter(tree.X, tree.Y - 1)); Aim = TileCenter(tree.X, tree.Y); Swing = .2f; MineTile = tree; MineProg = .5f; UpdateTreeOcclusion(); });
         S(.3f, () => { Swing = .2f; Shot("trees_behind"); });
         S(.15f, () => { Tp(TileCenter(tree.X, tree.Y + 1)); Aim = TileCenter(tree.X, tree.Y); Swing = .2f; UpdateTreeOcclusion(); });
         S(.3f, () => { Swing = .2f; Shot("trees_front"); });
@@ -116,6 +116,11 @@ public partial class Game
         S(.3f, () => { Swing = .2f; Shot("trees_below_up"); });
         S(.15f, () => { Tp(TileCenter(tree.X + 1, tree.Y) + new Vector2(0, 4)); Aim = TileCenter(tree.X, tree.Y - 1); Swing = .2f; UpdateTreeOcclusion(); });
         S(.3f, () => { Swing = .2f; Shot("trees_beside_up"); });
-        S(.2f, () => GD.Print("[check] TREES DONE"));
+        // два дерева друг над другом: крона нижнего закрывает ствол верхнего, а не наоборот; область ломания поверх обоих
+        S(.15f, () => { SetObj(tree.X, tree.Y - 1, Tl.Tree); Tp(TileCenter(tree.X, tree.Y - 4)); Aim = TileCenter(tree.X, tree.Y - 1); MineTile = new Vector2I(tree.X, tree.Y - 1); MineNeed = 2.2f; MineProg = 1.1f; Swing = .2f; Invuln = 0; UpdateTreeOcclusion(); });
+        S(.3f, () => { MineProg = 1.1f; Swing = .2f; Shot("trees_column_behind"); Check(CrownLayer(tree.X, tree.Y - 1) == 'T' || !TrunkCopyAt(tree.X, tree.Y - 1), "trees: a crown that covers another tree's trunk copy is drawn above it"); Check(breakArea.GetIndex() < crownRoot.GetIndex() && crownRoot.GetIndex() < ents.GetIndex() && ents.GetIndex() < trunkRoot.GetIndex() && trunkRoot.GetIndex() < topRoot.GetIndex() && topRoot.GetIndex() < overlay.GetIndex(), "trees: layer order is trunks, break area, front crowns, player, trunk copies, back crowns, progress bar"); });
+        S(.15f, () => { Tp(TileCenter(tree.X, tree.Y + 2)); Aim = TileCenter(tree.X, tree.Y); MineTile = tree; MineProg = 1.1f; Swing = .2f; UpdateTreeOcclusion(); });
+        S(.3f, () => { MineProg = 1.1f; Swing = .2f; Shot("trees_column_front"); SetObj(tree.X, tree.Y - 1, Tl.None); });
+        S(.2f, () => { TestKeepMine = false; GD.Print("[check] TREES DONE"); });
     }
 }

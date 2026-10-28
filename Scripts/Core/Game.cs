@@ -25,7 +25,7 @@ public static class It
 public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
 public sealed class Toast { public string S; public float Life = 3.4f; }
-public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f; }
+public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f, Age; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
@@ -61,7 +61,7 @@ public partial class Game : Node2D
     public World W;
     int srcId;
     const int LightLimit = 96;                       // должен совпадать с размером массива lights в Assets/Shaders/Lighting/lights_common.gdshaderinc
-    EntityLayer ents; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; Control uiRoot; public GameHud GameHudNode; BuildMenu buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
+    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; Control uiRoot; public GameHud GameHudNode; BuildMenu buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
     public float UiScaleVp = 2f;
     public readonly RandomNumberGenerator rng = new();
 
@@ -141,7 +141,8 @@ public partial class Game : Node2D
 
         BuildTileMaps();
         ents = new EntityLayer { G = this };
-        AddChild(ents); AddChild(topRoot); InitEnemyFx(); InitAmbient();
+        AddChild(ents); AddChild(trunkRoot); AddChild(topRoot);                 // порядок: игрок → копии стволов → кроны (крона дерева спереди закрывает ствол дерева позади)
+        overlay = new OverlayLayer { G = this }; AddChild(overlay); InitEnemyFx(); InitAmbient();
 
         cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = true, PositionSmoothingSpeed = 9f, Position = PPos };
         cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.Wd * TS; cam.LimitBottom = World.Ht * TS;
@@ -497,9 +498,9 @@ public partial class Game : Node2D
         Aim = aimOverride ?? GetGlobalMousePosition();
         if (testing) AutoTest(dt);
         UiTime += dt; UpdateMusic(dt); UpdateUiScale();
-        if (Menu != Mn.None) { UpdateShaders(dt); ents.QueueRedraw(); hud.QueueRedraw(); return; }
+        if (Menu != Mn.None) { UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         PlaySecs += dt; achT -= dt; if (achT <= 0) { achT = 2f; Ach.Check(this); }
-        if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); hud.QueueRedraw(); return; }
+        if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         if (FinStage == 1) UpdateFinale(dt);
 
         UpdatePlayer(dt);
@@ -541,7 +542,7 @@ public partial class Game : Node2D
         cam.Position = PPos;
         cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
         UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt); UpdatePlayerFx(dt); UpdateWorldLife(dt); ambientLayer?.QueueRedraw();
-        ents.QueueRedraw(); hud.QueueRedraw();
+        ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw();
     }
 
     // ───────────────────────── свет ─────────────────────────
@@ -621,7 +622,7 @@ public partial class Game : Node2D
         bool act = Input.IsMouseButtonPressed(MouseButton.Left) || KeyMap.Held("Attack");
         if (testing && aimOverride != null) act = false;
         if (Placing != null || OverUi) act = false;                       // режим строительства и клики по интерфейсу не бьют и не добывают
-        if (act) Act(dt); else { MineProg = 0; MineTile = new Vector2I(-1, -1); }
+        if (act) Act(dt); else if (!TestKeepMine) { MineProg = 0; MineTile = new Vector2I(-1, -1); }
     }
 
     float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));
@@ -759,14 +760,16 @@ public partial class Game : Node2D
 
     public void Toast(string s)
     {
-        Toasts.Add(new Toast { S = s });
+        var same = Toasts.Find(t => t.S == s); float life = Mathf.Min(8f, 3.2f + .07f * s.Length);        // время на чтение растёт с длиной текста
+        if (same != null) { same.Life = life; return; }
+        Toasts.Add(new Toast { S = s, Life = life });
         if (Toasts.Count > 3) Toasts.RemoveAt(0);
     }
 
     public void Announce(string title, string sub, Color c, string sfx = "discover")
     {
-        Banners.Add(new Banner { Title = title, Sub = sub, C = c });
-        if (Banners.Count > 3) Banners.RemoveAt(0);
+        Banners.Add(new Banner { Title = title, Sub = sub, C = c, Life = Mathf.Min(9f, 4.2f + .06f * (title.Length + sub.Length)) });
+        if (Banners.Count > 6) Banners.RemoveAt(1);                      // уведомления показываются по очереди; в очереди сохраняется самое свежее
         Sfx.Play(sfx);
     }
 
@@ -915,8 +918,10 @@ public partial class Game : Node2D
             p.P += p.V * dt; p.V *= Mathf.Max(0, 1 - 4 * dt);
         }
         for (int i = Texts.Count - 1; i >= 0; i--) { var t = Texts[i]; t.Life -= dt; t.P += new Vector2(0, -14 * dt); if (t.Life <= 0) Texts.RemoveAt(i); }
-        for (int i = Toasts.Count - 1; i >= 0; i--) { Toasts[i].Life -= dt; if (Toasts[i].Life <= 0) Toasts.RemoveAt(i); }
-        for (int i = Banners.Count - 1; i >= 0; i--) { Banners[i].Life -= dt; if (Banners[i].Life <= 0) Banners.RemoveAt(i); }
+        // пока открыто окно, меню или карта, сообщения не гаснут: игрок успевает их прочитать
+        float msgDt = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None ? 0f : dt;
+        for (int i = Toasts.Count - 1; i >= 0; i--) { Toasts[i].Life -= msgDt; if (Toasts[i].Life <= 0) Toasts.RemoveAt(i); }
+        if (Banners.Count > 0) { var cb = Banners[0]; cb.Age += msgDt; cb.Life -= msgDt * (Banners.Count > 1 ? 1.5f : 1f); if (cb.Life <= 0) Banners.RemoveAt(0); }       // по одному, по очереди
         // атмосфера биома
         int reg = RegionAt(PPos);
         if (reg != 0 && rng.Randf() < dt * 10)

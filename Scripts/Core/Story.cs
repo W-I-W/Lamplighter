@@ -52,7 +52,7 @@ public static class Story
         "LANTHER",
         "",
         "Игра, механики и мир",
-        "Автор проекта",
+        "Автор проекта: Damir Seitmukhametov (Bow Pixel)",
         "",
         "Программирование, процедурная графика и звук",
         "Код проекта (Godot 4 · C#)",

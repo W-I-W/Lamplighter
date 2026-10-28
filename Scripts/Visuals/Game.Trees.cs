@@ -24,7 +24,7 @@ public partial class Game
     void RefreshCrown(int x, int y)
     {
         var ch = ChunkAt(x, y); if (ch == null) return;
-        var lc = new Vector2I(x % CS, y % CS); int id = CrownId(x, y); bool above = behindTrunks.Contains(new Vector2I(x, y + 1));
+        var lc = new Vector2I(x % CS, y % CS); int id = CrownId(x, y); bool above = behindTrunks.Contains(new Vector2I(x, y + 1)) || behindTrunks.Contains(new Vector2I(x, y));        // свой ствол за игроком или в этой клетке копия чужого ствола — крона выше
         if (id < 0) { ch.B.EraseCell(lc); ch.T.EraseCell(lc); return; }
         var layer = above ? ch.T : ch.B; var other = above ? ch.B : ch.T;
         layer.SetCell(lc, srcId, new Vector2I(id, 0)); other.EraseCell(lc);
@@ -91,7 +91,7 @@ public partial class Game
         {
             var ch = ChunkAt(k.X, k.Y); var lc = new Vector2I(k.X % CS, k.Y % CS);
             if (ch != null) { if (behindTrunks.Contains(k) && IsPlantTile(W.Get(k.X, k.Y))) ch.K.SetCell(lc, srcId, new Vector2I(AtlasX(W.Get(k.X, k.Y), 1), 0)); else ch.K.EraseCell(lc); }
-            RefreshCrown(k.X, k.Y - 1);
+            RefreshCrown(k.X, k.Y - 1); RefreshCrown(k.X, k.Y);
         }
     }
 }

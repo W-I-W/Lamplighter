@@ -50,18 +50,37 @@ public partial class Game
         }
     }
 
-    // ───────────────────────── отрисовка сущностей ─────────────────────────
-    public void DrawEntities(EntityLayer c)
+    /// <summary>Область ломания (слой между стволами и кронами): рамка наведённой клетки, подсветка и трещины ломаемого тайла.</summary>
+    public void DrawBreakArea(EntityLayer c) => DrawBreakFx(c, true);
+
+    /// <summary>Клетку закрывает крона другого дерева, если прямо под ней тоже стоит дерево: его крона лежит в этой клетке и должна лежать поверх подсветки.</summary>
+    bool CoveredByCrown(Vector2I t) => World.In(t.X, t.Y + 1) && IsPlantTile(W.Get(t.X, t.Y + 1));
+
+    /// <summary>Рамка и подсветка. Закрытая кроной другого дерева клетка рисуется в нижнем слое (под кроной), остальные — поверх всего, в том числе поверх копии ствола,
+    /// когда игрок стоит за деревом: выделение никогда не оказывается «за» рубимым деревом.</summary>
+    void DrawBreakFx(EntityLayer c, bool covered)
     {
-        DrawWaterShimmer(c);
         var at = ToTile(Aim);
-        if (PPos.DistanceTo(TileCenter(at.X, at.Y)) <= 40f && W.Get(at.X, at.Y) != Tl.None && !IsWall(W.Get(at.X, at.Y)))
+        if (CoveredByCrown(at) == covered && PPos.DistanceTo(TileCenter(at.X, at.Y)) <= 40f && W.Get(at.X, at.Y) != Tl.None && !IsWall(W.Get(at.X, at.Y)))
             Gfx.Outline(c, new Rect2(at.X * TS, at.Y * TS, TS, TS), new Color(1, 1, 1, .25f), 1f);
+        if (MineTile.X >= 0 && CoveredByCrown(MineTile) == covered) DrawMineFx(c);
+    }
+
+    /// <summary>Подсветка и трещины не закрытых кроной клеток и полоса прогресса ломания поверх деревьев.</summary>
+    public void DrawBreakOverlay(EntityLayer c)
+    {
+        DrawBreakFx(c, false);
         if (MineTile.X >= 0 && MineProg > 0)
         {
             var o = new Vector2(MineTile.X * TS, MineTile.Y * TS + TS + 1);
             Gfx.Bar(c, o, TS, 2, MineProg / MineNeed, new Color("#ffe27a"));
         }
+    }
+
+    // ───────────────────────── отрисовка сущностей ─────────────────────────
+    public void DrawEntities(EntityLayer c)
+    {
+        DrawWaterShimmer(c);
         if (SmeltQ.Count > 0)
         {
             var o = SmeltAt + new Vector2(-8, 9);
@@ -71,7 +90,6 @@ public partial class Game
         DrawStatusMarkers(c);
         DrawSelection(c);
         DrawBuildGhost(c);
-        DrawMineFx(c);
         DrawHazards(c);
         DrawHeartWorld(c);
         DrawBeams(c);

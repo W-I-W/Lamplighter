@@ -1443,5 +1443,6 @@
   "Это награда: её даёт победа над стражем": "This is a reward for defeating a guardian",
   "Не хватает ресурсов": "Not enough resources",
   "Быстрый путь": "Fast travel",
-  "{0} ({1} доступно)": "{0} ({1} available)"
+  "{0} ({1} доступно)": "{0} ({1} available)",
+  "Автор проекта: Damir Seitmukhametov (Bow Pixel)": "Project author: Damir Seitmukhametov (Bow Pixel)"
 }

@@ -158,14 +158,14 @@ public partial class Hud : Control
     {
         float y = G.Boss != null ? 34 : 22;
         if (G.Banners.Count == 0) return y;
-        var b = G.Banners[G.Banners.Count - 1];                 // показываем только последнее уведомление
-        float a = Mathf.Clamp(b.Life * 1.6f, 0, 1), slide = Mathf.Clamp((3.5f - b.Life) * 8f, 0, 1);
+        var b = G.Banners[0];                                   // уведомления идут по очереди, ни одно не теряется
+        float a = Mathf.Clamp(b.Life * 1.6f, 0, 1) * Mathf.Clamp(b.Age * 6f, 0, 1), slide = Mathf.Clamp(b.Age * 8f, 0, 1);
         float w = Mathf.Min(vs.X - 20, Mathf.Max(TextW(b.Title), TextW(b.Sub)) + 20);
         var r = new Rect2(Mathf.Round(vs.X * .5f - w * .5f), Mathf.Round(y - (1 - slide) * 6), w, 24);
         var old = curMod; curMod = new Color(1, 1, 1, a);
         Panel(r, "PanelGold");
         Txt(b.Title, new Vector2(r.Position.X, r.Position.Y + 10), 9, new Color(b.C.R, b.C.G, b.C.B), HorizontalAlignment.Center, w);
-        { string sub = Loc.T(b.Sub); RichLine(sub, new Vector2(r.Position.X, r.Position.Y + 20), w, Text, TextFx.Typed(sub, 3.5f - b.Life, 70f), true); }
+        { string sub = Loc.T(b.Sub); RichLine(sub, new Vector2(r.Position.X, r.Position.Y + 20), w, Text, TextFx.Typed(sub, b.Age, 70f), true); }
         curMod = old;
         return y + 28;
     }

@@ -13,7 +13,7 @@ public partial class Game
     const int ChunksX = World.Wd / CS, ChunksY = World.Ht / CS;
     sealed class Chunk { public TileMapLayer G, F, O, B, T, K; }
     readonly Chunk[] chunks = new Chunk[ChunksX * ChunksY];
-    Node2D groundRoot, objRoot, crownRoot, topRoot; TileSet chunkSet;
+    Node2D groundRoot, objRoot, crownRoot, trunkRoot, topRoot; BreakAreaLayer breakArea; TileSet chunkSet;
     public int LoadedChunks; public float LastChunkMs;
     float chunkT;
     const int LoadR = 1, KeepR = 2;
@@ -24,8 +24,8 @@ public partial class Game
         var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS), UseTexturePadding = false };   // без внутренних полей: шейдеры растительности читают атлас по колонкам 16 px
         for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
         srcId = chunkSet.AddSource(src);
-        groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); topRoot = new Node2D();
-        AddChild(groundRoot); AddChild(foliageRoot); AddChild(objRoot); AddChild(crownRoot); InitVegetation();
+        groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); trunkRoot = new Node2D(); topRoot = new Node2D();
+        AddChild(groundRoot); AddChild(foliageRoot); AddChild(objRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); AddChild(crownRoot); InitVegetation();
     }
 
     Chunk ChunkAt(int x, int y)
@@ -57,7 +57,7 @@ public partial class Game
                 if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0));
                 int crown = CrownId(wx, wy); if (crown >= 0) c.B.SetCell(new Vector2I(x, y), srcId, new Vector2I(crown, 0));
             }
-        groundRoot.AddChild(c.G); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); crownRoot.AddChild(c.B); topRoot.AddChild(c.T); topRoot.AddChild(c.K); chunks[ci] = c; LoadedChunks++;
+        groundRoot.AddChild(c.G); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); crownRoot.AddChild(c.B); topRoot.AddChild(c.T); trunkRoot.AddChild(c.K); chunks[ci] = c; LoadedChunks++;
         LastChunkMs = (float)sw.Elapsed.TotalMilliseconds;
     }
 
