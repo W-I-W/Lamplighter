@@ -24,7 +24,7 @@ public static class It
 
 public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
-public sealed class Toast { public string S; public float Life = 3.4f; }
+public sealed class Toast { public string S; public float Life = 3.4f, Age; }
 public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f, Age; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
@@ -924,7 +924,7 @@ public partial class Game : Node2D
         for (int i = Texts.Count - 1; i >= 0; i--) { var t = Texts[i]; t.Life -= dt; t.P += new Vector2(0, -14 * dt); if (t.Life <= 0) Texts.RemoveAt(i); }
         // пока открыто окно, меню или карта, сообщения не гаснут: игрок успевает их прочитать
         float msgDt = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None ? 0f : dt;
-        for (int i = Toasts.Count - 1; i >= 0; i--) { Toasts[i].Life -= msgDt; if (Toasts[i].Life <= 0) Toasts.RemoveAt(i); }
+        for (int i = Toasts.Count - 1; i >= 0; i--) { Toasts[i].Life -= msgDt; Toasts[i].Age += msgDt; if (Toasts[i].Life <= 0) Toasts.RemoveAt(i); }
         if (Banners.Count > 0) { var cb = Banners[0]; cb.Age += msgDt; cb.Life -= msgDt * (Banners.Count > 1 ? 1.5f : 1f); if (cb.Life <= 0) Banners.RemoveAt(0); }       // по одному, по очереди
         // атмосфера биома
         int reg = RegionAt(PPos);

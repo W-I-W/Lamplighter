@@ -190,7 +190,7 @@ public partial class Hud : Control
             float w = 0; foreach (var l in lines) w = Mathf.Max(w, TextW(l));
             var old = curMod; curMod = new Color(1, 1, 1, a);
             Panel(new Rect2(Mathf.Round(cx - w * .5f - 5), y - 8, w + 10, 4 + lines.Count * 10), "PanelDark");
-            int typed = (int)((3.4f - t.Life) * 90f), off = 0;
+            int typed = (int)(t.Age * 90f), off = 0;
             for (int k = 0; k < lines.Count; k++)
             {
                 int vis = Mathf.Clamp(typed - off, 0, lines[k].Length); off += lines[k].Length + 1;

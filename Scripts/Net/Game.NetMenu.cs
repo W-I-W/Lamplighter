@@ -41,7 +41,7 @@ public partial class Game
         switch (i)
         {
             case 0:
-                if (NetService.Transport is SteamTransport st) st.OpenInviteDialog();
+                if (NetService.Transport is SteamTransport st) { st.OpenInviteDialog(); if (st.InviteInfo != "") { DisplayServer.ClipboardSet(st.InviteInfo); Toast("ID лобби скопирован: " + st.InviteInfo); } }
                 else if (NetService.Active) Toast($"Адрес для подключения: ваш IP, порт {NetConst.DefaultPort}");
                 else Fail("Сетевая игра не запущена");
                 break;

@@ -1458,6 +1458,8 @@
   "Вход в лобби Steam": "Join a Steam lobby",
   "Адрес хоста (порт по умолчанию 24865):": "Host address (default port 24865):",
   "ID лобби:": "Lobby ID:",
+  "Порт:": "Port:",
+  "ID лобби скопирован: {0}": "Lobby ID copied: {0}",
   "Enter — подключиться · Esc — назад": "Enter — connect · Esc — back",
   "Сетевая игра не запущена. Создать её можно в главном меню: «Мультиплеер».": "No network game is running. Create one in the main menu: \"Multiplayer\".",
   "Вы — хост": "You are the host",

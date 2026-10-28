@@ -105,6 +105,8 @@ public partial class Hud
                     {
                         wv.Text(false, $"{Loc.T(NetService.Role == NetRole.Host ? "Вы — хост" : "Вы — клиент")} · {Loc.T(NetService.Transport?.DisplayName ?? "")} · {NetService.Count}/{NetConst.MaxPlayers}", Cyan, true, 2);
                         foreach (var p in NetService.Players.Values) wv.Text(false, "● " + p.Name + (p.PeerId == 1 ? " " + Loc.T("(хост)") : "") + (p.PeerId == NetService.LocalId ? " " + Loc.T("(вы)") : ""), Good, false);
+                        string inv = NetService.Transport?.InviteInfo ?? "";
+                        if (inv != "") wv.Text(false, Loc.T(NetService.Transport is SteamTransport ? "ID лобби:" : "Порт:") + " " + inv, Gold, true, 2);
                         if (NetService.Status != "") wv.Text(false, NetService.Status, Dim, true, 2);
                     }
                     string[] rows = { "Пригласить друзей", "Отключиться", "Назад" };
