@@ -49,7 +49,7 @@ public static class Story
 
     public static readonly string[] Credits =
     {
-        "ФОНАРЩИК — LANTERNREACH",
+        "LANTHER",
         "",
         "Игра, механики и мир",
         "Автор проекта",

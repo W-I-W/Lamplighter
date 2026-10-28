@@ -46,6 +46,8 @@ public partial class Game
     // ───────────────────────── обновление ─────────────────────────
     void UpdateWorldLife(float dt)
     {
+        TickDemolish(dt);
+        StationFlashT = Mathf.Max(0, StationFlashT - dt);
         if (cam == null || W == null) return;
         var cc = CamCenter; float far = 260f; float sp = Settings.Particles;
         // золотые эмиттеры

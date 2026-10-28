@@ -24,7 +24,7 @@ public partial class Game
 
     public void BuildAmp()
     {
-        if (!BpDone.Contains("bp_amp")) { Fail("Нужен чертёж «Светокристаллы» (журнал [J], лавка или находки)"); return; }
+        if (!BpDone.Contains("bp_amp")) { Fail("Нужен чертёж «Светокристаллы» [J]"); return; }
         if (!Can(AmpCost)) { Fail("Светокристалл: нужно " + NeedStr(AmpCost)); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(AmpCost); SetObj(t.Value.X, t.Value.Y, Tl.AmpCrystal); GiveXp(10);
@@ -35,12 +35,12 @@ public partial class Game
 
     public void BuildBarrier()
     {
-        if (!BpDone.Contains("bp_barrier")) { Fail("Нужен чертёж «Световые барьеры» (журнал [J], лавка или находки)"); return; }
+        if (!BpDone.Contains("bp_barrier")) { Fail("Нужен чертёж «Световые барьеры» [J]"); return; }
         if (!Can(BarrierCost)) { Fail("Столб-барьер: нужно " + NeedStr(BarrierCost)); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(BarrierCost); SetObj(t.Value.X, t.Value.Y, Tl.BarrierPost); Posts.Add(t.Value); GiveXp(10);
         Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#8ff0ff"), 14, 70); Sfx.Play("build", -2, 1.3f); RecomputeLightTech();
-        Toast("Два столба на одной линии (до 9 клеток) образуют барьер, задерживающий теней");
+        Toast("Два столба в линию (до 9 клеток) задерживают теней");
     }
 
     static readonly int[][][] HeroCost = { C(It.Lens, 1, It.Copper, 4), C(It.Lens, 2, It.Silver, 3), C(It.Lens, 3, It.AncCrystal, 1) };

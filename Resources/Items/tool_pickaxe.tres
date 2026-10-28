@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ToolDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/ToolDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "pickaxe"
+Name = "Кирка"
+Desc = "Добыча камня, руды и дерева; в бою — небольшой урон"
+Icon = 23
+MiningPower = 1.0
+CombatDamage = 1.0
+AttackInterval = 1.0
+AttackRange = 0
+EffWood = 1.0
+EffStone = 1.0
+EffOre = 1.0
+EffRubble = 1.0
+Craftable = false

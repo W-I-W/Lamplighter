@@ -6,13 +6,13 @@ namespace Lamplighter;
 public partial class WindowRow : PanelContainer
 {
     public int Index = -1;
-    readonly Label[] c = new Label[6]; Label cr; RichTextLabel sub; Control subM; string variation = "";
+    readonly Label[] c = new Label[6]; Label cr; RichTextLabel sub; TextureRect icon; Control subM; string variation = "";
     static readonly Color Gold = new("#ffd23f");
 
     public override void _Ready()
     {
         for (int i = 0; i < 6; i++) c[i] = GetNode<Label>("%C" + i);
-        cr = GetNode<Label>("%CR"); sub = GetNode<RichTextLabel>("%Sub"); subM = GetNode<Control>("%SubM");
+        icon = GetNode<TextureRect>("%Icon"); cr = GetNode<Label>("%CR"); sub = GetNode<RichTextLabel>("%Sub"); subM = GetNode<Control>("%SubM");
     }
 
     void Style(bool btn, bool sel, bool disabled)
@@ -28,9 +28,9 @@ public partial class WindowRow : PanelContainer
     }
 
     /// <summary>Обычная строка: текст слева, значение справа, под ней при необходимости пояснение.</summary>
-    public void Set(int index, bool btn, bool sel, bool disabled, string left, string right, Color col, Color? rightCol = null, string subText = null, Color? subCol = null)
+    public void Set(int index, bool btn, bool sel, bool disabled, string left, string right, Color col, Color? rightCol = null, string subText = null, Color? subCol = null, Texture2D ic = null)
     {
-        Index = index; Style(btn, sel, disabled);
+        Index = index; Style(btn, sel, disabled); icon.Visible = ic != null; if (ic != null) icon.Texture = ic;
         Put(c[0], left, col, 0); for (int i = 1; i < 6; i++) c[i].Visible = false;
         cr.Visible = !string.IsNullOrEmpty(right); if (cr.Visible) { if (cr.Text != right) cr.Text = right; cr.Modulate = rightCol ?? (sel ? Gold : col); }
         subM.Visible = subText != null; if (subText != null) TextFx.Apply(sub, subText, subCol ?? new Color("#8a96b0"), 0);
@@ -39,7 +39,7 @@ public partial class WindowRow : PanelContainer
     /// <summary>Строка-таблица: колонки с фиксированной шириной (0 — занимает остаток).</summary>
     public void SetCols(int index, bool sel, string[] texts, float[] widths, Color[] colors, string right, Color rightCol)
     {
-        Index = index; Style(false, sel, false);
+        Index = index; Style(false, sel, false); icon.Visible = false;
         for (int i = 0; i < 6; i++) { if (i < texts.Length) Put(c[i], texts[i], colors[i], widths[i]); else c[i].Visible = false; }
         cr.Visible = !string.IsNullOrEmpty(right); if (cr.Visible) { if (cr.Text != right) cr.Text = right; cr.Modulate = rightCol; }
         subM.Visible = false;

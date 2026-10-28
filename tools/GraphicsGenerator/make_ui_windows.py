@@ -42,6 +42,16 @@ theme_override_constants/separation = 0
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="Lines/Cols"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(16, 12)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
 {cols}
 [node name="CR" type="Label" parent="Lines/Cols"]
 unique_name_in_owner = true

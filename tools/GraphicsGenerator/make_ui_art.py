@@ -1,4 +1,4 @@
-"""Генератор пиксельных элементов интерфейса Lanternreach -> Assets/UI/*.png и Resources/UI/LanternTheme.tres.
+"""Генератор пиксельных элементов интерфейса Lanther -> Assets/UI/*.png и Resources/UI/LanternTheme.tres.
 Запуск из корня проекта: python Tools/GraphicsGenerator/make_ui_art.py
 Палитра ограничена; все текстуры 9-patch, рисуются без сглаживания (Nearest)."""
 import os, zlib, struct

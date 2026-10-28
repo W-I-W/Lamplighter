@@ -94,6 +94,7 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "ui") { BuildUiScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "fx") { BuildFxScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "veg") { BuildVegScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "items") { BuildItemsScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interact") { BuildInteractScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interactload") { BuildInteractLoadScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "texcheck") { BuildTexCheckScript(); return; }

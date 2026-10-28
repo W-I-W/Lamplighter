@@ -1,4 +1,4 @@
-"""Генератор пиксельного шрифта Lanternreach (5x7, кириллица + латиница) -> Assets/UI/Fonts/lantern.png + lantern.fnt (BMFont).
+"""Генератор пиксельного шрифта Lanther (5x7, кириллица + латиница) -> Assets/UI/Fonts/lantern.png + lantern.fnt (BMFont).
 Запуск из корня проекта:  python Tools/GraphicsGenerator/make_ui_font.py
 Глифы можно править прямо в этом файле (строки из # и .) или перерисовать PNG вручную."""
 import zlib, struct, os

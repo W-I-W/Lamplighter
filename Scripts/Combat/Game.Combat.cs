@@ -215,7 +215,7 @@ public partial class Game
             if (PPos.DistanceTo(a.Pos) < 13 * TS)
             {
                 Boss = SpawnEnemy(a.Pos + new Vector2(0, -36), k, null, DangerScale);
-                Announce(EnemyName(k) + " пробудился!", a.BossId == 2 ? "Вода и тьма — его стихия. Береги свет!" : a.BossId == 3 ? "Огонь и дым — его оружие" : a.BossId == 4 ? "Зеркальный щит, лёд и метель. Свет призм сломит его защиту" : a.BossId == 5 ? "Он поглощает свет мира. Ставьте фонари и ищите настоящие источники света" : "Он охраняет особый древний фонарь. Побеждай — и получишь силу света", new Color("#d58cff"), "boss");
+                Announce(EnemyName(k) + " пробудился!", a.BossId == 2 ? "Вода и тьма — его стихия. Береги свет!" : a.BossId == 3 ? "Огонь и дым — его оружие" : a.BossId == 4 ? "Зеркальный щит, лёд и метель. Свет призм сломит его защиту" : a.BossId == 5 ? "Он поглощает свет. Ставьте фонари" : "Хранитель древнего фонаря. Победа даст силу света", new Color("#d58cff"), "boss");
                 Shake = 4;
             }
         }
@@ -235,22 +235,22 @@ public partial class Game
         if (id == 1)
         {
             TechMask |= 1 << (int)Tech.Pulse; Give(It.Aether, 3, e.Pos + new Vector2(0, -16));
-            title = "Хранитель Тёмного леса повержен!"; sub = "Первое ядро света добыто! Световой импульс [F] — улучшите Центральный маяк у центра";
+            title = "Хранитель Тёмного леса повержен!"; sub = "Первое ядро света! Улучшите маяк [E]";
         }
         else if (id == 2)
         {
             TechMask |= 1 << (int)Tech.Beam; Give(It.Crystal, 4, e.Pos + new Vector2(0, -16)); Give(It.Silver, 3, e.Pos + new Vector2(0, -24));
-            title = "Хранитель глубин повержен!"; sub = "Второе ядро света и ПРОЖЕКТОР [R]: луч, что отражается зеркалами. Улучшите маяк — откроются пустоши";
+            title = "Хранитель глубин повержен!"; sub = "Второе ядро и ПРОЖЕКТОР [R]. Улучшите маяк";
         }
         else if (id == 4)
         {
             TechMask |= 1 << (int)Tech.Prism; Give(It.Frost, 6, e.Pos + new Vector2(0, -16)); Give(It.Crystal, 6, e.Pos + new Vector2(0, -24)); ClearIceBlocks();
-            title = "Хранитель Зимы повержен!"; sub = "Четвёртое ядро света и усиленные световые кристаллы. Улучшите маяк — откроется Сердце Тьмы";
+            title = "Хранитель Зимы повержен!"; sub = "Четвёртое ядро. Улучшите маяк — откроется Сердце Тьмы";
         }
         else
         {
             TechMask |= 1 << (int)Tech.Fireproof; Give(It.Ember, 4, e.Pos + new Vector2(0, -16)); Give(It.Obsidian, 3, e.Pos + new Vector2(0, -24));
-            title = "Пепельный страж повержен!"; sub = "Третье ядро света и огнестойкость: пепел и дым больше не вредят";
+            title = "Пепельный страж повержен!"; sub = "Третье ядро и огнестойкость";
         }
         GiveXp(150 + 50 * id); Flash = .8f; Shake = 8; VictoryFx(e.Pos, id == 4 ? new Color("#bfe9ff") : id == 3 ? new Color("#ff9a5a") : id == 2 ? new Color("#7ac8ff") : new Color("#d58cff"));
         Burst(e.Pos, new Color("#d58cff"), 50, 180);
@@ -304,7 +304,7 @@ public partial class Game
         Diag.Count("deaths");
         int lost = Math.Min(25, Inv[It.Shard] / 4); Inv[It.Shard] -= lost;
         PPos = RespawnPos(); Hp = MaxHp; Invuln = 2f; Save();
-        Toast(lost > 0 ? $"Тьма поглотила вас. Вы очнулись у ближайшего фонаря (потеряно осколков: {lost}); всё остальное сохранено" : "Тьма поглотила вас. Вы очнулись у ближайшего фонаря; весь прогресс сохранён");
+        Toast(lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();
     }
 
@@ -595,7 +595,7 @@ public partial class Game
                 if (e.T2 <= 0)
                 {
                     LightBlockT = hpf < .4f ? 10f : 7f; Sfx.Play("boss", 0, .6f); Shake = 4;
-                    Announce("Свет погас!", "Хранитель глубин гасит фонари — сигнальная ракета [Q] и импульс [F] ещё горят", new Color("#7ac8ff"), "boss");
+                    Announce("Свет погас!", "Хранитель гасит фонари: [Q] и [F] ещё горят", new Color("#7ac8ff"), "boss");
                     e.State = 0; e.T1 = 2.4f * mul;
                 }
                 break;

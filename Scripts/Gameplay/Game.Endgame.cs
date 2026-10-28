@@ -93,7 +93,7 @@ public partial class Game
 
     public void BuildDecor(int k)
     {
-        if (BeaconLevel < 2) { Fail("Украшения открываются после первого улучшения Центрального маяка"); return; }
+        if (BeaconLevel < 2) { Fail("Украшения: после улучшения маяка"); return; }
         var cost = DecorCostArr(k);
         if (!Can(cost)) { Fail(DecorNames[k] + ": нужно " + NeedStr(cost)); return; }
         var t = PlaceTarget(); if (t == null) return;
@@ -241,7 +241,7 @@ public partial class Game
         else if (WinTab == 1) BuyLegend(WinCur);
         else if (WinCur < CosmNames.Length)
         {
-            if ((CosmMask & (1 << WinCur)) == 0) Fail("Облик открывается за первое прохождение разлома: 1, 3 и 5 уровней");
+            if ((CosmMask & (1 << WinCur)) == 0) Fail("Облик: пройдите разлом 1, 3 и 5 уровней");
             else { CosmSel = WinCur; Sfx.Play("upgrade", -4, 1.4f); Toast("Облик: " + CosmNames[WinCur]); }
         }
         return true;

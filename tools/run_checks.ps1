@@ -1,4 +1,4 @@
-# Lanternreach automated checks.
+# Lanther automated checks.
 # Usage:  powershell -File tools\run_checks.ps1   (env GODOT or -Godot may point to godot*.exe)
 param([string]$Godot = $env:GODOT)
 
@@ -47,6 +47,7 @@ $tmpU = Join-Path $env:TEMP 'lamp_check_ui'; New-Item -ItemType Directory -Force
 Copy-Item (Join-Path (Join-Path $root 'testsaves') 'mid\save.json') $tmpU -Force
 Run-Stage 'ui: HUD, build menu, inventory, all windows (screenshots)' 'ui' @('UI SCREENSHOTS DONE') @{ LAMP_LOAD = '1' } @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
 Run-Stage 'fx: enemy attack stages, hit feedback, deaths (screenshots)' 'fx' @('FX SCREENSHOTS DONE') @{} @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
+Run-Stage 'items: inventory, hotbar, tools in combat, crafting groups, build mode' 'items' @('ITEMS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'economy audit (trade loops, sinks)' 'econ' @('ECON AUDIT PASSED')
 Run-Stage 'combat audit (weapons, dead effects)' 'combat' @('COMBAT AUDIT PASSED')
 Run-Stage 'soak: 100 s, all biomes, leaks/fps' 'soak' @('SUMMARY failures=0') @{} @('\[check\] FAIL')

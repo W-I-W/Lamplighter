@@ -59,7 +59,7 @@ public partial class Game
     void EndFinale()
     {
         FinStage = 0; FinT = 0; Invuln = 3; Dawn = 1;
-        Announce("Мир освобождён", "Вы можете продолжить играть: исследовать, строить и бросать вызов Разломам Тьмы", new Color("#fff2b0"), "ancient");
+        Announce("Мир освобождён", "Можно играть дальше: исследовать, строить, брать Разломы", new Color("#fff2b0"), "ancient");
         Found.Add("Центральный маяк активирован — Тьма отступила");
         Save();
     }

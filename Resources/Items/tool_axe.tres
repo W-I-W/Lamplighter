@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ToolDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/ToolDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "axe"
+Name = "Топор"
+Desc = "Быстро рубит деревья; в бою слабее меча"
+Icon = 24
+MiningPower = 1.0
+CombatDamage = 0.9
+AttackInterval = 0.95
+AttackRange = 2
+EffWood = 1.9
+EffStone = 0.45
+EffOre = 0.0
+EffRubble = 0.45
+Craftable = true

@@ -39,6 +39,7 @@ public partial class Game
         var d = Db.Weapon(id); if (d == null) return;
         Owned.Add(new OwnedWeapon { Id = id });
         if (CurW < 0) CurW = Owned.Count - 1;
+        AutoAssign(RefWeapon(id)); HotFollow();
         RecomputeEffects();
         if (announce) Announce($"Оружие: {d.Name}", $"{Db.ClassNames[(int)d.Cls]} · {Db.RarName[(int)d.Rar]} · {d.Desc}", Db.RarCol[(int)d.Rar], "chest");
     }
@@ -46,15 +47,10 @@ public partial class Game
     public void EquipWeapon(int i)
     {
         if (i < -1 || i >= Owned.Count) return;
-        CurW = i; MineProg = 0; RecomputeEffects(); Sfx.Play("tick", 0, 1.4f);
+        CurW = i; MineProg = 0; RecomputeEffects(); HotFollow(); Sfx.Play("tick", 0, 1.4f);
     }
 
-    public void CycleWeapon()
-    {
-        if (Owned.Count == 0) { Fail("У вас нет оружия — создайте его у печи [C]"); return; }
-        EquipWeapon(CurW + 1 >= Owned.Count ? -1 : CurW + 1);
-        Toast("Оружие: " + (CurDef?.Name ?? PickNames[Tier] + " (добыча)"));
-    }
+    public void CycleWeapon() => HotCycle(1);
 
     bool NearForge() => FurnaceNear(56, out _) || (BuildingNear(PPos, 56) is Building b && b.Type == Tl.Forge);
     public bool BpOk(string bp) => bp == null || BpDone.Contains(bp);

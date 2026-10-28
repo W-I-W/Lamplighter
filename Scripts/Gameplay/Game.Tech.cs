@@ -43,7 +43,7 @@ public partial class Game
 
         new() { Name = "Серебряное лезвие", Desc = "+50% урона по теням; пробивает броню жуков", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 4, It.Iron, 3), Ok = g => g.LitIn(1) >= 1, Page = 1 },
         new() { Name = "Кристальная оптика", Desc = "Открывает кристальный фонарь [9] и зеркала [0]", Req = "Добудьте кристалл", Cost = C(It.Crystal, 4, It.Silver, 3), Ok = g => g.Inv[It.Crystal] >= 1 || g.Tier >= 3, Page = 1 },
-        new() { Name = "Боевой фонарь", Desc = "Открывает боевой фонарь [8]: жжёт врагов рядом", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 3, It.Iron, 3, It.Shard, 3), Ok = g => g.LitIn(1) >= 1, Page = 1 },
+        new() { Name = "Боевой фонарь", Desc = "Открывает боевой фонарь [B]: жжёт врагов рядом", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 3, It.Iron, 3, It.Shard, 3), Ok = g => g.LitIn(1) >= 1, Page = 1 },
         new() { Name = "Звёздный фонарь героя", Desc = "Свет героя +25%, сильнее жжёт врагов вокруг", Req = "Изучите Линзу света", Cost = C(It.Crystal, 4, It.Silver, 4, It.Shard, 4), Ok = g => g.Has(Tech.Lens), Page = 1 },
         new() { Name = "Серебряные шестерни", Desc = "Всё производство деревни быстрее в 1,5 раза", Req = "Постройте кузницу", Cost = C(It.Silver, 6, It.Iron, 4), Ok = g => g.HasBuilding(Tl.Forge), Page = 1 },
         new() { Name = "Автобур [Z]", Desc = "Новая постройка: сам добывает серебро и кристаллы", Req = "Фонарь в шахтах и склад", Cost = C(It.Crystal, 5, It.Silver, 5, It.Iron, 4), Ok = g => g.LitIn(1) >= 1 && g.HasBuilding(Tl.Warehouse), Page = 1 },
@@ -57,7 +57,7 @@ public partial class Game
         new() { Name = "Огненные линзы", Desc = "Фонари светят на 30% дальше, боевые поджигают", Req = "Зажгите фонарь в пустошах", Cost = C(It.Ember, 5, It.Crystal, 4, It.Obsidian, 3), Ok = g => g.LitIn(2) >= 1, Page = 2 },
         new() { Name = "Огнестойкость", Desc = "Награда Пепельного стража: иммунитет к огню и дыму", Req = "Победите Пепельного стража", Cost = C(), Ok = g => g.BossDown(3), Page = 2, Reward = true },
 
-        new() { Name = "Усиленные световые кристаллы", Desc = "Награда Хранителя Зимы: светокристаллы +22% (до 4), кристальные лучи длиннее и мощнее", Req = "Победите Хранителя Зимы", Cost = C(), Ok = g => g.BossDown(4), Page = 3, Reward = true },
+        new() { Name = "Усиленные световые кристаллы", Desc = "Награда: светокристаллы +22%, лучи длиннее", Req = "Победите Хранителя Зимы", Cost = C(), Ok = g => g.BossDown(4), Page = 3, Reward = true },
         new() { Name = "Ледяные шипы", Desc = "Лёд больше не скользит под ногами", Req = "Откройте путь в монастырь", Cost = C(It.Frost, 3, It.Silver, 3), Ok = g => g.BeaconLevel >= 4, Page = 3 },
         new() { Name = "Морозное лезвие", Desc = "Удары замедляют и замораживают врагов", Req = "Откройте путь в монастырь", Cost = C(It.Frost, 4, It.Iron, 4), Ok = g => g.BeaconLevel >= 4, Page = 3 },
         new() { Name = "Тёплые меха", Desc = "Холод вредит на 60% меньше", Req = "Откройте путь в монастырь", Cost = C(It.Frost, 4, It.Obsidian, 2), Ok = g => g.BeaconLevel >= 4, Page = 3 },

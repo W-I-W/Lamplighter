@@ -112,24 +112,16 @@ public partial class GameHud : Control
 
     static string Short(int n) => n >= 10000 ? $"{n / 1000}k" : n >= 1000 ? $"{n / 1000f:0.#}k" : n.ToString();
 
+    /// <summary>Хотбар: инструменты и оружие. Выбранный слот — золотая рамка; клавиши 1–8, колесо мыши.</summary>
     void UpdateHotbar()
     {
-        // Слоты повторяют клавиши 1–8 (действия те же, что и раньше).
-        var cost = new int[8][][]; var built = new bool[8]; var unlocked = new bool[8]; Texture2D[] ic = new Texture2D[8]; string[] cnt = new string[8];
-        cost[0] = Game.FurnaceCost; unlocked[0] = true; ic[0] = UiIcons.Tile(Art.Furnace); cnt[0] = G.HasFurnace ? "✓" : "";
-        cost[1] = Game.LanternCost; unlocked[1] = true; ic[1] = UiIcons.Tile(Art.Lantern); cnt[1] = G.Lamps.Count > 0 ? G.Lamps.Count.ToString() : "";
-        cost[2] = G.NextPickCost; unlocked[2] = G.HasFurnace && G.NextPickCost != null; ic[2] = UiIcons.Item(UiIcons.Pickaxe); cnt[2] = G.Tier.ToString();
-        int[] bk = { 0, 1, 2, 3 }; int[] tile = { Art.Warehouse, Art.Sawmill, Art.Mine, Art.Forge };
-        for (int i = 0; i < 4; i++) { cost[3 + i] = Game.BCost(bk[i], 1); unlocked[3 + i] = G.BUnlocked(bk[i]); ic[3 + i] = UiIcons.Tile(tile[i]); cnt[3 + i] = G.HasBuilding(Game.BTypes[bk[i]]) ? "✓" : ""; }
-        cost[7] = Game.LampCostOf(1); unlocked[7] = G.Has(Tech.CombatLamp); ic[7] = UiIcons.Tile(Art.CombatLantern); cnt[7] = "";
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < Game.HotCount; i++)
         {
-            bool ok = unlocked[i] && cost[i] != null && G.Can(cost[i]);
-            var st = flashSlot == i && flashT > 0 ? SlotState.Selected : !unlocked[i] ? SlotState.Disabled : ok ? SlotState.Ok : SlotState.Normal;
-            hot[i].Set(ic[i], cnt[i], (i + 1).ToString(), st, 0, "", unlocked[i] ? 1f : .35f);
+            string r = G.Hot[i]; bool has = G.HotValid(r);
+            var st = !has ? SlotState.Disabled : i == G.HotSel ? SlotState.Selected : SlotState.Normal;
+            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f);
         }
-        var w = G.CurDef; string ch = w == null ? "" : w.Cls == WClass.Sword ? "М" : w.Cls == WClass.Bow ? "Л" : w.Cls == WClass.Staff ? "П" : "";
-        weapon.Set(w == null ? UiIcons.Item(UiIcons.Pickaxe) : null, "", "V", SlotState.Normal, 0, ch);
+        weapon.Visible = false;
     }
 
     void UpdateAbilities()

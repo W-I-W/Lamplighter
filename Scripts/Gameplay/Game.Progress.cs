@@ -23,7 +23,7 @@ public partial class Game
     void UpgradeBeacon()
     {
         if (BeaconLevel >= 6) { Fail("Центральный маяк уже активирован окончательно"); return; }
-        if (BeaconLevel == 5 && !BossDown(5)) { Fail("Для окончательной активации нужно победить Источник Тьмы в Сердце Тьмы"); return; }
+        if (BeaconLevel == 5 && !BossDown(5)) { Fail("Победите Источник Тьмы в Сердце Тьмы"); return; }
         if (Inv[It.Core] < 1) { Fail("Нужно ядро света — его даёт победа над стражем биома"); return; }
         Inv[It.Core]--; BeaconLevel++;
         var a = W.Ancients[0]; a.TargetRadius = BeaconRadius(BeaconLevel); a.Pulse = 1f; OnAncientLit(a, true);
@@ -65,7 +65,7 @@ public partial class Game
         switch (t)
         {
             case Tl.Chest: case Tl.Shrine: case Tl.Obelisk: case Tl.Cage: case Tl.TechCache: case Tl.Spire: return p != null && PoiIx(p, ix);
-            case Tl.Altar: ix.Lines.Add("Алтарь лучей: направьте лучи на три приёмника вокруг (кристальные фонари, зеркала, Прожектор)"); return true;
+            case Tl.Altar: ix.Lines.Add("Алтарь лучей: направьте лучи на три приёмника"); return true;
             case Tl.AltarOn: ix.Lines.Add("Алтарь пробуждён"); return true;
             case Tl.Machine:
                 ix.Lines.Add("Заброшенный механизм древних");
@@ -81,7 +81,7 @@ public partial class Game
                 ix.Action("E", "Починить мост"); NeedCost(ix, BridgeCost); ix.Gives("Откроет", "Новый путь"); ix.E = () => RepairBridge(x, y);
                 return true;
             case Tl.Seal:
-                ix.Lines.Add(x < 200 ? "Древняя печать. Её снимет только улучшенный Центральный маяк (ядро света)" : x < 300 ? "Печать пепла. Её снимет второе улучшение Центрального маяка" : x < 450 ? "Ледяная печать. Её снимет третье улучшение Центрального маяка" : "Печать пустоты. Её снимет четвёртое улучшение маяка");
+                ix.Lines.Add(x < 200 ? "Древняя печать. Нужен улучшенный маяк" : x < 300 ? "Печать пепла. Её снимет второе улучшение Центрального маяка" : x < 450 ? "Ледяная печать. Нужно 3-е улучшение маяка" : "Печать пустоты. Её снимет четвёртое улучшение маяка");
                 return true;
             case Tl.Receiver: ix.Lines.Add("Приёмник света: направьте на него луч через зеркала"); return true;
             case Tl.ReceiverOn: ix.Lines.Add("Приёмник светится"); return true;

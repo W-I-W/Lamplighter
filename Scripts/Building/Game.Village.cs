@@ -96,9 +96,9 @@ public partial class Game
         if (!Can(cost)) { Fail($"{BNames[bk]}: нужно {CostStr(cost)}"); return; }
         var t = PlaceTarget(true); if (t == null) return;
         int reg = World.RegionOf(t.Value.X);
-        if (bk == 4 && reg != 1) { Fail("Автобур можно ставить только в Затопленных шахтах (на освещённой земле)"); return; }
-        if (bk == 9 && reg != 3) { Fail("Криоэкстрактор можно ставить только в Ледяном монастыре (на освещённой земле)"); return; }
-        if (bk == 5 && reg != 2) { Fail("Коллектор можно ставить только в Пепельных пустошах (на освещённой земле)"); return; }
+        if (bk == 4 && reg != 1) { Fail("Автобур: только в Затопленных шахтах"); return; }
+        if (bk == 9 && reg != 3) { Fail("Криоэкстрактор: только в Ледяном монастыре"); return; }
+        if (bk == 5 && reg != 2) { Fail("Коллектор: только в Пепельных пустошах"); return; }
         Pay(cost);
         var b = new Building { Type = BTypes[bk], X = t.Value.X, Y = t.Value.Y };
         Buildings.Add(b); SetObj(b.X, b.Y, b.Type); netT = 0;
@@ -141,6 +141,7 @@ public partial class Game
             if (b.Level < BDesc[bk].Length) ix.Gives("Новое", BDesc[bk][b.Level], TipRole.Zone);
         }
         else ix.Info("Максимальный уровень · [P] управление");
+        ix.Action("X", "Разобрать — вернуть в запас"); ix.X = () => DemolishBuilding(b);
     }
 
     public static bool IsProducer(Tl t) => t == Tl.Sawmill || t == Tl.Mine || t == Tl.Forge || t == Tl.Drill || t == Tl.Collector || t == Tl.Refinery || t == Tl.Cryo;
@@ -347,7 +348,7 @@ public partial class Game
     void UpdateUnlocks(float dt)
     {
         unlockT -= dt; if (unlockT > 0) return; unlockT = .4f;
-        string[] hint = { "Хранилище и центр производства [4]", "Производит дерево само [5]", "Добывает руду сама [6]", "Плавит руду со склада [7]", "Добывает серебро и кристаллы [Z]", "Добывает обсидиан и уголь пепла [X]",
+        string[] hint = { "Хранилище и центр производства", "Производит дерево само", "Добывает руду сама", "Плавит руду со склада [7]", "Добывает серебро и кристаллы [Z]", "Добывает обсидиан и уголь пепла [X]",
             "Шестерни и линзы из слитков [B]", "Подключает здания к складу [B]", "Торговля и покупка чертежей [B]", "Добывает ледяной кристалл [B]" };
         for (int bk = 0; bk < BCount; bk++)
             if ((Ann & (1L << bk)) == 0 && BUnlocked(bk))

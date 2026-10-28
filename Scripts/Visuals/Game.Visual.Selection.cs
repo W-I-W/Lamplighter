@@ -40,8 +40,9 @@ public partial class Game
     /// <summary>Предпросмотр постройки под курсором, пока открыто меню строительства: зелёный — можно ставить, красный — нельзя.</summary>
     void DrawBuildGhost(EntityLayer c)
     {
-        if (Window != Win.Build) return;
-        var list = BuildEntriesFiltered(); if (WinCur >= list.Count) return; var e = list[WinCur]; if (e.Tile < 0) return;
+        BuildEntry e = Placing;
+        if (e == null) { if (Window != Win.Build) return; var list = BuildEntriesFiltered(); if (WinCur >= list.Count) return; e = list[WinCur]; }
+        if (e.Tile < 0) return;
         var t = ToTile(Aim); var center = TileCenter(t.X, t.Y);
         bool ok = e.Unlocked && W.Get(t.X, t.Y) == Tl.None && PPos.DistanceTo(center) <= 56f && ToTile(PPos) != t && W.Ground[World.Key(t.X, t.Y)] != Art.WaterG;
         var col = ok ? new Color(.45f, 1f, .45f, .75f) : new Color(1f, .4f, .35f, .6f);

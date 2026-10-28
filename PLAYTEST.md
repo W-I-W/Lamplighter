@@ -1,4 +1,4 @@
-# Lanternreach — playtest protocol (needs real players)
+# Lanther — playtest protocol (needs real players)
 
 Turn on Settings → "Diagnostics (local only)" (or `LAMP_DIAG=1`). Data: `diagnostics.json` + one line per minute in `diagnostics_log.jsonl`.
 After a session: `python tools/summarize_diag.py` prints the state at 15 min / 1 h / 3 h / 5 h / 10 h of play.

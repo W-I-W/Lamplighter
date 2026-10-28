@@ -165,7 +165,7 @@ public partial class Game
         if (rage && e.Mark.X == 0)
         {
             e.Mark = new Vector2(1, 0);
-            Announce("Пепельный страж в ярости!", "Огонь держится дольше, он бросается вперёд и оставляет пламя за собой", new Color("#ff7a3a"), "boss"); Shake = 5;
+            Announce("Пепельный страж в ярости!", "Огонь горит дольше и летит вперёд", new Color("#ff7a3a"), "boss"); Shake = 5;
         }
         Vector2 vel = Vector2.Zero;
         switch (e.State)

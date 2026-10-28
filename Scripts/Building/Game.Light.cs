@@ -17,7 +17,7 @@ public partial class Game
     public List<Lamp> Lamps = new();
     public const int MaxLamps = 40;
     public static readonly string[] LampNames = { "Фонарь", "Боевой фонарь", "Кристальный фонарь" };
-    static readonly int[][][] LampCost = { CostLantern, C(It.Wood, 3, It.Silver, 2, It.Iron, 2), C(It.Crystal, 3, It.Silver, 2, It.Copper, 2) };
+    static readonly int[][][] LampCost = { C(It.Wood, 4, It.Copper, 2), C(It.Wood, 3, It.Silver, 2, It.Iron, 2), C(It.Crystal, 3, It.Silver, 2, It.Copper, 2) };
     static readonly int[][] MirrorCost = C(It.Crystal, 2);
     public static readonly Vector2I[] Dirs = { new(1, 0), new(0, 1), new(-1, 0), new(0, -1) };
     public static int[][] LampCostOf(int kind) => LampCost[kind];
@@ -51,7 +51,7 @@ public partial class Game
         Lamps.Add(new Lamp { X = t.Value.X, Y = t.Value.Y, Kind = kind, Anim = 0 }); OnLampLit(Game.TileCenter(t.Value.X, t.Value.Y), kind);
         Burst(TileCenter(t.Value.X, t.Value.Y), kind == 1 ? new Color("#ff7a3a") : kind == 2 ? new Color("#bfe9ff") : new Color("#ffd86b"), 14, 70);
         Sfx.Play("build"); GiveXp(25); Save();
-        if (kind == 2) Toast("Кристальный фонарь поставлен: E — повернуть луч. Зеркала [0] перенаправляют его");
+        if (kind == 2) Toast("Кристальный фонарь: [E] — повернуть луч, зеркала [0]");
     }
 
     void BuildMirror()
@@ -89,6 +89,7 @@ public partial class Game
         if (l.Kind == 2) { ix.Action("E", "Повернуть луч"); ix.E = () => { l.Dir = (l.Dir + 1) % 4; Sfx.Play("tick"); Burst(l.Pos, new Color("#bfe9ff"), 4, 40); }; }
         if (l.Level < 3) { ix.Action("U", $"Улучшить до ур.{l.Level + 1}"); NeedCost(ix, LampUpCost(l.Level + 1)); ix.U = () => UpgradeLamp(l); }
         else ix.Info("Максимальный уровень");
+        ix.Action("X", "Разобрать — вернуть в запас"); ix.X = () => DemolishLamp(l);
     }
 
     void UpdateLamps(float dt)

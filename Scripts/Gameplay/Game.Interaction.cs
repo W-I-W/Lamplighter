@@ -25,7 +25,7 @@ public partial class Game
         var list = new List<IInteractable>();
         void Add(string key, string title, Rect2 r, int prio, Action<Ix> fill, bool test = true)
         {
-            if (test) { var probe = new Ix(); fill(probe); if (probe.Lines.Count == 0 && probe.E == null && probe.U == null) return; }
+            if (test) { var probe = new Ix(); fill(probe); if (probe.Lines.Count == 0 && probe.E == null && probe.U == null && probe.X == null) return; }
             list.Add(new Target { Key = key, Title = title, Bounds = r, Priority = prio, Fill = fill });
         }
         // древние фонари и Центральный маяк
@@ -47,9 +47,10 @@ public partial class Game
             for (int x = c.X - 3; x <= c.X + 3; x++)
             {
                 var t = W.Get(x, y); int tx = x, ty = y;
-                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", SmeltQ.Count > 0 ? "Добавить в плавку" : "Плавить руду"); ix.Gives("Даст", "Слиток (1 руда + 1 дерево)", TipRole.Resource); ix.E = () => StartSmelt(at); }); continue; }
+                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Открыть: плавка и крафт"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
+                if (t != Tl.Mirror1 && t != Tl.Mirror2 && IsPlacedTile(x, y)) { Add($"t:{x}:{y}", PlacedTitle(t), TileRect(x, y), 1, ix => AddDemolishTile(tx, ty, ix)); continue; }
                 if (!IsTileInteractable(t)) continue;
-                Add($"t:{x}:{y}", TileTitle(t), TileRect(x, y), 1, ix => TileIx(tx, ty, W.Get(tx, ty), ix));
+                Add($"t:{x}:{y}", TileTitle(t), TileRect(x, y), 1, ix => { TileIx(tx, ty, W.Get(tx, ty), ix); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); });
             }
         // события (торговец, разлом, путник, осаждённый фонарь)
         foreach (var ev in Events)
@@ -72,6 +73,8 @@ public partial class Game
         }
         return list;
     }
+
+    static string PlacedTitle(Tl t) => TileStockKey(t) switch { "amp" => "Светокристалл", "barrier" => "Столб-барьер", "decor0" => "Статуя Фонарщика", "decor1" => "Фонтан света", "decor2" => "Знамя маяка", _ => "Постройка" };
 
     static bool IsTileInteractable(Tl t) => t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
         || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn

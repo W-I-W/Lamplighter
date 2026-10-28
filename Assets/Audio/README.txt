@@ -1,4 +1,4 @@
-Lanternreach — замена звука и музыки
+Lanther — замена звука и музыки
 ====================================
 Музыка (петля): Assets/Audio/Music/NAME.ogg | .mp3 | .wav
   Имена: menu, forest, mines, ash, ice, heart, boss, finale

@@ -45,7 +45,7 @@ public static class Db
         new() { Id = "staff1", Name = "Посох искр", Cls = WClass.Staff, Tier = 1, Dmg = 7, Cd = .8f, Speed = 130, Slots = 1, Inherent = new[] { (Fxk.Chain, 1f) }, Tags = new[] { "storm" }, Cost = C(It.Wood, 4, It.Shard, 4), Desc = "Искровой шар взрывается и бьёт молнией" },
         new() { Id = "staff2", Name = "Кристальный посох", Cls = WClass.Staff, Tier = 2, Dmg = 10, Cd = .75f, Speed = 135, Slots = 2, Bp = "bp_staff2", Inherent = new[] { (Fxk.Slow, 1f), (Fxk.Freeze, .5f) }, Tags = new[] { "ice" }, Cost = C(It.Crystal, 3, It.Shard, 6, It.Wood, 2), Desc = "Ледяные шары замедляют и замораживают", Rar = Rar.Uncommon },
         new() { Id = "staff3", Name = "Посох пепла", Cls = WClass.Staff, Tier = 3, Dmg = 13, Cd = .7f, Speed = 140, Slots = 3, Bp = "bp_staff3", Inherent = new[] { (Fxk.Burn, 2f) }, Tags = new[] { "fire" }, Cost = C(It.Ember, 4, It.Obsidian, 3, It.Shard, 4), Desc = "Огненные шары поджигают", Rar = Rar.Rare },
-        new() { Id = "staff_w", Name = "Посох Зимы", Cls = WClass.Staff, Tier = 3, Dmg = 14, Cd = .7f, Speed = 145, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Freeze, 2f), (Fxk.Slow, 1f) }, Tags = new[] { "ice" }, Desc = "Ледяные шары замораживают врагов; лёд и свет — две стороны одной силы" },
+        new() { Id = "staff_w", Name = "Посох Зимы", Cls = WClass.Staff, Tier = 3, Dmg = 14, Cd = .7f, Speed = 145, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Freeze, 2f), (Fxk.Slow, 1f) }, Tags = new[] { "ice" }, Desc = "Ледяные шары замораживают врагов" },
         new() { Id = "staff_u", Name = "Посох Пепельного стража", Cls = WClass.Staff, Tier = 3, Dmg = 12, Cd = .68f, Speed = 150, Slots = 2, Unique = true, Rar = Rar.Epic, Inherent = new[] { (Fxk.Burn, 2f), (Fxk.Blast, 1f) }, Tags = new[] { "fire" }, Desc = "Огненные шары взрываются при гибели врагов" },
     };
 
@@ -116,7 +116,7 @@ public static class Db
         R("r_merchant", "Печать торговца", "Лучшие цены у торговцев", Rar.Uncommon, new string[0], new[] { "Trade:0.1" }, "#e0c080"),
         R("r_glaciersoul", "Душа ледника", "Холод в крови: заморозка чаще", Rar.Rare, new[] { "ice" }, new[] { "Freeze:0.8" }, "#9fd8ff"),
         R("r_prismcore", "Ядро призмы", "Реликвия Хранителя Зимы: свет фонарей усиливается", Rar.Epic, new[] { "light" }, new[] { "LampRadius:0.08", "Arc:1" }, "#e8faff"),
-        R("r_voidlens", "Линза пустоты", "Видит сквозь иллюзии: фонарь шире, помечает настоящий свет, показывает руны и иллюзии", Rar.Rare, new[] { "light" }, new[] { "HeroRadius:0.1", "Reveal:1" }, "#d8b8ff"),
+        R("r_voidlens", "Линза пустоты", "Видит иллюзии: фонарь шире, метит настоящий свет", Rar.Rare, new[] { "light" }, new[] { "HeroRadius:0.1", "Reveal:1" }, "#d8b8ff"),
         // временные: только для испытаний Тьмы
         R("t_flame", "Пламя испытания", "Временно: огонь на всех ударах", Rar.Rare, new[] { "fire" }, new[] { "Burn:1.5" }, "#ff7a2a", false),
         R("t_frost", "Иней испытания", "Временно: заморозка на всех ударах", Rar.Rare, new[] { "ice" }, new[] { "Slow:1", "Freeze:0.6" }, "#7ad0ff", false),
@@ -136,7 +136,7 @@ public static class Db
         S("syn_ice_staff", "Ледяные шары", "Ледяной путь", "Лёд + посох: шары замораживают", new[] { "tag:ice>=1", "class:staff" }, new[] { "Freeze:1" }, "нужен ледяной эффект и посох"),
         S("syn_light_sword", "Световая дуга", "Путь света", "Световая реликвия + меч: дополнительная дуга света", new[] { "tag:light>=1", "class:sword" }, new[] { "Arc:1" }, "нужна световая реликвия или вставка и меч"),
         S("syn_light_lamp", "Сияющие фонари", "Путь света", "Свет + фонарь: радиус больше", new[] { "tag:light>=1", "ability:lamp" }, new[] { "LampRadius:0.15", "HeroRadius:0.1" }, "нужны световой эффект и хотя бы один фонарь"),
-        S("syn_light_surge", "Лучезарность", "Путь света", "Три световых эффекта: периодическое усиление всех световых способностей", new[] { "tag:light>=3" }, new[] { "Flag:RadiantSurge" }, "нужно три световых эффекта"),
+        S("syn_light_surge", "Лучезарность", "Путь света", "Три световых эффекта, усиление света", new[] { "tag:light>=3" }, new[] { "Flag:RadiantSurge" }, "нужно три световых эффекта"),
         S("syn_storm_staff", "Грозовой посох", "Путь бури", "Буря + посох: шары разят цепной молнией", new[] { "tag:storm>=1", "class:staff" }, new[] { "Chain:1" }, "нужен грозовой эффект и посох"),
         S("syn_storm_bow", "Молниеносные стрелы", "Путь бури", "Буря + лук: стрелы бьют молнией", new[] { "tag:storm>=1", "class:bow" }, new[] { "Chain:1" }, "нужен грозовой эффект и лук"),
     };

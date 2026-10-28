@@ -21,7 +21,7 @@ public partial class Hud
         if (G.Menu == Mn.Main || G.Menu == Mn.Pause)
         {
             mv.Begin(true, G.Menu == Mn.Main ? .92f : .82f, "↑/↓ выбор · Enter" + (G.Menu == Mn.Pause ? " · Esc — продолжить" : ""), true);
-            mv.Titles("ФОНАРЩИК", "Lanternreach", Gold, new Color("#9fd8ff"));
+            mv.Titles("LANTHER", "", Gold, new Color("#9fd8ff"));
             var items = G.Menu == Mn.Main ? Game.MainItems : Game.PauseItems;
             for (int i = 0; i < items.Length; i++) mv.Item(i, G.MenuCur == i, items[i], G.Menu == Mn.Main && i == 0 && !G.HasSave);
             return;

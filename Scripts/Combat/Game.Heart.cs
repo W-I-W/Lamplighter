@@ -255,8 +255,8 @@ public partial class Game
         if ((int)e.Mark.X != ph)
         {
             e.Mark = new Vector2(ph, 0); e.State = 0; e.T1 = 2f; DrainPylons();
-            if (ph == 2) { e.Shield = true; Announce("Источник искажает мир!", "Он закрылся тьмой. Пробудите два древних светила [E] у краёв арены — свет сломит защиту", new Color("#d58cff"), "boss"); Shake = 6; }
-            if (ph == 3) { e.Shield = true; Announce("Последний свет!", "Нужны три светила. Не доверяйте мерцающим огням — настоящие горят ровно", new Color("#ffe27a"), "boss"); Shake = 8; }
+            if (ph == 2) { e.Shield = true; Announce("Источник искажает мир!", "Он закрыт тьмой. Пробудите два светила [E]", new Color("#d58cff"), "boss"); Shake = 6; }
+            if (ph == 3) { e.Shield = true; Announce("Последний свет!", "Нужны три светила. Настоящие горят ровно", new Color("#ffe27a"), "boss"); Shake = 8; }
         }
         if (ph >= 2)
         {
@@ -385,7 +385,7 @@ public partial class Game
         Give(It.Core, 1, e.Pos + new Vector2(0, -20)); Give(It.Shard, 12, e.Pos); Give(It.Relic, 3, e.Pos + new Vector2(0, -8)); Give(It.AncCrystal, 3, e.Pos + new Vector2(10, -8));
         GiveRelic("r_voidlens"); Found.Add("Победа над Источником Тьмы"); GiveXp(900);
         Flash = 1f; Shake = 10; Burst(e.Pos, new Color("#ffe9a0"), 80, 220); VictoryFx(e.Pos, new Color("#ffe9a0"));
-        Announce("Источник Тьмы повержен!", "Пятое ядро света добыто. Вернитесь к Центральному маяку и зажгите его окончательно", new Color("#ffe9a0"), "ancient");
+        Announce("Источник Тьмы повержен!", "Пятое ядро! Зажгите Центральный маяк", new Color("#ffe9a0"), "ancient");
         Save();
     }
 }

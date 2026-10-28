@@ -1,4 +1,4 @@
-# Lanternreach — release notes for developers
+# Lanther — release notes for developers
 
 Version: **1.0.0** (`Game.VersionStr` in `Scripts/UI/Game.Menu.cs`, also `application/file_version` in `export_presets.cfg`).
 
@@ -6,11 +6,11 @@ Version: **1.0.0** (`Game.VersionStr` in `Scripts/UI/Game.Menu.cs`, also `applic
 
 ```
 dotnet build Lamplighter.csproj -c ExportRelease       # release compile check
-godot --headless --path . --export-release "Windows Desktop" build/Lanternreach.exe
+godot --headless --path . --export-release "Windows Desktop" build/Lanther.exe
 ```
 
 * The preset is in `export_presets.cfg`. `lang/*.json` and `audio/*` are included through `include_filter`.
-* Output: `build/Lanternreach.exe` + `.pck` + `data_Lamplighter_windows_x86_64/` (keep them together). `build/` is git-ignored.
+* Output: `build/Lanther.exe` + `.pck` + `data_Lamplighter_windows_x86_64/` (keep them together). `build/` is git-ignored.
 * The export was run on the dev machine with the Godot install that is used here; code signing is disabled.
 
 ## Automated checks
@@ -111,3 +111,13 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 - **Biomes**: ambient particle layer above the darkness (leaves, fireflies, pollen / drops / ash and embers / snow / dark motes), capped at 90 particles and spawned only around the camera.
 - **Settings**: wind, particles, flashes, extra effects (0-150%) in Settings; screen shake already existed. `Settings.Particles` also scales `Game.Burst`.
 - Not done: moving parts of machines (tiles are single sprites), heat-haze distortion, tree-fall tilt.
+
+## Inventory, hotbar, tools, crafting (stage 8)
+
+- **Inventory** (`I`): shows only resources with quantity > 0, list closes gaps, no capacity limit; only changed cells are updated (`InventoryWindow.cs`). Zero-quantity data stays in the game.
+- **Hotbar**: 8 slots with tools and weapons only (`Scripts/Combat/Game.Hotbar.cs`); slots hold stable references (`tool:axe`, `weapon:sword1`), never copies. `1-8` and the mouse wheel select, `V` cycles. Assign in the Equipment window (`C`, tab "Weapons"): `Enter` holds the item, `Shift+1..8` assigns it, `X` removes it. New items go to a free slot automatically. Saved in the save file (old saves get pickaxe + owned weapons).
+- **Tools** are `Resources/Items/tool_*.tres` (`ToolDef`): `MiningPower`, `CombatDamage` (multiplier of base player damage), `AttackInterval`, `AttackRange`, per-resource efficiency (`EffWood/EffStone/EffOre/EffRubble`). Pickaxe keeps its old values; axe, shovel and hammer are crafted by hand. LMB uses the held item through the existing `Act` pipeline; every tool can hit enemies (once per swing) but far weaker than a sword.
+- **Crafting** (Equipment window, tab "Creation"): `Hand crafting` group plus a group for the station you stand next to (`E` on a furnace opens it; `C` next to a furnace or a forge). Groups are collapsible; recipes are Ready (green cost) / Missing (red cost, still listed) / Owned; unlearned blueprints are hidden. `Q` cycles x1/x5/x10/max for stackable recipes (smelting, weapon inserts). Station recipes cannot be used after walking away.
+- **Building** (`B`): choosing a building closes the menu and starts placement (ghost under the cursor, green/red, LMB builds, RMB/Esc cancels); LMB over UI never hits or mines.
+- Digit keys no longer build; use `B` (`9`/`0` still place the crystal lantern and mirror).
+- Test: `LAMP_STAGE=items` (part of `tools/run_checks.ps1`).

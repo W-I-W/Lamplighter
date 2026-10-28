@@ -23,19 +23,19 @@ public partial class Game
     {
         hintT -= dt; if (hintT > 0 || testing && !Diag.Enabled && OS.GetEnvironment("LAMP_HINTS") == "") return; hintT = 1.2f;
         bool early = Level <= 6 && BeaconLevel <= 1;
-        if (early && PlaySecs < 120) Hint("move", "WASD — движение · ЛКМ или Пробел — бить врагов и добывать деревья и камни");
+        if (early && PlaySecs < 120) Hint("move", "WASD — движение · ЛКМ — бить и добывать");
         var a1 = W.Ancients.Count > 1 ? W.Ancients[1] : null;
-        if (early && !IsLit(PPos) && a1 != null) Hint("dark", "Вне света появляются тени. Бейте их: они роняют осколки света для древних фонарей");
-        foreach (var e in Enemies) if (!e.IsBoss && e.Pos.DistanceTo(PPos) < 130 && early) { Hint("enemy", "Враг рядом! Бейте ЛКМ; держитесь у света — там тени слабеют и горят"); break; }
-        if (a1 != null && !a1.Lit && Inv[It.Shard] >= a1.Cost && a1.Cost > 0) Hint("shards", $"Осколков хватает ({a1.Cost})! Идите к ближайшему древнему фонарю (метка у края карты) и нажмите E");
-        if (LitCount >= 1) Hint("lit1", "Территория освобождена: в свете можно строить [B]. Дальше — другие фонари, находки и спасение жителей");
-        if (HasFurnace && Tier < 1 && Inv[It.Copper] >= 5) Hint("pick", "Меди достаточно: нажмите 3 у печи — кирка станет лучше и возьмёт новые руды");
+        if (early && !IsLit(PPos) && a1 != null) Hint("dark", "Вне света — тени. Бейте их ради осколков света");
+        foreach (var e in Enemies) if (!e.IsBoss && e.Pos.DistanceTo(PPos) < 130 && early) { Hint("enemy", "Враг! Бейте [ЛКМ], держитесь у света"); break; }
+        if (a1 != null && !a1.Lit && Inv[It.Shard] >= a1.Cost && a1.Cost > 0) Hint("shards", $"Осколков хватает ({a1.Cost})! К древнему фонарю, [E]");
+        if (LitCount >= 1) Hint("lit1", "Территория освобождена: строить можно [B]");
+        if (HasFurnace && Tier < 1 && Inv[It.Copper] >= 5) Hint("pick", "Меди хватает: улучшите кирку у печи");
         if (!HasFurnace && Inv[It.Stone] >= 10 && Inv[It.Wood] >= 5) Hint("furnace", "Хватает на печь: нажмите 1 на свободной клетке рядом");
-        if (Inv[It.Core] > 0 && BeaconLevel < 6) Hint("core", It.Ic(It.Core) + "Ядро света! Отнесите его к Центральному маяку в центре карты и нажмите E");
-        if (Level >= 3 && LitCount >= 1) Hint("goal", "Большая цель: ядра света у стражей земель — они восстанавливают Центральный маяк. Карта — M");
-        if (Buildings.Count >= 3 && HasBuilding(Tl.Warehouse)) Hint("auto", "Производство идёт само: смотрите состояние на зданиях, управление — P. Рядом со складом материалы берутся прямо из него");
-        if (TotalLit >= 3 && BossDown(1) == false) Hint("boss1", "Страж леса ждёт у особого фонаря. Готовьте оружие [C] и реликвии");
-        if (BossDown(1)) Hint("travel", "Быстрый путь: у зажжённого фонаря нажмите U — перенос к другому зажжённому фонарю уже освобождённых земель");
+        if (Inv[It.Core] > 0 && BeaconLevel < 6) Hint("core", It.Ic(It.Core) + "Ядро света! Отнесите к маяку, [E]");
+        if (Level >= 3 && LitCount >= 1) Hint("goal", "Цель: ядра света стражей. Карта — [M]");
+        if (Buildings.Count >= 3 && HasBuilding(Tl.Warehouse)) Hint("auto", "Производство идёт само. Управление — [P]");
+        if (TotalLit >= 3 && BossDown(1) == false) Hint("boss1", "Страж леса у особого фонаря. Готовьте оружие [C]");
+        if (BossDown(1)) Hint("travel", "Быстрый путь: [U] у зажжённого фонаря");
     }
 
     // ───────────────────────── быстрый путь ─────────────────────────

@@ -30,7 +30,7 @@ public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg;
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
-public sealed partial class Ix { public List<string> Lines = new(); public Action E, U; public string Title, Key; }
+public sealed partial class Ix { public List<string> Lines = new(); public Action E, U, X; public string Title, Key; }
 
 public sealed class SaveData
 {
@@ -41,6 +41,8 @@ public sealed class SaveData
     public int[] LX, LY, LK, LL, LD; public string Explored;
     // этап 4
     public string[] WId; public int[][] WMods; public int CurW, HeroLamp; public int[] ModInv;
+    public string[] BsK; public int[] BsV, PlacedK;                                      // запас построек и клетки, поставленные игроком
+    public string[] Hot, Tools; public int HotSel; public string CurTool;               // хотбар (инструменты и оружие)
     public string[] Relics, Equipped, BpDone, FragK, Found; public int[] FragV;
     public int[] BPrio, BMode; public bool[] BOff, BForced; public int[] BLocal;
     public int TradeEpoch, ExtraV; public string[] Bought; public float[] Demand; public float EvNext;
@@ -133,7 +135,7 @@ public partial class Game : Node2D
         if (!LoadGame()) NewWorld(testing ? 4242 : (int)(rng.Randi() % 1000000));
         ApplyBeaconRadius();
         InitVillage();
-        InitMap();
+        InitMap(); InitHotbar();
         InitAsh();
 
         BuildTileMaps();
@@ -159,7 +161,7 @@ public partial class Game : Node2D
         buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildMenu>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
         invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
 
-        Toast("Соберите дерево и камень (ЛКМ), постройте печь [1]. Тьма вокруг опасна — держитесь у маяка. [M] — карта");
+        Toast("Добудьте дерево и камень, постройте печь [B]. [M] — карта");
         if (pendingMsg != null) Toast(pendingMsg);
         if (pendingMsg2 != null) Toast(pendingMsg2);
         InitLightTech();
@@ -254,7 +256,7 @@ public partial class Game : Node2D
                 Tech = TechMask, Ann2 = Ann, Kills = Kills, BossMask = BossMask, Beacon = BeaconLevel,
                 BT = new int[Buildings.Count], BX = new int[Buildings.Count], BY = new int[Buildings.Count], BL = new int[Buildings.Count],
                 PoiState = new byte[W.Pois.Count], Explored = Convert.ToBase64String(Expl),
-                WId = Owned.ConvertAll(o => o.Id).ToArray(), WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(), CurW = CurW, HeroLamp = HeroLampLv, ModInv = ModInv,
+                BsK = new List<string>(BuildStock.Keys).ToArray(), BsV = new List<int>(BuildStock.Values).ToArray(), PlacedK = new List<int>(Placed).ToArray(), Hot = (string[])Hot.Clone(), HotSel = HotSel, Tools = new List<string>(OwnedTools).ToArray(), CurTool = CurTool, WId = Owned.ConvertAll(o => o.Id).ToArray(), WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(), CurW = CurW, HeroLamp = HeroLampLv, ModInv = ModInv,
                 Relics = OwnedRelics.ToArray(), Equipped = EquippedRelics.ToArray(), BpDone = new List<string>(BpDone).ToArray(), FragK = new List<string>(Frag.Keys).ToArray(), FragV = new List<int>(Frag.Values).ToArray(), Found = Found.ToArray(),
                 BPrio = Buildings.ConvertAll(b => b.Prio).ToArray(), BMode = Buildings.ConvertAll(b => b.Mode).ToArray(), BOff = Buildings.ConvertAll(b => b.Off).ToArray(), BForced = Buildings.ConvertAll(b => b.Forced).ToArray(),
                 BLocal = Flat(Buildings), TradeEpoch = TradeEpoch, ExtraV = ExtraVillagers, Bought = new List<string>(Bought).ToArray(), Demand = Demand, EvNext = evNext,
@@ -328,7 +330,7 @@ public partial class Game : Node2D
             TechMask = d.Tech; Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
             BossMask = legacy ? (d.Boss ? 1 : 0) : d.BossMask; BeaconLevel = legacy ? 1 : Math.Max(1, d.Beacon);
             if (d.Inv != null) for (int i = 0; i < Inv.Length && i < d.Inv.Length; i++) Inv[i] = d.Inv[i];
-            if (legacy && d.Boss) { Inv[It.Core]++; pendingMsg = "Сохранение обновлено: за победу над Хранителем леса вы получили ядро света — улучшите Центральный маяк!"; }
+            if (legacy && d.Boss) { Inv[It.Core]++; pendingMsg = "Сохранение обновлено: получено ядро света"; }
             if (d.Stock != null) for (int i = 0; i < Stock.Length && i < d.Stock.Length; i++) Stock[i] = d.Stock[i];
             if (d.BT != null) for (int i = 0; i < d.BT.Length; i++)
                 {
@@ -342,7 +344,7 @@ public partial class Game : Node2D
                     else bb.Forced = true;
                     Buildings.Add(bb);
                 }
-            if (legacy) { Ann = -1L; pendingMsg2 = "Сохранение обновлено: старые постройки связаны со складом автоматически, новые нужно подключать узлами снабжения"; }
+            if (legacy) { Ann = -1L; pendingMsg2 = "Сохранение обновлено: постройки подключены к складу"; }
             if (d.PoiState != null)
                 for (int i = 0; i < W.Pois.Count && i < d.PoiState.Length; i++)
                 {
@@ -362,6 +364,12 @@ public partial class Game : Node2D
                 for (int y = 0; y < World.N; y++) for (int x = 0; x < World.N; x++) if (W.Get(x, y) == Tl.Lantern) Lamps.Add(new Lamp { X = x, Y = y, Anim = 1 });
             if (d.WId != null) for (int i = 0; i < d.WId.Length; i++) { var o = new OwnedWeapon { Id = d.WId[i] }; if (d.WMods != null && i < d.WMods.Length && d.WMods[i] != null) o.Mods.AddRange(d.WMods[i]); if (Db.Weapon(o.Id) != null) Owned.Add(o); }
             CurW = Math.Min(d.CurW, Owned.Count - 1); HeroLampLv = d.HeroLamp;
+            if (d.Tools != null) { OwnedTools.Clear(); foreach (var t in d.Tools) OwnedTools.Add(t); } OwnedTools.Add("pickaxe");
+            CurTool = d.CurTool != null && OwnedTools.Contains(d.CurTool) ? d.CurTool : "pickaxe";
+            if (d.BsK != null) for (int i = 0; i < d.BsK.Length && i < d.BsV.Length; i++) if (d.BsV[i] > 0) BuildStock[d.BsK[i]] = d.BsV[i];
+            if (d.PlacedK != null) foreach (var pk in d.PlacedK) Placed.Add(pk); else InitPlaced();
+            if (d.Hot != null) for (int i = 0; i < HotCount && i < d.Hot.Length; i++) Hot[i] = d.Hot[i];
+            HotSel = Math.Clamp(d.HotSel, 0, HotCount - 1);
             if (d.ModInv != null) for (int i = 0; i < ModInv.Length && i < d.ModInv.Length; i++) ModInv[i] = d.ModInv[i];
             if (d.Relics != null) OwnedRelics.AddRange(d.Relics); if (d.Equipped != null) EquippedRelics.AddRange(d.Equipped);
             if (d.BpDone != null) foreach (var b in d.BpDone) BpDone.Add(b);
@@ -413,9 +421,16 @@ public partial class Game : Node2D
     {
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
         if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
-        if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0) { OverUi = UiOver(cb.Position / UiScaleVp); ClickWorld(); }
+        if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0)
+        {
+            OverUi = UiOver(cb.Position / UiScaleVp);
+            if (Placing != null && Window == Win.None && !OverUi) { PlaceNow(); return; }
+            ClickWorld();
+        }
+        if (e is InputEventMouseButton pr && pr.Pressed && pr.ButtonIndex == MouseButton.Right && Placing != null) { Placing = null; Toast("Строительство отменено"); return; }
         if (FinStage > 0) { if (e is InputEventKey fk && fk.Pressed && !fk.Echo) FinaleKey(fk.Keycode); return; }
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right && Window == Win.None) TrySpin();
+        if (e is InputEventMouseButton wb && wb.Pressed && Window == Win.None && !TechOpen && !MapOpen && (wb.ButtonIndex == MouseButton.WheelUp || wb.ButtonIndex == MouseButton.WheelDown)) { HotCycle(wb.ButtonIndex == MouseButton.WheelUp ? -1 : 1); return; }
         if (e is InputEventKey k && k.Pressed && !k.Echo)
         {
             var key = KeyMap.Translate(k.Keycode); if (key == Key.None) return;
@@ -423,6 +438,7 @@ public partial class Game : Node2D
             switch (key)
             {
                 case Key.E: DetailT = 3f; if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
+                case Key.X: DetailT = 3f; if (Cur.X != null) Cur.X(); else Fail("Рядом нет построенного предмета, который можно разобрать"); break;
                 case Key.U: DetailT = 3f; if (Cur.U != null) Cur.U(); else Fail("Рядом нет здания или фонаря для улучшения"); break;
                 case Key.Key1: Digit(1); break;
                 case Key.Key2: Digit(2); break;
@@ -434,13 +450,11 @@ public partial class Game : Node2D
                 case Key.Key8: Digit(8); break;
                 case Key.Key9: Digit(9); break;
                 case Key.Key0: Digit(0); break;
-                case Key.Z: if (!TechOpen) BuildBuilding(4); break;
-                case Key.X: if (!TechOpen) BuildBuilding(5); break;
                 case Key.T: { bool o = !TechOpen; CloseWindows(); TechOpen = o; Sfx.Play("tick"); break; }
                 case Key.M: { bool o = !MapOpen; CloseWindows(); MapOpen = o; Sfx.Play("tick"); break; }
                 case Key.Left: if (TechOpen) { TechPage = (TechPage + 3) % 4; Sfx.Play("tick"); } break;
                 case Key.Right: if (TechOpen) { TechPage = (TechPage + 1) % 4; Sfx.Play("tick"); } break;
-                case Key.Escape: if (TechOpen || MapOpen) CloseWindows(); else OpenMenu(Mn.Pause); break;
+                case Key.Escape: if (Placing != null) { Placing = null; Toast("Строительство отменено"); } else if (TechOpen || MapOpen) CloseWindows(); else OpenMenu(Mn.Pause); break;
                 case Key.Shift: TryDash(); break;
                 case Key.Q: TryFlare(); break;
                 case Key.V: CycleWeapon(); break;
@@ -459,18 +473,11 @@ public partial class Game : Node2D
     void Digit(int n)
     {
         if (TechOpen) { if (n >= 1) BuyTech(n - 1); return; }
-        switch (n)
+        if (n >= 1 && n <= HotCount) { HotSelect(n - 1); return; }                  // 1–8: выбор инструмента или оружия в хотбаре
+        switch (n)                                                                  // постройки теперь — только через меню строительства [B]
         {
-            case 1: BuildFurnace(); break;
-            case 2: BuildLamp(0); break;
-            case 3: UpgradePick(); break;
-            case 4: BuildBuilding(0); break;
-            case 5: BuildBuilding(1); break;
-            case 6: BuildBuilding(2); break;
-            case 7: BuildBuilding(3); break;
-            case 8: BuildLamp(1); break;
-            case 9: BuildLamp(2); break;
-            case 0: BuildMirror(); break;
+            case 9: PlaceKey("lamp2"); break;
+            case 0: PlaceKey("mirror"); break;
         }
     }
 
@@ -608,6 +615,7 @@ public partial class Game : Node2D
 
         bool act = Input.IsMouseButtonPressed(MouseButton.Left) || KeyMap.Held("Attack");
         if (testing && aimOverride != null) act = false;
+        if (Placing != null || OverUi) act = false;                       // режим строительства и клики по интерфейсу не бьют и не добывают
         if (act) Act(dt); else { MineProg = 0; MineTile = new Vector2I(-1, -1); }
     }
 
@@ -625,7 +633,8 @@ public partial class Game : Node2D
     void ActPick(float dt, bool melee)
     {
         var toAim = Aim - PPos; var dir = toAim.LengthSquared() > 1 ? toAim.Normalized() : new Vector2(Facing, 0);
-        Enemy best = null; float bd = 30f;
+        var td = CurW < 0 ? CurToolDef : ToolDef.Get("pickaxe");           // с оружием в руках добыча идёт кирой, как и раньше
+        Enemy best = null; float bd = 30f + td.AttackRange;
         foreach (var e in Enemies)
         {
             if (e.Hidden) continue;
@@ -636,7 +645,7 @@ public partial class Game : Node2D
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (AtkCd <= 0) { AtkCd = .42f; Swing = .22f; Hurt(best, PlayerDamage, dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
+            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Hurt(best, PlayerDamage * td.CombatDamage, dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
             return;
         }
         var tile = ToTile(Aim);
@@ -648,14 +657,20 @@ public partial class Game : Node2D
             if (tierMsgCd <= 0)
             {
                 tierMsgCd = 2;
-                Fail(t == Tl.Iron ? "Железо не берётся этой киркой — улучшите её до медной [3]" : TierNeed(t) == 3 ? "Эта руда требует кристальной кирки [3]" : "Эта руда требует железной кирки");
+                Fail(t == Tl.Iron ? "Железо не берётся. Улучшите кирку у печи [E]" : TierNeed(t) == 3 ? "Эта руда требует кристальной кирки [3]" : "Эта руда требует железной кирки");
             }
             MineProg = 0; return;
+        }
+        float eff = td.Efficiency(t) * td.MiningPower;
+        if (eff <= 0f)
+        {
+            if (tierMsgCd <= 0) { tierMsgCd = 2; Fail($"{td.Name} не подходит для добычи: {TileTitle(t)}"); }
+            MineProg = 0; MineTile = new Vector2I(-1, -1); return;
         }
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
         MineNeed = t switch { Tl.Tree => 1.1f, Tl.DeadTree => 1.0f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 1.1f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         float before = MineProg;
-        MineProg += dt * MineSpeed; Swing = .2f; Diag.Add("mine_secs", dt);
+        MineProg += dt * MineSpeed * eff; Swing = .2f; Diag.Add("mine_secs", dt);
         if ((int)(before * 5) != (int)(MineProg * 5)) { Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; TileShake(tile.X, tile.Y); }
         if (MineProg >= MineNeed) BreakTile(tile, t, true);
     }
@@ -783,7 +798,7 @@ public partial class Game : Node2D
         var t = PlaceTarget(); if (t == null) return;
         Pay(CostFurnace); SetObj(t.Value.X, t.Value.Y, Tl.Furnace); HasFurnace = true;
         Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#ff9a2e"), 14, 60); Sfx.Play("build");
-        GiveXp(20); Toast("Печь построена! Подойдите и нажмите E, чтобы плавить руду (1 руда + 1 дерево)");
+        GiveXp(20); Toast("Печь готова! Плавка: [E] (руда + дерево)");
         Save();
     }
 
@@ -841,7 +856,7 @@ public partial class Game : Node2D
     void Activate(Ancient a, int idx)
     {
         if (a.Boss && !BossDown(a.BossId)) { Fail("Фонарь охраняет страж — сначала победите его"); return; }
-        if (Inv[It.Shard] < a.Cost) { Fail($"Для зажигания нужно осколков света: {a.Cost} (у вас {Inv[It.Shard]}). Их роняют тени и люмен-руда"); return; }
+        if (Inv[It.Shard] < a.Cost) { Fail($"Нужно осколков: {a.Cost} (есть {Inv[It.Shard]})"); return; }
         Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0; OnAncientLit(a); Diag.Mark("first_lantern"); Diag.Count("lanterns_lit");
         SetObj(a.Tile.X, a.Tile.Y, a.Boss ? Tl.BossOn : Tl.AncOn);
         var ex = new List<string>(); var seen = new HashSet<Tl>();

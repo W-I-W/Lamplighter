@@ -150,10 +150,10 @@ public partial class Game
                     for (int i = 0; i < 3; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(i * 2.1f) * 26, PoolKind(reg));
                     sub = "Победите носильщика (золотой) — в мешках редкие ресурсы"; break;
                 }
-            case "lamp": ev.V = 60f; ev.Wave = 0; ev.WaveT = 4f; sub = "Защитите фонарь от теней 45 секунд — он останется вашим навсегда"; break;
+            case "lamp": ev.V = 60f; ev.Wave = 0; ev.WaveT = 4f; sub = "Защитите фонарь 45 секунд — он станет вашим"; break;
             case "trader": ev.Npc = ev.Pos; sub = "Подойдите и нажмите E: редкие товары на ограниченное время"; break;
             case "meteor": ev.State = 0; ev.V = 3.2f; sub = "С неба падает свет — осколок упадёт в отмеченном месте"; break;
-            case "rift": ev.State = 0; sub = "Необязательное испытание: временная реликвия, три волны, награда за победу"; break;
+            case "rift": ev.State = 0; sub = "Испытание: реликвия на время, три волны, награда"; break;
             default: ev.Npc = ev.Pos; sub = "Подойдите [E] и проводите к освещённой земле"; break;
         }
         Announce("Событие: " + EvName(ev.Kind), sub, col, ev.Kind == "rift" ? "boss" : "discover");
@@ -280,7 +280,7 @@ public partial class Game
         if (ev.State != 0) return;
         ev.State = 1; ev.Wave = 0; ev.WaveT = 1f; ev.T = 0; ev.Life = 9999; trialT = 80f; TrialActive = true;
         var id = TempIds[ev.Seed % 4]; GrantTemp(id);
-        Announce("Испытание Тьмы началось!", $"Временная реликвия: «{Db.Relic(id).Title}». Три волны за 80 секунд — прогресс мира не затронут", new Color("#c070ff"), "boss");
+        Announce("Испытание Тьмы началось!", $"Реликвия «{Db.Relic(id).Title}»: три волны за 80 секунд", new Color("#c070ff"), "boss");
     }
 
     void UpdateRift(GEvent ev, float dt)
@@ -298,7 +298,7 @@ public partial class Game
         if (ev.Wave >= 3 && clear)
         {
             var r = new Random(ev.Seed); Inv[It.Coins] += 60 + r.Next(40); GrantTag(RollTag(r, 3, .5f), ev.Pos); Give(It.AncCrystal, 1, ev.Pos + new Vector2(0, -10));
-            Announce("Испытание пройдено!", "Награда: монеты, редкая находка и древний кристалл. Временная реликвия исчезла", new Color("#ffe27a"), "ancient"); GiveXp(120); ev.Done = true;
+            Announce("Испытание пройдено!", "Награда: монеты, находка и кристалл", new Color("#ffe27a"), "ancient"); GiveXp(120); ev.Done = true;
         }
         else if (trialT <= 0 || ev.Pos.DistanceTo(PPos) > 30 * TS) { Announce("Испытание провалено", "Ничего не потеряно — разлом закрылся", new Color("#9aa6bf"), "error"); ev.Done = true; }
     }

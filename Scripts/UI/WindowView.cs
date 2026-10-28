@@ -75,8 +75,8 @@ public partial class WindowView : Control
     }
 
     /// <summary>Строка в списке слева (или единственном).</summary>
-    public void Row(int idx, bool sel, string left, string right, Color col, string sub = null, Color? subCol = null, bool btn = false, bool disabled = false)
-        => TakeRow(false).Set(idx, btn, sel, disabled, Loc.T(left), right == null ? null : Loc.T(right), col, null, sub == null ? null : Loc.T(sub), subCol);
+    public void Row(int idx, bool sel, string left, string right, Color col, string sub = null, Color? subCol = null, bool btn = false, bool disabled = false, Texture2D icon = null, Color? rightCol = null)
+        => TakeRow(false).Set(idx, btn, sel, disabled, Loc.T(left), right == null ? null : Loc.T(right), col, rightCol, sub == null ? null : Loc.T(sub), subCol, icon);
 
     public void Cols(int idx, bool sel, string[] t, float[] w, Color[] c, string right, Color rightCol)
     { for (int i = 0; i < t.Length; i++) t[i] = Loc.T(t[i]); TakeRow(false).SetCols(idx, sel, t, w, c, right, rightCol); }
@@ -105,6 +105,14 @@ public partial class WindowView : Control
     public void Rich(string plain, int visible)
     {
         var l = TakeRich(false); TextFx.Apply(l, plain, new Color("#d8e0f0"), 0); l.VisibleCharacters = visible;
+    }
+
+    /// <summary>Готовый BBCode-текст в панели подробностей (цвета заданы тегами; без автораскраски).</summary>
+    public void Bb(bool detail, string bbcode, Color baseCol)
+    {
+        var l = TakeRich(detail); l.BbcodeEnabled = true; l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        if (l.Text != bbcode) l.Text = bbcode; l.VisibleCharacters = -1; l.AddThemeColorOverride("default_color", baseCol);
+        l.SetMeta("k", bbcode);
     }
 
     /// <summary>Конец кадра: прячет неиспользованные узлы.</summary>

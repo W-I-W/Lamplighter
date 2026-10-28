@@ -35,7 +35,7 @@ public partial class Game
         S(.25f, () => { WinTab = 2; });
         foreach (var m in new[] { Mn.Main, Mn.Pause, Mn.Settings, Mn.Keys, Mn.Slots, Mn.Achv, Mn.Credits })
         { var mm = m; S(.25f, () => { CloseWindows(); MenuBack = Mn.Pause; OpenMenu(mm); }); }
-        S(.25f, () => { AskConfirm("Загрузить это сохранение? Несохранённый прогресс будет потерян.", () => { }, Mn.Pause); });
+        S(.25f, () => { AskConfirm("Загрузить? Несохранённое пропадёт.", () => { }, Mn.Pause); });
         S(.25f, () => { Menu = Mn.None; FinStage = 2; FinScene = 1; });
         S(.25f, () => { FinStage = 3; FinT = 3; });
         S(.25f, () => { FinStage = 0; Menu = Mn.None; Announce("Разлом пройден! Уровень 2", "Осколков разлома: +7", Colors.White); });

@@ -48,17 +48,32 @@ public partial class Hud
 
     void DrawEquip(Vector2 vs)
     {
-        wv.Begin(vs, "Экипировка", Cyan, "←/→ вкладка · ↑/↓ выбор · Enter действие · C/Esc закрыть", new Vector2(600, 330), 190);
+        wv.Begin(vs, "Экипировка", Cyan, G.WinTab == 2 ? "←/→ вкладка · ↑/↓ выбор · Enter создать · Q количество · C/Esc закрыть" : "←/→ вкладка · ↑/↓ · Enter создать · Q кол-во · Esc", new Vector2(600, 330), 190);
         wv.SetTabs(Game.EquipTabs, G.WinTab);
         int fit = wv.Fit(11);
         switch (G.WinTab)
         {
             case 0:
                 {
-                    wv.Row(0, Sel(0), "Кирка", G.CurW == -1 ? "в руках" : null, G.CurW == -1 ? Gold : Text);
-                    for (int i = 0; i < G.Owned.Count; i++) { var d = Db.Weapon(G.Owned[i].Id); wv.Row(i + 1, Sel(i + 1), d.Name, (G.CurW == i ? "★ " : "") + Db.ClassNames[(int)d.Cls], Db.RarCol[(int)d.Rar]); }
-                    int sel = G.WinCur - 1; var w = sel >= 0 && sel < G.Owned.Count ? Db.Weapon(G.Owned[sel].Id) : null;
-                    if (w == null) { Det("Кирка: добыча руды и слабый удар. Оружие даёт классовое поведение: меч — дуга по области, лук — стрелы, посох — магические шары.", Dim); break; }
+                    var tl = G.ToolList(); int nt = tl.Count;
+                    string Slot(string r) { int sl = G.HotSlotOf(r); return sl >= 0 ? $"[{sl + 1}]" : ""; }
+                    for (int i = 0; i < nt; i++)
+                    {
+                        var td = ToolDef.Get(tl[i]); bool held = G.CurW == -1 && G.CurTool == tl[i]; string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name;
+                        wv.Row(i, Sel(i), nm, ((held ? "★ " : "") + Slot(Game.RefTool(tl[i]))).Trim(), held ? Gold : Text);
+                    }
+                    for (int i = 0; i < G.Owned.Count; i++) { var d = Db.Weapon(G.Owned[i].Id); wv.Row(nt + i, Sel(nt + i), d.Name, ((G.CurW == i ? "★ " : "") + Slot(Game.RefWeapon(d.Id)) + " " + Db.ClassNames[(int)d.Cls]).Trim(), Db.RarCol[(int)d.Rar]); }
+                    if (G.WinCur < nt)
+                    {
+                        var td = ToolDef.Get(tl[G.WinCur]); string nm = tl[G.WinCur] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name;
+                        Det($"{nm} · {Loc.T("инструмент")}", Gold, false); Det(td.Desc, Dim);
+                        Det($"{Loc.T("Урон врагам")}: {Mathf.RoundToInt(td.CombatDamage * 100)}% {Loc.T("базового")} · {Loc.T("добыча")} ×{td.MiningPower:0.#}", Text, false);
+                        Det($"{Loc.T("Дерево")} ×{td.EffWood:0.#} · {Loc.T("Камень")} ×{td.EffStone:0.#} · {Loc.T("Руда")} ×{td.EffOre:0.#} · {Loc.T("Завалы")} ×{td.EffRubble:0.#}", Dim, true);
+                        Det("[Enter] в руки · [Shift]+[1-8] в хотбар · [X] убрать", Hint, true);
+                        break;
+                    }
+                    int sel = G.WinCur - nt; var w = sel >= 0 && sel < G.Owned.Count ? Db.Weapon(G.Owned[sel].Id) : null;
+                    if (w == null) break;
                     Det($"{w.Name} · {Db.RarName[(int)w.Rar]}", Db.RarCol[(int)w.Rar], false); Det(w.Desc, Dim);
                     Det($"Урон {G.WeaponDmg(w):0.#} · темп {1f / w.Cd:0.0}/с · слотов {w.Slots}", Text, false);
                     var ow = G.Owned[sel]; Det("Вставки (Backspace — снять):", Gold, false);
@@ -66,13 +81,14 @@ public partial class Hud
                     Det("Ваши вставки (цифра — вставить):", Gold, false);
                     for (int m = 0; m < Db.Mods.Length; m++) Det($"[{m + 1}] {Db.Mods[m].Name} ×{G.ModInv[m]}", G.ModInv[m] > 0 ? Text : Muted, false);
                     Det("Эффекты: " + EffText(), Hint, true, 2);
+                    Det("[Enter] в руки · [Shift]+[1-8] в хотбар · [X] убрать", Hint, true);
                     break;
                 }
             case 1:
                 {
                     wv.Text(false, $"Слоты: {G.EquippedRelics.Count}/{G.RelicSlots}", Dim, false); int sc = Scroll(G.WinCur, fit - 1);
                     for (int i = sc; i < G.OwnedRelics.Count && i < sc + fit - 1; i++) { var d = Db.Relic(G.OwnedRelics[i]); if (d == null) continue; bool eq = G.EquippedRelics.Contains(d.Id); wv.Row(i, Sel(i), (eq ? "✓ " : "  ") + d.Title, null, eq ? Good : Db.RarCol[d.Rarity]); }
-                    if (G.OwnedRelics.Count == 0) wv.Text(false, "Реликвий пока нет: ищите их в сундуках, тайниках, у торговцев и за боссов", Dim);
+                    if (G.OwnedRelics.Count == 0) wv.Text(false, "Реликвий нет: ищите в сундуках и у торговцев", Dim);
                     if (G.WinCur < G.OwnedRelics.Count)
                     {
                         var d = Db.Relic(G.OwnedRelics[G.WinCur]);
@@ -85,43 +101,56 @@ public partial class Hud
                 }
             case 2:
                 {
-                    var ws = G.CraftableWeapons(); int total = ws.Count + Db.Mods.Length; int sc = Scroll(G.WinCur, fit);
-                    for (int i = sc; i < total && i < sc + fit; i++)
+                    var rows = G.CraftRows(); int sc = Scroll(G.WinCur, fit);
+                    Texture2D GroupIcon(string g) => g == "hand" ? UiIcons.Item(UiIcons.Pickaxe) : g == "furnace" ? UiIcons.Tile(Art.Furnace) : UiIcons.Tile(Art.Forge);
+                    for (int i = sc; i < rows.Count && i < sc + fit; i++)
                     {
-                        string nm, cost; Color col;
-                        if (i < ws.Count) { var w = ws[i]; bool have = G.HasWeapon(w.Id), okb = G.BpOk(w.Bp); nm = w.Name; cost = have ? "есть" : !okb ? "чертёж" : ""; col = have ? Dim : !okb ? Muted : G.Can(w.Cost) ? Good : Warn; }
-                        else { var m = Db.Mods[i - ws.Count]; nm = "Вставка: " + m.Name; cost = !G.BpOk(m.Bp) ? "чертёж" : ""; col = !G.BpOk(m.Bp) ? Muted : G.Can(m.Cost) ? Good : Warn; }
-                        wv.Row(i, Sel(i), nm, cost == "" ? null : cost, col);
+                        var (grp, rec) = rows[i];
+                        if (rec == null)
+                        {
+                            int cnt = G.RecipesOf(grp).Count; bool fold = G.CraftFold.Contains(grp); bool flash = grp != "hand" && G.StationFlashT > 0 && ((int)(G.UiTime * 8) % 2 == 0);
+                            wv.Row(i, Sel(i), (fold ? "+ " : "- ") + Game.GroupName(grp), cnt.ToString(), flash ? Colors.White : Gold, null, null, false, false, GroupIcon(grp));
+                            continue;
+                        }
+                        var st = G.StateOf(rec);
+                        var col = st == RecState.Ready ? Good : st == RecState.Owned ? Dim : Warn;
+                        string right = st == RecState.Owned ? "есть" : st == RecState.Missing ? "не хватает" : (rec.Extra != null && rec.Extra() > 0 ? $"в очереди {rec.Extra()}" : null);
+                        wv.Row(i, Sel(i), "   " + rec.Name, right, col, null, null, false, false, rec.Icon >= 0 ? UiIcons.Item(rec.Icon) : null, st == RecState.Missing ? Bad : null);
                     }
-                    if (G.WinCur < ws.Count)
+                    if (G.WinCur >= rows.Count) break;
+                    var (sg, sr) = rows[G.WinCur];
+                    if (sr == null)
                     {
-                        var w = ws[G.WinCur]; Det(w.Name, Db.RarCol[(int)w.Rar], false);
-                        Det($"{Db.ClassNames[(int)w.Cls]} · урон {w.Dmg} · слотов {w.Slots}", Text, false); Det(w.Desc, Dim);
-                        Det("Нужно: " + G.NeedStr(w.Cost), Gold);
-                        if (w.Bp != null) Det("Чертёж: " + Db.Bp(w.Bp).Name + (G.BpDone.Contains(w.Bp) ? " ✓" : $" ({G.Frag.GetValueOrDefault(w.Bp)}/{Db.Bp(w.Bp).Need})"), G.BpDone.Contains(w.Bp) ? Good : Warn);
+                        Det(Game.GroupName(sg), Gold, false);
+                        Det(sg == "hand" ? "Простые вещи, которые можно сделать где угодно." : "Рецепты станции доступны, пока вы рядом с ней. Отойдёте — группа пропадёт.", Dim);
+                        Det($"Рецептов: {G.RecipesOf(sg).Count} · [Enter] — свернуть или развернуть", Text, false);
+                        break;
                     }
-                    else
+                    var stt = G.StateOf(sr);
+                    Det(sr.Name, stt == RecState.Ready ? Good : stt == RecState.Owned ? Dim : Warn, false); Det(sr.Desc, Dim);
+                    var scost = sr.CostNow;
+                    if (scost != null)
                     {
-                        var m = Db.Mods[G.WinCur - ws.Count]; Det("Вставка: " + m.Name, Gold, false);
-                        Det(m.Desc + (m.Tag != null ? $" · тег «{m.Tag}» для синергий" : ""), Dim);
-                        Det("Нужно: " + G.NeedStr(m.Cost), Gold);
-                        Det("Чертёж: " + Db.Bp(m.Bp).Name + (G.BpDone.Contains(m.Bp) ? " ✓" : $" ({G.Frag.GetValueOrDefault(m.Bp)}/{Db.Bp(m.Bp).Need})"), G.BpDone.Contains(m.Bp) ? Good : Warn);
+                        var sb = new System.Text.StringBuilder(Loc.T("Нужно") + ":\n");
+                        foreach (var c in scost) { int have = G.Inv[c[0]]; string clr = have >= c[1] ? "#9be07a" : "#f06a5e"; sb.Append($"[color={clr}]{It.Ic(c[0])}{Loc.T(It.Names[c[0]])} {have}/{c[1]}[/color]\n"); }
+                        wv.Bb(true, sb.ToString().TrimEnd(), Text);
                     }
-                    Det("Создаётся рядом с печью или кузницей", Dim, false);
+                    if (sr.Multi) Det($"{Loc.T("Количество")}: ×{(Game.QtySteps[G.CraftQty] == int.MaxValue ? Loc.T("макс.") + $" ({Math.Max(1, G.MaxCraft(sr))})" : Game.QtySteps[G.CraftQty].ToString())} · [Q]", Gold, false);
+                    Det(stt == RecState.Ready ? "[Enter] — создать" : stt == RecState.Owned ? "Уже есть" : "Не хватает материалов", stt == RecState.Ready ? Good : stt == RecState.Owned ? Dim : Bad, false);
                     break;
                 }
             default:
                 {
                     Det($"Фонарь героя: уровень {G.HeroLampLv}/3", new Color("#fff2b0"), false);
                     Det($"Радиус света: {(int)G.PlayerLightR} px", Text, false);
-                    Det("Каждый уровень: +12% радиуса. Ур.2: свет жжёт врагов вокруг. Ур.3: мощная аура.", Dim);
+                    Det("Уровень: +12% радиуса. Ур.2: свет жжёт. Ур.3: аура", Dim);
                     if (G.HeroLampLv < 3)
                     {
                         var c = Game.HeroCostFor(G.HeroLampLv); Det($"Следующий уровень: {G.NeedStr(c)}", G.Can(c) ? Good : Warn);
                         Det(G.BpDone.Contains("bp_herolamp") ? "[Enter] улучшить" : "Нужен чертёж «Фонарь героя» (журнал [J])", G.BpDone.Contains("bp_herolamp") ? Gold : Warn);
                     }
                     int cry = 0; foreach (var l in G.Lamps) if (l.Kind == 2) cry++;
-                    Det($"Фонарей: {G.Lamps.Count} (кристальных {cry}). Светокристаллы усиливают соседние фонари на 12% каждый (до 3)", Dim);
+                    Det($"Фонарей: {G.Lamps.Count} (кристальных {cry}) · кристаллы +12% (до 3)", Dim);
                     break;
                 }
         }
@@ -134,7 +163,7 @@ public partial class Hud
         wv.SetTabs(new[] { "Чертежи", "Находки", "Цели" }, G.WinTab); int vis = wv.Fit(11, 24);
         if (G.WinTab == 0)
         {
-            wv.Text(false, $"Собрано чертежей: {G.BpDone.Count}/{Db.Bps.Length}. Недостающие фрагменты — в лавке.", Dim, false); int sc = Scroll(G.WinCur, vis);
+            wv.Text(false, $"Чертежей: {G.BpDone.Count}/{Db.Bps.Length}. Остальные — в лавке", Dim, false); int sc = Scroll(G.WinCur, vis);
             for (int i = sc; i < Db.Bps.Length && i < sc + vis; i++) { var b = Db.Bps[i]; bool ok = G.BpDone.Contains(b.Id); int fr = G.Frag.GetValueOrDefault(b.Id); wv.Row(i, Sel(i), (ok ? "✓ " : "  ") + b.Name, ok ? "изучен" : $"{fr}/{b.Need}", ok ? Good : fr > 0 ? Warn : Dim); }
             if (G.WinCur < Db.Bps.Length) wv.Text(false, Db.Bps[G.WinCur].Desc, Hint, true, 2);
         }
@@ -146,7 +175,7 @@ public partial class Hud
         }
         else
         {
-            if (G.Found.Count == 0) wv.Text(false, "Редких находок пока нет — исследуйте сундуки, тайники, обелиски и события.", Dim);
+            if (G.Found.Count == 0) wv.Text(false, "Редких находок нет: ищите в сундуках и тайниках", Dim);
             int sc = Scroll(G.WinCur, vis);
             for (int i = sc; i < G.Found.Count && i < sc + vis; i++) { var s = G.Found[i]; Color col = Text; for (int k = 0; k < 5; k++) if (s.StartsWith(Db.RarName[k])) col = Db.RarCol[k]; wv.Row(i, Sel(i), s, null, col); }
         }
@@ -157,13 +186,13 @@ public partial class Hud
 
     void DrawProd(Vector2 vs)
     {
-        wv.Begin(vs, "Производство", new Color("#ff9a2e"), "↑/↓ здание · ←/→ режим · 1/2/3 приоритет · Enter пауза · U улучшить · P/Esc", new Vector2(600, 330));
+        wv.Begin(vs, "Производство", new Color("#ff9a2e"), "↑/↓ здание · ←/→ режим · 1-3 приоритет · Enter пауза · U ап", new Vector2(600, 330));
         var list = G.ProdList();
         for (int i = 0, sh = 0; i < It.Count && sh < 12; i++) if (G.Stock[i] > 0) { wv.Chip(Icon(i), G.Stock[i].ToString(), Text); sh++; }
         wv.Text(false, $"Склад {G.StockTotal}/{G.StockCap} на ресурс · скорость ×{G.ProdMul:F2} · жителей {G.Villagers.Count}", Dim, false);
         float[] ws = { 100, 20, 72, 56, 66, 0 };
         wv.Cols(-1, false, new[] { "Здание", "Ур", "Состояние", "Связь", "Приоритет", "Режим" }, ws, new[] { Gold, Gold, Gold, Gold, Gold, Gold }, null, Dim);
-        if (list.Count == 0) wv.Text(false, "Производственных зданий нет: стройте лесопилку [5], шахту [6], кузницу [7], цех [B] — они работают сами.", Dim);
+        if (list.Count == 0) wv.Text(false, "Нет зданий: стройте лесопилку, шахту, цех [B]", Dim);
         int vis = wv.Fit(11, 60), sc = Scroll(G.WinCur, vis);
         for (int i = sc; i < list.Count && i < sc + vis; i++)
         {
@@ -173,7 +202,7 @@ public partial class Hud
                 new[] { b.Off ? Dim : Text, Gold, b.Status == 0 && !b.Off ? Good : b.Status == 4 || b.Off ? Dim : Warn, lk ? Good : Bad, b.Prio == 0 ? Warn : b.Prio == 2 ? Dim : Text, Cyan },
                 $"{(int)(b.Prog / Mathf.Max(.1f, Game.BIntervalOf(bk, b.Level)) * 100)}%", Dim);
         }
-        wv.Text(false, "Приоритет задаёт, кто первым берёт сырьё со склада. Режим выбирает продукт. Здания вне радиуса склада копят продукцию у себя — соединяйте узлами снабжения.", Dim, true, 3);
+        wv.Text(false, "Приоритет: кто первым берёт сырьё. Режим: продукт. Далеко от склада — соединяйте узлами", Dim, true, 3);
     }
 
     // ───────────────────────── торговля ─────────────────────────
@@ -185,7 +214,7 @@ public partial class Hud
         int vis = wv.Fit(11, 36);
         if (G.TradeTab == 0)
         {
-            if (G.CurOffers.Count == 0) wv.Text(false, "Сегодня нет товаров. Улучшайте лавку и продвигайтесь по миру — ассортимент растёт.", Dim);
+            if (G.CurOffers.Count == 0) wv.Text(false, "Товаров нет. Улучшайте лавку", Dim);
             int sc = Scroll(G.WinCur, vis);
             for (int i = sc; i < G.CurOffers.Count && i < sc + vis; i++) { var o = G.CurOffers[i]; bool bought = G.OfferBought(o); wv.Row(i, Sel(i), (bought ? "✓ " : "") + o.Title, bought ? "куплено" : $"{o.Price}", bought ? Dim : G.Inv[It.Coins] >= o.Price ? Db.RarCol[(int)o.Rar] : Warn); }
             if (G.WinCur < G.CurOffers.Count) wv.Text(false, G.CurOffers[G.WinCur].Desc, Hint, true, 2);

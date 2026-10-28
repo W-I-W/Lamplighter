@@ -37,15 +37,17 @@ public partial class BuildMenu : Control
         {
             bool has = i < list.Count; slots[i].Visible = has; if (!has) continue; var e = list[i];
             var st = i == G.WinCur ? SlotState.Selected : !e.Unlocked ? SlotState.Disabled : e.Affordable ? SlotState.Ok : SlotState.Normal;
-            slots[i].Set(UiIcons.Tile(e.Tile), "", "", st, 0, "", e.Unlocked ? 1f : .35f);
+            slots[i].Set(UiIcons.Tile(e.Tile), e.Stock > 0 ? "x" + e.Stock : "", "", st, 0, "", e.Unlocked ? 1f : .35f);
         }
         if (list.Count == 0) { nameL.Text = ""; return; }
         var s = list[G.WinCur]; nameL.Text = Loc.T(s.Name); preview.Texture = UiIcons.Tile(s.Tile); preview.Modulate = new Color(1, 1, 1, s.Unlocked ? 1f : .4f);
         hint.Text = Loc.T(s.Hint);
         if (!s.Unlocked) { status.Text = Loc.T("Закрыто: ") + Loc.T(s.Lock); status.AddThemeColorOverride("font_color", new Color("#ffb36a")); }
+        else if (s.Stock > 0) { status.Text = Loc.T("В запасе: ") + s.Stock + Loc.T(" · [Enter] поставить"); status.AddThemeColorOverride("font_color", new Color("#9be07a")); }
+        else if (s.CostArr == null) { status.Text = Loc.T("Уже построено"); status.AddThemeColorOverride("font_color", new Color("#9fd8ff")); }
         else if (!s.Affordable) { status.Text = Loc.T("Не хватает: ") + Loc.T(G.MissingText(s.CostArr)); status.AddThemeColorOverride("font_color", new Color("#ffb36a")); }
-        else { status.Text = Loc.T("Можно строить"); status.AddThemeColorOverride("font_color", new Color("#9be07a")); }
+        else { status.Text = Loc.T("Хватает: [Enter] создать"); status.AddThemeColorOverride("font_color", new Color("#ffd23f")); }
         cost.Text = s.CostArr == null ? "" : Loc.T("Цена: ") + G.NeedShortText(s.CostArr);
-        place.Text = Loc.T("Enter — выбрать, затем курсор на свободную клетку рядом: она подсветится зелёным");
+        place.Text = Loc.T("[Enter] создать/поставить · [Q] ещё один · [ЛКМ] поставить · [X] разобрать");
     }
 }

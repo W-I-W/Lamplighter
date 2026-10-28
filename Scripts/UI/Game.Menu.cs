@@ -113,7 +113,7 @@ public partial class Game
         switch (i)
         {
             case 0: if (HasSave) CloseMenu(); else Sfx.Play("error"); break;
-            case 1: if (HasSave) AskConfirm("Начать новую игру? Текущее сохранение будет заменено (копия останется в save_prev.json).", NewGame, Mn.Main); else NewGame(); break;
+            case 1: if (HasSave) AskConfirm("Начать заново? Сохранение будет заменено.", NewGame, Mn.Main); else NewGame(); break;
             case 2: MenuBack = Mn.Main; SlotSaveMode = false; OpenMenu(Mn.Slots); break;
             case 3: MenuBack = Mn.Main; OpenMenu(Mn.Settings); break;
             case 4: MenuBack = Mn.Main; OpenMenu(Mn.Achv); break;
@@ -203,7 +203,7 @@ public partial class Game
             return;
         }
         if (!Slots[i].Exists) { Sfx.Play("error"); return; }
-        AskConfirm("Загрузить это сохранение? Несохранённый прогресс будет потерян.", () => LoadSlot(i), Mn.Slots);
+        AskConfirm("Загрузить? Несохранённое пропадёт.", () => LoadSlot(i), Mn.Slots);
     }
 
     void LoadSlot(int i)

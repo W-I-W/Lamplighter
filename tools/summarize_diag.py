@@ -1,4 +1,4 @@
-"""Summarize user://diagnostics_log.jsonl (Windows: %APPDATA%\Godot\app_userdata\Lanternreach\ or Lamplighter) into milestones."""
+"""Summarize user://diagnostics_log.jsonl (Windows: %APPDATA%\Godot\app_userdata\Lanther\ or Lamplighter) into milestones."""
 import json, sys, glob, os
 p = sys.argv[1] if len(sys.argv) > 1 else glob.glob(os.path.expandvars(r'%APPDATA%\Godot\app_userdata\*\diagnostics_log.jsonl'))[0]
 rows = [json.loads(l) for l in open(p, encoding='utf-8') if l.strip()]
