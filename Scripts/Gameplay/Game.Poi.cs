@@ -139,7 +139,7 @@ public partial class Game
         foreach (var (item, n) in got)
         {
             Inv[item] += n; parts.Add($"{n} {It.Ab[item]}");
-            Texts.Add(new FText { P = p.Pos + new Vector2((k % 3 - 1) * 16, -10 - (k / 3) * 8), S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.6f, C = It.Col[item] }); k++;
+            Texts.Add(new FText { P = p.Pos + new Vector2(0, -10 - k * 13), S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.6f, C = It.Col[item] }); k++;
         }
         SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); p.State = 3; GiveXp(15 + tier * 5);
         Burst(p.Pos, new Color("#ffe27a"), 18, 80);

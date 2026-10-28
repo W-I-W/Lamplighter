@@ -132,7 +132,9 @@ public partial class Game : Node2D
         AddChild(new Sfx()); AddChild(new Music());
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != "";
         testDir = OS.GetEnvironment("LAMP_AUTOTEST");
-        if (!LoadGame()) NewWorld(testing ? 4242 : (int)(rng.Randi() % 1000000));
+        if (NetService.Role == NetRole.Client && NetService.WorldSeed.HasValue) { NewWorld(NetService.WorldSeed.Value); PPos = NetService.SpawnPos + new Vector2(14, 0); }   // клиент: мир хоста, не локальное сохранение
+        else if (!LoadGame()) NewWorld(testing ? 4242 : (int)(rng.Randi() % 1000000));
+        InitNet(); StartNetFromEnv();
         if (Upgrades == null) InitUpgrades(null);
         ApplyBeaconRadius();
         InitVillage();
@@ -250,6 +252,7 @@ public partial class Game : Node2D
 
     public void Save()
     {
+        if (NetService.Role == NetRole.Client) return;           // клиент не пишет мир хоста поверх локального сохранения
         try
         {
             while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
@@ -425,6 +428,7 @@ public partial class Game : Node2D
     // ───────────────────────── ввод ─────────────────────────
     public override void _Input(InputEvent e)
     {
+        if (Menu == Mn.NetJoin && e is InputEventKey nk && nk.Pressed) { NetJoinKey(nk); return; }
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
         if (HotDragInput(e)) return;
         if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
@@ -522,7 +526,7 @@ public partial class Game : Node2D
         UpdateEnemies(dt);
         UpdateProjectiles(dt);
         UpdateBeacons(dt);
-        UpdateBossSpawn(dt); Upgrades?.Tick(dt);
+        UpdateBossSpawn(dt); Upgrades?.Tick(dt); UpdateNet(dt);
         UpdateSpawning(dt);
         UpdateVillage(dt);
         UpdatePois(dt);

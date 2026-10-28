@@ -96,6 +96,11 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "veg") { BuildVegScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "items") { BuildItemsScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "trees") { BuildTreesScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "netsteam") { BuildNetSteamScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "steamprobe") { BuildSteamProbeScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "netmenu") { BuildNetMenuScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "nethost") { BuildNetScript(true); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "netjoin") { BuildNetScript(false); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "upgrades") { BuildUpgradesScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interact") { BuildInteractScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interactload") { BuildInteractLoadScript(); return; }

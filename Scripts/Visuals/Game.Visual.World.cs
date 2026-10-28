@@ -103,6 +103,7 @@ public partial class Game
         foreach (var d in deaths) { var dd = d; list.Add((d.Pos.Y, () => DrawDeath(c, dd))); }
         foreach (var v in Villagers) { var vv = v; list.Add((v.Pos.Y, () => DrawVillager(c, vv))); }
         list.Add((PPos.Y, () => { DrawCosmetic(c); DrawPlayer(c); }));
+        AddRemoteDraws(list, c);
         list.Sort((a, b) => a.y.CompareTo(b.y));
         foreach (var l in list) l.a();
 

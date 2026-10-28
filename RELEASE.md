@@ -130,3 +130,11 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 - Opening a category: banner «Открыта категория», pixel sparks, gold tab icon with a pulsing «new» star until it is viewed, tab appear animation on the next window open.
 - UI is built by `tools/GraphicsGenerator/make_upgrade_ui.py` (`UpgradeWindow.tscn`, `UpgradeEntry.tscn`, `UpgradeTheme.tres`, state icons); scripts `Scripts/UI/Upgrades/`.
 - Tests: `LAMP_STAGE=upgrades` (part of `tools/run_checks.ps1`).
+
+## Multiplayer foundation (stage 7.5, part 1)
+
+* `Scripts/Net`: isolated transport layer (`INetTransport`: ENet + Steam via GodotSteam called dynamically), `NetService`/`NetNode` (host-authoritative handshake, version check, roster, position snapshots), remote characters with names and health bars, connection indicator.
+* Menu: «Мультиплеер» (host on LAN, join by address, Steam lobby/join if GodotSteam + Steam are available), «Сеть» in the pause menu.
+* Single player is unchanged; a client never writes the local save. See `docs/MULTIPLAYER.md` for what is verified and what is not.
+* Dev-only `steam_appid.txt` (480) is git-ignored and excluded from export; the release build needs the project's own AppID and GodotSteam export templates.
+* Tests: `tools/run_checks.ps1` (stages `net*`, two-process ENet checks, real Steam host check); `-NetOnly` runs only the network ones.

@@ -78,6 +78,39 @@ public partial class Hud
                     mv.Line($"{Loc.T("Версия")} {Game.VersionStr} · {Game.BuildStr}", new Vector2(0, vs.Y - 25), vs.X, false, Dim);
                     break;
                 }
+            case Mn.Multi:
+                {
+                    wv.Begin(vs, "Мультиплеер", Gold, "↑/↓ · Enter · Esc — назад", new Vector2(360, 230), 0, .82f);
+                    string[] rows = { "Создать игру (локальная сеть)", "Присоединиться по адресу", "Steam: создать лобби", "Steam: " + (G.NetFriendsOnly ? "только друзья" : "публичное лобби"), "Steam: войти по ID лобби", "Назад" };
+                    bool[] ok = { true, true, G.NetSteamOk, G.NetSteamOk, G.NetSteamOk, true };
+                    for (int i = 0; i < rows.Length; i++) wv.Row(i, G.MenuCur == i, rows[i], null, !ok[i] ? Muted : G.MenuCur == i ? Gold : Text, null, null, true);
+                    if (!G.NetSteamOk) wv.Text(false, Loc.T("Steam недоступен: ") + Loc.T(G.NetSteamWhy), Warn, true, 3);
+                    if (NetService.State == NetState.Failed) wv.Text(false, NetService.Status, Bad, true, 2);
+                    break;
+                }
+            case Mn.NetJoin:
+                {
+                    wv.Begin(vs, G.NetJoinSteam ? "Вход в лобби Steam" : "Подключение к игре", Gold, "Enter — подключиться · Esc — назад", new Vector2(340, 150), 0, .82f);
+                    wv.Text(false, G.NetJoinSteam ? "ID лобби:" : "Адрес хоста (порт по умолчанию 24865):", Dim);
+                    wv.Text(false, G.NetAddr + (((int)(G.UiTime * 2) % 2 == 0) ? "_" : " "), Text, false);
+                    bool busy = NetService.State == NetState.Connecting || NetService.State == NetState.Handshaking;
+                    if (NetService.Status != "") wv.Text(false, NetService.Status, NetService.State == NetState.Failed ? Bad : busy ? Cyan : Good, true, 3);
+                    break;
+                }
+            case Mn.NetInfo:
+                {
+                    wv.Begin(vs, "Сеть", Gold, "↑/↓ · Enter · Esc — назад", new Vector2(360, 230), 0, .82f);
+                    if (!NetService.Active) wv.Text(false, "Сетевая игра не запущена. Создать её можно в главном меню: «Мультиплеер».", Dim, true, 3);
+                    else
+                    {
+                        wv.Text(false, $"{Loc.T(NetService.Role == NetRole.Host ? "Вы — хост" : "Вы — клиент")} · {Loc.T(NetService.Transport?.DisplayName ?? "")} · {NetService.Count}/{NetConst.MaxPlayers}", Cyan, true, 2);
+                        foreach (var p in NetService.Players.Values) wv.Text(false, "● " + p.Name + (p.PeerId == 1 ? " " + Loc.T("(хост)") : "") + (p.PeerId == NetService.LocalId ? " " + Loc.T("(вы)") : ""), Good, false);
+                        if (NetService.Status != "") wv.Text(false, NetService.Status, Dim, true, 2);
+                    }
+                    string[] rows = { "Пригласить друзей", "Отключиться", "Назад" };
+                    for (int i = 0; i < rows.Length; i++) wv.Row(i, G.MenuCur == i, rows[i], null, G.MenuCur == i ? Gold : Text, null, null, true);
+                    break;
+                }
             case Mn.Achv:
                 {
                     wv.Begin(vs, $"{Loc.T("Достижения")} {Ach.Got.Count}/{Ach.All.Length}", Gold, "↑/↓ · Esc — назад", new Vector2(360, 300), 0, .82f);

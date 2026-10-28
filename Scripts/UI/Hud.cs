@@ -17,6 +17,7 @@ public partial class Hud : Control
 
     public override void _Ready()
     {
+        ProcessPriority = 1000;      // после игры и камеры: подписи над персонажами берут уже обновлённые позиции, иначе отстают на кадр и дрожат при ходьбе
         theme = GD.Load<Theme>(ThemePath); font = theme.DefaultFont ?? ThemeDB.FallbackFont; Theme = theme;
         wv = GD.Load<PackedScene>("res://Scenes/UI/Window.tscn").Instantiate<WindowView>(); wv.G = G; wv.ZIndex = 4050; AddChild(wv);
         mv = GD.Load<PackedScene>("res://Scenes/UI/Menu.tscn").Instantiate<MenuView>(); mv.G = G; mv.ZIndex = 4060; AddChild(mv);
@@ -79,7 +80,7 @@ public partial class Hud : Control
         if (G.Menu == Mn.Main) { DrawMenu(vs); FinishViews(); return; }
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
-        DrawMarkers(vs); DrawEventMarkers(vs); DrawStatusLabels(); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
+        DrawMarkers(vs); DrawEventMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
         float y = DrawBanners(vs); DrawToasts(vs, y);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);
@@ -237,6 +238,23 @@ public partial class Hud : Control
     }
 
     /// <summary>Подпись состояния (нет ресурсов, склад полон…) над постройкой рядом с игроком.</summary>
+    /// <summary>Сеть: имена и здоровье союзников над персонажами и компактный индикатор соединения (точка и число игроков).</summary>
+    void DrawNetLabels(Vector2 vs)
+    {
+        if (!NetService.Active) return;
+        foreach (var p in NetService.Players.Values)
+        {
+            if (!p.Handshaken || p.PeerId == NetService.LocalId) continue;
+            var sp = ToScreen(p.Shown + new Vector2(0, -17));
+            Txt(p.Name, sp + new Vector2(-45, -9), 9, new Color("#c9f0b0"), HorizontalAlignment.Center, 90);
+            float w = 16f, k = Mathf.Clamp(p.Hp / Mathf.Max(1f, p.MaxHp), 0, 1);
+            Rect(new Rect2(Mathf.Round(sp.X - w / 2), Mathf.Round(sp.Y + 1), w, 2), new Color(0, 0, 0, .7f));
+            Rect(new Rect2(Mathf.Round(sp.X - w / 2), Mathf.Round(sp.Y + 1), Mathf.Round(w * k), 2), k > .35f ? new Color("#9be07a") : new Color("#f06a5e"));
+        }
+        var col = NetService.State == NetState.Online ? new Color("#9be07a") : NetService.State == NetState.Failed ? new Color("#f06a5e") : new Color("#8ff0ff");
+        Txt($"● {NetService.Count}/{NetConst.MaxPlayers}", new Vector2(vs.X - 56, vs.Y - 14), 9, col, HorizontalAlignment.Right, 48);
+    }
+
     void DrawStatusLabels()
     {
         foreach (var b in G.Buildings)

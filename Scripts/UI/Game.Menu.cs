@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace Lamplighter;
 
-public enum Mn { None, Main, Pause, Settings, Slots, Keys, Credits, Confirm, Achv }
+public enum Mn { None, Main, Pause, Settings, Slots, Keys, Credits, Confirm, Achv, Multi, NetJoin, NetInfo }
 
 public sealed class SlotInfo { public int Slot; public bool Exists; public int Level, Beacon; public bool Finished; public string Stamp = ""; public float Secs; }
 
@@ -23,8 +23,8 @@ public partial class Game
     public float UiTime, PlaySecs;
     static bool skipMenu;
 
-    public static readonly string[] MainItems = { "Продолжить", "Новая игра", "Загрузить игру", "Настройки", "Достижения", "Титры", "Выход" };
-    public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Загрузить игру", "Настройки", "Достижения", "Титры", "В главное меню", "Выход" };
+    public static readonly string[] MainItems = { "Продолжить", "Новая игра", "Загрузить игру", "Мультиплеер", "Настройки", "Достижения", "Титры", "Выход" };
+    public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Загрузить игру", "Настройки", "Достижения", "Сеть", "Титры", "В главное меню", "Выход" };
     public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Ветер", "Частицы", "Вспышки", "Доп. эффекты", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Управление", "Назад" };
 
     public bool HasSave => File.Exists(SavePath) || File.Exists(BakPath);
@@ -33,7 +33,7 @@ public partial class Game
     string BakPath => Path.Combine(SaveDir, "save.bak");
 
     // ───────────────────────── открытие/закрытие ─────────────────────────
-    public void OpenMenu(Mn m) { Menu = m; MenuCur = 0; if (m == Mn.Slots) RefreshSlots(); if (m == Mn.Main && !HasSave) MenuCur = 1; Sfx.Play("tick", -4, 1.1f); }
+    public void OpenMenu(Mn m) { Menu = m; MenuCur = 0; if (m == Mn.Multi) RefreshNetMenu(); if (m == Mn.Slots) RefreshSlots(); if (m == Mn.Main && !HasSave) MenuCur = 1; Sfx.Play("tick", -4, 1.1f); }
     void CloseMenu() { Menu = Mn.None; RebindAction = null; Settings.Save(); }
 
     public void StartMenuOnLaunch()
@@ -45,7 +45,7 @@ public partial class Game
     public int MenuLen => Menu switch
     {
         Mn.Main => MainItems.Length, Mn.Pause => PauseItems.Length, Mn.Settings => SettingsItems.Length, Mn.Slots => 4,
-        Mn.Keys => KeyMap.Actions.Length + 2, Mn.Confirm => 2, Mn.Achv => Ach.All.Length, _ => 1
+        Mn.Keys => KeyMap.Actions.Length + 2, Mn.Confirm => 2, Mn.Achv => Ach.All.Length, Mn.Multi => 6, Mn.NetInfo => 3, _ => 1
     };
 
     // ───────────────────────── ввод ─────────────────────────
@@ -66,6 +66,8 @@ public partial class Game
             case Mn.Pause: if (enter) PauseAct(MenuCur); break;
             case Mn.Settings: SettingsKey(k, enter); break;
             case Mn.Slots: if (enter) SlotAct(MenuCur); break;
+            case Mn.Multi: if (enter) MultiAct(MenuCur); break;
+            case Mn.NetInfo: if (enter) NetInfoAct(MenuCur); break;
             case Mn.Keys: KeysKey(k, enter); break;
             case Mn.Confirm: if (k == Key.Left || k == Key.Right || k == Key.A || k == Key.D) MenuCur = 1 - MenuCur; else if (enter) { if (MenuCur == 0) confirmYes?.Invoke(); else OpenMenu(MenuBack); } break;
             case Mn.Credits: case Mn.Achv: if (enter && Menu == Mn.Credits) MenuBackKey(); break;
@@ -115,10 +117,11 @@ public partial class Game
             case 0: if (HasSave) CloseMenu(); else Sfx.Play("error"); break;
             case 1: if (HasSave) AskConfirm("Начать заново? Сохранение будет заменено.", NewGame, Mn.Main); else NewGame(); break;
             case 2: MenuBack = Mn.Main; SlotSaveMode = false; OpenMenu(Mn.Slots); break;
-            case 3: MenuBack = Mn.Main; OpenMenu(Mn.Settings); break;
-            case 4: MenuBack = Mn.Main; OpenMenu(Mn.Achv); break;
-            case 5: MenuBack = Mn.Main; OpenMenu(Mn.Credits); break;
-            case 6: Save(); GetTree().Quit(); break;
+            case 3: MenuBack = Mn.Main; OpenMenu(Mn.Multi); break;
+            case 4: MenuBack = Mn.Main; OpenMenu(Mn.Settings); break;
+            case 5: MenuBack = Mn.Main; OpenMenu(Mn.Achv); break;
+            case 6: MenuBack = Mn.Main; OpenMenu(Mn.Credits); break;
+            case 7: Save(); NetService.Leave(false); GetTree().Quit(); break;
         }
     }
 
@@ -131,9 +134,10 @@ public partial class Game
             case 2: MenuBack = Mn.Pause; SlotSaveMode = false; OpenMenu(Mn.Slots); break;
             case 3: MenuBack = Mn.Pause; OpenMenu(Mn.Settings); break;
             case 4: MenuBack = Mn.Pause; OpenMenu(Mn.Achv); break;
-            case 5: MenuBack = Mn.Pause; OpenMenu(Mn.Credits); break;
-            case 6: Save(); skipMenu = false; GetTree().ReloadCurrentScene(); break;
-            case 7: Save(); GetTree().Quit(); break;
+            case 5: MenuBack = Mn.Pause; OpenMenu(Mn.NetInfo); break;
+            case 6: MenuBack = Mn.Pause; OpenMenu(Mn.Credits); break;
+            case 7: Save(); NetService.Leave(false); skipMenu = false; forceNew = false; GetTree().ReloadCurrentScene(); break;
+            case 8: Save(); NetService.Leave(false); GetTree().Quit(); break;
         }
     }
 
