@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="UpgradeIconSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/UpgradeIconSet.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Tech = PackedStringArray("tile:13", "ui:ability_dash", "item:4", "item:23", "tile:13", "ui:ability_spin", "tile:60", "ui:ability_flare", "item:7", "ui:ability_pulse", "item:27", "tile:59", "tile:60", "item:14", "item:17", "tile:67", "item:10", "ui:ability_beam", "item:13", "item:12", "tile:71", "tile:37", "item:18", "item:12", "tile:98", "item:19", "item:19", "item:19")

@@ -48,7 +48,7 @@ public partial class Game
         recipes = new();
         int[][] C(params int[] a) { var l = new int[a.Length / 2][]; for (int i = 0; i < l.Length; i++) l[i] = new[] { a[i * 2], a[i * 2 + 1] }; return l; }
         // ручной крафт: инструменты
-        foreach (var (id, cost) in new[] { ("axe", C(It.Wood, 5, It.Stone, 3)), ("shovel", C(It.Wood, 4, It.Stone, 2)), ("hammer", C(It.Wood, 4, It.Stone, 6)) })
+        foreach (var (id, cost) in new[] { ("axe", C(It.Wood, 5, It.Stone, 3)) })
         {
             var td = ToolDef.Get(id); string tid = id; var tc = cost;
             recipes.Add(new Recipe { Id = "tool_" + id, Group = "hand", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc) });

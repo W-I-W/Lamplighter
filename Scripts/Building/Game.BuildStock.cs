@@ -21,11 +21,9 @@ public partial class Game
     public bool CraftBuild(BuildEntry e)
     {
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
-        bool unique = e.Key.StartsWith("bld");
-        if (e.CostArr == null) { Fail("Уже построено — улучшайте [U]"); return false; }
-        if (unique && e.Stock > 0) { Fail("Уже создано — поставьте её"); return false; }
-        if (!Can(e.CostArr)) { Fail("Не хватает: " + MissingStr(e.CostArr)); return false; }
-        Pay(e.CostArr); StockAdd(e.Key, 1); Sfx.Play("build", -3, 1.2f);
+        var cost = e.Raw ?? e.CostArr; if (cost == null) return false;
+        if (!Can(cost)) { Fail("Не хватает: " + MissingStr(cost)); return false; }
+        Pay(cost); StockAdd(e.Key, 1); Sfx.Play("build", -3, 1.2f);
         Toast($"Создано: {e.Name} (в запасе: {StockOf(e.Key)})"); return true;
     }
 

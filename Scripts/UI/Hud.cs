@@ -86,7 +86,6 @@ public partial class Hud : Control
         DrawEndgameHud(vs);
         if (G.Menu != Mn.None) DrawMenu(vs);
         else if (G.FinStage >= 1) DrawFinale(vs);
-        else if (G.TechOpen) DrawTech(vs);
         else if (G.MapOpen) DrawMap(vs);
         else DrawWindows(vs);
         FinishViews();

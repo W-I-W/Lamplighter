@@ -334,21 +334,6 @@ layout_mode = 2
 [node name="Slot2" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Slot3" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
-layout_mode = 2
-
-[node name="Slot4" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
-layout_mode = 2
-
-[node name="Slot5" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
-layout_mode = 2
-
-[node name="Slot6" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
-layout_mode = 2
-
-[node name="Slot7" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
-layout_mode = 2
-
 [node name="Abilities" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 1

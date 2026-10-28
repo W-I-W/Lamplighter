@@ -7,7 +7,7 @@ namespace Lamplighter;
 public sealed class GEvent
 {
     public string Kind; public Vector2 Pos; public float T, Life, V; public int State, Count, Seed; public bool Done;
-    public Vector2 Npc; public int Wave; public float WaveT;
+    public Vector2 Npc; public int Wave; public float WaveT; public int Face = 1;
 }
 
 /// <summary>Динамические события: редкие, зависят от биома и прогресса, не трогают постройки и древние фонари.</summary>

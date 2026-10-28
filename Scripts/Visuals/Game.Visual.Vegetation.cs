@@ -33,6 +33,7 @@ public partial class Game
     public void TileShake(int x, int y)
     {
         var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = TileIsPlant(tt) ? 1f : .35f;
+        if (TileIsPlant(tt)) y--;                                                       // у дерева качается крона — клетка над стволом
         for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == new Vector2I(x, y)) { tileShakes[i] = (tileShakes[i].tile, 0f, amt); return; }
         if (tileShakes.Count >= 8) tileShakes.RemoveAt(0);
         tileShakes.Add((new Vector2I(x, y), 0f, amt));
@@ -44,6 +45,7 @@ public partial class Game
     void UpdateVegetation(float dt)
     {
         if (swayMat == null) return;
+        UpdateTreeOcclusion();
         var cfg = VisualFxConfig.Get();
         var arr = new Vector4[8]; int n = 0;
         for (int i = tileShakes.Count - 1; i >= 0; i--)
@@ -74,6 +76,7 @@ public partial class Game
                 int wx = cx * CS + x, wy = cy * CS + y, k = wy * World.Wd + wx;
                 if (World.RegionOf(wx) != 0 || W.Ground[k] > 3 || W.Obj[k] != (byte)Tl.None) continue;
                 uint h = FoliageHash(wx, wy, W.Seed); float r = (h & 0xffff) / 65535f; if (r > dens) continue;
+                if (CutBush.Contains(k)) continue;
                 float q = r / dens; int id = q < .52f ? FoliageTuft : q < .74f ? FoliageTall : q < .90f ? FoliageFlowers : FoliageBush;
                 f.SetCell(new Vector2I(x, y), srcId, new Vector2I(id, 0));
             }

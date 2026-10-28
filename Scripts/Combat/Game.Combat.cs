@@ -369,6 +369,7 @@ public partial class Game
 
             if (!aggro)
             {
+                if (e.IsBoss && e.Hp < e.MaxHp) { e.Hp = Mathf.Min(e.MaxHp, e.Hp + e.MaxHp * .06f * dt); if (rng.Randf() < dt * 6) Burst(e.Pos + new Vector2(0, -8), new Color("#9be07a"), 1, 20); }   // игрок далеко — страж восстанавливает здоровье
                 if (e.Home.HasValue) { var h = e.Home.Value - e.Pos; if (h.Length() > 20) vel = h.Normalized() * 28; }
             }
             else if (e.Freeze > 0) { }

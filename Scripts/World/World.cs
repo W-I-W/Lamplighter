@@ -40,6 +40,18 @@ public sealed class Ancient
 public sealed partial class World
 {
     public const int N = 128, TS = 16;          // N — сторона области леса
+    /// <summary>Деревья двухклеточные: крона занимает клетку над стволом. Дерево, над которым стоит камень, руда или другой объект, убирается (у верхней кромки мира тоже).</summary>
+    void ClearBlockedCrowns()
+    {
+        for (int y = 0; y < Ht; y++)
+            for (int x = 0; x < Wd; x++)
+            {
+                var t = (Tl)Obj[y * Wd + x]; if (t != Tl.Tree && t != Tl.Pine && t != Tl.DeadTree) continue;
+                if (y == 0) { Obj[y * Wd + x] = (byte)Tl.None; continue; }
+                var up = (Tl)Obj[(y - 1) * Wd + x]; if (up != Tl.None && up != Tl.Tree && up != Tl.Pine && up != Tl.DeadTree) Obj[y * Wd + x] = (byte)Tl.None;
+            }
+    }
+
     public const int Wd = 640, Ht = 128;        // весь мир: лес, шахты, пустоши, монастырь, Сердце Тьмы
     public const int MX0 = 128, MX1 = 255, AX0 = 256, AX1 = 383, IX0 = 384, IX1 = 511, HX0 = 512, HX1 = 639;
     public int Seed;
@@ -141,6 +153,7 @@ public sealed partial class World
         w.GenFinds(seed, 3, 4);
         w.GenLore(seed);
         w.EnsureStoryReachable();
+        w.ClearBlockedCrowns();
         w.GenObj = (byte[])w.Obj.Clone();
         return w;
     }

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeCategoryData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/UpgradeCategoryData.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "basic"
+Title = "Основные"
+Icon = "tile:13"
+Order = 0
+Page = 0
+BiomeId = -1
+Condition = 0

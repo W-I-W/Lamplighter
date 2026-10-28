@@ -13,7 +13,7 @@ public partial class GameHud : Control
     Control status, goal, world, hint, detail, abilities;
     RichTextLabel goalTitle, goalNeeds, goalMore; Label level, lvCap, hpLabel, biome, lLabel, beacon, hintLabel, dTitle, dBody;
     ProgressBar hp, xp, goalBar, lBar;
-    UiSlot weapon; readonly UiSlot[] hot = new UiSlot[8]; readonly UiSlot[] abil = new UiSlot[5];
+    UiSlot weapon; readonly UiSlot[] hot = new UiSlot[Game.HotCount]; readonly UiSlot[] abil = new UiSlot[5];
     readonly Control[] chips = new Control[5];
     readonly int[] lastInv = new int[It.Count]; readonly float[] lastChange = new float[It.Count];
     float flashT, hintA; int flashSlot = -1; Control[] panels;
@@ -28,7 +28,7 @@ public partial class GameHud : Control
         biome = GetNode<Label>("%Biome"); lLabel = GetNode<Label>("%LLabel"); beacon = GetNode<Label>("%Beacon"); hintLabel = GetNode<Label>("%HintLabel"); dTitle = GetNode<Label>("%DTitle"); dBody = GetNode<Label>("%DBody");
         hp = GetNode<ProgressBar>("%HpBar"); xp = GetNode<ProgressBar>("%XpBar"); goalBar = GetNode<ProgressBar>("%Bar"); lBar = GetNode<ProgressBar>("%LBar");
         weapon = GetNode<UiSlot>("%Weapon");
-        var slots = GetNode("Bottom/Row/Hotbar/Slots"); for (int i = 0; i < 8; i++) hot[i] = slots.GetChild<UiSlot>(i);
+        var slots = GetNode("Bottom/Row/Hotbar/Slots"); for (int i = 0; i < Game.HotCount; i++) hot[i] = slots.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) abil[i] = abilities.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) chips[i] = GetNode<Control>($"%Chip{i}");
         abilIcons = new[] { "dash", "spin", "flare", "pulse", "beam" }.Select(n => GD.Load<Texture2D>($"res://Assets/UI/ability_{n}.png")).ToArray();
@@ -58,6 +58,17 @@ public partial class GameHud : Control
     }
 
     public void Flash(int slot) { flashSlot = slot; flashT = .9f; }
+
+    /// <summary>Номер слота хотбара под точкой (логические координаты) или -1.</summary>
+    public int HotSlotAt(Vector2 p) { for (int i = 0; i < Game.HotCount; i++) if (hot[i] != null && hot[i].IsVisibleInTree() && hot[i].GetGlobalRect().HasPoint(p)) return i; return -1; }
+
+    TextureRect dragRect;
+    void UpdateDrag()
+    {
+        if (dragRect == null) { dragRect = new TextureRect { MouseFilter = MouseFilterEnum.Ignore, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.Nearest, ZIndex = 4090, CustomMinimumSize = new Vector2(32, 32), Size = new Vector2(32, 32) }; AddChild(dragRect); }
+        int ic = G.DragIcon; dragRect.Visible = ic >= 0;
+        if (ic >= 0) { dragRect.Texture = UiIcons.Item(ic); dragRect.GlobalPosition = G.DragPos - dragRect.Size * .5f; }
+    }
 
     static string T(string s) => Loc.T(s);
 
@@ -112,7 +123,7 @@ public partial class GameHud : Control
 
     static string Short(int n) => n >= 10000 ? $"{n / 1000}k" : n >= 1000 ? $"{n / 1000f:0.#}k" : n.ToString();
 
-    /// <summary>Хотбар: инструменты и оружие. Выбранный слот — золотая рамка; клавиши 1–8, колесо мыши.</summary>
+    /// <summary>Хотбар: инструменты и оружие. Выбранный слот — золотая рамка; клавиши 1–3, колесо мыши.</summary>
     void UpdateHotbar()
     {
         for (int i = 0; i < Game.HotCount; i++)
@@ -121,7 +132,7 @@ public partial class GameHud : Control
             var st = !has ? SlotState.Disabled : i == G.HotSel ? SlotState.Selected : SlotState.Normal;
             hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f);
         }
-        weapon.Visible = false;
+        weapon.Visible = false; UpdateDrag();
     }
 
     void UpdateAbilities()

@@ -42,17 +42,17 @@ public partial class Game
         new() { Name = "Световой импульс [F]", Desc = "Награда за победу над Хранителем леса", Req = "Победите Хранителя Тёмного леса", Cost = C(), Ok = g => g.BossDown(1), Reward = true },
 
         new() { Name = "Серебряное лезвие", Desc = "+50% урона по теням; пробивает броню жуков", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 4, It.Iron, 3), Ok = g => g.LitIn(1) >= 1, Page = 1 },
-        new() { Name = "Кристальная оптика", Desc = "Открывает кристальный фонарь [9] и зеркала [0]", Req = "Добудьте кристалл", Cost = C(It.Crystal, 4, It.Silver, 3), Ok = g => g.Inv[It.Crystal] >= 1 || g.Tier >= 3, Page = 1 },
+        new() { Name = "Кристальная оптика", Desc = "Открывает кристальный фонарь и зеркала [B]", Req = "Добудьте кристалл", Cost = C(It.Crystal, 4, It.Silver, 3), Ok = g => g.Inv[It.Crystal] >= 1 || g.Tier >= 3, Page = 1 },
         new() { Name = "Боевой фонарь", Desc = "Открывает боевой фонарь [B]: жжёт врагов рядом", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 3, It.Iron, 3, It.Shard, 3), Ok = g => g.LitIn(1) >= 1, Page = 1 },
         new() { Name = "Звёздный фонарь героя", Desc = "Свет героя +25%, сильнее жжёт врагов вокруг", Req = "Изучите Линзу света", Cost = C(It.Crystal, 4, It.Silver, 4, It.Shard, 4), Ok = g => g.Has(Tech.Lens), Page = 1 },
         new() { Name = "Серебряные шестерни", Desc = "Всё производство деревни быстрее в 1,5 раза", Req = "Постройте кузницу", Cost = C(It.Silver, 6, It.Iron, 4), Ok = g => g.HasBuilding(Tl.Forge), Page = 1 },
-        new() { Name = "Автобур [Z]", Desc = "Новая постройка: сам добывает серебро и кристаллы", Req = "Фонарь в шахтах и склад", Cost = C(It.Crystal, 5, It.Silver, 5, It.Iron, 4), Ok = g => g.LitIn(1) >= 1 && g.HasBuilding(Tl.Warehouse), Page = 1 },
+        new() { Name = "Автобур [B]", Desc = "Новая постройка: сам добывает серебро и кристаллы", Req = "Фонарь в шахтах и склад", Cost = C(It.Crystal, 5, It.Silver, 5, It.Iron, 4), Ok = g => g.LitIn(1) >= 1 && g.HasBuilding(Tl.Warehouse), Page = 1 },
         new() { Name = "Болотные сапоги", Desc = "Вода почти не замедляет", Req = "Откройте путь в шахты", Cost = C(It.Silver, 3, It.Wood, 10, It.Crystal, 2), Ok = g => g.BeaconLevel >= 2, Page = 1 },
         new() { Name = "Прожектор [R]", Desc = "Награда Хранителя глубин: луч, что отражается зеркалами", Req = "Победите Хранителя глубин", Cost = C(), Ok = g => g.BossDown(2), Page = 1, Reward = true },
 
         new() { Name = "Огненное лезвие", Desc = "Удары поджигают врагов", Req = "Откройте путь в пустоши", Cost = C(It.Ember, 4, It.Iron, 4), Ok = g => g.BeaconLevel >= 3, Page = 2 },
         new() { Name = "Теплозащита", Desc = "Огонь и горячий пепел вредят на 60% меньше, дым слабее", Req = "Откройте путь в пустоши", Cost = C(It.Obsidian, 3, It.Silver, 3), Ok = g => g.BeaconLevel >= 3, Page = 2 },
-        new() { Name = "Пепельный коллектор [X]", Desc = "Новая постройка: добывает обсидиан и уголь", Req = "Откройте путь в пустоши", Cost = C(It.Obsidian, 4, It.Silver, 4, It.Crystal, 3), Ok = g => g.BeaconLevel >= 3, Page = 2 },
+        new() { Name = "Пепельный коллектор [B]", Desc = "Новая постройка: добывает обсидиан и уголь", Req = "Откройте путь в пустоши", Cost = C(It.Obsidian, 4, It.Silver, 4, It.Crystal, 3), Ok = g => g.BeaconLevel >= 3, Page = 2 },
         new() { Name = "Раскалённые горны", Desc = "Кузница работает в 2 раза быстрее", Req = "Кузница и путь в пустоши", Cost = C(It.Ember, 6, It.Obsidian, 4), Ok = g => g.BeaconLevel >= 3 && g.HasBuilding(Tl.Forge), Page = 2 },
         new() { Name = "Огненные линзы", Desc = "Фонари светят на 30% дальше, боевые поджигают", Req = "Зажгите фонарь в пустошах", Cost = C(It.Ember, 5, It.Crystal, 4, It.Obsidian, 3), Ok = g => g.LitIn(2) >= 1, Page = 2 },
         new() { Name = "Огнестойкость", Desc = "Награда Пепельного стража: иммунитет к огню и дыму", Req = "Победите Пепельного стража", Cost = C(), Ok = g => g.BossDown(3), Page = 2, Reward = true },
@@ -74,13 +74,6 @@ public partial class Game
     {
         var list = PageList(TechPage).FindAll(i => !Techs[i].Reward);
         if (n < 0 || n >= list.Count) return;
-        int i = list[n]; var t = Techs[i];
-        if (Has((Tech)i)) { Toast("Уже изучено"); return; }
-        if (!t.Ok(this)) { Fail("Пока недоступно: " + t.Req); return; }
-        if (!Can(t.Cost)) { Fail("Не хватает: " + NeedStr(t.Cost)); return; }
-        Pay(t.Cost); TechMask |= 1 << i; GiveXp(30);
-        Burst(PPos, new Color("#8ff0ff"), 20, 100);
-        Announce("Изучено: " + t.Name, t.Desc, new Color("#8ff0ff"), "tech");
-        Save();
+        LearnTech(list[n]);
     }
 }

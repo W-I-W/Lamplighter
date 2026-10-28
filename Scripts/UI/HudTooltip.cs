@@ -8,7 +8,7 @@ namespace Lamplighter;
 /// pixel-панель из темы, пиксельный шрифт, координаты округляются до целых пикселей.</summary>
 public partial class Hud
 {
-    TooltipStyle tipStyle; readonly TooltipAnimator tip = new(); float tipLast;
+    TooltipStyle tipStyle; readonly TooltipAnimator tip = new(); float tipLast; Vector2 tipPos; string tipPosKey;
 
     /// <summary>Одна визуальная строка: фрагменты, клавиша действия (если есть) и признак строки с вниманием.</summary>
     sealed class TipLine { public List<TipSpan> Spans = new(); public string Key; public bool Ok = true, Alert; public float W; }
@@ -66,6 +66,11 @@ public partial class Hud
         if (G.GameHudNode != null) { var (sl, sr) = G.GameHudNode.FreeSpan(y, y + h, vs.X, G.UiScaleVp); x = Mathf.Clamp(x, sl + 4, Mathf.Max(sl + 4, sr - 4 - w)); }
         x = Mathf.Clamp(x, 2, Mathf.Max(2, vs.X - w - 2));
         y = Mathf.Clamp(y, 2, Mathf.Max(2, vs.Y - h - 2));
+        // камера сглажена, поэтому якорь на экране плывёт на доли пикселя; подпись плавно следует за ним, а не прыгает с округлением
+        var tipTarget = new Vector2(x, y);
+        if (key != null && key != tipPosKey) { tipPosKey = key; tipPos = tipTarget; }
+        else if ((tipTarget - tipPos).Length() > .6f) tipPos += (tipTarget - tipPos) * (1f - Mathf.Exp(-dt * 20f));
+        x = tipPos.X; y = tipPos.Y;
         y += (1 - tip.Rise(st)) * st.SlidePx;
         var r = new Rect2(Mathf.Round(x), Mathf.Round(y), w, h);
 

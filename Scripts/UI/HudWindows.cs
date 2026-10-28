@@ -48,7 +48,7 @@ public partial class Hud
 
     void DrawEquip(Vector2 vs)
     {
-        wv.Begin(vs, "Экипировка", Cyan, G.WinTab == 2 ? "←/→ вкладка · ↑/↓ выбор · Enter создать · Q количество · C/Esc закрыть" : "←/→ вкладка · ↑/↓ · Enter создать · Q кол-во · Esc", new Vector2(600, 330), 190);
+        wv.Begin(vs, "Экипировка", Cyan, G.WinTab == 2 ? "←/→ вкладка · ↑/↓ выбор · Enter создать · Q количество · C/Esc закрыть" : G.WinTab == 0 ? "←/→ вкладка · ↑/↓ · Enter надеть · Esc закрыть" : "←/→ вкладка · ↑/↓ · Enter · Esc закрыть", new Vector2(600, 330), 190);
         wv.SetTabs(Game.EquipTabs, G.WinTab);
         int fit = wv.Fit(11);
         switch (G.WinTab)
@@ -68,8 +68,8 @@ public partial class Hud
                         var td = ToolDef.Get(tl[G.WinCur]); string nm = tl[G.WinCur] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name;
                         Det($"{nm} · {Loc.T("инструмент")}", Gold, false); Det(td.Desc, Dim);
                         Det($"{Loc.T("Урон врагам")}: {Mathf.RoundToInt(td.CombatDamage * 100)}% {Loc.T("базового")} · {Loc.T("добыча")} ×{td.MiningPower:0.#}", Text, false);
-                        Det($"{Loc.T("Дерево")} ×{td.EffWood:0.#} · {Loc.T("Камень")} ×{td.EffStone:0.#} · {Loc.T("Руда")} ×{td.EffOre:0.#} · {Loc.T("Завалы")} ×{td.EffRubble:0.#}", Dim, true);
-                        Det("[Enter] в руки · [Shift]+[1-8] в хотбар · [X] убрать", Hint, true);
+                        Det($"{Loc.T("Дерево")} ×{td.EffWood:0.#} · {Loc.T("Камень")} ×{td.EffStone:0.#} · {Loc.T("Руда")} ×{td.EffOre:0.#} · {Loc.T("Завалы")} ×{td.EffRubble:0.#}", Dim, true, 2);
+                        Det("[Enter] надеть · [Shift]+[1-3] в хотбар · [X] убрать", Hint, true, 2);
                         break;
                     }
                     int sel = G.WinCur - nt; var w = sel >= 0 && sel < G.Owned.Count ? Db.Weapon(G.Owned[sel].Id) : null;
@@ -81,7 +81,7 @@ public partial class Hud
                     Det("Ваши вставки (цифра — вставить):", Gold, false);
                     for (int m = 0; m < Db.Mods.Length; m++) Det($"[{m + 1}] {Db.Mods[m].Name} ×{G.ModInv[m]}", G.ModInv[m] > 0 ? Text : Muted, false);
                     Det("Эффекты: " + EffText(), Hint, true, 2);
-                    Det("[Enter] в руки · [Shift]+[1-8] в хотбар · [X] убрать", Hint, true);
+                    Det("[Enter] надеть · [Shift]+[1-3] в хотбар · [X] убрать", Hint, true, 2);
                     break;
                 }
             case 1:
@@ -122,12 +122,11 @@ public partial class Hud
                     if (sr == null)
                     {
                         Det(Game.GroupName(sg), Gold, false);
-                        Det(sg == "hand" ? "Простые вещи, которые можно сделать где угодно." : "Рецепты станции доступны, пока вы рядом с ней. Отойдёте — группа пропадёт.", Dim);
                         Det($"Рецептов: {G.RecipesOf(sg).Count} · [Enter] — свернуть или развернуть", Text, false);
                         break;
                     }
                     var stt = G.StateOf(sr);
-                    Det(sr.Name, stt == RecState.Ready ? Good : stt == RecState.Owned ? Dim : Warn, false); Det(sr.Desc, Dim);
+                    Det(sr.Name, stt == RecState.Ready ? Good : stt == RecState.Owned ? Text : Warn, false);
                     var scost = sr.CostNow;
                     if (scost != null)
                     {
@@ -136,7 +135,7 @@ public partial class Hud
                         wv.Bb(true, sb.ToString().TrimEnd(), Text);
                     }
                     if (sr.Multi) Det($"{Loc.T("Количество")}: ×{(Game.QtySteps[G.CraftQty] == int.MaxValue ? Loc.T("макс.") + $" ({Math.Max(1, G.MaxCraft(sr))})" : Game.QtySteps[G.CraftQty].ToString())} · [Q]", Gold, false);
-                    Det(stt == RecState.Ready ? "[Enter] — создать" : stt == RecState.Owned ? "Уже есть" : "Не хватает материалов", stt == RecState.Ready ? Good : stt == RecState.Owned ? Dim : Bad, false);
+                    Det(stt == RecState.Ready ? "[Enter] — создать" : stt == RecState.Owned ? "Уже есть" : "Не хватает материалов", stt == RecState.Ready ? Good : stt == RecState.Owned ? Text : Bad, false);
                     break;
                 }
             default:
@@ -228,21 +227,6 @@ public partial class Hud
             wv.Text(false, Loc.T("Спрос: ") + d, Dim, true, 2);
         }
         if (G.TradeMsg != "") wv.Text(false, G.TradeMsg, Good, false);
-    }
-
-    // ───────────────────────── улучшения ─────────────────────────
-    void DrawTech(Vector2 vs)
-    {
-        var all = Game.PageList(G.TechPage);
-        wv.Begin(vs, $"{Loc.T("Улучшения")} · {G.TechCount}/{Game.Techs.Length}", Cyan, "цифра — изучить · ←/→ вкладка · T/Esc — закрыть", new Vector2(460, 100 + all.Count * 24));
-        wv.SetTabs(Game.TechPages, G.TechPage); int num = 0;
-        for (int k = 0; k < all.Count; k++)
-        {
-            int i = all[k]; var t = Game.Techs[i]; bool own = G.Has((Tech)i), ok = t.Ok(G), can = ok && !t.Reward && G.Can(t.Cost);
-            var col = own ? Cyan : can ? Good : ok ? Warn : Muted; string key = t.Reward ? "[★]" : $"[{++num}]";
-            string right = own ? "✓" : !ok ? Loc.T("нужно: ") + Loc.T(t.Req) : t.Reward ? "награда" : Game.CostStr(t.Cost);
-            wv.Row(t.Reward ? -1 : num, false, $"{key} {t.Name}", right, col, t.Desc, own ? Dim : new Color("#a8b2c8"));
-        }
     }
 
     // ───────────────────────── карта ─────────────────────────

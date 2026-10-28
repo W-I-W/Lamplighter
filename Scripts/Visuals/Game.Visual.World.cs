@@ -142,11 +142,7 @@ public partial class Game
                 ang = d.Angle() + sg * Mathf.Lerp(.55f, -1.45f, k * k);
             }
             else ang = d.Angle() + sg * (-1.0f + t * 2.0f);
-            var a = PPos + new Vector2(0, -3); var b = a + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 13;
-            Color head = Tier == 0 ? new Color("#c9b08a") : Tier == 1 ? new Color("#e58a3d") : Tier == 2 ? new Color("#dfe8f6") : Tier == 3 ? new Color("#9fe4ff") : new Color("#a890ff");
-            var pp = new Vector2(Mathf.Cos(ang + 1.57f), Mathf.Sin(ang + 1.57f));
-            Gfx.Line(c, a, b, new Color("#6b4423"), 1.5f);
-            Gfx.Line(c, b + pp * 3, b - pp * 3, head, 2f);
+            DrawHeldItem(c, PPos + new Vector2(0, -3), ang);
         }
         if (SpinT > 0)
         {
@@ -203,11 +199,13 @@ public partial class Game
                     c.DrawTextureRectRegion(Art.TileTex, new Rect2(ev.Pos - new Vector2(8, 8), new Vector2(16, 16)), new Rect2(Art.Lantern * 16, 0, 16, 16));
                     Gfx.Rect(c, new Rect2(ev.Pos + new Vector2(-8, 9), new Vector2(16, 2)), new Color(0, 0, 0, .7f)); Gfx.Rect(c, new Rect2(ev.Pos + new Vector2(-8, 9), new Vector2(16 * Mathf.Clamp(ev.V / 60f, 0, 1), 2)), new Color("#ffe27a")); break;
                 case "trader":
-                    Shadow(c, ev.Pos, 5); c.DrawSetTransform(ev.Pos, 0, new Vector2(PPos.X < ev.Pos.X ? -1 : 1, 1));
+                    if (Mathf.Abs(PPos.X - ev.Pos.X) > 10) ev.Face = PPos.X < ev.Pos.X ? -1 : 1;
+                    Shadow(c, ev.Pos, 5); c.DrawSetTransform(ev.Pos, 0, new Vector2(ev.Face, 1));
                     DrawFrame(c, Def("trader"), (int)(Time * 2) % 2, Colors.White); c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
                     Gfx.Disc(c, ev.Pos + new Vector2(0, -16), 2.2f, new Color("#ffd86b")); break;
                 case "traveler":
-                    Shadow(c, ev.Npc, 5); c.DrawSetTransform(ev.Npc, 0, new Vector2(PPos.X < ev.Npc.X ? -1 : 1, 1));
+                    if (Mathf.Abs(PPos.X - ev.Npc.X) > 10) ev.Face = PPos.X < ev.Npc.X ? -1 : 1;
+                    Shadow(c, ev.Npc, 5); c.DrawSetTransform(ev.Npc, 0, new Vector2(ev.Face, 1));
                     DrawFrame(c, Def("traveler"), (int)(Time * (ev.State == 1 ? 6 : 2)) % 2, Colors.White); c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
                     if (ev.State == 0) Gfx.Disc(c, ev.Npc + new Vector2(0, -16), 2.2f, new Color("#8ff0ff")); break;
                 case "meteor":

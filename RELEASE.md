@@ -121,3 +121,12 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 - **Building** (`B`): choosing a building closes the menu and starts placement (ghost under the cursor, green/red, LMB builds, RMB/Esc cancels); LMB over UI never hits or mines.
 - Digit keys no longer build; use `B` (`9`/`0` still place the crystal lantern and mirror).
 - Test: `LAMP_STAGE=items` (part of `tools/run_checks.ps1`).
+
+## Upgrades window and categories (stage 9)
+
+- **Window** (`T`): tabs only for opened categories, a scrollable list of compact cards on the left, details on the right (icon, short description with highlighted numbers, requirement, cost with icons, Learn button). Card states: learned (green frame, check), available (gold dot), not enough resources (red frame, red missing cost), condition not met (dimmed, lock, requirement shown on the right). All upgrades of an opened category are always visible. Keys: `↑/↓`, `←/→`, `Enter`; mouse: tabs, cards, button, wheel; right click closes.
+- **Categories are data**: `Resources/Upgrades/Categories/*.tres` (`UpgradeCategoryData`: id, title, icon, order, page, biome, condition). A new category = a new `.tres` (+ upgrades with that `Page`). Icons: `Resources/Upgrades/UpgradeIcons.tres`.
+- **`UpgradeProgressionSystem`** (`Scripts/Gameplay`): a category opens when an ancient lantern is permanently lit in its biome (not by generation, chunk loading or proximity), fires `CategoryUnlocked`, never closes, is saved (`UpCats`, `UpNew`). Old saves: restored silently from lit lanterns and already learned upgrades.
+- Opening a category: banner «Открыта категория», pixel sparks, gold tab icon with a pulsing «new» star until it is viewed, tab appear animation on the next window open.
+- UI is built by `tools/GraphicsGenerator/make_upgrade_ui.py` (`UpgradeWindow.tscn`, `UpgradeEntry.tscn`, `UpgradeTheme.tres`, state icons); scripts `Scripts/UI/Upgrades/`.
+- Tests: `LAMP_STAGE=upgrades` (part of `tools/run_checks.ps1`).

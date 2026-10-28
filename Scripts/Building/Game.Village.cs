@@ -348,7 +348,7 @@ public partial class Game
     void UpdateUnlocks(float dt)
     {
         unlockT -= dt; if (unlockT > 0) return; unlockT = .4f;
-        string[] hint = { "Хранилище и центр производства", "Производит дерево само", "Добывает руду сама", "Плавит руду со склада [7]", "Добывает серебро и кристаллы [Z]", "Добывает обсидиан и уголь пепла [X]",
+        string[] hint = { "Хранилище и центр производства", "Производит дерево само", "Добывает руду сама", "Плавит руду со склада", "Добывает серебро и кристаллы", "Добывает обсидиан и уголь пепла",
             "Шестерни и линзы из слитков [B]", "Подключает здания к складу [B]", "Торговля и покупка чертежей [B]", "Добывает ледяной кристалл [B]" };
         for (int bk = 0; bk < BCount; bk++)
             if ((Ann & (1L << bk)) == 0 && BUnlocked(bk))
@@ -357,10 +357,10 @@ public partial class Game
                 Announce($"Открыта постройка: {BNames[bk]}", hint[bk], new Color("#d9b27c"), "tech");
             }
         for (int i = 0; i < Techs.Length; i++)
-            if (!Techs[i].Reward && (Ann & (1L << (12 + i))) == 0 && Techs[i].Ok(this))
+            if (!Techs[i].Reward && (Ann & (1L << (12 + i))) == 0 && Upgrades.IsPageUnlocked(Techs[i].Page) && Techs[i].Ok(this))
             {
                 Ann |= 1L << (12 + i);
-                Announce("Доступно улучшение: " + Techs[i].Name, "Откройте меню улучшений [T], вкладка «" + TechPages[Techs[i].Page] + "»", new Color("#8ff0ff"), "tech");
+                Announce("Доступно улучшение: " + Techs[i].Name, "Меню [T], вкладка «" + TechPages[Techs[i].Page] + "»", new Color("#8ff0ff"), "tech");
             }
         Goals = BuildGoals();
     }

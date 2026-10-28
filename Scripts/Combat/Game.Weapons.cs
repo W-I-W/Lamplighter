@@ -38,16 +38,18 @@ public partial class Game
         if (HasWeapon(id)) return;
         var d = Db.Weapon(id); if (d == null) return;
         Owned.Add(new OwnedWeapon { Id = id });
-        if (CurW < 0) CurW = Owned.Count - 1;
-        AutoAssign(RefWeapon(id)); HotFollow();
+        AutoAssign(RefWeapon(id)); int hs = HotSlotOf(RefWeapon(id));
+        if (hs >= 0 && CurW < 0 && Owned.Count == 1) HotSelect(hs);
         RecomputeEffects();
+        if (announce && hs < 0) Toast("Новое оружие: наденьте его в экипировке [C]");
         if (announce) Announce($"Оружие: {d.Name}", $"{Db.ClassNames[(int)d.Cls]} · {Db.RarName[(int)d.Rar]} · {d.Desc}", Db.RarCol[(int)d.Rar], "chest");
     }
 
     public void EquipWeapon(int i)
     {
         if (i < -1 || i >= Owned.Count) return;
-        CurW = i; MineProg = 0; RecomputeEffects(); HotFollow(); Sfx.Play("tick", 0, 1.4f);
+        if (i < 0) { EquipNone(); HotFollow(); return; }
+        HotEquip(RefWeapon(Owned[i].Id)); Sfx.Play("tick", 0, 1.4f);
     }
 
     public void CycleWeapon() => HotCycle(1);

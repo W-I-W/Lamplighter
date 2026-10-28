@@ -1,0 +1,93 @@
+[gd_resource type="Theme" load_steps=7 format=3]
+
+[sub_resource type="StyleBoxFlat" id="CardNormal"]
+bg_color = Color(0.0784, 0.1098, 0.1882, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.1725, 0.2196, 0.3451, 1)
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="CardAvail"]
+bg_color = Color(0.0941, 0.1333, 0.2275, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.5412, 0.4549, 0.1882, 1)
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="CardMissing"]
+bg_color = Color(0.1333, 0.1020, 0.1412, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4784, 0.2314, 0.2314, 1)
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="CardLocked"]
+bg_color = Color(0.0588, 0.0745, 0.1216, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.1216, 0.1490, 0.2196, 1)
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="CardOwned"]
+bg_color = Color(0.0745, 0.1412, 0.1216, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3098, 0.6824, 0.3529, 1)
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="CardSelected"]
+bg_color = Color(0.1216, 0.1608, 0.2667, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1.0000, 0.8235, 0.2471, 1)
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
+anti_aliasing = false
+
+[resource]
+CardNormal/base_type = &"PanelContainer"
+CardNormal/styles/panel = SubResource("CardNormal")
+CardAvail/base_type = &"PanelContainer"
+CardAvail/styles/panel = SubResource("CardAvail")
+CardMissing/base_type = &"PanelContainer"
+CardMissing/styles/panel = SubResource("CardMissing")
+CardLocked/base_type = &"PanelContainer"
+CardLocked/styles/panel = SubResource("CardLocked")
+CardOwned/base_type = &"PanelContainer"
+CardOwned/styles/panel = SubResource("CardOwned")
+CardSelected/base_type = &"PanelContainer"
+CardSelected/styles/panel = SubResource("CardSelected")

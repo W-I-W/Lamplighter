@@ -35,16 +35,16 @@ public partial class Game
         var l = new List<BuildEntry>();
         void E(string key, int cat, int tile, string n, int[][] cost, bool unl, string lk, Action a, string hint = "", int[][] raw = null) => l.Add(new BuildEntry { Key = key, Stock = StockOf(key), Raw = raw ?? cost, Cat = cat, Tile = tile, Name = n, Hint = hint, CostArr = cost, Cost = cost == null ? "" : CostStr(cost), Unlocked = unl, Lock = lk, Affordable = cost == null || Can(cost), Do = a });
         E("furnace", 1, Art.Furnace, "Печь", CostFurnace, true, "", BuildFurnace, "Плавит руду в слитки, улучшает кирку");
-        E("lamp0", 1, Art.Lantern, "Фонарь", CostLantern, true, "", () => BuildLamp(0), "Постоянный свет на клетке [2]");
-        E("lamp1", 1, Art.CombatLantern, "Боевой фонарь", LampCost[1], Has(Tech.CombatLamp), "улучшение [T] «Боевой фонарь»", () => BuildLamp(1), "Жжёт врагов рядом [8]");
-        E("lamp2", 1, Art.CrystalLantern, "Кристальный фонарь", LampCost[2], Has(Tech.Optics), "улучшение [T] «Оптика»", () => BuildLamp(2), "Пускает луч света [9]");
-        E("mirror", 1, Art.Mirror1, "Зеркало", MirrorCost, Has(Tech.Optics), "улучшение [T] «Оптика»", BuildMirror, "Поворачивает луч [0]");
+        E("lamp0", 1, Art.Lantern, "Фонарь", CostLantern, true, "", () => BuildLamp(0), "Постоянный свет на клетке");
+        E("lamp1", 1, Art.CombatLantern, "Боевой фонарь", LampCost[1], Has(Tech.CombatLamp), "улучшение [T] «Боевой фонарь»", () => BuildLamp(1), "Жжёт врагов рядом");
+        E("lamp2", 1, Art.CrystalLantern, "Кристальный фонарь", LampCost[2], Has(Tech.Optics), "улучшение [T] «Оптика»", () => BuildLamp(2), "Пускает луч света");
+        E("mirror", 1, Art.Mirror1, "Зеркало", MirrorCost, Has(Tech.Optics), "улучшение [T] «Оптика»", BuildMirror, "Поворачивает луч");
         E("amp", 1, Art.AmpCrystal, "Светокристалл", AmpCost, BpDone.Contains("bp_amp"), "чертёж «Светокристаллы»", BuildAmp, "Усиливает соседние фонари");
         E("barrier", 1, Art.BarrierPost, "Столб-барьер", BarrierCost, BpDone.Contains("bp_barrier"), "чертёж «Световые барьеры»", BuildBarrier, "Два столба держат теней");
         for (int bk = 0; bk < BCount; bk++)
         {
             int k = bk; bool has = HasBuilding(BTypes[k]);
-            E("bld" + k, 2, AtlasX(BTypes[k], 1), BNames[k] + (has ? " ✓" : ""), has ? null : BCost(k, 1), BUnlocked(k), BLock(k), () => BuildBuilding(k), BDesc[k][0], BCost(k, 1));
+            E("bld" + k, 2, AtlasX(BTypes[k], 1), BNames[k] + (has ? " ✓" : ""), BCost(k, 1), BUnlocked(k), BLock(k), () => BuildBuilding(k), BDesc[k][0], BCost(k, 1));
         }
         int[] dt = { Art.Statue, Art.Fountain, Art.Banner };
         for (int dk = 0; dk < 3; dk++) { int kk = dk; E("decor" + kk, 3, dt[dk], DecorNames[kk], DecorCostArr(kk), BeaconLevel >= 2, "улучшите Центральный маяк", () => BuildDecor(kk), "Украшение: бонус к производству"); }
@@ -117,7 +117,7 @@ public partial class Game
             case Key.P: OpenWin(Win.Prod); return true;
             case Key.B: OpenWin(Win.Build); return true;
             case Key.I: OpenWin(Win.Inventory); return true;
-            case Key.T: CloseWindows(); TechOpen = true; return true;
+            case Key.T: OpenTech(true); return true;
             case Key.M: CloseWindows(); MapOpen = true; return true;
             case Key.F5: Save(); Toast("Игра сохранена"); return true;
             case Key.Up: WinCur = Math.Max(0, WinCur - 1); return true;
@@ -164,16 +164,10 @@ public partial class Game
         return false;
     }
 
-    /// <summary>Мышь в окне улучшений [T]: вкладки, клик по строке — изучить, ПКМ — закрыть.</summary>
+    /// <summary>Мышь в окне улучшений [T]: ПКМ закрывает окно; вкладки, карточки и кнопка — элементы UpgradeWindowUI.</summary>
     bool TechMouse(InputEventMouse e)
     {
-        if (hud == null || e is not InputEventMouseButton mb || !mb.Pressed) return false;
-        var p = e.Position / UiScaleVp;
-        if (mb.ButtonIndex == MouseButton.Right) { CloseWindows(); return true; }
-        if (mb.ButtonIndex != MouseButton.Left) return false;
-        int tab = hud.TabHit(p), row = hud.RowHit(p);
-        if (tab >= 0) { TechPage = tab; Sfx.Play("tick"); return true; }
-        if (row >= 1) { Digit(row); return true; }
+        if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right) { CloseWindows(); return true; }
         return false;
     }
 
@@ -186,7 +180,7 @@ public partial class Game
         {
             case 0:
                 if (enter) HoldEquipRow(WinCur);
-                else if (shift && k >= Key.Key1 && k <= Key.Key8) { var r = EquipRef(WinCur); if (r != null) HotAssign((int)k - (int)Key.Key1, r); }      // Shift+1..8 — назначить в хотбар
+                else if (shift && k >= Key.Key1 && k <= Key.Key3) { var r = EquipRef(WinCur); if (r != null) HotAssign((int)k - (int)Key.Key1, r); }      // Shift+1..8 — назначить в хотбар
                 else if (k == Key.X) { var r = EquipRef(WinCur); int sl = r == null ? -1 : HotSlotOf(r); if (sl >= 0) HotClear(sl); }                  // X — убрать из хотбара
                 else if (k >= Key.Key1 && k <= Key.Key7) InstallMod((int)k - (int)Key.Key1);
                 else if (k == Key.Backspace || k == Key.Delete) { var ow = CurOw; if (ow != null && ow.Mods.Count > 0) RemoveMod(ow.Mods.Count - 1); }

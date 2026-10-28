@@ -51,7 +51,7 @@ public partial class Game
         Lamps.Add(new Lamp { X = t.Value.X, Y = t.Value.Y, Kind = kind, Anim = 0 }); OnLampLit(Game.TileCenter(t.Value.X, t.Value.Y), kind);
         Burst(TileCenter(t.Value.X, t.Value.Y), kind == 1 ? new Color("#ff7a3a") : kind == 2 ? new Color("#bfe9ff") : new Color("#ffd86b"), 14, 70);
         Sfx.Play("build"); GiveXp(25); Save();
-        if (kind == 2) Toast("Кристальный фонарь: [E] — повернуть луч, зеркала [0]");
+        if (kind == 2) Toast("Кристальный фонарь: [E] — повернуть луч");
     }
 
     void BuildMirror()

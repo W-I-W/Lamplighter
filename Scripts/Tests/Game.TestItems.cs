@@ -29,16 +29,17 @@ public partial class Game
             Inv[It.Wood] = 40; Inv[It.Stone] = 40; Inv[It.Copper] = 20;
             Check(CraftTool("axe", new[] { new[] { It.Wood, 5 }, new[] { It.Stone, 3 } }), "craft: axe made by hand crafting");
             Check(OwnedTools.Contains("axe") && HotSlotOf("tool:axe") >= 0, "hotbar: new axe lands in a free slot automatically");
-            CraftTool("shovel", new[] { new[] { It.Wood, 4 }, new[] { It.Stone, 2 } }); CraftTool("hammer", new[] { new[] { It.Wood, 4 }, new[] { It.Stone, 6 } });
             GiveWeapon("sword1", false); GiveWeapon("bow1", false); GiveWeapon("staff1", false);
-            Check(HotSlotOf("weapon:sword1") >= 0 && HotSlotOf("weapon:bow1") >= 0 && HotSlotOf("weapon:staff1") >= 0, "hotbar: sword, bow and staff can be placed");
+            Check(HotSlotOf("weapon:sword1") >= 0 && HotSlotOf("weapon:bow1") < 0 && HotSlotOf("weapon:staff1") < 0, "hotbar: only one weapon fits, later weapons must be equipped by hand");
+            HotEquip("weapon:bow1"); Check(HotSlotOf("weapon:bow1") >= 0 && HotSlotOf("weapon:sword1") < 0 && CurDef != null && CurDef.Id == "bow1", "hotbar: equipping a weapon replaces the previous one");
+            HotAssign(HotSlotOf("weapon:bow1"), "weapon:staff1"); Check(HotSlotOf("weapon:staff1") >= 0 && HotSlotOf("weapon:bow1") < 0, "hotbar: assigning into the weapon slot replaces the weapon");
             // без дублей
-            HotAssign(7, "tool:axe"); int cnt = 0; foreach (var h in Hot) if (h == "tool:axe") cnt++;
-            Check(cnt == 1 && Hot[7] == "tool:axe", "hotbar: reassigning moves the item instead of duplicating it");
+            HotAssign(HotCount - 1, "tool:axe"); int cnt = 0; foreach (var h in Hot) if (h == "tool:axe") cnt++;
+            Check(cnt == 1 && Hot[HotCount - 1] == "tool:axe", "hotbar: reassigning moves the item instead of duplicating it");
             // выбор
-            HotSelect(HotSlotOf("weapon:bow1")); Check(CurDef != null && CurDef.Id == "bow1", "hotbar: selecting the bow slot holds the bow");
-            HotSelect(HotSlotOf("tool:shovel")); Check(CurW == -1 && CurTool == "shovel", "hotbar: selecting a tool slot holds the tool");
-            HotSelect(HotSlotOf("weapon:sword1")); Check(CurDef != null && CurDef.Id == "sword1", "hotbar: selecting the sword slot holds the sword");
+            HotSelect(HotSlotOf("weapon:staff1")); Check(CurDef != null && CurDef.Id == "staff1", "hotbar: selecting the weapon slot holds the weapon");
+            HotSelect(HotSlotOf("tool:axe")); Check(CurW == -1 && CurTool == "axe", "hotbar: selecting a tool slot holds the tool");
+            HotEquip("weapon:sword1"); Check(CurDef != null && CurDef.Id == "sword1", "hotbar: equipping the sword holds the sword");
             HotCycle(1); Check(CurW != 0 || CurTool != "pickaxe" || true, "hotbar: wheel cycling works");
             // урон инструментов против меча
             var sword = Db.Weapon("sword1"); float swordDmg = WeaponDmg(sword);
@@ -48,7 +49,6 @@ public partial class Game
                 GD.Print($"[items] {id}: combat damage {d:0.0} vs sword {swordDmg:0.0}");
                 Check(d > 0, $"tools: {id} can hurt enemies");
             }
-            Check(PlayerDamage * ToolDef.Get("shovel").CombatDamage < PlayerDamage * ToolDef.Get("axe").CombatDamage, "tools: shovel is weaker than axe in combat");
             Check(ToolDef.Get("axe").Efficiency(Tl.Tree) > ToolDef.Get("pickaxe").Efficiency(Tl.Tree), "tools: axe chops trees faster than the pickaxe");
             Check(ToolDef.Get("axe").Efficiency(Tl.Copper) == 0 && ToolDef.Get("pickaxe").Efficiency(Tl.Copper) > 0, "tools: the pickaxe still mines ore, the axe does not");
             // реальный удар инструментом по врагу: один раз за удар
@@ -62,10 +62,10 @@ public partial class Game
             Enemies.Clear(); Hot[0] = "tool:pickaxe";
             Check(CraftGroups().Count == 1 && CraftGroups()[0] == "hand", "crafting: only the hand group without a station");
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
-            var axe = RecipesOf("hand").Find(r => r.Id == "tool_hammer");
+            var axe = RecipesOf("hand").Find(r => r.Id == "tool_axe");
             Check(axe != null && StateOf(axe) == RecState.Owned, "crafting: owned tools are marked as owned");
             // печь рядом
-            var ft = FreeAdj(); var tile = ToTile(ft);
+            var tile = ToTile(PPos + FreeAdj());
             SetObj(tile.X, tile.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tile.X, tile.Y) + new Vector2(0, 16);
             Check(ActiveStation() == "furnace" && CraftGroups().Contains("furnace"), "crafting: the Furnace group appears next to a furnace");
             var smelt = RecipesOf("furnace").Find(r => r.Id.StartsWith("smelt_"));
@@ -84,9 +84,9 @@ public partial class Game
             Check(ActiveStation() == "forge" && CraftGroups().Contains("forge") && !CraftGroups().Contains("furnace"), "crafting: the Forge group replaces the Furnace group");
             Buildings.RemoveAt(Buildings.Count - 1);
             // сохранение: хотбар записывается
-            HotAssign(2, "tool:shovel"); Save();
+            HotAssign(1, "tool:axe"); Save();
             var text = File.Exists(SavePath) ? File.ReadAllText(SavePath) : "";
-            Check(text.Contains("tool:shovel") && text.Contains("weapon:sword1"), "save: hotbar assignments are written to the save file");
+            Check(text.Contains("tool:axe") && text.Contains("weapon:sword1"), "save: hotbar assignments are written to the save file");
             // строительство: режим размещения
             // постройки как предметы: создать → поставить → разобрать → поставить снова
             Inv[It.Wood] = 99; Inv[It.Stone] = 99; Inv[It.Copper] = 99; Inv[It.Iron] = 99; PPos = home; Hp = MaxHp; Aim = PPos + FreeAdj();
@@ -105,7 +105,7 @@ public partial class Game
             GD.Print($"[check] SUMMARY failures={fails}");
         });
         // снимки интерфейса: хотбар, инвентарь, окно крафта со станцией
-        S(.2f, () => { Inv[It.Wood] = 12; Inv[It.Stone] = 9; Inv[It.CopperOre] = 3; Inv[It.Copper] = 5; Enemies.Clear(); PPos = home; var ft = FreeAdj(); var tl = ToTile(ft); SetObj(tl.X, tl.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tl.X, tl.Y) + new Vector2(0, 16); HotSelect(HotSlotOf("weapon:sword1")); CloseWindows(); });
+        S(.2f, () => { Inv[It.Wood] = 12; Inv[It.Stone] = 9; Inv[It.CopperOre] = 3; Inv[It.Copper] = 5; Enemies.Clear(); PPos = home; var tl = ToTile(PPos + FreeAdj()); SetObj(tl.X, tl.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tl.X, tl.Y) + new Vector2(0, 16); HotEquip("weapon:sword1"); CloseWindows(); });
         S(.4f, () => Shot("items_hud"));
         S(.1f, () => { OpenWin(Win.Inventory); }); S(.4f, () => Shot("items_inventory"));
         S(.1f, () => { OpenStation("furnace"); WinCur = 1; GD.Print($"[items] station={ActiveStation()} near={FurnaceNear(56, out _)} ppos={PPos} groups={string.Join(",", CraftGroups())}"); }); S(.4f, () => Shot("items_craft_furnace"));

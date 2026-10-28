@@ -91,7 +91,7 @@ theme_type_variation = &"GoldLabel"
 ''')
 
 # ───────────── GameHud ─────────────
-slots = ''.join(f'\n[node name="Slot{i}" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]\nlayout_mode = 2\n' for i in range(8))
+slots = ''.join(f'\n[node name="Slot{i}" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]\nlayout_mode = 2\n' for i in range(3))
 abil = ''.join(f'\n[node name="Ability{i}" parent="Abilities" instance=ExtResource("slot")]\nlayout_mode = 2\n' for i in range(5))
 chips = ''.join(f'''
 [node name="Chip{i}" type="HBoxContainer" parent="TopRight/World/V/Res"]

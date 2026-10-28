@@ -226,7 +226,7 @@ for i, f in enumerate(ICON_FILES):
         for x in range(11):
             r, g, bl, a = im.getpixel((x, y))
             if a >= 110: px[oy + y][ox + x] = (r, g, bl, 255)
-    chars.append(f'char id={0xE000 + i} x={ox} y={oy} width=11 height=11 xoffset=0 yoffset=0 xadvance=12 page=0 chnl=15')
+    chars.append(f'char id={0xE000 + i} x={ox} y={oy} width=11 height=11 xoffset=0 yoffset=-2 xadvance=12 page=0 chnl=15')
 base = 'Assets/UI/Fonts'
 png(f'{base}/lantern.png', W, H, px)
 fnt = [f'info face="Lantern Pixel" size=9 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0 outline=0',

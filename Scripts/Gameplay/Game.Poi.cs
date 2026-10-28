@@ -179,7 +179,7 @@ public partial class Game
         Villagers.Add(new Villager { Pos = p.Pos, Wander = wh != null ? wh.Pos : TileCenter(W.Spawn.X + 2, W.Spawn.Y) });
         GiveXp(50); Burst(p.Pos, new Color("#7ad45a"), 24, 100); if (BpDone.Add("bp_stall")) Frag["bp_stall"] = 1;
         Toast(Story.Rescued[(p.Tile.X * 7 + p.Tile.Y * 3) % Story.Rescued.Length]);
-        Announce("Житель освобождён!", Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница [7]" : "Ещё один работник в деревне", new Color("#7ad45a"), "rescue");
+        Announce("Житель освобождён!", Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница [B]" : "Ещё один работник в деревне", new Color("#7ad45a"), "rescue");
         Save();
     }
 
@@ -250,7 +250,7 @@ public partial class Game
             Add("Зажечь фонари пустошей", LitIn(2) >= 3, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
             Add("Теплозащита или огненное лезвие [T]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
             Add("Обсидиановая кирка у печи [E]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
-            Add("Построить коллектор пепла [X]", HasBuilding(Tl.Collector), Has(Tech.Collector) ? "Ставьте на освещённой земле пустошей" : "Изучите «Пепельный коллектор» [T]");
+            Add("Построить коллектор пепла [B]", HasBuilding(Tl.Collector), Has(Tech.Collector) ? "Ставьте на освещённой земле пустошей" : "Изучите «Пепельный коллектор» [T]");
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }

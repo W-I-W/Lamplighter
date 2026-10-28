@@ -58,4 +58,13 @@ for pi, (tile, stem, strong) in enumerate(PLANTS):
         idx = POSE_BASE + pi * 4 + k
         name = stem.split('_', 1)[1]
         shifted(base, displacement(base, strong, level)).save(f'{ENV}{idx:03d}_{name}_p{tag}.png')
+# crown tiles of the two-tile trees (the trunk tile below them stays still)
+TOPS = [('162_TreeTop', 2), ('163_PineTop', 2), ('164_DeadTop', 2)]
+TOP_POSE_BASE = 165
+for pi, (stem, strong) in enumerate(TOPS):
+    base = Image.open(ENV + stem + '.png').convert('RGBA')
+    for k, (tag, level) in enumerate(POSES):
+        idx = TOP_POSE_BASE + pi * 4 + k
+        name = stem.split('_', 1)[1]
+        shifted(base, displacement(base, strong, level)).save(f'{ENV}{idx:03d}_{name}_p{tag}.png')
 print('poses written:', len(PLANTS) * 4, 'tiles', POSE_BASE, '..', POSE_BASE + len(PLANTS) * 4 - 1)

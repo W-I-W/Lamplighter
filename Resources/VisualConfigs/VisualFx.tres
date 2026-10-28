@@ -4,12 +4,12 @@
 
 [resource]
 script = ExtResource("1")
-SwayTiles = PackedInt32Array(5, 111, 79, 130, 131, 132, 133)
-SwayAmp = PackedFloat32Array(2.0, 1.6, 1.0, 2.6, 1.5, 2.8, 3.6)
+SwayTiles = PackedInt32Array(5, 111, 79, 130, 131, 132, 133, 162, 163, 164)
+SwayAmp = PackedFloat32Array(0.0, 0.0, 0.0, 2.6, 1.5, 2.8, 3.6, 2.2, 1.8, 1.2)
 GlowTiles = PackedInt32Array(9, 22, 50, 51, 100, 110)
 GlowAmount = PackedFloat32Array(0.35, 0.35, 0.3, 0.15, 0.4, 0.3)
 UsePoses = true
-PoseBase = PackedInt32Array(134, 138, 142, 146, 150, 154, 158)
+PoseBase = PackedInt32Array(134, 138, 142, 146, 150, 154, 158, 165, 169, 173)
 Wind = 1.0
 HitShakePx = 2.4
 HitShakeTime = 0.5

@@ -17,7 +17,7 @@ public partial class ToolDef : Resource
     [Export] public float EffWood = 1f, EffStone = 1f, EffOre = 1f, EffRubble = 1f;   // ResourceTypeEfficiency по группам: дерево, камень, руда, завалы
     [Export] public bool Craftable;                      // создаётся в ручном крафте (кирка есть всегда)
 
-    public static readonly string[] Ids = { "pickaxe", "axe", "shovel", "hammer" };
+    public static readonly string[] Ids = { "pickaxe", "axe" };
     static Dictionary<string, ToolDef> cache;
     public static ToolDef Get(string id)
     {
