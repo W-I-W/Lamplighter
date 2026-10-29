@@ -60,7 +60,9 @@ public sealed class VillSave { public int Id, Work = -1, Home = -1, Talk; public
 public partial class Game : Node2D
 {
     public const int TS = 16;
-    public const float Zoom = 3f;
+    public const float ZoomBase = 3f;
+    /// <summary>Масштаб мира. Подгоняется под окно так, чтобы пиксель арта занимал целое число пикселей экрана (при дробном масштабе между тайлами мелькают линии).</summary>
+    public static float Zoom = ZoomBase;
     static bool forceNew, showPrologue;
 
     public World W;
@@ -557,11 +559,16 @@ public partial class Game : Node2D
 
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
         // Камера плавно следует за игроком и стоит строго на сетке физических пикселей: дробное положение давало светлые полоски между тайлами
-        float pxPerUnit = Zoom * Mathf.Max(.01f, DisplayServer.WindowGetSize().Y / Mathf.Max(1f, ViewSize.Y));
+        // масштаб окна по осям берём из итогового преобразования: размер вьюпорта округляется, и X-масштаб чуть отличается от Y — отсюда вертикальные/горизонтальные щели между тайлами
+        var ft = GetViewport().GetFinalTransform(); float scX = Mathf.Max(.01f, ft.X.X), winScale = Mathf.Max(.01f, ft.Y.Y);
+        float pxPerUnit = Mathf.Max(1f, Mathf.Round(ZoomBase * winScale)); Zoom = pxPerUnit / winScale; cam.Zoom = new Vector2(pxPerUnit / scX, Zoom);
         if (!camInit || camPos.DistanceTo(PPos) > 160f) { camPos = PPos; camInit = true; } else camPos = camPos.Lerp(PPos, 1f - Mathf.Exp(-9f * dt));
-        cam.Position = (camPos * pxPerUnit).Round() / pxPerUnit;
+        // центр кадра в физических пикселях может быть дробным (ширина окна / масштаб не целая) — подгоняем камеру под эту дробь, иначе края тайлов падают на полпикселя
+        var ctr = new Vector2(ViewSize.X * scX, ViewSize.Y * winScale) * .5f; var fr = new Vector2(ctr.X - Mathf.Floor(ctr.X), ctr.Y - Mathf.Floor(ctr.Y));
+        cam.Position = ((camPos * pxPerUnit - fr).Round() + fr) / pxPerUnit;
         var shakeOff = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
         cam.Offset = (shakeOff * pxPerUnit).Round() / pxPerUnit;
+        if (backdrop != null) { var half = ViewSize / Zoom * .5f + new Vector2(32, 32); backdrop.Position = cam.Position - half; backdrop.Size = half * 2; }      // подложка под землёй следует за камерой
         UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt); UpdatePlayerFx(dt); UpdateWorldLife(dt); ambientLayer?.QueueRedraw();
         ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw();
     }

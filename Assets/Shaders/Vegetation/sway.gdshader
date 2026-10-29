@@ -9,10 +9,12 @@ uniform float wind = 1.0;          // overall wind strength (config * player set
 uniform vec2 player = vec2(-99999.0);   // world position of the player (grass bends away)
 uniform vec4 shakes[8];            // x, y = tile coords, z = amplitude (px, already decayed), w = phase
 varying vec2 wpos;
+varying vec4 vcol;                 // модуляция слоя (прозрачность крон за игроком)
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(41.7, 289.3))) * 4375.5453); }
 
 void vertex() {
+	vcol = COLOR;
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 }
 
@@ -52,17 +54,17 @@ void fragment() {
 			float k = clamp(floor(shift * 2.0 / a + 0.5), -2.0, 2.0);
 			float pose_col = k == 0.0 ? col : td.a + (k < -1.5 ? 0.0 : k < 0.0 ? 1.0 : k < 1.5 ? 2.0 : 3.0);
 			uv.x = UV.x + (pose_col - col) * 16.0 / atlas.x;
-			COLOR = texture(TEXTURE, uv);
+			COLOR = texture(TEXTURE, uv) * vcol;
 		} else {
 		float px = shift * lift;          // fractional on purpose: with nearest sampling and a 3x zoom the blade edges then move in single screen pixels (smooth), not in 3-pixel jumps
 		uv.x = UV.x - px / atlas.x;
 		float lo = col * 16.0 / atlas.x + 0.5 / atlas.x;
 		float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
 		uv.x = clamp(uv.x, lo, hi);                                // edge pixels are repeated instead of cut off, so the silhouette never gets sliced
-		COLOR = texture(TEXTURE, uv);
+		COLOR = texture(TEXTURE, uv) * vcol;
 		}
 	} else {
-		COLOR = texture(TEXTURE, UV);
+		COLOR = texture(TEXTURE, UV) * vcol;
 	}
 	float g = td.b;
 	if (g > 0.0) {

@@ -13,7 +13,7 @@ public partial class Game
     const int ChunksX = World.Wd / CS, ChunksY = World.Ht / CS;
     sealed class Chunk { public TileMapLayer G, F, O, B, T, K; }
     readonly Chunk[] chunks = new Chunk[ChunksX * ChunksY];
-    Node2D groundRoot, objRoot, crownRoot, trunkRoot, topRoot; BreakAreaLayer breakArea; TileSet chunkSet;
+    ColorRect backdrop; Node2D groundRoot, objRoot, crownRoot, trunkRoot, topRoot; BreakAreaLayer breakArea; TileSet chunkSet;
     public int LoadedChunks; public float LastChunkMs;
     float chunkT;
     const int LoadR = 1, KeepR = 2;
@@ -25,7 +25,7 @@ public partial class Game
         for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
         srcId = chunkSet.AddSource(src);
         groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); trunkRoot = new Node2D(); topRoot = new Node2D();
-        AddChild(groundRoot); AddChild(foliageRoot); AddChild(objRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); AddChild(crownRoot); InitVegetation();
+        AddChild(groundRoot); backdrop = new ColorRect { Color = new Color(.35f, .55f, .26f), MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = -1 }; groundRoot.AddChild(backdrop); AddChild(foliageRoot); AddChild(objRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); AddChild(crownRoot); InitVegetation();
     }
 
     Chunk ChunkAt(int x, int y)

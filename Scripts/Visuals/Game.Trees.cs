@@ -84,8 +84,9 @@ public partial class Game
             for (int tx = pt.X - 2; tx <= pt.X + 2; tx++)
             {
                 if (!World.In(tx, ty) || !IsPlantTile(W.Get(tx, ty))) continue;
-                var k = new Vector2I(tx, ty); float lim = ty * TS + (behindTrunks.Contains(k) ? 11 : 5);
-                if (PPos.Y < lim) want.Add(k);
+                var k = new Vector2I(tx, ty); bool was = behindTrunks.Contains(k); float lim = ty * TS + (was ? 11 : 5);
+                // дерево уходит наверх (и становится прозрачным) только пока игрок реально под кроной: рядом по ширине и не дальше двух клеток за стволом
+                if (PPos.Y < lim && PPos.Y > (ty - 2) * TS - (was ? 10 : 6) && Mathf.Abs(PPos.X - (tx * TS + TS * .5f)) < (was ? 24 : 20)) want.Add(k);
             }
         if (want.SetEquals(behindTrunks)) return;
         var changed = new List<Vector2I>();
@@ -95,7 +96,13 @@ public partial class Game
         foreach (var k in changed)
         {
             var ch = ChunkAt(k.X, k.Y); var lc = new Vector2I(k.X % CS, k.Y % CS);
-            if (ch != null) { if (behindTrunks.Contains(k) && IsPlantTile(W.Get(k.X, k.Y))) ch.K.SetCell(lc, srcId, new Vector2I(AtlasX(W.Get(k.X, k.Y), 1), 0)); else ch.K.EraseCell(lc); }
+            if (ch != null)
+            {
+                var tt = W.Get(k.X, k.Y);
+                // пока копия ствола в K полупрозрачна, настоящий ствол слоя O скрыт — иначе низ дерева выглядит плотным, а крона прозрачной
+                if (behindTrunks.Contains(k) && IsPlantTile(tt)) { ch.K.SetCell(lc, srcId, new Vector2I(AtlasX(tt, 1), 0)); ch.O.EraseCell(lc); }
+                else { ch.K.EraseCell(lc); if (IsPlantTile(tt)) ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(tt, LevelAt(k.X, k.Y)), 0)); }
+            }
             RefreshCrown(k.X, k.Y - 1); RefreshCrown(k.X, k.Y);
         }
     }
