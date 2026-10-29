@@ -83,6 +83,19 @@ public partial class Game
         }
     }
 
+    /// <summary>Босс, у которого в радиусе боя есть хотя бы один живой игрок (я или любой другой). По нему рисуется шкала здоровья у всех участников.</summary>
+    public Enemy BossInFight()
+    {
+        float r = Tune.T.BossLeashTiles * TS;
+        foreach (var e in Enemies)
+        {
+            if (!e.IsBoss || e.Hp <= 0) continue;
+            if (e.Pos.DistanceTo(PPos) <= r) return e;
+            if (NetService.Active) foreach (var p in NetService.Players.Values) if (p.Handshaken && p.PeerId != LocalPeer && p.Hp > 0 && p.Shown.DistanceTo(e.Pos) <= r) return e;
+        }
+        return null;
+    }
+
     /// <summary>Клиент: показ врагов хоста без ИИ.</summary>
     void ClientEnemies(float dt)
     {

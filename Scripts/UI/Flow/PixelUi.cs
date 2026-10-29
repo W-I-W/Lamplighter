@@ -65,10 +65,10 @@ public partial class LookView : Control
 
     public override void _Draw()
     {
-        int frame = Walking ? (int)(t * 6) % 2 : 0; float bob = Walking ? (frame == 1 ? -1 : 0) : (Mathf.Sin(t * 2.4f) > .35f ? -1 : 0);
+        int frame = Walking ? (int)(t * 6) % 2 : 0; float bob = Walking ? (frame == 1 ? -1 : 0) : 0;      // покой — дыхание из кадров Idle
         float z = zoom;
         if (Flip) DrawSetTransform(new Vector2(16 * z, 0), 0, new Vector2(-1, 1));
-        LookArt.Draw(this, Look, frame, new Vector2(0, bob * z), Colors.White, 16, z, Lamp);
+        LookArt.Draw(this, Look, frame, new Vector2(0, bob * z), Colors.White, 16, z, Lamp, Walking);
         DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 }

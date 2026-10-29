@@ -24,7 +24,6 @@ public static class It
 
 public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
-public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f, Age; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked, Manual; public float WorkMul = .6f; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
@@ -64,7 +63,6 @@ public partial class Game : Node2D
     public List<FText> Texts = new();
     public readonly GameNotificationService Notify = new();     // единый журнал: все уведомления игры и чат
     public ChatHud Chat; public RegionTitleHud RegionTitle; public ResourceActionUI ResUi; public bool ChatOpen => Chat != null && Chat.IsOpen;
-    public List<Banner> Banners = new();
     float saveT, regionT; int lastRegion = -1;
     public int Kills;
     Vector3 tint = new(.012f, .016f, .045f);
@@ -622,12 +620,7 @@ public partial class Game : Node2D
             "build" or "tech" or "upgrade" => MsgTone.Gold, "ancient" or "discover" => MsgTone.Cyan, "chest" or "rescue" or "levelup" => MsgTone.Good, "error" => MsgTone.Warn, _ => MsgTone.Info
         };
         bool world = sfx == "ancient" || sfx == "discover";
-        Notify.Post(important ? MsgKind.Important : world ? MsgKind.World : MsgKind.System, tone, Loc.T(title), null, important ? 2 : 1);
-        if (important)
-        {
-            Banners.Add(new Banner { Title = title, Sub = sub, C = c, Life = Mathf.Min(5f, 3f + .03f * (title.Length + sub.Length)) });
-            if (Banners.Count > 3) Banners.RemoveAt(1);
-        }
+        Notify.Post(important ? MsgKind.Important : world ? MsgKind.World : MsgKind.System, tone, Loc.T(title) + (important && sub != null && sub.Length > 0 && sub.Length <= 70 ? " — " + Loc.T(sub) : ""), null, important ? 2 : 1);      // важное тоже в чат, без панелей сверху
         Sfx.Play(sfx);
     }
 
@@ -780,7 +773,6 @@ public partial class Game : Node2D
         // пока открыто окно, меню или карта, сообщения не гаснут: игрок успевает их прочитать
         float msgDt = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None ? 0f : dt;
         Notify.Tick(msgDt);
-        if (Banners.Count > 0) { var cb = Banners[0]; cb.Age += msgDt; cb.Life -= msgDt * (Banners.Count > 1 ? 1.5f : 1f); if (cb.Life <= 0) Banners.RemoveAt(0); }       // по одному, по очереди
         // атмосфера биома
         int reg = RegionAt(PPos);
         if (reg != 0 && rng.Randf() < dt * 10)

@@ -187,9 +187,9 @@ def _detail(variant, f, part):
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     g = frame_grid(variant, 6, f)
     pals = {
-        'base': {'e': (22, 26, 44), 'm': (42, 47, 69), 'f': (58, 63, 77)},
-        'lamp': {'l': (255, 216, 107), 'i': (255, 251, 224)},
-        'lampoff': {'l': (72, 78, 104), 'i': (112, 120, 150)},
+        'base': {'e': (22, 26, 44), 'm': (42, 47, 69)},                                   # глаза и ноги — поверх тела
+        'lamp': {'f': (58, 63, 77), 'l': (255, 216, 107), 'i': (255, 251, 224)},          # ручка и лампа — позади героя
+        'lampoff': {'f': (58, 63, 77), 'l': (72, 78, 104), 'i': (112, 120, 150)},
     }
     pal = pals[part]
     for y in range(H):
@@ -204,8 +204,23 @@ def _detail(variant, f, part):
     return im
 
 
+IDLE = os.path.join(LOOK, 'Idle'); WALK = os.path.join(LOOK, 'Walk')
+os.makedirs(IDLE, exist_ok=True); os.makedirs(WALK, exist_ok=True)
+
+
+def breathe(frame):
+    """Кадр покоя: верхняя часть (голова, корпус, лампа) на пиксель ниже, ноги стоят — лёгкое дыхание."""
+    out = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    out.alpha_composite(frame.crop((0, 0, W, 14)), (0, 1))
+    out.alpha_composite(frame.crop((0, 14, W, H)), (0, 14))
+    return out
+
+
 def save(name, img):
-    img.save(os.path.join(LOOK, name))
+    """Каждый слой — два листа по две плитки 16×16: Walk/ (кадр 0 стоя, кадр 1 шаг) и Idle/ (кадр 0 стоя, кадр 1 вдох). Игра берёт папку по состоянию героя."""
+    img.save(os.path.join(WALK, name))
+    f0 = img.crop((0, 0, W, H)); idle = Image.new('RGBA', (W * 2, H), (0, 0, 0, 0)); idle.paste(f0, (0, 0)); idle.paste(breathe(f0), (W, 0))
+    idle.save(os.path.join(IDLE, name))
 
 
 save('skin.png', make_sheet(skin_layer))

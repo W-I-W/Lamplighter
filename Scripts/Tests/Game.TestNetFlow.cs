@@ -8,7 +8,7 @@ namespace Lamplighter;
 /// Два процесса через ENet; Steam использует тот же код, отличается только транспорт. Запуск: tools/run_checks.ps1 (net flow).</summary>
 public partial class Game
 {
-    static int netFlowPhase; static string netFlowChar;
+    static int netFlowPhase; static string netFlowChar; Vector2 netHome;
 
     static readonly Look HostFlowLook = new() { Skin = 2, Hair = 6, HairCol = 1, Cloth1 = 3, Cloth2 = 4, Variant = 1 };
     static readonly Look GuestFlowLook = new() { Skin = 5, Hair = 3, HairCol = 2, Cloth1 = 9, Cloth2 = 10, Variant = 2 };
@@ -64,6 +64,9 @@ public partial class Game
                 });
                 WaitStepFlow(15f, () => Stock[It.Wood] == 2, ok => Check(ok, "netflow host: the guest's deposit reached the world storage"));
                 WaitStepFlow(15f, () => Stock[It.Wood] == 0, ok => Check(ok, "netflow host: the guest's withdrawal left the storage empty"));
+                S(.3f, () => { var o = Other(); var home = PPos; Tp(PPos + new Vector2(900, 0)); var b = SpawnEnemy(o.Pos + new Vector2(40, 0), EK.Warden, null, 1f); Check(b != null && b.IsBoss && b.Pos.DistanceTo(PPos) > 300f, "netflow host: a boss fight starts near the guest, far from the host"); netHome = home; });
+                WaitStepFlow(10f, () => BossInFight() != null, ok => Check(ok, "netflow host: the boss bar is shown although only the guest is fighting"));
+                S(.5f, () => { Enemies.Clear(); Boss = null; Tp(netHome); });
                 WaitStepFlow(40f, () => NetService.Count <= 1, ok => Check(ok, "netflow host: the guest left"));
                 S(.5f, () =>
                 {
@@ -111,6 +114,7 @@ public partial class Game
                 WaitStepFlow(15f, () => Stock[It.Wood] == 2, ok => Check(ok, "netflow guest: the chest shows the same amount as the host"));
                 S(.3f, () => { Check(TryChest(false, It.Wood, 2), "netflow guest: withdrawal request"); });
                 WaitStepFlow(15f, () => Inv[It.Wood] == 38 && Stock[It.Wood] == 0, ok => Check(ok, "netflow guest: took the items back, the chest is empty"));
+                WaitStepFlow(20f, () => BossInFight() != null, ok => Check(ok, "netflow guest: the boss bar is shown during the fight"));
                 S(.5f, () =>
                 {
                     Save(); var cs = SaveManager.LoadCharacter(netFlowChar);

@@ -84,7 +84,6 @@ public partial class Hud : Control
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
         DrawDrops(vs); DrawMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
         LayoutTop(vs);
-        DrawBanners(vs);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);
         DrawEndgameHud(vs);
@@ -110,7 +109,8 @@ public partial class Hud : Control
     // ───────────────────────── уведомления ─────────────────────────
     // верхняя колонка: босс, разлом, испытание, лучезарность, затем баннеры и тосты — друг под другом, на одной оси
     protected float topCx, topMaxW, topRiftY, topTrialY, topSurgeY, topBannerY;
-    bool BossShown => G.Boss != null && G.Boss.Pos.DistanceTo(G.PPos) <= Tune.T.BossLeashTiles * 16f;
+    Enemy FightBoss => G.BossInFight();                         // босс, с которым сражается кто-то из игроков: шкала видна всем, даже далеко от боя
+    bool BossShown => FightBoss != null;
 
     void LayoutTop(Vector2 vs)
     {
@@ -126,27 +126,11 @@ public partial class Hud : Control
 
     void DrawBossBar(Vector2 vs)
     {
-        var b = G.Boss; if (b == null || !BossShown) return;      // полоса босса только пока он рядом (в сети она оставалась после смерти игрока)
+        var b = FightBoss; if (b == null) return;      // полоса босса только пока он рядом (в сети она оставалась после смерти игрока)
         float w = 200, x = topCx - w * .5f;
         Panel(new Rect2(x - 6, 4, w + 12, 24), "PanelGold");
         Txt(Game.EnemyName(b.Kind), new Vector2(x, 14), 9, new Color("#f0c8ff"), HorizontalAlignment.Center, w);
         Bar(new Rect2(x, 17, w, 7), b.Hp / b.MaxHp, "HpBar");
-    }
-
-    float DrawBanners(Vector2 vs)
-    {
-        float y = topBannerY;
-        if (G.Banners.Count == 0) return y;
-        var b = G.Banners[0];                                   // уведомления идут по очереди, ни одно не теряется
-        float a = Mathf.Clamp(b.Life * 1.6f, 0, 1) * Mathf.Clamp(b.Age * 6f, 0, 1), slide = Mathf.Clamp(b.Age * 8f, 0, 1);
-        float w = Mathf.Min(topMaxW, Mathf.Max(TextW(b.Title), TextW(b.Sub)) + 20);
-        var r = new Rect2(Mathf.Round(topCx - w * .5f), Mathf.Round(y - (1 - slide) * 6), w, 24);
-        var old = curMod; curMod = new Color(1, 1, 1, a);
-        Panel(r, "PanelGold");
-        Txt(b.Title, new Vector2(r.Position.X, r.Position.Y + 10), 9, new Color(b.C.R, b.C.G, b.C.B), HorizontalAlignment.Center, w);
-        { string sub = Loc.T(b.Sub); RichLine(sub, new Vector2(r.Position.X, r.Position.Y + 20), w, Text, TextFx.Typed(sub, b.Age, 70f), true); }
-        curMod = old;
-        return y + 28;
     }
 
     /// <summary>Реликвии, лучезарность, испытание и события — в виде компактной полосы под шкалой босса/уведомлениями.</summary>

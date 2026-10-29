@@ -24,9 +24,9 @@ public partial class Game
             for (int i = 0; i < 5; i++) Toast("Игра сохранена");
             Check(Notify.History.Count == 6, $"chat: six different messages, the repeats merged ({Notify.History.Count})");
             Check(Notify.History[^1].Repeat == 5, "chat: identical messages are merged into one with a counter");
-            Check(Banners.Count == 0 && Notify.History.Exists(m => m.Text.StartsWith("Открыта постройка")), "chat: ordinary notifications go to the log, not to banner panels");
+            Check(Notify.History.Exists(m => m.Text.StartsWith("Открыта постройка")), "chat: ordinary notifications go to the log, not to banner panels");
             Announce("Хранитель Тёмного леса повержен!", "победа", new Color("#ffe9a0"), "ancient");
-            Check(Banners.Count == 1 && Notify.History[^1].Kind == MsgKind.Important, "chat: an important victory also shows a short banner");
+            Check(Notify.History[^1].Kind == MsgKind.Important && Notify.History[^1].Text.Contains("победа"), "chat: an important victory is a line in the chat, with its short note");
             Check(GameNotificationService.Clean("  a\u0007b \n\n c  ", 200) == "a b c" && GameNotificationService.Clean(new string('x', 500), 200).Length == 200, "chat: control characters are stripped and the length is limited to 200");
             Check(Notify.Chat("X", "   ") == null, "chat: an empty message is not accepted");
             for (int i = 0; i < 130; i++) Notify.System("Сообщение " + i);
