@@ -41,7 +41,7 @@ user://worlds/<WorldId>.png            миниатюра карты 160×32 (о
 
 ## Внешность
 
-Слои `Assets/Sprites/Player/Look/*.png` (контур, кожа, одежда 1 и 2, детали, волосы) рисуются поверх друг друга и тонируются палитрами `Look`. Генератор: `python tools/GraphicsGenerator/make_look_art.py` (также рисует иконки и фон экранов выбора в `Assets/UI/Flow`). Новые причёски и фасоны — это новые строки в `HAIR` / `VARIANTS` скрипта и числа в `Look` (`HairN`, `VariantN`, названия).
+Слои `Assets/Sprites/Player/Look/*.png` (кожа, одежда 1 и 2, детали, волосы) рисуются поверх друг друга и тонируются палитрами `Look`; контур `LookArt` строит в коде по силуэту этих слоёв. Генератор: `python tools/GraphicsGenerator/make_look_art.py` (также рисует иконки и фон экранов выбора в `Assets/UI/Flow`). Новые причёски и фасоны — это новые строки в `HAIR` / `VARIANTS` скрипта и числа в `Look` (`HairN`, `VariantN`, названия).
 
 ## Проверки
 

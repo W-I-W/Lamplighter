@@ -1,7 +1,7 @@
 """Слои внешности героя Lanther (Assets/Sprites/Player/Look) и иконки/фон экранов выбора (Assets/UI/Flow).
 Запуск: python tools/GraphicsGenerator/make_look_art.py
 Слой — лист 32x16 (два кадра по 16x16, кадр 1 — шаг). Тонируемые слои (кожа, волосы, одежда) нарисованы в оттенках серого и умножаются на цвет палитры в игре;
-контур считается по общему силуэту каждой пары «вариант одежды × причёска» и лежит в отдельном листе outline_vV_hH.png.
+контур не рисуется здесь: LookArt.cs строит его в коде по общему силуэту слоёв.
 """
 import os
 from PIL import Image
@@ -204,21 +204,6 @@ def _detail(variant, f, part):
     return im
 
 
-def outline_layer(variant, hair, f):
-    g = frame_grid(variant, hair, f)
-    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    for y in range(H):
-        for x in range(W):
-            if g[y][x] is not None:
-                continue
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < W and 0 <= ny < H and g[ny][nx] is not None:
-                    im.putpixel((x, y), (16, 20, 42, 255))
-                    break
-    return im
-
-
 def save(name, img):
     img.save(os.path.join(LOOK, name))
 
@@ -230,8 +215,6 @@ for v in VARIANTS:
     save(f'lampoff_v{v}.png', make_sheet(detail_layer(v, 'lampoff')))
     save(f'cloth1_v{v}.png', make_sheet(cloth_layer(v, {'a'})))
     save(f'cloth2_v{v}.png', make_sheet(cloth_layer(v, {'b'})))
-    for h in HAIR:
-        save(f'outline_v{v}_h{h}.png', make_sheet(lambda f, v=v, h=h: outline_layer(v, h, f)))
 for h in HAIR:
     save(f'hair_{h}.png', make_sheet(hair_layer(h)))
 
