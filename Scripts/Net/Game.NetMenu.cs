@@ -31,9 +31,10 @@ public partial class Game
     void HostGame(string transport)
     {
         var o = new NetHostOptions { FriendsOnly = NetFriendsOnly };
+        if (HasSave) Save();                                                // одиночный прогресс записывается до перехода в сетевой мир
         if (!NetService.StartHost(transport, o)) { Sfx.Play("error"); Toast(NetService.Status); return; }
-        if (HasSave) CloseMenu(); else NewGame();
-        Toast(transport == "enet" ? $"Игра открыта (порт {o.Port}). Друзья подключаются по вашему адресу" : "Создание лобби Steam…");
+        CarryMsg = transport == "enet" ? $"Сетевая игра открыта (порт {o.Port}). Это отдельное сохранение: одиночный мир не затронут" : "Сетевая игра: создание лобби Steam… (отдельное сохранение)";
+        skipMenu = true; forceNew = false; GetTree().ReloadCurrentScene();     // сетевой мир и персонаж загружаются из save_mp.json или создаются заново
     }
 
     void NetInfoAct(int i)

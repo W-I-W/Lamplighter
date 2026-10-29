@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "glade"
+Title = "Редкая поляна"
+Hint = "Необычные кристаллы растут здесь. Берегитесь хранителя"
+Kind = 18
+Variant = 0
+Region = 0
+Count = 2
+MinFromSpawn = 20
+MaxFromSpawn = 56
+Clear = 3
+Spacing = 13
+Guards = 1
+Tier = 1
+Reward = ""
+Unique = false
+SilhouetteR = 260
+MapColor = Color(0.55, 1, 0.8, 1)

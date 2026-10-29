@@ -53,17 +53,33 @@ public static class Settings
         AudioServer.SetBusVolumeDb(Bus("SFX"), Sfx <= .001f ? -80f : Mathf.LinearToDb(Sfx));
     }
 
+    static bool windowPlaced;
+
     public static void ApplyWindow(bool testing)
     {
         if (testing) return;
-        if (Fullscreen) DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen);
+        // Перезагрузка сцены (выход в меню, смена сетевого мира) вызывает ApplyWindow снова: если окно уже в нужном режиме и размере, ничего не трогаем — иначе оно дёргалось
+        if (Fullscreen) { if (DisplayServer.WindowGetMode() != DisplayServer.WindowMode.ExclusiveFullscreen) DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen); windowPlaced = true; }
         else
         {
+            bool wasWindowed = DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Windowed;
+            if (windowPlaced && wasWindowed && DisplayServer.WindowGetSize() == Resolutions[Math.Min(Res, Resolutions.Length - 1)]) return;
+            windowPlaced = true;
             DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
-            var r = Resolutions[Res]; var screen = DisplayServer.ScreenGetSize();
-            if (r.X > screen.X || r.Y > screen.Y) r = Resolutions[0];
-            DisplayServer.WindowSetSize(r); DisplayServer.WindowSetPosition((screen - r) / 2);
+            int scr = DisplayServer.WindowGetCurrentScreen(); var area = DisplayServer.ScreenGetUsableRect(scr);        // рабочая область именно того экрана, где окно (без панели задач)
+            var r = Resolutions[Res]; if (r.X > area.Size.X || r.Y > area.Size.Y) { r = Resolutions[0]; for (int i = Resolutions.Length - 1; i >= 0; i--) if (Resolutions[i].X <= area.Size.X && Resolutions[i].Y <= area.Size.Y) { r = Resolutions[i]; break; } }
+            DisplayServer.WindowSetSize(r); CenterWindow(scr);
+            if (Engine.GetMainLoop() is SceneTree st) st.CreateTimer(.15).Timeout += () => CenterWindow(DisplayServer.WindowGetCurrentScreen());     // рамка окна известна не сразу после смены режима
         }
+    }
+
+    /// <summary>Центр окна (с рамкой и заголовком) в рабочей области выбранного экрана, с учётом его смещения на рабочем столе.</summary>
+    static void CenterWindow(int scr)
+    {
+        if (Fullscreen || DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Windowed) return;
+        var area = DisplayServer.ScreenGetUsableRect(scr); var size = DisplayServer.WindowGetSizeWithDecorations();
+        var pos = area.Position + (area.Size - size) / 2; pos.X = Math.Max(area.Position.X, pos.X); pos.Y = Math.Max(area.Position.Y, pos.Y);
+        DisplayServer.WindowSetPosition(pos);
     }
 
     public static void Apply(bool testing) { ApplyAudio(); ApplyWindow(testing); Loc.SetLang(Lang); }

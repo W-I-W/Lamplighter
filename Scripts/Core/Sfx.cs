@@ -15,7 +15,10 @@ public partial class Sfx : Node
     readonly Random rnd = new(7);
     readonly RandomNumberGenerator prng = new();
 
-    public static void Play(string name, float db = 0f, float pitch = 1f) => inst?.P(name, db, pitch);
+    public static Action<string, float, float> Hook;                // сеть: пересылает игровые звуки остальным игрокам
+    public static void Play(string name, float db = 0f, float pitch = 1f) { inst?.P(name, db, pitch); Hook?.Invoke(name, db, pitch); }
+    /// <summary>Звук, пришедший по сети: играется без повторной пересылки.</summary>
+    public static void PlayRemote(string name, float db = 0f, float pitch = 1f) => inst?.P(name, db, pitch);
 
     public override void _Ready()
     {

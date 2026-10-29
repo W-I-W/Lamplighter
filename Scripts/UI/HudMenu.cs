@@ -15,6 +15,8 @@ public partial class Hud
         int i = mv.ItemHit(p); return i >= 0 ? i : wv.RowHit(p);
     }
 
+    public bool SettingFrac(Vector2 logical, int idx, out float frac) => wv.ValueFrac(logical, idx, out frac);
+
     void DrawMenu(Vector2 vs)
     {
         if (G.Menu == Mn.None) return;

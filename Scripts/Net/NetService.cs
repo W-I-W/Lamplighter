@@ -18,6 +18,7 @@ public static class NetService
 
     // мир, выданный хостом клиенту при подключении
     public static int? WorldSeed; public static int WorldGen; public static Vector2 SpawnPos; public static bool WorldPending;
+    public static byte[] PendingPoi, PendingAnc; public static int[] PendingTiles, PendingLamps;                   // снимок общего прогресса мира от хоста: применяется, когда мир клиента готов
 
     public static event Action<NetPlayer> PlayerJoined, PlayerLeft;
     public static event Action<string> Notice;                     // короткие сообщения для игрока
@@ -36,10 +37,19 @@ public static class NetService
     {
         Leave(false); var t = Make(transportId); if (t == null) return Fail("Неизвестный транспорт");
         if (!t.IsAvailable(out var why)) return Fail(why);
+        AutoName(t);
         Transport = t; Role = NetRole.Host; State = NetState.Connecting; Status = "Создание игры…"; Players.Clear(); WorldSeed = null;
         t.Failed += OnTransportFailed; t.Ready += OnHostReady; hostOpts = o;
         var err = t.StartHost(o); if (err != Error.Ok) return Fail(Status != "" && State == NetState.Failed ? Status : $"Не удалось создать игру ({err})");
         return true;
+    }
+
+    /// <summary>Если игрок не задал имя, берём имя из Steam, а без Steam — имя пользователя системы: иначе у всех участников было бы одинаковое «Игрок».</summary>
+    static void AutoName(INetTransport t)
+    {
+        if (LocalName != "" && LocalName != "Игрок") return;
+        string n = t is SteamTransport st ? st.LocalPersona : ""; if (n == "") n = OS.GetEnvironment("USERNAME"); if (n == "") n = OS.GetEnvironment("USER");
+        if (n != "") LocalName = n.Length > 20 ? n.Substring(0, 20) : n;
     }
 
     static NetHostOptions hostOpts;
@@ -49,7 +59,8 @@ public static class NetService
     {
         Leave(false); var t = Make(transportId); if (t == null) return Fail("Неизвестный транспорт");
         if (!t.IsAvailable(out var why)) return Fail(why);
-        Transport = t; Role = NetRole.Client; State = NetState.Connecting; Status = "Подключение…"; Players.Clear(); WorldSeed = null; WorldPending = false;
+        AutoName(t);
+        Transport = t; Role = NetRole.Client; State = NetState.Connecting; Status = "Подключение…"; Players.Clear(); WorldSeed = null; WorldPending = false; PendingPoi = null; PendingAnc = null; PendingTiles = null; PendingLamps = null;
         t.Failed += OnTransportFailed; t.Ready += () => Node?.AttachPeer();
         var err = t.StartClient(target); if (err != Error.Ok) return Fail(State == NetState.Failed ? Status : $"Не удалось подключиться ({err})");
         return true;
@@ -69,7 +80,7 @@ public static class NetService
         bool was = Role != NetRole.Offline;
         Node?.DetachPeer();
         var t = Transport; Transport = null; t?.Close(); t?.ClearHandlers();
-        Role = NetRole.Offline; State = NetState.Offline; Players.Clear(); WorldSeed = null; WorldPending = false; Status = "";
+        Role = NetRole.Offline; State = NetState.Offline; Players.Clear(); WorldSeed = null; WorldPending = false; PendingPoi = null; PendingAnc = null; PendingTiles = null; PendingLamps = null; Status = "";
         if (was && notify) Ended?.Invoke();
     }
 

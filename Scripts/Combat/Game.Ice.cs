@@ -21,7 +21,7 @@ public partial class Game
 
     public void Chill(float t)
     {
-        if (Has(Tech.FrostArmor)) t *= .4f;
+        if (Has(Tech.FrostArmor)) t *= ColdTaken;
         ChillT = Mathf.Max(ChillT, t);
     }
 
@@ -128,7 +128,7 @@ public partial class Game
 
     Vector2 UpdateWinter(Enemy e, float dt, Vector2 dir, float dist)
     {
-        float hpf = e.Hp / e.MaxHp; int ph = hpf > .66f ? 1 : hpf > .33f ? 2 : 3; float mul = ph == 3 ? .65f : 1f;
+        float hpf = e.Hp / e.MaxHp; int ph = hpf > .66f ? 1 : hpf > .33f ? 2 : 3; float mul = (ph == 3 ? .65f : 1f) * BossTempoMul();
         if ((int)e.Mark.X != ph)
         {
             e.Mark = new Vector2(ph, 0);
@@ -143,6 +143,7 @@ public partial class Game
             else if (!e.Shield && ph >= 2) e.Shield = true;
             if (e.Shield && ArenaPrismsLit() >= need) { e.Shield = false; e.VulnT = 6f; Announce("Щит разбит!", "Хранитель уязвим — бейте!", new Color("#ffe27a"), "ancient"); Burst(e.Pos, new Color("#ffffff"), 30, 150); Shake = 4; }
         }
+        if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero;
         switch (e.State)
         {
@@ -150,7 +151,7 @@ public partial class Game
                 {
                     var home = e.Home ?? e.Pos; var toHome = home - e.Pos;
                     vel = toHome.Length() > 11 * TS ? toHome.Normalized() * 30f : dir * (ph == 3 ? 36f : 28f);
-                    e.T1 -= dt;
+                    e.T1 -= dt; if (TryBossSpecial(e, dt, hpf, dist, dir)) break;
                     if (dist < 22 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(12f, -dir); Chill(2f); }
                     if (e.T1 <= 0)
                     {

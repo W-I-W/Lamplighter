@@ -102,6 +102,11 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "nethost") { BuildNetScript(true); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "netjoin") { BuildNetScript(false); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "upgrades") { BuildUpgradesScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "equip") { BuildEquipScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "skills") { BuildSkillsScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "explore") { BuildExploreScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "village") { BuildVillageScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "difficulty") { BuildDifficultyScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interact") { BuildInteractScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interactload") { BuildInteractLoadScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "texcheck") { BuildTexCheckScript(); return; }

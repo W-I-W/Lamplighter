@@ -27,7 +27,7 @@ public partial class Game
         S(.25f, () => Open(Win.Build));
         S(.25f, () => { CloseWindows(); OpenTrade(null); });
         S(.25f, () => { TradeTab = 1; });
-        for (int p = 0; p < 4; p++) { int pp = p; S(.25f, () => { foreach (var an in W.Ancients) if (an.Region >= 1 && an.Region <= 3 && !an.Boss) an.Lit = true; Upgrades.Update(false); OpenTech(true); TechPage = pp; TechCur = 0; }); }
+        for (int p = 0; p < 4; p++) { int pp = p; S(.25f, () => { foreach (var an in W.Ancients) if (an.Region >= 1 && an.Region <= 3 && !an.Boss) an.Lit = true; Upgrades.Update(false); OpenTech(true); TechPage = pp; TechSel = -1; }); }
         S(.25f, () => { CloseWindows(); MapOpen = true; });
         S(.25f, () => { CloseWindows(); var p = W.Pois.Find(x => x.Kind == PK.Lore); if (p != null) ReadLore(p); });
         S(.25f, () => { CloseWindows(); Window = Win.Rift; WinTab = 0; });

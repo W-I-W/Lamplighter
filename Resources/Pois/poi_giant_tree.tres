@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "giant_tree"
+Title = "Древо-хранитель"
+Hint = "Огромное древо хранит дар лесу: коснитесь корней [E]"
+Kind = 21
+Variant = 12
+MinGen = 3
+Region = 0
+Count = 1
+MinFromSpawn = 26
+MaxFromSpawn = 56
+Clear = 4
+Spacing = 14
+Guards = 0
+Tier = 2
+Reward = "relic:r_dawnprism;item:15:3"
+Unique = true
+SilhouetteR = 700
+MapColor = Color(1, 0.85, 0.4, 1)

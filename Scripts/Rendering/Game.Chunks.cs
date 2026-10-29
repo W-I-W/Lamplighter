@@ -44,8 +44,8 @@ public partial class Game
             F = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
             O = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
             B = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },     // кроны деревьев под игроком (игрок спереди дерева)
-            T = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },     // кроны деревьев: выше игрока, без коллизии
-            K = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS) }                           // стволы, закрывающие игрока, когда он стоит позади дерева
+            T = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat, Modulate = new Color(1, 1, 1, TreeFadeAlpha) },     // кроны деревьев: выше игрока, без коллизии; полупрозрачны, чтобы видеть игрока/постройку за деревом
+            K = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Modulate = new Color(1, 1, 1, TreeFadeAlpha) }                         // стволы, закрывающие игрока, когда он стоит позади дерева
         };
         FillFoliage(c.F, cx, cy);
         for (int y = 0; y < CS; y++)

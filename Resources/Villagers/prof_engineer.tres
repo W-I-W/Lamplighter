@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ProfDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Village/ProfDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "engineer"
+Title = "Инженер"
+Building = "Refinery"
+Rate = 1.4
+Anim = "inspect"
+Sprite = "v_engineer"
+Order = 4
+Enabled = true
+Accent = Color(0.5, 0.85, 0.9, 1)
+Lines = PackedStringArray("Механизмы древних не сломаны — они ждут.", "Дай шестерёнки, и цех заработает ровнее.", "Каждый узел снабжения — как нерв поселения.")

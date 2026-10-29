@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "r3_tower"
+Title = "Заброшенная башня"
+Hint = "Стража охраняет сундук наверху: победите её"
+Kind = 16
+Variant = 0
+MinGen = 3
+Region = 3
+Count = 1
+MinFromSpawn = 16
+MaxFromSpawn = 56
+Clear = 3
+Spacing = 13
+Guards = 4
+Tier = 2
+Reward = "relic:r_rimemirror;item:15:2"
+Unique = true
+SilhouetteR = 340
+MapColor = Color(1, 0.85, 0.4, 1)

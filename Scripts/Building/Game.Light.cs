@@ -32,7 +32,7 @@ public partial class Game
     {
         float b = l.Kind == 0 ? 96 : l.Kind == 1 ? 72 : 64;
         float lv = l.Level == 1 ? 1f : l.Level == 2 ? 1.35f : 1.7f;
-        float f = b * lv * (Has(Tech.FarLanterns) ? 1.5f : 1f) * (Has(Tech.FireLens) ? 1.3f : 1f);
+        float f = b * lv * (1f + FarLampBonus) * (1f + E(Tech.FireLens));
         f *= (LightBlockT > 0 ? .4f : 1f) * (1f - .55f * SmokeAt(l.Pos)) * (1f + (Has(Tech.Prism) ? .22f : .12f) * l.Amp) * (1f + N("LampRadius")) * (Surge > 0 ? 1.25f : 1f);
         return f * Ease(l.Anim);
     }
@@ -201,6 +201,8 @@ public partial class Game
             bool lit = false;
             foreach (var bp in Beams) { for (int i = 0; i + 1 < bp.Pts.Count && !lit; i++) if (DistToSeg(p.Pos, bp.Pts[i], bp.Pts[i + 1]) < 11) lit = true; if (lit) break; }
             if (!lit) foreach (var b in Beacons) if (p.Pos.DistanceTo(b.Pos) < BeaconR(b) * .85f) { lit = true; break; }
+            if (!lit) foreach (var a in W.Ancients) if (a.Lit && p.Pos.DistanceTo(a.Pos) < AncientR(a)) { lit = true; break; }
+            if (!lit) foreach (var l in Lamps) if (p.Pos.DistanceTo(l.Pos) < 5 * TS) { lit = true; break; }
             if (!lit) continue;
             SetObj(p.Tile.X, p.Tile.Y, Tl.Chest); p.Seen = true; Burst(p.Pos, new Color("#ffe27a"), 20, 90);
             Announce("Скрытый тайник проявился!", "Свет выявил то, что скрывала тьма", new Color("#ffd86b"), "tech");

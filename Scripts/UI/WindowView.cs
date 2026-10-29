@@ -25,10 +25,12 @@ public partial class WindowView : Control
     }
 
     /// <summary>Начало кадра: размер и положение рамки, заголовок, подсказка. listW: 0 — один список; &gt;0 — слева список такой ширины, справа подробности; -1 — область карты.</summary>
+    float listWidth;     // ширина колонки списка, если рядом есть панель подробностей: абзацы списка не должны быть шире неё (иначе окно растёт за край экрана)
+
     public void Begin(Vector2 vs, string titleText, Color accent, string footer, Vector2 size, float listW = 0, float dimAlpha = .55f)
     {
         nRow = nText = nRich = nTab = nChip = posList = posDetail = 0; hasTabs = false; ResetMap();
-        size = new Vector2(Mathf.Min(size.X, vs.X - 12), Mathf.Min(size.Y, vs.Y - 12)); frameSize = size; detailW = size.X - 12 - Mathf.Max(0, listW) - 6 - 10;
+        size = new Vector2(Mathf.Min(size.X, vs.X - 12), Mathf.Min(size.Y, vs.Y - 12)); frameSize = size; listWidth = listW; detailW = size.X - 12 - Mathf.Max(0, listW) - 6 - 10;
         dim.Color = new Color(0, 0, .03f, dimAlpha);
         frame.CustomMinimumSize = size; frame.Size = size; frame.Position = new Vector2(Mathf.Round(vs.X * .5f - size.X * .5f), Mathf.Round(vs.Y * .5f - size.Y * .5f - 4));
         title.Text = Loc.T(titleText); title.Modulate = accent;
@@ -98,7 +100,7 @@ public partial class WindowView : Control
         if (nRich < riches.Count) l = riches[nRich];
         else { l = new RichTextLabel { FitContent = true, MouseFilter = MouseFilterEnum.Ignore }; riches.Add(l); }
         nRich++; l.Visible = true; if (detail) Place(l, detailBox, ref posDetail); else Place(l, listBox, ref posList);
-        l.CustomMinimumSize = new Vector2(detail ? detailW : frameSize.X - 30, 0); return l;
+        l.CustomMinimumSize = new Vector2(detail ? detailW : listWidth > 0 ? Mathf.Max(40, listWidth - 14) : frameSize.X - 30, 0); return l;
     }
 
     /// <summary>Текст с раскраской ключевых слов и «печатной машинкой»: visible — сколько символов показано (-1 — все).</summary>
@@ -135,6 +137,14 @@ public partial class WindowView : Control
         if (!Visible) return -1; var p = logical * G.UiScaleVp;
         for (int i = 0; i < nRow; i++) if (rows[i].Index >= 0 && Inside(rows[i], p)) return rows[i].Index;
         return -1;
+    }
+
+    /// <summary>Положение клика внутри значения строки (0 — левый край полосы, 1 — правый). false, если в строке нет значения.</summary>
+    public bool ValueFrac(Vector2 logical, int idx, out float frac)
+    {
+        frac = 0; if (!Visible) return false; var p = logical * G.UiScaleVp;
+        for (int i = 0; i < nRow; i++) if (rows[i].Index == idx && rows[i].ValueSpan(out var a, out var b)) { frac = (p.X - a) / (b - a); return true; }
+        return false;
     }
 
     public int TabHit(Vector2 logical)

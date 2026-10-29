@@ -29,6 +29,7 @@ public partial class Game
         var arr = new Vector4[LightLimit]; int n = 0;
         float fl = 1f + .05f * Mathf.Sin(Time * 11f) + .03f * Mathf.Sin(Time * 23f + 1f);
         arr[n++] = new Vector4(PPos.X, PPos.Y, PlayerLightR * fl, 0);
+        foreach (var rp in Remotes()) if (rp.Hp > 0 && n < LightLimit - 20) arr[n++] = new Vector4(rp.Shown.X, rp.Shown.Y, rp.Light * fl, 0);      // свет других игроков: каждый видит свет остальных
         foreach (var a in W.Ancients) if (a.Lit && n < LightLimit) arr[n++] = new Vector4(a.Pos.X, a.Pos.Y, AncientR(a), Mathf.Max(a.Anim < 1 ? 1 - a.Anim : 0, a.Pulse));
         foreach (var l in Lamps) if (n < LightLimit) arr[n++] = new Vector4(l.Pos.X, l.Pos.Y, LampRad(l) * (1f + .02f * Mathf.Sin(Time * 9f + l.Pos.X) + .012f * Mathf.Sin(Time * 23f + l.Pos.Y * 1.3f)), 0);
         foreach (var b in Beacons) if (n < LightLimit) arr[n++] = new Vector4(b.Pos.X, b.Pos.Y, BeaconR(b), b.Ring * (1 - b.T / b.Dur));
@@ -67,6 +68,7 @@ public partial class Game
             else if (ev.Kind == "trader") yield return new Vector4(ev.Pos.X, ev.Pos.Y, 56, 0);
             else if (ev.Kind == "meteor" && ev.State == 1) yield return new Vector4(ev.Pos.X, ev.Pos.Y, 46 * k, 0);
             else if (ev.Kind == "rift") yield return new Vector4(ev.Pos.X, ev.Pos.Y, 50 * k, 0);
+            else if (ev.Kind == "awaken") yield return new Vector4(ev.Pos.X, ev.Pos.Y, 48, -.5f * k);
             else if (ev.Kind == "traveler") yield return new Vector4(ev.Npc.X, ev.Npc.Y, 40, 0);
             else if (ev.Kind == "caravan" || ev.Kind == "elite") yield return new Vector4(ev.Pos.X, ev.Pos.Y, 30, -.45f * k);
         }
@@ -104,6 +106,14 @@ public partial class Game
             if (a.Lit) continue;
             float d = a.Pos.DistanceTo(PPos); if (d > (a.Boss ? 420 : 340)) continue;
             yield return new Vector4(a.Pos.X, a.Pos.Y, a.Boss ? 70 : 50, -(a.Boss ? .55f : .45f) * pulse); if (++n >= 12) yield break;
+        }
+        // силуэты далёких мест (башня, редкая поляна): видны сквозь тьму издалека и подсказывают направление, не раскрывая сами тайники
+        foreach (var p in W.Pois)
+        {
+            if ((p.State >= 3 && p.Kind != PK.GiantTree) || (p.Kind != PK.Tower && p.Kind != PK.Glade && p.Kind != PK.SparkAltar && p.Kind != PK.RuneObelisk && p.Kind != PK.GiantTree)) continue;
+            var def = PoiDefs.Of(p.Kind); float rng2 = def != null && def.SilhouetteR > 0 ? def.SilhouetteR : 300; if (p.Pos.DistanceTo(PPos) > rng2) continue;
+            float fl = p.Kind == PK.Glade || p.Kind == PK.SparkAltar ? .55f + .45f * Mathf.Sin(Time * 7f + p.Pos.X) : pulse;
+            yield return new Vector4(p.Pos.X, p.Pos.Y - (p.Kind == PK.Tower ? 20 : p.Kind == PK.GiantTree ? 48 : 0), p.Kind == PK.GiantTree ? 96 : p.Kind == PK.Tower ? 64 : 30, -(p.Kind == PK.GiantTree ? .55f : p.Kind == PK.Tower ? .5f : .4f) * fl); if (++n >= 12) yield break;
         }
         foreach (var p in W.Pois)
         {

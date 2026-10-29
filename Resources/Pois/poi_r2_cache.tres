@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "r2_cache"
+Title = "Скрытый тайник"
+Hint = "Тайник проявился!"
+Kind = 14
+Variant = 10
+MinGen = 3
+Region = 2
+Count = 2
+MinFromSpawn = 16
+MaxFromSpawn = 56
+Clear = 1
+Spacing = 11
+Guards = 0
+Tier = 2
+Reward = ""
+Unique = false
+SilhouetteR = 0
+MapColor = Color(1, 0.85, 0.4, 1)

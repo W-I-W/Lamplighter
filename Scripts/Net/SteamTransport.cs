@@ -31,9 +31,9 @@ public sealed class SteamTransport : INetTransport
         if (!inited)
         {
             // Запуск из редактора/exe не из Steam: steam_appid.txt ищется рядом с запущенным exe, а не в проекте. Без него Steam не знает AppID.
-            // Для разработки подставляем тестовый AppID 480 (Spacewar); при запуске из Steam переменные уже заданы и ничего не меняется.
+            // Подставляем AppID игры (NetConst.DevAppId = 5523470); при запуске из Steam переменные уже заданы и ничего не меняется.
             if (OS.GetEnvironment("SteamAppId") == "" && OS.GetEnvironment("SteamGameId") == "" && !System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(OS.GetExecutablePath()) ?? "", "steam_appid.txt")))
-            { OS.SetEnvironment("SteamAppId", NetConst.DevAppId); OS.SetEnvironment("SteamGameId", NetConst.DevAppId); GD.Print("[steam] AppID не задан — тестовый " + NetConst.DevAppId + " (Spacewar). В релизе нужен свой AppID."); }
+            { OS.SetEnvironment("SteamAppId", NetConst.DevAppId); OS.SetEnvironment("SteamGameId", NetConst.DevAppId); GD.Print("[steam] AppID не задан — используется AppID игры " + NetConst.DevAppId + "."); }
             var r = steam.Call("steamInitEx");
             bool ok = true;
             if (r.VariantType == Variant.Type.Dictionary) { var d = r.AsGodotDictionary(); ok = d.ContainsKey("status") && (long)d["status"] == 0; if (!ok) reason = d.ContainsKey("verbal") ? d["verbal"].ToString() : "Steam не запущен"; }
@@ -123,5 +123,9 @@ public sealed class SteamTransport : INetTransport
     }
 
     public ulong UserIdOf(long peerId) => peer != null && peerId != 0 && ClassDB.ClassHasMethod("SteamMultiplayerPeer", "get_steam_id_for_peer_id") ? (ulong)peer.Call("get_steam_id_for_peer_id", peerId).AsInt64() : 0;
+    /// <summary>Имя этого игрока в Steam (пусто, если Steam не готов).</summary>
+    public string LocalPersona { get { try { return Available() ? steam.Call("getPersonaName").AsString() : ""; } catch { return ""; } } }
+    bool Available() => inited && steam != null;
+
     public string UserNameOf(long peerId) { ulong id = UserIdOf(peerId); return id == 0 || !inited ? "" : steam.Call("getFriendPersonaName", (long)id).AsString(); }
 }

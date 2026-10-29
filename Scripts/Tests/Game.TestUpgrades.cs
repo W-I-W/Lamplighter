@@ -49,12 +49,13 @@ public partial class Game
         {
             Check(Ids() == "basic,depths,ash,ice" && fired == 3, $"upgrades: all four categories are open in the data order ({Ids()})");
             // состояния улучшений
-            var basic = PageList(0); Check(basic.Count == 10, $"upgrades: a category shows all of its upgrades, even unavailable ones ({basic.Count})");
+            var basic = PageList(0); Check(basic.Count == 16, $"upgrades: a category shows all of its upgrades, even unavailable ones ({basic.Count})");
             int lens = (int)Tech.Lens; HasFurnace = false; Check(StateOfTech(lens) == TechState.Locked, "upgrades: unmet condition → Locked");
             HasFurnace = true; for (int i = 0; i < It.Count; i++) Inv[i] = 0; Check(StateOfTech(lens) == TechState.Missing, "upgrades: condition met, no materials → Missing (still visible)");
-            Inv[It.Copper] = 4; Inv[It.Shard] = 2; Check(StateOfTech(lens) == TechState.Available, "upgrades: condition met and materials in place → Available");
-            TechPage = 0; TechCur = 0; Check(LearnTech(lens) && Has(Tech.Lens) && Inv[It.Copper] == 0 && Inv[It.Shard] == 0, "upgrades: learning pays the cost and grants the upgrade");
-            Check(StateOfTech(lens) == TechState.Owned && !LearnTech(lens), "upgrades: a learned upgrade is Owned and cannot be bought twice");
+            foreach (var cc in LevelCost(lens, 1)) Inv[cc[0]] = cc[1]; Check(StateOfTech(lens) == TechState.Available, "upgrades: condition met and materials in place → Available");
+            TechPage = 0; Check(LearnTech(lens) && Has(Tech.Lens) && Lv(Tech.Lens) == 1 && Inv[It.Copper] == 0 && Inv[It.Shard] == 0, "upgrades: learning pays the cost of level 1 and grants exactly one level");
+            Check(StateOfTech(lens) == TechState.Missing && !LearnTech(lens) && Lv(Tech.Lens) == 1, "upgrades: level 2 needs its own materials and is not bought without them");
+            SetSkillLevel(lens, 5); Check(StateOfTech(lens) == TechState.Owned && !LearnTech(lens) && Lv(Tech.Lens) == 5, "upgrades: a maxed upgrade is Owned and cannot be bought again"); SetSkillLevel(lens, 0);
             Check(StateOfTech((int)Tech.Pulse) != TechState.Available, "upgrades: a boss reward cannot be bought");
             // сохранение: открытые вкладки и непросмотренные
             Save(); var d = ReadSave();
@@ -85,22 +86,24 @@ public partial class Game
         S(.5f, () =>
         {
             Check(upgradeWindow.Visible && upgradeWindow.TabCount == 4, $"ui: the window shows four tabs ({upgradeWindow.TabCount})");
-            Check(upgradeWindow.CardCount == PageList(TechPage).Count, $"ui: every upgrade of the category has a card ({upgradeWindow.CardCount})");
-            int cur = TechCur; TechKey(Key.Down); Check(TechCur == cur + 1, "ui: ↓ moves the selection");
-            TechKey(Key.Up); Check(TechCur == cur, "ui: ↑ moves the selection back");
-            TechKey(Key.Right); Check(TechPage == 1, "ui: → switches to the next category");
+            Check(upgradeWindow.NodeCount == PageList(TechPage).Count, $"ui: every upgrade of the category is a node ({upgradeWindow.NodeCount})");
+            Check(upgradeWindow.LinkCount >= 8, $"ui: the tree draws dependency links ({upgradeWindow.LinkCount})");
+            Check(TechSel == (int)Tech.Lens, "ui: the first root is selected on opening"); TechKey(Key.Down); Check(TechSel == (int)Tech.FarLanterns, "ui: ↓ moves to the branch below");
+            TechKey(Key.Up); Check(TechSel == (int)Tech.Lens, "ui: ↑ moves back up");
+            TechKey(Key.Tab); Check(TechPage == 1, "ui: Tab switches to the next category");
             Check(!Upgrades.IsNew("depths"), "ui: viewing a new category clears its mark");
-            TechKey(Key.Left); Check(TechPage == 0, "ui: ← switches back");
+            TechKey(Key.Pageup); Check(TechPage == 0, "ui: PgUp switches back");
             upgradeWindow.ClickTab(2); Check(TechPage == 2, "ui: a click on a tab selects it"); upgradeWindow.ClickTab(0);
-            upgradeWindow.ClickCard(2); Check(TechCur == 2, "ui: a click on a card selects it");
-            TechCur = PageList(0).IndexOf((int)Tech.Dash); int c0 = Inv[It.Iron]; upgradeWindow.ClickLearn();
+            upgradeWindow.ClickNode((int)Tech.Spin); Check(TechSel == (int)Tech.Spin, "ui: a click on a node selects it");
+            TechSel = (int)Tech.Dash; int c0 = Inv[It.Iron]; upgradeWindow.ClickLearn();
             Check(Has(Tech.Dash) && Inv[It.Iron] < c0, "ui: the Learn button learns the selected upgrade");
-            TechCur = PageList(0).IndexOf((int)Tech.Reaper); TechKey(Key.Enter); Check(Has(Tech.Reaper), "ui: Enter learns the selected upgrade");
-            TechPage = 0; TechCur = 0; Flash = 0; Toasts.Clear(); Banners.Clear();
+            TechSel = (int)Tech.Reaper; TechKey(Key.Enter); Check(!Has(Tech.Reaper), "ui: a locked branch cannot be bought while its parent is below the required level");
+            TechSel = (int)Tech.Dash; TechKey(Key.Enter); Check(Lv(Tech.Dash) == 2, "ui: Enter buys exactly one more level"); TechSel = (int)Tech.Reaper; TechKey(Key.Enter); Check(Has(Tech.Reaper), "ui: the branch opens when the parent reaches level 2");
+            TechPage = 0; TechSel = -1; Flash = 0; Toasts.Clear(); Banners.Clear();
         });
-        S(.5f, () => { Flash = 0; Shot("upg_basic"); TechCur = PageList(0).IndexOf((int)Tech.FarLanterns); });
+        S(.5f, () => { Log($"upgwin open={TechOpen} vis={upgradeWindow.Visible} menu={Menu} nodes={upgradeWindow.NodeCount}"); Flash = 0; Shot("upg_basic"); TechSel = (int)Tech.FarLanterns; });
         S(.4f, () => Shot("upg_available"));
-        S(.3f, () => { SelectTechPage(1); TechCur = 1; });
+        S(.3f, () => { SelectTechPage(1); });
         S(.5f, () => Shot("upg_depths"));
         S(.2f, () => { CloseWindows(); Check(!TechOpen, "ui: the window closes"); GD.Print($"[check] SUMMARY failures={fails}"); });
         // новая категория: уведомление и вкладка с отметкой «новое»

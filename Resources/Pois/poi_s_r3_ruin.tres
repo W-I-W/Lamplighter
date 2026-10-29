@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "s_r3_ruin"
+Title = "Выживший"
+Hint = "Кто-то просит о помощи: освободите его [E]"
+Kind = 22
+Variant = 3
+MinGen = 4
+Region = 3
+Count = 1
+MinFromSpawn = 14
+MaxFromSpawn = 56
+Clear = 3
+Spacing = 12
+Guards = 0
+Tier = 1
+Reward = "villager:engineer"
+Unique = true
+SilhouetteR = 0
+MapColor = Color(0.5, 0.85, 0.4, 1)

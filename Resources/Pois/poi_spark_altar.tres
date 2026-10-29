@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "spark_altar"
+Title = "Алтарь искр"
+Hint = "Отдайте три искры света [E]: алтарь откроет тайну леса"
+Kind = 19
+Variant = 10
+MinGen = 2
+Region = 0
+Count = 1
+MinFromSpawn = 18
+MaxFromSpawn = 50
+Clear = 3
+Spacing = 13
+Guards = 0
+Tier = 2
+Reward = "relic:r_luckycoin"
+Unique = true
+SilhouetteR = 380
+MapColor = Color(1, 0.89, 0.5, 1)

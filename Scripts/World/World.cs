@@ -16,7 +16,7 @@ public enum Tl : byte
     FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge
 }
 
-public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret, Lore }
+public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret, Lore, Tower, Vault, Glade, SparkAltar, RuneObelisk, GiantTree, Survivor }
 
 /// <summary>Место интереса. State: 0 нетронуто, 1 стража вышла, 2 стража побеждена, 3 завершено.</summary>
 public sealed class Poi
@@ -32,6 +32,13 @@ public sealed class Ancient
     public float Anim;          // 0..1 — анимация отступления тьмы
     public int Cost;            // осколков света для зажигания
     public float RadiusTiles, TargetRadius, Pulse;
+    public LampKind Kind;       // вид фонаря (этап 8)
+    public bool Done;           // условие вида выполнено: стража побеждена или теневой кристалл разрушен
+    public Vector2I Crystal = new(-1, -1);   // теневой кристалл заражённого фонаря
+    public Poi GuardPoi = new() { Kind = PK.Camp };   // «хозяин» стражей охраняемого фонаря (в список мест не входит)
+    public byte Phase;          // 0 — не тронут, 1 — стража вышла
+    public Vector2I[] Pylons;   // загадочный фонарь: три светила (запад, север, восток) и порядок их касания
+    public int[] Seq; public int SeqPos; public Vector2I Tablet = new(-1, -1);
     public List<(int x, int y, Tl t)> Veins = new();   // скрытые жилы, появляются после зажигания
     public Vector2 Pos => new((Tile.X + .5f) * World.TS, (Tile.Y + .5f) * World.TS);
 }
@@ -68,9 +75,9 @@ public sealed partial class World
     public Tl Get(int x, int y) => In(x, y) ? (Tl)Obj[y * Wd + x] : Tl.Cliff;
     public void Set(int x, int y, Tl t) { if (In(x, y)) Obj[y * Wd + x] = (byte)t; }
 
-    public static World Generate(int seed)
+    public static World Generate(int seed, int genV = CurrentGen)
     {
-        var w = new World { Seed = seed };
+        var w = new World { Seed = seed, GenV = genV };
         var rng = new Random(seed);
         var nz = new FastNoiseLite { Seed = seed, Frequency = 0.05f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex };
         var forest = new FastNoiseLite { Seed = seed + 7, Frequency = 0.045f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex };
@@ -152,6 +159,7 @@ public sealed partial class World
         w.GenHeart(seed);
         w.GenFinds(seed, 3, 4);
         w.GenLore(seed);
+        if (genV >= 1) w.GenExplore(seed);
         w.EnsureStoryReachable();
         w.ClearBlockedCrowns();
         w.GenObj = (byte[])w.Obj.Clone();

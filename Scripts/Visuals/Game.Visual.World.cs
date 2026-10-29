@@ -86,7 +86,7 @@ public partial class Game
             var o = SmeltAt + new Vector2(-8, 9);
             Gfx.Bar(c, o, 16, 2, SmeltProg, new Color("#ff9a2e"));
         }
-        DrawBuildings(c);
+        DrawBuildings(c); DrawVillageDecor(c);
         DrawStatusMarkers(c);
         DrawSelection(c);
         DrawBuildGhost(c);
@@ -99,6 +99,7 @@ public partial class Game
         DrawEvents(c);
 
         var list = new List<(float y, Action a)>();
+        DrawGiantTrees(list, c);
         foreach (var e in Enemies) { var ee = e; list.Add((e.Pos.Y, () => DrawEnemy(c, ee))); }
         foreach (var d in deaths) { var dd = d; list.Add((d.Pos.Y, () => DrawDeath(c, dd))); }
         foreach (var v in Villagers) { var vv = v; list.Add((v.Pos.Y, () => DrawVillager(c, vv))); }
@@ -231,6 +232,8 @@ public partial class Game
                     if (ev.State == 0) { Gfx.Ring(c, ev.Pos, 10 + 8 * (1 - ev.V / 3.2f), 16, new Color(1f, .9f, .5f, .7f), 1.5f); Gfx.Line(c, ev.Pos + new Vector2(-ev.V * 30, -ev.V * 90), ev.Pos, new Color(1f, .95f, .7f, .7f), 3f); }
                     else Gfx.Ring(c, ev.Pos, 12 + 2 * Mathf.Sin(Time * 4), 18, new Color(1f, .9f, .5f, .5f), 1f);
                     break;
+                case "awaken":
+                    Gfx.Ring(c, ev.Pos, 52 + 2 * Mathf.Sin(Time * 3), 28, new Color(.6f, .38f, .85f, .35f + .15f * Mathf.Sin(Time * 5)), 1f); break;
                 case "rift":
                     for (int i = 0; i < 3; i++) Gfx.Arc(c, ev.Pos, 8 + i * 5 + 2 * Mathf.Sin(Time * 3 + i), Time * (i % 2 == 0 ? 1 : -1.3f), Time * (i % 2 == 0 ? 1 : -1.3f) + 4.2f, 16, new Color(.75f, .45f, 1f, .9f - i * .2f), 2f);
                     Gfx.Disc(c, ev.Pos, 5, new Color(.15f, .05f, .3f, .9f)); break;
@@ -282,10 +285,21 @@ public partial class Game
     void DrawVillager(EntityLayer c, Villager v)
     {
         Shadow(c, v.Pos, 4);
-        int f = (int)v.Walk % 2; float bob = v.Working ? -Mathf.Abs(Mathf.Sin(v.Walk)) * 1.5f : 0;
+        var pd = ProfDefs.Of(v.Prof); var def = Def(pd != null && pd.Sprite != "" ? pd.Sprite : "villager");
+        int f = v.State == VState.Working && def.Frames >= 4 ? 2 + (int)(v.Anim / .35f) % 2 : v.State == VState.Walking ? (int)v.Walk % 2 : v.Working ? (int)v.Walk % 2 : 0;
+        float bob = v.State == VState.Walking ? -Mathf.Abs(Mathf.Sin(v.Walk)) * 1f : 0;
         c.DrawSetTransform(v.Pos + new Vector2(0, bob), 0, new Vector2(v.Face, 1));
-        DrawFrame(c, Def("villager"), f, Colors.White);
+        DrawFrame(c, def, f, Colors.White);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+    }
+
+    /// <summary>Портрет для окна разговора: первый кадр листа профессии.</summary>
+    readonly Dictionary<string, AtlasTexture> portraits = new();
+    public Texture2D VillagerPortrait(Villager v)
+    {
+        var pd = ProfDefs.Of(v.Prof); string id = pd != null && pd.Sprite != "" ? pd.Sprite : "villager";
+        if (portraits.TryGetValue(id, out var t)) return t; var d = Def(id); if (d.Sheet == null) return null;
+        return portraits[id] = new AtlasTexture { Atlas = d.Sheet, Region = new Rect2(0, 0, d.FrameSize, d.FrameSize) };
     }
 
     // ───────────────────────── отрисовка ─────────────────────────
@@ -303,7 +317,7 @@ public partial class Game
                 if (b.Level >= 5) Gfx.Disc(c, b.Pos + new Vector2(0, -11), 1.6f, new Color("#ffe27a"));
                 continue;
             }
-            if (b.Type == Tl.Hub || b.Type == Tl.Stall)
+            if (b.Type == Tl.Hub || b.Type == Tl.Stall || b.Type == Tl.House)
             {
                 if (b.Type == Tl.Hub) Gfx.Ring(c, b.Pos, NodeRange(b), 48, new Color(.55f, .9f, 1f, .08f + .04f * Mathf.Sin(Time * 2f)), 1f);
                 if (!linked && b.Type == Tl.Hub) Gfx.Disc(c, b.Pos + new Vector2(0, -11), 2.2f, new Color("#ff5050"));

@@ -110,7 +110,7 @@ public partial class Game
         var r = Hot[HotSel]; if (!HotValid(r)) return;
         if (IsToolRef(r)) { CurTool = RefId(r); EquipNone(); }
         else { int i = Owned.FindIndex(o => o.Id == RefId(r)); if (i >= 0) { CurW = i; MineProg = 0; RecomputeEffects(); } }
-        Toast(HotName(r));
+        
     }
 
     /// <summary>Выбор предмета вне хотбара: слот выбирается вслед за предметом.</summary>

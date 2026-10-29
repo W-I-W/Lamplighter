@@ -1,0 +1,63 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/Equip/EquipCardUI.cs" id="1"]
+[ext_resource type="Theme" path="res://Resources/UI/UpgradeTheme.tres" id="2"]
+
+[node name="EquipCard" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 26)
+theme = ExtResource("2")
+theme_type_variation = &"CardNormal"
+script = ExtResource("1")
+
+[node name="H" type="HBoxContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 5
+
+[node name="Icon" type="TextureRect" parent="H"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="T" type="VBoxContainer" parent="H"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Name" type="Label" parent="H/T"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "name"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="Sub" type="Label" parent="H/T"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+text = "sub"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="Slot" type="Label" parent="H"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.56, 0.84, 1, 1)
+text = "[1]"
+
+[node name="Tag" type="Label" parent="H"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.61, 0.88, 0.48, 1)
+text = "●"

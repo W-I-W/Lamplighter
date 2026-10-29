@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Win { None, Equip, Journal, Prod, Build, Trade, Story, Rift, Inventory }
+public enum Win { None, Equip, Journal, Prod, Build, Trade, Story, Rift, Inventory, Talk }
 
 public sealed class BuildEntry { public string Key, Name, Cost, Lock, Hint = ""; public bool Unlocked, Affordable; public Action Do; public int Cat, Tile = -1, Stock; public int[][] CostArr, Raw; }
 
@@ -69,6 +69,7 @@ public partial class Game
             case Win.Build: return BuildEntriesFiltered().Count;
             case Win.Inventory: return InvVisible().Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
+            case Win.Talk: return 2;
         }
         return 0;
     }
@@ -131,6 +132,7 @@ public partial class Game
             case Win.Prod: ProdKey(k); break;
             case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
+            case Win.Talk: TalkKey(k); break;
             case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) { if (!hud.StorySkip()) CloseWindows(); } break;
         }
         return true;
@@ -203,11 +205,13 @@ public partial class Game
         if (k == Key.Left || k == Key.Right)
         {
             var modes = BModes[bk]; if (modes == null || modes.Length < 2) return;
-            b.Mode = (b.Mode + (k == Key.Right ? 1 : modes.Length - 1)) % modes.Length; b.Prog = 0; Sfx.Play("tick");
+            b.Mode = (b.Mode + (k == Key.Right ? 1 : modes.Length - 1)) % modes.Length; b.Prog = 0; Sfx.Play("tick"); if (NetClient) Net?.SendBuildCmd(4, BKey(b), b.Mode, 0);
         }
-        else if (k == Key.Key1 || k == Key.Key2 || k == Key.Key3) { b.Prio = (int)k - (int)Key.Key1; netT = 0; Sfx.Play("tick"); }
-        else if (k == Key.Enter || k == Key.KpEnter) { b.Off = !b.Off; Sfx.Play("tick"); }
+        else if (k == Key.Key1 || k == Key.Key2 || k == Key.Key3) { b.Prio = (int)k - (int)Key.Key1; netT = 0; Sfx.Play("tick"); if (NetClient) Net?.SendBuildCmd(5, BKey(b), b.Prio, 0); }
+        else if (k == Key.Enter || k == Key.KpEnter) { b.Off = !b.Off; Sfx.Play("tick"); if (NetClient) Net?.SendBuildCmd(6, BKey(b), b.Off ? 1 : 0, 0); }
         else if (k == Key.U) UpgradeBuilding(b);
+        else if (k == Key.Tab) CycleWorker(b);
+        else if (k == Key.Backspace || k == Key.Delete) ClearWorker(b);
     }
 
     void TradeKey(Key k, bool shift)

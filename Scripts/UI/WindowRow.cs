@@ -6,6 +6,12 @@ namespace Lamplighter;
 public partial class WindowRow : PanelContainer
 {
     public int Index = -1;
+    /// <summary>Горизонтальный промежуток значения справа (полоса громкости) в координатах окна; false, если значения нет.</summary>
+    public bool ValueSpan(out float x0, out float x1)
+    {
+        x0 = x1 = 0; if (cr == null || !cr.Visible) return false;
+        var t = cr.GetGlobalTransform(); x0 = (t * Vector2.Zero).X; x1 = (t * cr.Size).X; return x1 - x0 > 4f;
+    }
     readonly Label[] c = new Label[6]; Label cr; RichTextLabel sub; TextureRect icon; Control subM; string variation = "";
     static readonly Color Gold = new("#ffd23f");
 

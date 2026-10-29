@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ProfDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Village/ProfDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "smith"
+Title = "Кузнец"
+Building = "Forge"
+Rate = 1.5
+Anim = "hammer"
+Sprite = "v_smith"
+Order = 3
+Enabled = true
+Accent = Color(1, 0.7, 0.35, 1)
+Lines = PackedStringArray("Принеси железо, и я сделаю тебе кое-что получше.", "Горн горит — значит, мир ещё жив.", "Хороший слиток слышно по звону.")

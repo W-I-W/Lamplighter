@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "tower"
+Title = "Заброшенная башня"
+Hint = "Башню охраняют тени — наверху ждёт ценная находка"
+Kind = 16
+Variant = 0
+Region = 0
+Count = 1
+MinFromSpawn = 30
+MaxFromSpawn = 56
+Clear = 4
+Spacing = 13
+Guards = 3
+Tier = 2
+Reward = "relic:r_beaconwick;item:15:1"
+Unique = true
+SilhouetteR = 460
+MapColor = Color(0.82, 0.7, 1, 1)

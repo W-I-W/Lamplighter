@@ -86,6 +86,7 @@ public partial class Game
         int bk = BIndex(b.Type);
         if (b.Type == Tl.Warehouse && StockTotal > 0) { Fail("Сначала заберите ресурсы со склада [E]"); return; }
         if (!ConfirmDemolish($"b{b.X}:{b.Y}", BNames[bk], b.Level > 1 ? "Улучшения пропадут." : null)) return;
+        if (NetClient) Net?.SendBuildCmd(3, BKey(b), 0, 0);
         Buildings.Remove(b); SetObj(b.X, b.Y, Tl.None); netT = 0;
         DemolishDone(b.Pos, "bld" + bk, BNames[bk]);
     }

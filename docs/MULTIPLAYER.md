@@ -25,7 +25,7 @@
 
 ## Steam
 * Нужны: запущенный Steam, GodotSteam в движке **и в экспортных шаблонах**, AppID.
-* AppID в проекте не настроен. Для разработки: файл `steam_appid.txt` с `480` (Spacewar) в корне проекта — он в `.gitignore` и в `exclude_filter` экспорта;
+* AppID игры — 5523470 (`NetConst.DevAppId`, подставляется при запуске не из Steam). Для запуска из редактора: файл `steam_appid.txt` с `5523470` (AppID игры) в корне проекта — он в `.gitignore` и в `exclude_filter` экспорта;
   **в релизной сборке должен быть собственный AppID** (файл рядом с exe не нужен, когда игра запускается из Steam).
 * Лобби: `createLobby` → после `lobby_created` (вне обратного вызова!) создаётся `SteamMultiplayerPeer.create_host(0)`; `server_relay = true`.
   Известная особенность: создатель лобби тоже получает `lobby_joined` — это не вход клиента (игнорируется).

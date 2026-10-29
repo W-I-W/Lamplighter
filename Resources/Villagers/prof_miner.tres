@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ProfDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Village/ProfDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "miner"
+Title = "Шахтёр"
+Building = "Mine"
+Rate = 1.4
+Anim = "pick"
+Sprite = "v_miner"
+Order = 2
+Enabled = true
+Accent = Color(0.7, 0.78, 0.9, 1)
+Lines = PackedStringArray("В глубинах ещё полно руды. И кое-чего похуже.", "Камень не обманет. А вот тьма — запросто.", "Дай мне кирку покрепче, и шахта заговорит.")

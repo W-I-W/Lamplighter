@@ -10,14 +10,17 @@ public partial class Game
 {
     float poiT;
 
-    public static string PoiName(PK k) => k switch
+    /// <summary>Название места с учётом варианта и данных из Resources/Pois.</summary>
+    public static string PoiLabel(Poi p) => p.Kind == PK.Camp && p.Variant == 8 ? "Тёмный лагерь" : PoiName(p.Kind);
+
+    public static string PoiName(PK k) => PoiDefs.Of(k) is PoiDef pd && k != PK.Camp ? pd.Title : k switch
     {
         PK.Chest => "Сундук путника", PK.Ruins => "Древние руины", PK.House => "Заброшенный дом", PK.Camp => "Лагерь теней",
         PK.Shrine => "Святилище света", PK.Captive => "Пленник Тьмы", PK.Obelisk => "Обелиск", PK.Workshop => "Заброшенная мастерская", PK.Puzzle => "Хранилище света", PK.BridgeSite => "Разрушенный мост",
         PK.TechCache => "Забытая технология", PK.Spire => "Древний кристалл", PK.Altar => "Алтарь лучей", PK.Secret => "Скрытый тайник", PK.Lore => "Записка", _ => "Эфирная роща"
     };
 
-    static string PoiHint(PK k) => k switch
+    static string PoiHint(PK k) => PoiDefs.Of(k) is PoiDef pd && k != PK.Camp ? pd.Hint : k switch
     {
         PK.Chest => "Откройте сундук [E]", PK.Ruins => "Руины хранят добычу — осмотрите центр", PK.House => "В доме остались припасы и реликвии",
         PK.Camp => "Стража охраняет сундук — награда велика", PK.Shrine => "Святилище дарует благословение [E]",
@@ -31,7 +34,7 @@ public partial class Game
 
     public static Color PoiColor(PK k) => k switch
     {
-        PK.Camp => new Color("#ff6a5a"), PK.Captive => new Color("#7ad45a"), PK.Shrine => new Color("#8ff0ff"), PK.Obelisk => new Color("#9fb4ff"),
+        PK.Tower => new Color("#d2b3ff"), PK.RuneObelisk => new Color("#8ff0ff"), PK.GiantTree => new Color("#9af06a"), PK.SparkAltar => new Color("#ffe27a"), PK.Vault => new Color("#ffd86b"), PK.Glade => new Color("#8cffd0"), PK.Camp => new Color("#ff6a5a"), PK.Captive => new Color("#7ad45a"), PK.Shrine => new Color("#8ff0ff"), PK.Obelisk => new Color("#9fb4ff"),
         PK.Grove => new Color("#d58cff"), PK.Workshop => new Color("#8ff0ff"), PK.Puzzle => new Color("#ffe27a"), PK.BridgeSite => new Color("#d9b27c"), PK.TechCache => new Color("#8ff0ff"), PK.Spire => new Color("#ffb0ff"), PK.Altar => new Color("#ffe27a"), PK.Secret => new Color("#ffd86b"), _ => new Color("#ffd86b")
     };
 
@@ -42,14 +45,18 @@ public partial class Game
         foreach (var p in W.Pois)
         {
             float d = p.Pos.DistanceTo(PPos);
-            if (p.Kind == PK.Secret && W.Get(p.Tile.X, p.Tile.Y) == Tl.SecretCache) continue;
+            if (p.Kind == PK.Secret && W.Get(p.Tile.X, p.Tile.Y) == Tl.SecretCache)
+            {
+                if (d < 10 * TS) Parts.Add(new Particle { P = p.Pos + new Vector2(rng.RandfRange(-6, 6), rng.RandfRange(-6, 4)), V = new Vector2(0, -10), Life = .9f, Max = .9f, C = new Color("#ffe9a0"), Size = 1.5f });   // слабый блик выдаёт тайник, проявит его только свет
+                continue;
+            }
             if (!p.Seen && d < seeR)
             {
                 p.Seen = true; GiveXp(8);
-                Announce("Найдено: " + PoiName(p.Kind), PoiHint(p.Kind), PoiColor(p.Kind), "discover");
-                if (p.Kind == PK.Grove) p.State = 3;
+                Announce("Найдено: " + PoiLabel(p), p.Kind == PK.Camp && p.Variant == 8 ? "Усиленная стража: победите её, и сундук откроется" : PoiHint(p.Kind), PoiColor(p.Kind), "discover"); Burst(p.Pos, PoiColor(p.Kind), 14, 60);
+                if (p.Kind == PK.Grove || (p.Kind == PK.Glade && p.Guards == 0)) p.State = 3;
             }
-            if ((p.Kind == PK.Camp || p.Kind == PK.Captive) && p.State == 0 && d < 13 * TS) SpawnGuards(p);
+            if ((p.Kind == PK.Camp || p.Kind == PK.Captive || p.Kind == PK.Tower || (p.Kind == PK.Glade && p.Guards > 0)) && p.State == 0 && d < 13 * TS && !NetClient) SpawnGuards(p);
             if (p.State == 1)
             {
                 bool any = false; foreach (var e in Enemies) if (e.Guard == p) { any = true; break; }
@@ -57,6 +64,8 @@ public partial class Game
                 {
                     p.State = 2; Sfx.Play("tick");
                     if (p.Kind == PK.Camp) Announce("Лагерь зачищен", "Сундук теперь можно открыть [E]", new Color("#7ad45a"), "discover");
+                    else if (p.Kind == PK.Tower) Announce("Башня свободна", "Сундук наверху можно открыть [E]", new Color("#7ad45a"), "discover");
+                    else if (p.Kind == PK.Glade) { p.State = 3; Announce("Хранитель поляны повержен", "Кристаллы можно добывать спокойно", new Color("#7ad45a"), "discover"); }
                     else Announce("Стража побеждена", "Подойдите к клетке и освободите жителя [E]", new Color("#7ad45a"), "discover");
                     GiveXp(20);
                 }
@@ -68,7 +77,7 @@ public partial class Game
     {
         p.State = 1;
         float distC = p.Pos.DistanceTo(TileCenter(World.N / 2, World.N / 2)) / TS;
-        float scale = 1f + distC / 90f;
+        float scale = 1f + distC / 90f + (p.Variant == 8 ? .35f : p.Kind == PK.Tower ? .25f : p.Kind == PK.Glade ? .5f : 0f);
         for (int i = 0; i < p.Guards; i++)
         {
             for (int tries = 0; tries < 20; tries++)
@@ -88,7 +97,7 @@ public partial class Game
                 break;
             }
         }
-        Announce(p.Kind == PK.Camp ? "Стража лагеря!" : "Стража пленника!", "Тени заметили вас — сражайтесь", new Color("#ff6a5a"), "boss");
+        Announce(p.Kind == PK.Camp ? "Стража лагеря!" : p.Kind == PK.Tower ? "Стража башни!" : p.Kind == PK.Glade ? "Хранитель поляны!" : p.Kind == PK.Captive ? "Стража пленника!" : "Стража фонаря!", "Тени заметили вас — сражайтесь", new Color("#ff6a5a"), "boss");
     }
 
     bool PoiIx(Poi p, Ix ix)
@@ -100,7 +109,7 @@ public partial class Game
             case Tl.Spire: ix.Lines.Add("[E] Взять древний световой кристалл"); ix.E = () => TakeSpire(p); return true;
             case Tl.Chest:
                 if (p.Variant == 7 && AltarLocked(p)) { ix.Lines.Add("Сундук запечатан: оживите алтарь тремя лучами"); return true; }
-                if (p.Kind == PK.Camp && p.State < 2) ix.Lines.Add("Сундук охраняется: победите стражу лагеря");
+                if ((p.Kind == PK.Camp || p.Kind == PK.Tower) && p.State < 2) ix.Lines.Add(p.Kind == PK.Tower ? "Сундук охраняется: победите стражу башни" : "Сундук охраняется: победите стражу лагеря");
                 else { ix.Lines.Add("[E] Открыть сундук"); ix.E = () => OpenChest(p); }
                 return true;
             case Tl.Shrine: ix.Lines.Add("[E] Помолиться у святилища света"); ix.E = () => UseShrine(p); return true;
@@ -119,6 +128,7 @@ public partial class Game
         float distC = p.Pos.DistanceTo(TileCenter(World.N / 2, World.N / 2)) / TS;
         int reg = World.RegionOf(p.Tile.X);
         int tier = reg > 0 ? 3 : distC < 22 ? 0 : distC < 40 ? 1 : 2;
+        bool big = p.Kind == PK.Tower || p.Kind == PK.Vault || p.Variant == 8; if (big) tier = Math.Max(tier, 2);          // испытания дают заметно больше обычных сундуков
         var got = new List<(int, int)>();
         void G(int item, int n) { if (n > 0) got.Add((item, n)); }
         G(It.Wood, r.Next(3, 7) + tier * 2);
@@ -130,12 +140,13 @@ public partial class Game
         if (r.NextDouble() < rel) G(It.Relic, 1);
         if (tier >= 2 && r.NextDouble() < .4) G(It.Aether, r.Next(1, 3));
         if (p.Kind == PK.Camp) G(It.Shard, 3);
+        if (big) { G(It.Shard, 3); G(It.Iron, r.Next(2, 5)); if (p.Kind == PK.Tower || p.Kind == PK.Vault) G(It.Crystal, 1); }
         if (reg == 1) { G(It.Silver, r.Next(1, 4)); G(It.Crystal, r.Next(1, 3)); }
         if (reg == 2) { G(It.Obsidian, r.Next(1, 3)); G(It.Ember, r.Next(1, 3)); }
         if (p.Variant == 1) { G(It.Relic, 1); G(It.Crystal, 2); if (reg > 0) G(It.Aether, 1 + r.Next(2)); }
         var parts = new List<string>(); int k = 0;
         if (p.Tag != null) foreach (var tg in p.Tag.Split(';')) GrantTag(tg, p.Pos);
-        { var rr = new Random(W.Seed * 61 + p.Tile.X * 7 + p.Tile.Y); float chance = p.Variant == 3 ? 1f : p.Variant == 1 || p.Variant == 7 ? .7f : p.Kind == PK.Camp ? .5f : .15f + Luck; if (rr.NextDouble() < chance) GrantTag(RollTag(rr, tier, p.Variant == 7 ? .4f : 0), p.Pos); }
+        { var rr = new Random(W.Seed * 61 + p.Tile.X * 7 + p.Tile.Y); float chance = p.Variant == 3 || p.Variant == 8 ? 1f : p.Variant == 1 || p.Variant == 7 ? .7f : p.Kind == PK.Camp ? .5f : .15f + Luck; if (rr.NextDouble() < chance) GrantTag(RollTag(rr, big ? tier + 1 : tier, p.Variant == 7 ? .4f : big ? .3f : 0), p.Pos); }
         foreach (var (item, n) in got)
         {
             Inv[item] += n; parts.Add($"{n} {It.Ab[item]}");
@@ -143,7 +154,8 @@ public partial class Game
         }
         SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); p.State = 3; GiveXp(15 + tier * 5);
         Burst(p.Pos, new Color("#ffe27a"), 18, 80);
-        Announce(p.Variant == 1 ? "Тайник вскрыт!" : p.Variant == 7 ? "Сокровищница открыта!" : "Сундук открыт!", string.Join(", ", parts), new Color("#ffd86b"), "chest");
+        Burst(p.Pos, new Color("#fff2b0"), 26, 110);
+        Announce(p.Variant == 1 ? "Тайник вскрыт!" : p.Variant == 7 || p.Kind == PK.Vault ? "Сокровищница открыта!" : p.Variant == 8 ? "Тёмный лагерь разорён!" : p.Kind == PK.Tower ? "Находка из башни!" : "Сундук открыт!", string.Join(", ", parts), new Color("#ffd86b"), "chest");
         Save();
     }
 
@@ -154,7 +166,7 @@ public partial class Game
         SetObj(p.Tile.X, p.Tile.Y, Tl.ShrineUsed); p.State = 3;
         Burst(p.Pos, new Color("#8ff0ff"), 26, 100);
         if (b == 0) { MaxHp += 20; Hp = MaxHp; Announce("Благословение стойкости", "Максимум здоровья +20", new Color("#8ff0ff"), "levelup"); }
-        else if (b == 1) { Announce("Благословение мудрости", "Вы получили целый уровень опыта", new Color("#8ff0ff"), "levelup"); GiveXp(XpNeed - Xp + .01f); }
+        else if (b == 1) { Announce("Благословение мудрости", "Вы получили целый уровень опыта", new Color("#8ff0ff"), "levelup"); GiveXp(XpNeed - Xp + .01f, true); }
         else { Inv[It.Relic]++; Inv[It.Shard] += 3; Announce("Дар света", "Реликвия и 3 осколка света", new Color("#8ff0ff"), "chest"); }
         GiveXp(10); Save();
     }
@@ -162,7 +174,7 @@ public partial class Game
     void UseObelisk(Poi p)
     {
         var list = new List<Poi>();
-        foreach (var q in W.Pois) if (q != p && q.State < 3 && !q.Seen && !q.Revealed && q.Kind != PK.Obelisk) list.Add(q);
+        foreach (var q in W.Pois) if (q != p && q.State < 3 && !q.Seen && !q.Revealed && q.Kind != PK.Obelisk && q.Kind != PK.Vault) list.Add(q);
         list.Sort((a, b) => a.Pos.DistanceTo(PPos).CompareTo(b.Pos.DistanceTo(PPos)));
         var names = new List<string>();
         for (int i = 0; i < Math.Min(2, list.Count); i++) { list[i].Revealed = true; names.Add($"{PoiName(list[i].Kind)} ({(int)(list[i].Pos.DistanceTo(PPos) / TS)})"); }
@@ -174,12 +186,15 @@ public partial class Game
 
     void Rescue(Poi p)
     {
+        if (NetService.Active && NetService.Role == NetRole.Client) { Net?.SendRescue(W.Pois.IndexOf(p)); return; }       // в кооперативе жителя создаёт хост
         SetObj(p.Tile.X, p.Tile.Y, Tl.None); p.State = 3;
-        var wh = Buildings.Find(b => b.Type == Tl.Warehouse);
-        Villagers.Add(new Villager { Pos = p.Pos, Wander = wh != null ? wh.Pos : TileCenter(W.Spawn.X + 2, W.Spawn.Y) });
+        string tagProf = p.Tag != null && p.Tag.StartsWith("villager:") ? p.Tag.Substring(9) : null;
+        var nv = AddVillager(1000 + W.Pois.IndexOf(p), p.Pos, tagProf, "poi"); if (nv == null) return;                 // тот же Id — не дубль
+        Found.Add($"Житель: {nv.Name} — {ProfTitle(nv)}");
+        Texts.Add(new FText { P = p.Pos + new Vector2(0, -38), S = $"{nv.Name}: Спасибо! Я не забуду.", Life = 3f, C = ProfDefs.Of(nv.Prof)?.Accent ?? Colors.White });
+        Burst(p.Pos + new Vector2(0, -6), new Color("#ffe9a0"), 18, 70);
         GiveXp(50); Burst(p.Pos, new Color("#7ad45a"), 24, 100); if (BpDone.Add("bp_stall")) Frag["bp_stall"] = 1;
-        Toast(Story.Rescued[(p.Tile.X * 7 + p.Tile.Y * 3) % Story.Rescued.Length]);
-        Announce("Житель освобождён!", Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница [B]" : "Ещё один работник в деревне", new Color("#7ad45a"), "rescue");
+        Announce($"Спасён: {nv.Name}", $"{ProfTitle(nv)}. " + (Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница [B]" : "Ещё один житель в деревне"), new Color("#7ad45a"), "rescue");
         Save();
     }
 
@@ -189,7 +204,7 @@ public partial class Game
         {
             if (p.State >= 3) continue;
             if (p.Revealed && !p.Seen) { yield return p; continue; }
-            if (Has(Tech.Sight) && p.Kind != PK.Grove && p.Pos.DistanceTo(PPos) < 22 * TS) yield return p;
+            if (Has(Tech.Sight) && p.Kind != PK.Grove && p.Kind != PK.Vault && p.Pos.DistanceTo(PPos) < SightTiles * TS) yield return p;
         }
     }
 
@@ -205,6 +220,8 @@ public partial class Game
         }
         return best;
     }
+
+    public string TestGoal;
 
     List<Goal> BuildGoals()
     {
@@ -275,6 +292,7 @@ public partial class Game
             Add("Получить легендарное улучшение", LegendMask != 0, "Осколки разломов меняют на легенды у врат", gp);
             Add("Украсить земли [B]", DecorCount >= 3, "Статуи, фонтаны, знамёна: производство +1,5% за каждое");
         }
+        if (TestGoal != null) g.Insert(0, new Goal { Title = TestGoal, Needs = "" });       // только проверки: общий список целей в сети
         return g;
     }
 

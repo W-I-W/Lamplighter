@@ -21,7 +21,9 @@ public partial class BuildMenu : Control
 
     void OnSlot(int i)
     {
-        if (G.WinCur == i) G.PressWindowKey(Key.Enter); else G.WinCur = i;
+        // предмет уже создан (есть в запасе): один клик сразу берёт его в режим установки; иначе первый клик выбирает, второй создаёт
+        var list = G.BuildEntriesFiltered(); bool stocked = i < list.Count && list[i].Stock > 0 && list[i].Unlocked;
+        if (G.WinCur == i || stocked) { G.WinCur = i; G.PressWindowKey(Key.Enter); } else G.WinCur = i;
     }
 
     public bool IsOver(Vector2 p) => Visible && panel.GetGlobalRect().HasPoint(p);

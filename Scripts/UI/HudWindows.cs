@@ -14,11 +14,12 @@ public partial class Hud
     {
         switch (G.Window)
         {
-            case Win.Equip: DrawEquip(vs); break;
+            case Win.Equip: break;   // окно экипировки — сцена EquipWindowUI
             case Win.Journal: DrawJournal(vs); break;
             case Win.Prod: DrawProd(vs); break;
             case Win.Trade: DrawTrade(vs); break;
             case Win.Story: DrawStory(vs); break;
+            case Win.Talk: DrawTalk(vs); break;
             case Win.Rift: DrawRiftWin(vs); break;
         }
     }
@@ -185,23 +186,38 @@ public partial class Hud
 
     void DrawProd(Vector2 vs)
     {
-        wv.Begin(vs, "Производство", new Color("#ff9a2e"), "↑/↓ здание · ←/→ режим · 1-3 приоритет · Enter пауза · U ап", new Vector2(600, 330));
+        wv.Begin(vs, "Производство", new Color("#ff9a2e"), "↑/↓ здание · ←/→ режим · 1-3 приоритет · Enter пауза · U ап · Tab работник · Backspace убрать", new Vector2(640, 330));
         var list = G.ProdList();
         for (int i = 0, sh = 0; i < It.Count && sh < 12; i++) if (G.Stock[i] > 0) { wv.Chip(Icon(i), G.Stock[i].ToString(), Text); sh++; }
         wv.Text(false, $"Склад {G.StockTotal}/{G.StockCap} на ресурс · скорость ×{G.ProdMul:F2} · жителей {G.Villagers.Count}", Dim, false);
-        float[] ws = { 100, 20, 72, 56, 66, 0 };
-        wv.Cols(-1, false, new[] { "Здание", "Ур", "Состояние", "Связь", "Приоритет", "Режим" }, ws, new[] { Gold, Gold, Gold, Gold, Gold, Gold }, null, Dim);
+float[] ws = { 96, 18, 64, 50, 60, 84, 0 };
+        wv.Cols(-1, false, new[] { "Здание", "Ур", "Состояние", "Связь", "Приоритет", "Работник", "Режим" }, ws, new[] { Gold, Gold, Gold, Gold, Gold, Gold, Gold }, null, Dim);
         if (list.Count == 0) wv.Text(false, "Нет зданий: стройте лесопилку, шахту, цех [B]", Dim);
         int vis = wv.Fit(11, 60), sc = Scroll(G.WinCur, vis);
         for (int i = sc; i < list.Count && i < sc + vis; i++)
         {
             var b = list[i]; int bk = Game.BIndex(b.Type); bool lk = b.Linked || b.Forced; var modes = Game.BModes[bk];
             wv.Cols(i, i == G.WinCur,
-                new[] { Game.BNames[bk], b.Level.ToString(), StatusText(b), lk ? (b.Forced ? "авто" : "связь") : "нет связи", Game.PrioNames[b.Prio], modes != null ? modes[b.Mode % modes.Length] : "—" }, ws,
-                new[] { b.Off ? Dim : Text, Gold, b.Status == 0 && !b.Off ? Good : b.Status == 4 || b.Off ? Dim : Warn, lk ? Good : Bad, b.Prio == 0 ? Warn : b.Prio == 2 ? Dim : Text, Cyan },
+                new[] { Game.BNames[bk], b.Level.ToString(), StatusText(b), lk ? (b.Forced ? "авто" : "связь") : "нет связи", Game.PrioNames[b.Prio], G.WorkerOf(b)?.Name ?? "—", modes != null ? modes[b.Mode % modes.Length] : "—" }, ws,
+                new[] { b.Off ? Dim : Text, Gold, b.Status == 0 && !b.Off ? Good : b.Status == 4 || b.Off ? Dim : Warn, lk ? Good : Bad, b.Prio == 0 ? Warn : b.Prio == 2 ? Dim : Text, G.WorkerOf(b) == null ? Dim : b.WorkMul > 1.05f ? Good : Text, Cyan },
                 $"{(int)(b.Prog / Mathf.Max(.1f, Game.BIntervalOf(bk, b.Level)) * 100)}%", Dim);
         }
         wv.Text(false, "Приоритет: кто первым берёт сырьё. Режим: продукт. Далеко от склада — соединяйте узлами", Dim, true, 3);
+    }
+
+    // ───────────────────────── разговор с жителем ─────────────────────────
+    string talkPlain = ""; float talkStart;
+    static readonly System.Text.RegularExpressions.Regex Keyword = new(@"(свет\w*|тьм\w*|фонар\w*|руд\w*|желез\w*|дерев\w*|печат\w*|страж\w*|монет\w*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    void DrawTalk(Vector2 vs)
+    {
+        var v = G.TalkV; if (v == null) return; var pd = ProfDefs.Of(v.Prof); var acc = pd?.Accent ?? Gold;
+        wv.Begin(vs, v.Name, acc, "[Enter] выбрать · [Esc] закрыть", new Vector2(330, 200));
+        wv.Chip(G.VillagerPortrait(v), Loc.T(pd?.Title ?? "Житель"), acc);
+        string plain = Loc.T(G.TalkText); if (plain != talkPlain) { talkPlain = plain; talkStart = G.UiTime; }
+        int n = (int)((G.UiTime - talkStart) * 55f);
+        if (n < plain.Length) wv.Rich(plain, n); else wv.Bb(false, Keyword.Replace(plain.Replace("[", "[lb]").Replace("]", "[rb]"), "[color=#ffd86b]$1[/color]"), Text);
+        wv.Row(0, Sel(0), "Ещё слово", "", Gold, null, null, true); wv.Row(1, Sel(1), "До встречи", "", Dim, null, null, true);
     }
 
     // ───────────────────────── торговля ─────────────────────────
@@ -248,9 +264,25 @@ public partial class Hud
         {
             var p = (o + an.Pos / 16f * s).Round(); if (!(an.Lit || G.IsExplored(an.Pos))) continue;
             if (an.Boss) wv.MapDiamond(p, 3f, an.Lit ? Gold : new Color("#d58cff"));
-            else wv.MapRect(new Rect2(p - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), an.Lit ? Gold : Colors.White);
+            else wv.MapRect(new Rect2(p - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), an.Lit ? Gold : Game.LampKindColor(an.Kind));
         }
-        foreach (var p in G.W.Pois) { if (!(p.Seen || p.Revealed) || p.State >= 3) continue; wv.MapRect(new Rect2((o + p.Pos / 16f * s).Round(), new Vector2(1, 1)), Game.PoiColor(p.Kind)); }
+        foreach (var p in G.W.Pois)
+        {
+            if (!(p.Seen || p.Revealed) || p.State >= 3) continue;
+            var ip = (o + p.Pos / 16f * s).Round(); var ic = Game.PoiColor(p.Kind);
+            switch (p.Kind)
+            {
+                case PK.Tower: wv.MapRect(new Rect2(ip - new Vector2(1, 2), new Vector2(3, 1)), ic); wv.MapRect(new Rect2(ip - new Vector2(0, 2), new Vector2(1, 4)), ic); break;     // башня — «Т»
+                case PK.Camp: case PK.Captive: wv.MapDiamond(ip, 2f, ic); break;
+                case PK.RuneObelisk: wv.MapDiamond(ip, 2f, ic); break;
+                case PK.GiantTree: wv.MapRect(new Rect2(ip - new Vector2(1, 1), new Vector2(3, 3)), ic); break;
+                case PK.SparkAltar: wv.MapRect(new Rect2(ip - new Vector2(1, 0), new Vector2(3, 1)), ic); wv.MapRect(new Rect2(ip, new Vector2(1, 2)), ic); break;
+                case PK.Vault: wv.MapDiamond(ip, 2f, ic); wv.MapRect(new Rect2(ip, new Vector2(1, 1)), new Color(.1f, .1f, .15f)); break;
+                case PK.Glade: wv.MapRect(new Rect2(ip - new Vector2(1, 0), new Vector2(3, 1)), ic); wv.MapRect(new Rect2(ip - new Vector2(0, 1), new Vector2(1, 3)), ic); break;           // поляна — «+»
+                default: wv.MapRect(new Rect2(ip, new Vector2(1, 1)), ic); break;
+            }
+        }
+        foreach (var rp in G.RemoteMapPositions()) { var rr = (o + rp / 16f * s).Round(); wv.MapRect(new Rect2(rr - new Vector2(1, 1), new Vector2(3, 3)), new Color("#8ff0ff")); }
         foreach (var b in G.Buildings) wv.MapRect(new Rect2((o + b.Pos / 16f * s).Round() - new Vector2(1, 1), new Vector2(2, 2)), new Color("#d9b27c"));
         foreach (var ev in G.Events) { var ep = (o + ev.Pos / 16f * s).Round(); wv.MapRect(new Rect2(ep - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), Game.EvColor(ev.Kind)); }
         var pp = (o + G.PPos / 16f * s).Round(); bool blink = Mathf.Sin(G.Time * 6f) > 0;
@@ -326,7 +358,7 @@ public partial class Hud
     {
         if (!G.RiftOn) return;
         int left = G.Enemies.FindAll(e => e.Ev != null && e.Ev.Kind == "riftx").Count;
-        var r = new Rect2(vs.X * .5f - 90, 4, 180, 24); Panel(r, "PanelGold");
+        var r = new Rect2(topCx - 90, topRiftY, 180, 24); Panel(r, "PanelGold");
         Txt($"Разлом {G.RiftTier} · волна {G.RiftWave}/{G.RiftWaves} · {left}", new Vector2(r.Position.X, r.Position.Y + 10), 9, Text, HorizontalAlignment.Center, r.Size.X);
         Txt($"{Game.AffixNames[G.RiftAffix[0]]} + {Game.AffixNames[G.RiftAffix[1]]}", new Vector2(r.Position.X, r.Position.Y + 20), 9, Dim, HorizontalAlignment.Center, r.Size.X);
     }

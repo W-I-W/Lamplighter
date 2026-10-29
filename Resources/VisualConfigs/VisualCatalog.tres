@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VisualCatalog" load_steps=40 format=3]
+[gd_resource type="Resource" script_class="VisualCatalog" load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Visuals/VisualCatalog.cs" id="cat"]
 [ext_resource type="Script" path="res://Scripts/Visuals/EntityVisualDef.cs" id="edef"]
@@ -38,13 +38,18 @@
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Vfx/rare_pickup.tres" id="v2"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Vfx/rare_pickup_big.tres" id="v3"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Vfx/level_up.tres" id="v4"]
+[ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/v_lumberjack.tres" id="vp_lumberjack"]
+[ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/v_miner.tres" id="vp_miner"]
+[ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/v_smith.tres" id="vp_smith"]
+[ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/v_farmer.tres" id="vp_farmer"]
+[ext_resource type="Resource" path="res://Resources/VisualConfigs/Entities/v_engineer.tres" id="vp_engineer"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Vfx/building_upgrade.tres" id="v5"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Vfx/enemy_hit.tres" id="v6"]
 [ext_resource type="Resource" path="res://Resources/VisualConfigs/Vfx/player_hurt.tres" id="v7"]
 
 [resource]
 script = ExtResource("cat")
-Entities = Array[ExtResource("edef")]([ExtResource("e0"), ExtResource("e1"), ExtResource("e2"), ExtResource("e3"), ExtResource("e4"), ExtResource("e5"), ExtResource("e6"), ExtResource("e7"), ExtResource("e8"), ExtResource("e9"), ExtResource("e10"), ExtResource("e11"), ExtResource("e12"), ExtResource("e13"), ExtResource("e14"), ExtResource("e15"), ExtResource("e16"), ExtResource("e17"), ExtResource("e18"), ExtResource("e19"), ExtResource("e20"), ExtResource("e21"), ExtResource("e22"), ExtResource("e23"), ExtResource("e24"), ExtResource("e25"), ExtResource("e26")])
+Entities = Array[ExtResource("edef")]([ExtResource("e0"), ExtResource("e1"), ExtResource("e2"), ExtResource("e3"), ExtResource("e4"), ExtResource("e5"), ExtResource("e6"), ExtResource("e7"), ExtResource("e8"), ExtResource("e9"), ExtResource("e10"), ExtResource("e11"), ExtResource("e12"), ExtResource("e13"), ExtResource("e14"), ExtResource("e15"), ExtResource("e16"), ExtResource("e17"), ExtResource("e18"), ExtResource("e19"), ExtResource("e20"), ExtResource("e21"), ExtResource("e22"), ExtResource("e23"), ExtResource("e24"), ExtResource("e25"), ExtResource("e26"), ExtResource("vp_lumberjack"), ExtResource("vp_miner"), ExtResource("vp_smith"), ExtResource("vp_farmer"), ExtResource("vp_engineer")])
 Effects = Array[ExtResource("vdef")]([ExtResource("v0"), ExtResource("v1"), ExtResource("v2"), ExtResource("v3"), ExtResource("v4"), ExtResource("v5"), ExtResource("v6"), ExtResource("v7")])
 Darkness = ExtResource("dark")
 Glow = ExtResource("glow")

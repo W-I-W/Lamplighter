@@ -9,14 +9,19 @@ public partial class Game
 {
     public readonly HashSet<int> CutBush = new();              // срубленные кусты (World.Key клетки)
 
+    const float TreeFadeAlpha = .5f;                           // прозрачность кроны и ствола, когда за деревом игрок или постройка
+
     static bool IsPlantTile(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;
+
+    static bool IsBuiltTile(Tl t) => IsProducer(t) || t == Tl.Furnace || t == Tl.Lantern || t == Tl.Warehouse || t == Tl.House || t == Tl.Tent || t == Tl.Stall || t == Tl.Hub
+        || t == Tl.CrystalLantern || t == Tl.CombatLantern || t == Tl.AmpCrystal || t == Tl.BarrierPost;
 
     /// <summary>Тайл кроны для клетки (x, y): крона рисуется над стволом, если снизу стоит дерево, а сама клетка не занята твёрдым объектом.</summary>
     int CrownId(int x, int y)
     {
         if (!World.In(x, y + 1)) return -1;
         var below = W.Get(x, y + 1); if (!IsPlantTile(below)) return -1;
-        var own = W.Get(x, y); if (own != Tl.None && !IsPlantTile(own)) return -1;
+        var own = W.Get(x, y); if (own != Tl.None && !IsPlantTile(own) && !IsBuiltTile(own)) return -1;      // постройка за деревом — крона рисуется поверх неё, как поверх игрока
         return below == Tl.Tree ? Art.TreeTop : below == Tl.Pine ? Art.PineTop : Art.DeadTop;
     }
 
@@ -24,7 +29,7 @@ public partial class Game
     void RefreshCrown(int x, int y)
     {
         var ch = ChunkAt(x, y); if (ch == null) return;
-        var lc = new Vector2I(x % CS, y % CS); int id = CrownId(x, y); bool above = behindTrunks.Contains(new Vector2I(x, y + 1)) || behindTrunks.Contains(new Vector2I(x, y));        // свой ствол за игроком или в этой клетке копия чужого ствола — крона выше
+        var lc = new Vector2I(x % CS, y % CS); int id = CrownId(x, y); bool above = behindTrunks.Contains(new Vector2I(x, y + 1)) || behindTrunks.Contains(new Vector2I(x, y)) || IsBuiltTile(W.Get(x, y));      // свой ствол за игроком или в этой клетке копия чужого ствола — крона выше
         if (id < 0) { ch.B.EraseCell(lc); ch.T.EraseCell(lc); return; }
         var layer = above ? ch.T : ch.B; var other = above ? ch.B : ch.T;
         layer.SetCell(lc, srcId, new Vector2I(id, 0)); other.EraseCell(lc);

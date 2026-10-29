@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://Scripts/UI/Upgrades/UpgradeWindowUI.cs" id="1"]
 [ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="2"]
-[ext_resource type="Script" path="res://Scripts/UI/Upgrades/UpgradeDetailsUI.cs" id="3"]
+[ext_resource type="Script" path="res://Scripts/UI/Upgrades/SkillDetailsUI.cs" id="3"]
+[ext_resource type="Script" path="res://Scripts/UI/Upgrades/SkillTreeCanvasUI.cs" id="4"]
 
 [node name="UpgradeWindow" type="Control"]
 visible = false
@@ -30,9 +31,9 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
+offset_left = -312.0
 offset_top = -172.0
-offset_right = 300.0
+offset_right = 312.0
 offset_bottom = 172.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -69,110 +70,51 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="ListPanel" type="PanelContainer" parent="Panel/V/Body"]
-custom_minimum_size = Vector2(262, 0)
-layout_mode = 2
-theme_type_variation = &"PanelDark"
-
-[node name="Scroll" type="ScrollContainer" parent="Panel/V/Body/ListPanel"]
-unique_name_in_owner = true
-layout_mode = 2
-horizontal_scroll_mode = 0
-
-[node name="List" type="VBoxContainer" parent="Panel/V/Body/ListPanel/Scroll"]
-unique_name_in_owner = true
+[node name="TreePanel" type="PanelContainer" parent="Panel/V/Body"]
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 2
+size_flags_stretch_ratio = 72.0
+theme_type_variation = &"PanelDark"
+
+[node name="Canvas" type="Control" parent="Panel/V/Body/TreePanel"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+script = ExtResource("4")
 
 [node name="Details" type="PanelContainer" parent="Panel/V/Body"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 28.0
 theme_type_variation = &"PanelDark"
 script = ExtResource("3")
 
-[node name="D" type="VBoxContainer" parent="Panel/V/Body/Details"]
+[node name="DV" type="VBoxContainer" parent="Panel/V/Body/Details"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 3
 
-[node name="Head" type="HBoxContainer" parent="Panel/V/Body/Details/D"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Icon" type="TextureRect" parent="Panel/V/Body/Details/D/Head"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-size_flags_vertical = 0
-texture_filter = 1
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Titles" type="VBoxContainer" parent="Panel/V/Body/Details/D/Head"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="Name" type="Label" parent="Panel/V/Body/Details/D/Head/Titles"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"GoldLabel"
-text = "name"
-autowrap_mode = 3
-
-[node name="State" type="Label" parent="Panel/V/Body/Details/D/Head/Titles"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "state"
-
-[node name="Desc" type="RichTextLabel" parent="Panel/V/Body/Details/D"]
-unique_name_in_owner = true
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="ReqTitle" type="Label" parent="Panel/V/Body/Details/D"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"DimLabel"
-text = "Требование"
-
-[node name="Req" type="RichTextLabel" parent="Panel/V/Body/Details/D"]
-unique_name_in_owner = true
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="CostTitle" type="Label" parent="Panel/V/Body/Details/D"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"DimLabel"
-text = "Стоимость"
-
-[node name="Cost" type="RichTextLabel" parent="Panel/V/Body/Details/D"]
-unique_name_in_owner = true
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="Spacer" type="Control" parent="Panel/V/Body/Details/D"]
+[node name="Scroll" type="ScrollContainer" parent="Panel/V/Body/Details/DV"]
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
-[node name="Learn" type="Button" parent="Panel/V/Body/Details/D"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 22)
-layout_mode = 2
-focus_mode = 0
-text = "Изучить"
-
-[node name="Keys" type="RichTextLabel" parent="Panel/V"]
+[node name="Foot" type="VBoxContainer" parent="Panel/V/Body/Details/DV"]
 unique_name_in_owner = true
 layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
+
+[node name="Box" type="VBoxContainer" parent="Panel/V/Body/Details/DV/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="Keys" type="Label" parent="Panel/V"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"DimLabel"
+text = "keys"
+clip_text = true

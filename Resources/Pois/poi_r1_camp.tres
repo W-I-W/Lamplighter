@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="PoiDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PoiDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "r1_camp"
+Title = "Тёмный лагерь"
+Hint = "Усиленная стража: победите её, и сундук откроется"
+Kind = 3
+Variant = 8
+MinGen = 3
+Region = 1
+Count = 1
+MinFromSpawn = 16
+MaxFromSpawn = 56
+Clear = 3
+Spacing = 13
+Guards = 6
+Tier = 2
+Reward = ""
+Unique = false
+SilhouetteR = 0
+MapColor = Color(1, 0.85, 0.4, 1)

@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="CombatTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Combat/CombatTuning.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+EnemyDamage = 1.6
+EnemyHp = 1.5
+EnemySpeed = 1.15
+EnemyAttackRate = 1.15
+BiomeDamage = PackedFloat32Array(1, 1.15, 1.3, 1.5, 1.7)
+BiomeHp = PackedFloat32Array(1, 1.2, 1.4, 1.6, 1.8)
+SpawnCapBonus = 2
+MaxAttackers = 3
+ShadeWindup = 0.38
+EliteChance = PackedFloat32Array(0.05, 0.07, 0.1, 0.13, 0.15)
+EliteMinLit = 1
+EliteMax = 2
+EliteHp = 1.8
+EliteDamage = 1.25
+BossHp = PackedFloat32Array(1.7, 1.6, 1.55, 1.5, 1.45)
+BossDamage = PackedFloat32Array(1.25, 1.3, 1.35, 1.4, 1.5)
+BossLeashTiles = 36.0
+BossRegenDelay = 8.0
+BossRegenRate = 0.03
+BossTempo = 1.0
+HitInvuln = 0.5
+RegenRate = 0.35
+RegenDelay = 5.0
+DashCooldown = 2.2
+DashInvuln = 0.2
+ReaperHeal = 1.5
+GatherMul = 0.65
+MineTimeMul = 1.35
+RegrowMul = 0.6
+ScarcityMul = 1.0
+TechCostMul = 2.0
+WeaponMineMul = 0.15
+XpMul = 0.6
+XpBase = 40.0
+XpLinear = 30.0
+XpQuad = 3.0
+CoopEnemyHp = PackedFloat32Array(1, 1.3, 1.55, 1.8)
+CoopBossHp = PackedFloat32Array(1, 1.6, 2.1, 2.6)
+CoopCap = PackedFloat32Array(1, 1.3, 1.55, 1.8)
+CoopElite = PackedFloat32Array(1, 1.3, 1.6, 2)
+CoopBossTempo = PackedFloat32Array(1, 0.95, 0.88, 0.8)
+CoopMaxAttackers = PackedInt32Array(3, 4, 5, 6)

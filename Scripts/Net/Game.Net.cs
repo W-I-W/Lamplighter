@@ -13,12 +13,12 @@ public partial class Game
 
     void InitNet()
     {
-        Net = new NetNode { Name = "NetNode", G = this }; AddChild(Net);
+        Net = new NetNode { Name = "NetNode", G = this }; AddChild(Net); InitNetFx();
         NetService.Notice += NetNotice; NetService.Ended += NetEnded;
         if (!testing) NetService.WatchSteamInvites();
     }
 
-    public override void _ExitTree() { NetService.Notice -= NetNotice; NetService.Ended -= NetEnded; }
+    public override void _ExitTree() { Sfx.Hook = null; NetService.Notice -= NetNotice; NetService.Ended -= NetEnded; }
 
     void NetNotice(string s) { if (IsInsideTree()) Toast(s); }
 
@@ -35,6 +35,7 @@ public partial class Game
     /// <summary>Каждый кадр: клиент, получивший мир от хоста, входит в игру. Если его мир отличается — сцена перезагружается с seed хоста.</summary>
     void UpdateNet(float dt)
     {
+        NetWorldTick(dt); NetVillageTick(dt); NetCombatTick(dt); NetStructTick(dt); NetGoalTick(dt); NetEventTick(dt); NetProgressTick(dt);
         if (NetService.Role == NetRole.Offline || !NetService.WorldPending) return;
         NetService.WorldPending = false;
         if (NetService.WorldSeed.HasValue && W.Seed != NetService.WorldSeed.Value) { skipMenu = true; GetTree().ReloadCurrentScene(); return; }
@@ -45,13 +46,15 @@ public partial class Game
     public void NetLeave()
     {
         bool client = NetService.Role == NetRole.Client;
-        if (!client) Save();
+        if (!client) Save();                                                    // сетевое сохранение хоста
         NetService.Leave(false);
-        if (client) { skipMenu = false; forceNew = false; GetTree().ReloadCurrentScene(); }
-        else Toast("Сетевая игра закрыта");
+        skipMenu = false; forceNew = false; CarryMsg = "Сетевая игра закрыта: вы снова в одиночном мире"; GetTree().ReloadCurrentScene();
     }
 
     // ───────────────────────── удалённые персонажи ─────────────────────────
+    /// <summary>Позиции других игроков кооператива для карты.</summary>
+    public IEnumerable<Vector2> RemoteMapPositions() { foreach (var p in Remotes()) yield return p.Shown; }
+
     IEnumerable<NetPlayer> Remotes() => NetService.Active ? NetService.Players.Values.Where(p => p.Handshaken && p.PeerId != NetService.LocalId) : Enumerable.Empty<NetPlayer>();
 
     int NetSlot(NetPlayer p) { int i = 0; foreach (var k in NetService.Players.Keys.OrderBy(x => x)) { if (k == p.PeerId) return i % NetTints.Length; i++; } return 0; }
@@ -71,6 +74,10 @@ public partial class Game
         var mod = NetTints[NetSlot(p)]; if ((p.Flags & 1) != 0) mod = new Color(.6f, 1f, 1f, .8f);
         DrawFrame(c, Def("player"), f, mod);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
-        if ((p.Flags & 2) != 0) { var d = new Vector2(p.Face < 0 ? -1 : 1, 0); Gfx.Line(c, pos + new Vector2(0, -3), pos + new Vector2(0, -3) + d * 12, new Color(.9f, .8f, .5f), 1.5f); }
+        if ((p.Flags & 2) != 0)                                  // замах: тот предмет, что у игрока в руках, и такой же рабочий цикл, как у своего персонажа
+        {
+            var dd = Vector2.FromAngle(p.AimAng); float sg = dd.X < 0 ? -1 : 1; float tt = (Time * 4.5f) % 1f; float k = tt < .65f ? tt / .65f : 1f - (tt - .65f) / .35f;
+            DrawHeldIcon(c, p.Held, pos + new Vector2(0, -3), p.AimAng + sg * Mathf.Lerp(.55f, -1.45f, k * k));
+        }
     }
 }

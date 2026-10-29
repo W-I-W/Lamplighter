@@ -54,6 +54,13 @@ public partial class Game
 
     public void CycleWeapon() => HotCycle(1);
 
+    /// <summary>Shift+V: следующее оружие из всех имеющихся встаёт в слот оружия хотбара и берётся в руки.</summary>
+    public void CycleOwnedWeapon()
+    {
+        if (Owned.Count == 0) return; int cur = CurW >= 0 && CurW < Owned.Count ? CurW : -1;
+        EquipWeapon((cur + 1) % Owned.Count);
+    }
+
     bool NearForge() => FurnaceNear(56, out _) || (BuildingNear(PPos, 56) is Building b && b.Type == Tl.Forge);
     public bool BpOk(string bp) => bp == null || BpDone.Contains(bp);
 
@@ -64,7 +71,7 @@ public partial class Game
         if (!BpOk(w.Bp)) { Fail("Нужен чертёж: " + Db.Bp(w.Bp).Name + " (журнал [J])"); return false; }
         if (!NearForge()) { Fail("Оружие создаётся рядом с печью или кузницей"); return false; }
         if (!Can(w.Cost)) { Fail("Не хватает: " + NeedStr(w.Cost)); return false; }
-        Pay(w.Cost); GiveWeapon(w.Id); GiveXp(25); Sfx.Play("build"); Save(); return true;
+        Pay(w.Cost); GiveWeapon(w.Id); HotEquip(RefWeapon(w.Id)); GiveXp(25); Sfx.Play("build"); Save(); return true;       // созданное оружие сразу берётся в руки (прежнее остаётся в экипировке [C])
     }
 
     public bool CraftMod(int id)
@@ -111,12 +118,12 @@ public partial class Game
         bool mineable = PPos.DistanceTo(TileCenter(tile.X, tile.Y)) <= 40f && Mineable(t);
         if (w.Cls == WClass.Sword)
         {
-            if (SwordAttack(w, dir)) { MineProg = 0; MineTile = new Vector2I(-1, -1); return; }
-            ActPick(dt, false); return;
+            MineProg = 0; MineTile = new Vector2I(-1, -1);
+            if (!SwordAttack(w, dir) && mineable && tierMsgCd <= 0) { tierMsgCd = 2; Fail("Оружием блоки не ломаются: возьмите кирку или топор"); }       // блоки — только инструментом
+            return;
         }
         bool enemyClose = false;
         foreach (var e in Enemies) if (!e.Hidden && e.Pos.DistanceTo(PPos) < 22) { enemyClose = true; break; }
-        if (mineable && !enemyClose) { ActPick(dt, false); return; }
         MineProg = 0; MineTile = new Vector2I(-1, -1);
         FireRanged(w, dir);
     }
@@ -203,14 +210,15 @@ public partial class Game
     void FireRanged(WeaponDef w, Vector2 dir)
     {
         if (AtkCd > 0) return;
-        AtkCd = w.Cd; Swing = .1f;
+        AtkCd = w.Cd * (1f - E(Tech.QuickDraw)); Swing = .1f;
         int n = 1 + (int)E(Fxk.Multi); float spread = .2f;
         for (int i = 0; i < n; i++)
         {
             var d = dir.Rotated((i - (n - 1) / 2f) * spread);
-            float dmg = WeaponDmg(w) * (n > 1 ? .75f : 1f);
-            if (w.Cls == WClass.Bow) FireProj(0, d, dmg, w.Speed, w.Pierce + (int)E(Fxk.Pierce), .75f);
-            else FireProj(1, d, dmg, w.Speed, (int)E(Fxk.Pierce), .9f, 26f + 4f * E(Fxk.Blast));
+            float dmg = WeaponDmg(w) * (n > 1 ? .75f : 1f) * (1f + E(Tech.Marksman));
+            int pe = (Has(Tech.Piercing) ? 1 : 0); float spd = w.Speed * (1f + E(Tech.Overcharge)), lf = 1f + E(Tech.Overcharge);
+            if (w.Cls == WClass.Bow) FireProj(0, d, dmg, spd, w.Pierce + (int)E(Fxk.Pierce) + pe, .75f * lf);
+            else FireProj(1, d, dmg, spd, (int)E(Fxk.Pierce) + pe, .9f * lf, 26f + 4f * E(Fxk.Blast));
         }
         if (E(Fxk.Arc) > 0) FireProj(2, dir, WeaponDmg(w) * .5f, 150f, 3, 70f);
         Sfx.Play(w.Cls == WClass.Bow ? "shoot" : "flare", -4, w.Cls == WClass.Bow ? 1.4f : 1.1f);

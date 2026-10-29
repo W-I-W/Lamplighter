@@ -251,7 +251,7 @@ public partial class Game
     // ───────────────────────── Источник Тьмы ─────────────────────────
     Vector2 UpdateSource(Enemy e, float dt, Vector2 dir, float dist)
     {
-        float hpf = e.Hp / e.MaxHp; int ph = hpf > .66f ? 1 : hpf > .33f ? 2 : 3; float mul = ph == 3 ? .62f : ph == 2 ? .85f : 1f;
+        float hpf = e.Hp / e.MaxHp; int ph = hpf > .66f ? 1 : hpf > .33f ? 2 : 3; float mul = (ph == 3 ? .62f : ph == 2 ? .85f : 1f) * BossTempoMul();
         if ((int)e.Mark.X != ph)
         {
             e.Mark = new Vector2(ph, 0); e.State = 0; e.T1 = 2f; DrainPylons();
@@ -272,6 +272,7 @@ public partial class Game
         }
         else e.Shield = false;
 
+        if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero; var perp = new Vector2(-dir.Y, dir.X);
         switch (e.State)
         {
@@ -280,7 +281,7 @@ public partial class Game
                     var home = e.Home ?? e.Pos; var toHome = home - e.Pos;
                     float spd = ph == 3 ? 38f : 28f;
                     vel = toHome.Length() > 12 * TS ? toHome.Normalized() * 34f : dist > 120 ? dir * spd : dist < 70 ? -dir * spd : perp * Mathf.Sin(Time * .9f) * spd * .6f;
-                    e.T1 -= dt;
+                    e.T1 -= dt; if (TryBossSpecial(e, dt, hpf, dist, dir)) break;
                     if (dist < 22 && e.Atk <= 0) { e.Atk = 1.2f; HurtPlayer(14f, -dir); }
                     if (e.T1 <= 0)
                     {

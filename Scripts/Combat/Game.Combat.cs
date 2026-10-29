@@ -12,7 +12,7 @@ public sealed class Enemy
     public float Hp, MaxHp, Atk, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
     // визуальное состояние (только отрисовка): стадии атаки, попадание, след рывка
     public float VTele0, VAtk = 9f, VPrevAtk, VPrevTele, VPrevDash, VHit = 9f, VHitMul = 1f, VTrailT; public Vector2 VHitDir; public Vector2[] VTrail = new Vector2[3];
-    public int State; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
+    public float LostT, Over, SpecT = 8f, SpecTim, SpecAng, SpecEmit; public int SpecPh, SpecN, SpecVol; public int NetId; public long Target = 1, LastHitBy; public float RetargetT, SeenT; public Vector2 NetPos; public int State, EMod; public bool Id2; public float WardT, RallyT; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
     public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden || Kind == EK.WinterWarden || Kind == EK.Source;
     public float Radius => Kind switch
     {
@@ -28,7 +28,7 @@ public partial class Game
     public Enemy Boss;
     public float DashCd, SpinCd, FlareCd, PulseCd, SpinT, DashT;
     Vector2 DashDir, LastMoveDir;
-    float spawnT = 4;
+    float spawnT = 4; float ctxDmg = 1f, stillT;
 
     float DangerScale => 1f + .18f * LitCount + .12f * LitIn(1) + .12f * LitIn(2) + .12f * LitIn(3) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0) + (BossDown(3) ? .1f : 0) + (BossDown(4) ? .1f : 0);
 
@@ -43,19 +43,21 @@ public partial class Game
     // ───────────────────────── способности ─────────────────────────
     void TryDash()
     {
+        if (Window != Win.None || TechOpen || MapOpen || Menu != Mn.None) return;          // в меню рывок невозможен
         if (Has(Tech.Dash) && DashCd <= 0 && DashT <= 0) Diag.Count("dash");
         if (!Has(Tech.Dash) || DashCd > 0 || DashT > 0) return;
         var d = LastMoveDir.LengthSquared() > .01f ? LastMoveDir : (Aim - PPos).Normalized();
         if (d.LengthSquared() < .01f) d = new Vector2(Facing, 0);
-        DashDir = d; DashT = .18f; DashCd = 1.6f; Invuln = Mathf.Max(Invuln, .3f); Sfx.Play("dash"); RelicOnDash(); OnDash(PPos, d);
+        DashDir = d; DashT = .18f; DashCd = DashCooldown; Invuln = Mathf.Max(Invuln, Tune.T.DashInvuln); Sfx.Play("dash"); RelicOnDash(); OnDash(PPos, d);
     }
 
     void TrySpin()
     {
         if (!Has(Tech.Spin) || SpinCd > 0) return;
-        SpinCd = 3f; SpinT = .25f; Sfx.Play("spin"); Swing = .22f;
+        if (CurDef != null && CurDef.Cls != WClass.Sword) { Toast("Круговой удар работает только с оружием ближнего боя"); return; }
+        SpinCd = 3f; SpinT = .25f; float spinK = SpinScale; Sfx.Play("spin"); Swing = .22f;
         foreach (var e in new List<Enemy>(Enemies))
-            if (!e.Hidden && e.Pos.DistanceTo(PPos) < 32 + e.Radius) Hurt(e, PlayerDamage * 1.2f, (e.Pos - PPos).Normalized(), true);
+            if (!e.Hidden && e.Pos.DistanceTo(PPos) < 32 * spinK + e.Radius) Hurt(e, PlayerDamage * 1.2f * spinK, (e.Pos - PPos).Normalized(), true);
         Burst(PPos, new Color("#fff2b0"), 12, 80);
     }
 
@@ -64,7 +66,7 @@ public partial class Game
         if (FlareCd <= 0) Diag.Count("flare");
         if (!Has(Tech.Flare) || FlareCd > 0) return;
         var d = Aim - PPos; if (d.Length() > 110) d = d.Normalized() * 110;
-        Beacons.Add(new Beacon { Pos = PPos + d, Dur = 10f, R = 72, Burn = 6f });
+        Beacons.Add(new Beacon { Pos = PPos + d, Dur = FlareDuration, R = 72, Burn = 6f });
         FlareCd = 8f; Sfx.Play("flare"); Burst(PPos + d, new Color("#ffd86b"), 14, 70);
     }
 
@@ -72,7 +74,7 @@ public partial class Game
     {
         if (PulseCd <= 0) Diag.Count("pulse");
         if (!Has(Tech.Pulse) || PulseCd > 0) return;
-        PulseCd = 12f; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0; RelicOnPulse(); OnPulse(PPos);
+        PulseCd = PulseCooldown; Sfx.Play("pulse"); Shake = 5; Flash = .3f; LightBlockT = 0; RelicOnPulse(); OnPulse(PPos);
         Beacons.Add(new Beacon { Pos = PPos, Dur = 1.8f, R = 170, Ring = 1f });
         foreach (var e in new List<Enemy>(Enemies))
             if (!e.Hidden && e.Pos.DistanceTo(PPos) < 170)
@@ -110,32 +112,40 @@ public partial class Game
         return true;
     }
 
+    int spawnIdx; public bool TestNoSpawn;          // только проверки: отключает случайное появление врагов
+
+    /// <summary>Появление врагов у каждого игрока по очереди: хост выбирает по одному игроку за такт, поэтому темп на игрока прежний, а враги появляются возле всех, а не только возле хоста.
+    /// Запас считается по врагам рядом с этим игроком.</summary>
     void UpdateSpawning(float dt)
     {
-        if (IsLit(PPos) || RiftOn) return;
-        int reg = RegionAt(PPos);
-        if (Finished && reg < 4) return;
+        if (NetClient || RiftOn || TestNoSpawn) return;
+        var targets = new List<Vector2> { PPos }; if (NetHost) foreach (var r in Remotes()) if (r.Hp > 0) targets.Add(r.Pos);
+        spawnT -= dt; if (spawnT > 0) return;
+        spawnIdx = (spawnIdx + 1) % targets.Count; var tp = targets[spawnIdx];
+        if (IsLit(tp)) { spawnT = .5f / targets.Count; return; }
+        int reg = RegionAt(tp);
+        if (Finished && reg < 4) { spawnT = 1f; return; }
         float nearUnlit = float.MaxValue;
-        for (int i = 1; i < W.Ancients.Count; i++) if (!W.Ancients[i].Lit && !W.Ancients[i].Boss && W.Ancients[i].Region == reg) nearUnlit = Mathf.Min(nearUnlit, W.Ancients[i].Pos.DistanceTo(PPos));
+        for (int i = 1; i < W.Ancients.Count; i++) if (!W.Ancients[i].Lit && !W.Ancients[i].Boss && W.Ancients[i].Region == reg) nearUnlit = Mathf.Min(nearUnlit, W.Ancients[i].Pos.DistanceTo(tp));
         bool guarded = nearUnlit < 9 * TS;
-        int free = 0; foreach (var e in Enemies) if (e.Guard == null && !e.IsBoss) free++;
+        int free = 0; foreach (var e in Enemies) if (e.Guard == null && !e.IsBoss && e.Pos.DistanceTo(tp) < 420f) free++;
         int baseCap = reg == 0 ? 3 + LitCount * 2 : 4 + LitIn(reg) * 2;
-        int cap = Math.Min(baseCap + (guarded ? 3 : 0), 12);
-        spawnT -= dt;
-        if (spawnT > 0) return;
-        spawnT = rng.RandfRange(2.2f, 3.8f) * (guarded ? .55f : 1f);
+        int cap = Math.Min((int)((baseCap + Tune.T.SpawnCapBonus + (guarded ? 3 : 0)) * (targets.Count > 1 ? 1f : CombatTuning.At(Tune.T.CoopCap, CoopIdx))), 18);
+        spawnT = rng.RandfRange(2.2f, 3.8f) * (guarded ? .55f : 1f) / targets.Count;
         if (free >= cap) return;
         for (int tries = 0; tries < 24; tries++)
         {
-            float a = rng.Randf() * Mathf.Tau, d = rng.RandfRange(130, 200);
-            var p = PPos + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * d;
+            float a2 = rng.Randf() * Mathf.Tau, d = rng.RandfRange(130, 200);
+            var p = tp + new Vector2(Mathf.Cos(a2), Mathf.Sin(a2)) * d;
             var t = ToTile(p);
             if (!W.Walkable(t.X, t.Y) || IsLit(p) || RegionAt(p) != reg) continue;
-            if (reg != 0 && !LineClear(PPos, p)) continue;
+            if (reg != 0 && !LineClear(tp, p)) continue;
+            bool nearOther = false; foreach (var o in targets) if (o != tp && o.DistanceTo(p) < 120f) { nearOther = true; break; }         // не прямо перед другим игроком
+            if (nearOther) continue;
             var k = PickKind(p, reg);
             if (k == EK.Eel && !WaterAt(p)) continue;
-            if (k == EK.Swarm) for (int s = 0; s < 4; s++) SpawnEnemy(p + new Vector2(rng.RandfRange(-8, 8), rng.RandfRange(-8, 8)), k);
-            else SpawnEnemy(p, k);
+            if (k == EK.Swarm) for (int s2 = 0; s2 < 4; s2++) SpawnEnemy(p + new Vector2(rng.RandfRange(-8, 8), rng.RandfRange(-8, 8)), k);
+            else { var ne = SpawnEnemy(p, k); TryMakeElite(ne, reg); }
             return;
         }
     }
@@ -193,9 +203,11 @@ public partial class Game
     {
         if (scale < 0) scale = DangerScale;
         bool boss = k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden || k == EK.WinterWarden || k == EK.Source;
-        float hp = BaseHp(k) * (boss ? 1f : scale);
+        if (NetClient) return new Enemy { Kind = k, Pos = p, Hp = 1, MaxHp = 1 };            // клиент врагов не создаёт: их присылает хост
+        var (dm, hm) = EnemyMuls(k, p);
+        float hp = BaseHp(k) * (boss ? hm : scale * hm); scale *= dm;
         var e = new Enemy { Kind = k, Pos = p, Hp = hp, MaxHp = hp, Phase = rng.Randf() * 6.28f, Scale = scale, Guard = guard, Cd = rng.RandfRange(.8f, 2f) };
-        if (guard != null) e.Home = p;
+        e.NetId = ++nextEnemyId; if (guard != null) e.Home = p;
         if (boss) { e.Home = p; e.T1 = 2.5f; e.T3 = 4f; }
         Enemies.Add(e); return e;
     }
@@ -205,6 +217,7 @@ public partial class Game
     void UpdateBossSpawn(float dt)
     {
         if (Boss != null && !Enemies.Contains(Boss)) Boss = null;
+        if (NetClient) return;
         bossT -= dt; if (bossT > 0) return; bossT = .3f;
         foreach (var a in W.Ancients)
         {
@@ -226,6 +239,7 @@ public partial class Game
     {
         int id = e.Kind == EK.Warden ? 1 : e.Kind == EK.DepthWarden ? 2 : e.Kind == EK.AshWarden ? 3 : e.Kind == EK.WinterWarden ? 4 : 5;
         BossMask |= 1 << (id - 1); if (Boss == e) Boss = null;
+        if (NetHost) Net?.SendBossDown(id, e.Pos);                      // эффекты победы видят все
         GiveWeapon(id == 1 ? "sword_u" : id == 2 ? "bow_u" : id == 3 ? "staff_u" : id == 4 ? "staff_w" : "");
         GiveRelic(id == 1 ? "r_dawnprism" : id == 2 ? "r_winterheart" : id == 3 ? "r_emberheart" : id == 4 ? "r_prismcore" : null);
         if (id == 5) { FinalBossKilled(e); return; }
@@ -264,20 +278,24 @@ public partial class Game
     public void Hurt(Enemy e, float dmg, Vector2 dir, bool melee = false, bool light = false)
     {
         if (e.Hidden) return;
+        if (NetClient && e.NetId > 0) { Net?.SendEnemyHit(e.NetId, dmg, dir, melee); e.Flash = .15f; e.VHit = 0; Fx("enemy_hit", e.Pos); return; }       // хост считает урон
         if (e.Kind == EK.Decoy) { e.Hp = 0; Burst(e.Pos, new Color("#c080ff"), 8, 60); return; }
         float m = 1f;
         if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { m *= .06f; if (rng.Randf() < .5f) Burst(e.Pos + (PPos - e.Pos).Normalized() * 14, new Color("#ffffff"), 3, 70); }
         if (e.Kind == EK.Sentinel && !light) { m *= .3f; Burst(e.Pos, new Color("#e8faff"), 3, 60); }
-        if (melee && Has(Tech.SilverEdge) && SoulKind(e.Kind)) m *= 1.5f;
+        if (e.Over > 0) { m *= 1.4f; if (rng.Randf() < .5f) Burst(e.Pos, new Color("#ffe27a"), 2, 45); }          // босс открыт после мощной способности
+        if (e.EMod == EWarded && e.WardT > 0) { m *= .35f; if (rng.Randf() < .5f) Burst(e.Pos, new Color("#9fe8ff"), 2, 50); }
+        if (melee && Has(Tech.SilverEdge) && SoulKind(e.Kind)) m *= 1f + E(Tech.SilverEdge);
         if (melee && e.Kind == EK.Beetle)
         {
             float cosA = e.Face.Normalized().Dot((PPos - e.Pos).Normalized());
-            if (cosA > .35f) { m *= Has(Tech.SilverEdge) ? .6f : .2f; Burst(e.Pos + e.Face * 6, new Color("#e4f4ff"), 4, 60); Sfx.Play("tick", -2, .6f); }
+            if (cosA > .35f) { m *= .2f + .08f * Lv(Tech.SilverEdge); Burst(e.Pos + e.Face * 6, new Color("#e4f4ff"), 4, 60); Sfx.Play("tick", -2, .6f); }
         }
         dmg *= m;
         e.Hp -= dmg; e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f);
         if (e.Kind == EK.Golem && rng.Randf() < .6f) AddZone(e.Pos, 40, 0, 3.5f, 0f, true);
-        if (melee && Has(Tech.FlameEdge)) e.Burn = 3f;
+        if (melee && Has(Tech.FlameEdge)) e.Burn = Mathf.Max(e.Burn, E(Tech.FlameEdge));
+        if (melee && Has(Tech.FrostEdge)) { e.Slow = Mathf.Max(e.Slow, E(Tech.FrostEdge)); if (!e.IsBoss && Lv(Tech.FrostEdge) >= 3 && rng.Randf() < .05f * (Lv(Tech.FrostEdge) - 2)) e.Freeze = Mathf.Max(e.Freeze, 1f); }
         if (melee && Tier >= 4) e.Burn = Mathf.Max(e.Burn, 2f);
         Fx("enemy_hit", e.Pos); OnEnemyHit(e, dmg, dir);
         Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), S = ((int)Mathf.Round(dmg)).ToString(), Life = .6f, C = m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
@@ -286,11 +304,12 @@ public partial class Game
     public void HurtPlayer(float dmg, Vector2 kb, bool fire = false)
     {
         if (Window == Win.Trade) Window = Win.None;
+        if (aiRemote != 0) { Net?.SendHurt(aiRemote, dmg * ctxDmg, kb, fire); return; }                  // враг выбрал другого игрока: урон решает хост и шлёт ему
         if (Invuln > 0) return;
         if (fire && Has(Tech.Fireproof)) return;
-        if (fire && Has(Tech.HeatShield)) dmg *= .4f;
+        if (fire && Has(Tech.HeatShield)) dmg *= HeatTaken;
         if (fire) dmg *= 1f - N("HeatResist");
-        Hp -= dmg; Invuln = .6f; regenDelay = 4f; Shake = 3f;
+        dmg *= ctxDmg; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
         pVel += kb * 120f; Sfx.Play("hurt");
         Fx("player_hurt", PPos, fire ? new Color("#ff9a2e") : null);
         Texts.Add(new FText { P = PPos + new Vector2(0, -12), S = "-" + (int)Mathf.Round(dmg), Life = .8f, C = new Color("#ff6060") });
@@ -300,7 +319,8 @@ public partial class Game
     void Die()
     {
         EventsOnDeath(); RiftOnDeath();
-        Enemies.Clear(); Projs.Clear(); Boss = null; LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
+        if (!NetService.Active) { Enemies.Clear(); Projs.Clear(); Boss = null; }        // в сети враги принадлежат хосту и смерть одного игрока их не стирает
+        LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
         int lost = Math.Min(25, Inv[It.Shard] / 4); Inv[It.Shard] -= lost;
         PPos = RespawnPos(); Hp = MaxHp; Invuln = 2f; Save();
@@ -314,6 +334,7 @@ public partial class Game
         Kills++;
         if (e.Ev != null) EvEnemyKilled(e);
         if (e.IsBoss) { BossKilled(e); return; }
+        EliteKilled(e);
         float xp = e.Kind switch { EK.IceWolf => 28, EK.FrostPriest => 30, EK.Sentinel => 50, EK.Mirage => 34, EK.Weaver => 36, EK.Stalker => 40, EK.Decoy => 0, EK.Shade => 15, EK.Wraith => 12, EK.Spitter => 18, EK.Bomber => 16, EK.Eel => 22, EK.Leech => 14, EK.Beetle => 26, EK.Imp => 24, EK.Golem => 40, EK.Spirit => 26, _ => 3 };
         float chance = e.Kind switch { EK.IceWolf => .55f, EK.FrostPriest => .6f, EK.Sentinel => .9f, EK.Mirage => .5f, EK.Weaver => .7f, EK.Stalker => .6f, EK.Decoy => 0f, EK.Shade => .7f, EK.Wraith => .45f, EK.Spitter => .6f, EK.Bomber => .5f, EK.Eel => .6f, EK.Leech => .5f, EK.Beetle => .7f, EK.Imp => .6f, EK.Golem => .9f, EK.Spirit => .6f, _ => .12f };
         xp *= 1f + .3f * RegionAt(e.Pos);
@@ -321,7 +342,7 @@ public partial class Game
         Burst(e.Pos, new Color("#a060ff"), e.Kind == EK.Swarm ? 5 : 14, 90);
         if (E(Fxk.Blast) > 0 && !inBlast) BlastAt(e.Pos, CurDef != null ? WeaponDmg(CurDef) : PlayerDamage);
         if (N("KillHeal") > 0) Hp = Mathf.Min(MaxHp, Hp + N("KillHeal"));
-        if (Has(Tech.Reaper)) { Hp = Mathf.Min(MaxHp, Hp + 3); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+3", Life = .7f, C = new Color("#7ad45a") }); }
+        if (Has(Tech.Reaper)) { Hp = Mathf.Min(MaxHp, Hp + ReaperHeal); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+" + ReaperHeal.ToString("0.#"), Life = .7f, C = new Color("#7ad45a") }); }
         if (rng.Randf() < chance) Give(It.Shard, e.Kind == EK.Golem ? 2 : 1, e.Pos);
         if (e.Kind == EK.Beetle && rng.Randf() < .3f) Give(It.Crystal, 1, e.Pos + new Vector2(0, -8));
         if ((e.Kind == EK.IceWolf || e.Kind == EK.Sentinel || e.Kind == EK.FrostPriest) && rng.Randf() < .3f) Give(It.Frost, 1, e.Pos + new Vector2(0, -8));
@@ -333,10 +354,13 @@ public partial class Game
     // ───────────────────────── ИИ врагов ─────────────────────────
     void UpdateEnemies(float dt)
     {
-        int attached = 0;
+        if (NetClient) { ClientEnemies(dt); return; }
+        var realP = PPos; RecordTrail(dt, realP); int attached = 0; CountBusyAttackers(); stillT = pVel.Length() < 8f ? stillT + dt : 0f;
         for (int i = Enemies.Count - 1; i >= 0; i--)
         {
-            var e = Enemies[i];
+            if (i >= Enemies.Count) continue;                                  // смерть врага (взрыв, цепочка) могла убрать нескольких сразу
+            var e = Enemies[i]; PPos = realP; ChooseTarget(e, dt, realP);
+            EliteTick(e, dt); if (e.Over > 0) e.Over -= dt; e.Cd -= dt * EnemyCdMul(e); ctxDmg = BossDamageMul(e.Kind); int projN = Projs.Count;
             e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt);
             e.Kb *= Mathf.Max(0, 1 - 9 * dt);
             e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
@@ -344,7 +368,7 @@ public partial class Game
             var to = PPos - e.Pos; float dist = to.Length(); var dir = dist > .01f ? to / dist : Vector2.Zero;
             var perp = new Vector2(-dir.Y, dir.X);
             bool guard = e.Guard != null || e.IsBoss || (e.Ev != null && e.Ev.Kind != "riftx");
-            if (!guard && dist > 380) { Enemies.RemoveAt(i); continue; }
+            if (!guard && NearestPlayerDist(e.Pos) > 380) { Enemies.RemoveAt(i); continue; }
 
             bool lit = !e.IsBoss && IsLit(e.Pos);
             if (lit)
@@ -354,30 +378,45 @@ public partial class Game
                 if (e.Hp <= 0) { Burst(e.Pos, new Color("#ffe9a0"), 10, 60); Enemies.RemoveAt(i); continue; }
             }
             float auraR = PlayerLightR * (Has(Tech.HeroLamp) ? .55f : .6f);
-            if ((Has(Tech.Searing) || Has(Tech.HeroLamp) || HeroLampLv >= 2) && dist < auraR && !e.Hidden)
+            if (AuraDps > 0 && dist < auraR && !e.Hidden)
             {
-                e.Hp -= (Has(Tech.HeroLamp) ? 4.5f : 2.5f) * dt * (e.IsBoss ? .3f : 1f); e.Flash = Mathf.Max(e.Flash, .04f);
+                e.Hp -= AuraDps * dt * (e.IsBoss ? .3f : 1f); e.Flash = Mathf.Max(e.Flash, .04f);
                 if (rng.Randf() < dt * 10) Burst(e.Pos, new Color("#ffe27a"), 1, 25);
             }
             float k = lit ? .5f : 1f;
             bool water = WaterAt(e.Pos);
             bool aquatic = e.Kind == EK.Eel || e.Kind == EK.DepthWarden;
             float wm = aquatic ? (water ? 1.4f : .45f) : (water ? .65f : 1f);
-            bool aggro = e.IsBoss ? (e.Home.HasValue && PPos.DistanceTo(e.Home.Value) < 20 * TS) : (!guard || dist < 150);
+            bool aggro = e.IsBoss ? (e.Home.HasValue && NearestPlayerDist(e.Home.Value) < Tune.T.BossLeashTiles * TS) : (!guard || dist < 150);        // босс не бросает бой, пока игрок в пределах поводка
             Vector2 vel = Vector2.Zero;
             e.Hidden = false;
 
+            if (aggro) e.LostT = 0;
             if (!aggro)
             {
-                if (e.IsBoss && e.Hp < e.MaxHp) { e.Hp = Mathf.Min(e.MaxHp, e.Hp + e.MaxHp * .06f * dt); if (rng.Randf() < dt * 6) Burst(e.Pos + new Vector2(0, -8), new Color("#9be07a"), 1, 20); }   // игрок далеко — страж восстанавливает здоровье
+                e.LostT += dt;
+                if (e.IsBoss && e.Hp < e.MaxHp && e.LostT > Tune.T.BossRegenDelay) { e.Hp = Mathf.Min(e.MaxHp, e.Hp + e.MaxHp * Tune.T.BossRegenRate * dt); if (rng.Randf() < dt * 6) Burst(e.Pos + new Vector2(0, -8), new Color("#9be07a"), 1, 20); }   // игрок далеко — страж восстанавливает здоровье
                 if (e.Home.HasValue) { var h = e.Home.Value - e.Pos; if (h.Length() > 20) vel = h.Normalized() * 28; }
             }
-            else if (e.Freeze > 0) { }
+            else if (e.Freeze > 0) { e.LostT = 0; }
             else switch (e.Kind)
             {
                 case EK.Shade:
-                    vel = dir * (36f + 2f * LitCount) * k;
-                    if (dist < 12 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(9f * e.Scale, -dir); }
+                    // подкрадывается, замирает с заметной подготовкой (тень вздрагивает), рывок, затем короткая пауза — тут её можно ударить
+                    if (e.State == 1) { vel = Vector2.Zero; e.Tele -= dt; if (e.Tele <= 0) { e.State = 2; e.Dash = .22f; e.DashDir = dir; Sfx.Play("dash", -8, 1.3f); } }
+                    else if (e.State == 2)
+                    {
+                        e.Dash -= dt; vel = e.DashDir * 150f * k;
+                        if (dist < 13 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(9f * e.Scale, -dir); }
+                        if (e.Dash <= 0) { e.State = 3; e.T2 = .8f; }
+                    }
+                    else if (e.State == 3) { e.T2 -= dt; vel = perp * (e.Id2 ? 28f : -28f) * k; if (e.T2 <= 0) { e.State = 0; e.Cd = rng.RandfRange(.5f, 1.1f); } }
+                    else
+                    {
+                        vel = dir * (36f + 2f * LitCount) * k;
+                        if (dist < 40) { vel = (dir * .4f + perp * (e.Id2 ? 1f : -1f)).Normalized() * 34f * k; }
+                        if (dist < 44 && e.Cd <= 0 && AtkSlot()) { e.State = 1; e.Tele = Tune.T.ShadeWindup; e.Id2 = rng.Randf() < .5f; }
+                    }
                     break;
                 case EK.Wraith:
                     e.Cd -= dt;
@@ -390,21 +429,31 @@ public partial class Game
                     else
                     {
                         vel = (dir + perp * Mathf.Sin(Time * 3f + e.Phase) * .8f).Normalized() * 58f * k;
-                        if (e.Cd <= 0 && dist < 100) { e.Tele = .35f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
+                        if (e.Cd <= 0 && dist < 100 && AtkSlot()) { e.Tele = .35f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
                     }
                     break;
                 case EK.Spitter:
-                    e.Cd -= dt;
-                    if (e.Tele > 0)
                     {
-                        e.Tele -= dt;
-                        if (e.Tele <= 0) { Projs.Add(new Proj { Pos = e.Pos, Vel = dir * 100f, Dmg = 7f * e.Scale }); Sfx.Play("shoot", -5); e.Cd = rng.RandfRange(2f, 3f); }
-                    }
-                    else
-                    {
-                        if (dist > 95) vel = dir * 42f; else if (dist < 60) vel = -dir * 42f; else vel = perp * Mathf.Sin(Time * 1.5f + e.Phase) * 20f;
-                        vel *= k;
-                        if (e.Cd <= 0 && dist < 150) e.Tele = .4f;
+                        // держит дистанцию, стреляет с упреждением и только при прямой видимости; без неё меняет позицию, а не стреляет в стену
+                        e.Cd -= dt; bool los = dist < 190 && LineClear(e.Pos, PPos);
+                        if (e.Tele > 0)
+                        {
+                            e.Tele -= dt; e.Mark = PPos + pVel * (dist / 100f) * .8f;
+                            if (e.Tele <= 0)
+                            {
+                                if (LineClear(e.Pos, e.Mark)) { Projs.Add(new Proj { Pos = e.Pos, Vel = (e.Mark - e.Pos).Normalized() * 100f, Dmg = 7f * e.Scale }); Sfx.Play("shoot", -5); }
+                                e.Cd = rng.RandfRange(1.8f, 2.8f);
+                            }
+                        }
+                        else
+                        {
+                            float side = Mathf.Sign(Mathf.Sin(Time * .7f + e.Phase));
+                            if (!los) vel = (dir + perp * side * .5f).Normalized() * 44f;
+                            else if (dist < 64) vel = (-dir + perp * side * .4f).Normalized() * 50f;
+                            else if (dist > 105) vel = dir * 42f; else vel = perp * side * 26f;
+                            vel *= k;
+                            if (e.Cd <= 0 && los && dist < 150) e.Tele = .5f;
+                        }
                     }
                     break;
                 case EK.Swarm:
@@ -456,21 +505,46 @@ public partial class Game
                         float want = dir.Angle(), cur = e.Face.Angle();
                         float diff = Mathf.Wrap(want - cur, -Mathf.Pi, Mathf.Pi);
                         e.Face = Vector2.FromAngle(cur + Mathf.Clamp(diff, -2.2f * dt, 2.2f * dt));
-                        vel = e.Face * 32f * wm * k;
-                        if (dist < 14 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(11f * e.Scale, -dir); }
+                        // тяжёлый: медленно идёт, перед ударом по площади замирает (предупреждение), после удара остаётся открытым на секунду
+                        if (e.State == 1)
+                        {
+                            vel = Vector2.Zero; e.Tele -= dt;
+                            if (e.Tele <= 0)
+                            {
+                                Shake = Mathf.Max(Shake, 4); Sfx.Play("boom", -6, 1.4f); for (int q = 0; q < 14; q++) { float a = q * Mathf.Tau / 14; Parts.Add(new Particle { P = e.Pos, V = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 80, Life = .35f, Max = .35f, C = new Color("#cfe6ff"), Size = 2 }); }
+                                if (dist < 36) HurtPlayer(14f * e.Scale, -dir); e.State = 3; e.T2 = 1f;
+                            }
+                        }
+                        else if (e.State == 3) { vel = Vector2.Zero; e.T2 -= dt; if (e.T2 <= 0) { e.State = 0; e.Cd = rng.RandfRange(1.4f, 2.4f); } }
+                        else
+                        {
+                            vel = e.Face * 32f * wm * k;
+                            if (dist < 14 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(11f * e.Scale, -dir); }
+                            if (dist < 36 && e.Cd <= 0 && AtkSlot()) { e.State = 1; e.Tele = .7f; }
+                        }
                     }
                     break;
                 default: vel = UpdateOtherEnemy(e, dt, dir, dist, perp, k); break;
             }
+            if (!e.IsBoss) vel *= EnemySpeedMul(e);
+            for (int pj = projN; pj < Projs.Count; pj++) Projs[pj].Dmg *= e.IsBoss ? ctxDmg : e.Kind == EK.Spitter ? 1f : Tune.T.EnemyDamage * CombatTuning.At(Tune.T.BiomeDamage, RegionAt(e.Pos));
+            ctxDmg = 1f;
             if (e.Kind == EK.Leech && e.State == 1) { }
             else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
                 if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }
 
+            // враг не заходит внутрь игрока: иначе мелкий враг шёл «в игроке» с его скоростью, и по нему нельзя было попасть
+            if (!e.IsBoss && e.Kind != EK.Leech && e.Kind != EK.Swarm)
+            {
+                float minD = e.Radius + 6f; var away = e.Pos - PPos; float dd = away.Length();
+                if (dd < minD) e.Pos = PPos + (dd > .01f ? away / dd : Vector2.FromAngle(e.Phase)) * minD;
+            }
             if (!e.IsBoss && e.Kind != EK.Leech)
                 foreach (var o in Enemies) if (o != e && !o.IsBoss) { var dd = e.Pos - o.Pos; float l = dd.Length(); if (l > .01f && l < 8) e.Pos += dd / l * (8 - l) * .3f; }
 
             if (e.Hp <= 0) { var dead = e; Enemies.RemoveAt(i); KillEnemy(dead); }
         }
+        PPos = realP; aiRemote = 0;
         if (attached == 0) LeechT = Mathf.Max(0, LeechT - dt);
     }
 
@@ -483,12 +557,13 @@ public partial class Game
 
     Vector2 UpdateWarden(Enemy e, float dt, Vector2 dir, float dist)
     {
-        float hpf = e.Hp / e.MaxHp, mul = hpf < .33f ? .65f : 1f;
+        float hpf = e.Hp / e.MaxHp, mul = (hpf < .33f ? .65f : 1f) * BossTempoMul();
+        if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero;
         switch (e.State)
         {
             case 0:
-                vel = dir * (hpf < .33f ? 48f : 40f); e.T1 -= dt;
+                vel = dir * (hpf < .33f ? 48f : 40f); e.T1 -= dt; if (stillT > 1.8f) e.T1 -= dt * 1.5f; if (TryBossSpecial(e, dt, hpf, dist, dir)) break;      // стоять на месте опасно: страж атакует чаще
                 if (dist < 22 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(12f, -dir); }
                 if (hpf < .33f) { e.T3 -= dt; if (e.T3 <= 0) { e.T3 = 4f; RingShot(e.Pos, 8, new Color("#d58cff")); } }
                 if (e.T1 <= 0)
@@ -516,7 +591,7 @@ public partial class Game
             case 3:
                 vel = e.DashDir * 200f; e.T2 -= dt;
                 if (dist < 20 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(18f, -dir); }
-                if (e.T2 <= 0) { e.State = 4; e.T2 = .8f; }
+                if (e.T2 <= 0) { e.State = 4; e.T2 = .8f; if (e.SpecN > 0 && hpf < .33f) e.Over = Mathf.Max(e.Over, 1.4f); }       // после комбинации «вихрь → рывок» страж открыт
                 break;
             case 4:
                 e.T2 -= dt; if (e.T2 <= 0) { e.State = 0; e.T1 = 1.8f * mul; }
@@ -536,12 +611,13 @@ public partial class Game
     /// <summary>Хранитель глубин: ныряет, бьёт приливом, призывает существ и гасит свет.</summary>
     Vector2 UpdateDepthWarden(Enemy e, float dt, Vector2 dir, float dist, bool water)
     {
-        float hpf = e.Hp / e.MaxHp, mul = hpf < .33f ? .6f : 1f;
+        float hpf = e.Hp / e.MaxHp, mul = (hpf < .33f ? .6f : 1f) * BossTempoMul();
+        if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero; float wm = water ? 1.4f : .6f;
         switch (e.State)
         {
             case 0:     // плывёт к игроку
-                vel = dir * 34f * wm; e.T1 -= dt;
+                vel = dir * 34f * wm; e.T1 -= dt; if (stillT > 1.8f) e.T1 -= dt * 1.5f; if (TryBossSpecial(e, dt, hpf, dist, dir)) break;
                 if (dist < 24 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(10f, -dir); }
                 if (e.T1 <= 0)
                 {
@@ -616,12 +692,15 @@ public partial class Game
 
     void UpdateProjectiles(float dt)
     {
+        if (NetClient) { foreach (var pr in Projs) pr.Pos += pr.Vel * dt; return; }           // клиент только показывает снаряды хоста
         for (int i = Projs.Count - 1; i >= 0; i--)
         {
             var p = Projs[i]; p.Life -= dt; p.Pos += p.Vel * dt;
             var t = ToTile(p.Pos);
             if (p.Dark && IsLit(p.Pos)) { Burst(p.Pos, new Color("#ffe27a"), 4, 40); Projs.RemoveAt(i); continue; }
-            if (p.Life <= 0 || World.Blocks(W.Get(t.X, t.Y)) && W.Get(t.X, t.Y) != Tl.Deep) { Burst(p.Pos, p.C, 3, 30); if (p.Zone) AddZone(p.Pos, 22, .3f, 4f, 6f); Projs.RemoveAt(i); continue; }
+            if (p.Life <= 0 || World.Blocks(W.Get(t.X, t.Y)) && W.Get(t.X, t.Y) != Tl.Deep && W.Get(t.X, t.Y) != Tl.Stone) {      // снаряды врагов пролетают сквозь камни, но не сквозь стены и постройки
+                 Burst(p.Pos, p.C, 3, 30); if (p.Zone) AddZone(p.Pos, 22, .3f, 4f, 6f); Projs.RemoveAt(i); continue; }
+            if (NetHost) { bool hitRemote = false; foreach (var r in Remotes()) if (r.Hp > 0 && p.Pos.DistanceTo(r.Pos) < 6f) { Net?.SendHurt(r.PeerId, p.Dmg, p.Vel.Normalized() * .8f, p.Fire); hitRemote = true; break; } if (hitRemote) { Projs.RemoveAt(i); continue; } }
             if (p.Pos.DistanceTo(PPos) < 6f)
             {
                 if (Invuln <= 0) { HurtPlayer(p.Dmg, p.Vel.Normalized() * .8f, p.Fire); if (p.Cold) Chill(2.2f); if (p.Zone) AddZone(p.Pos, 22, .3f, 4f, 6f); Projs.RemoveAt(i); }

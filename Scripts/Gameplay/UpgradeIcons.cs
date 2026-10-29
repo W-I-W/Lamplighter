@@ -24,5 +24,11 @@ public static class UpgradeIcons
         if (t != null) cache[spec] = t; return t;
     }
 
-    public static Texture2D ForTech(int tech) { var s = UpgradeIconSet.Get().Tech; return tech >= 0 && tech < s.Length ? Get(s[tech]) : null; }
+    /// <summary>Иконка навыка 32×32 из SkillDef (Assets/UI/Skills); без неё — запасная из набора UpgradeIconSet.</summary>
+    public static Texture2D ForTech(int tech)
+    {
+        if (tech < 0 || tech >= Game.Techs.Length) return null; string path = Game.SkillOf(tech).Icon;
+        if (!string.IsNullOrEmpty(path)) { if (cache.TryGetValue(path, out var c)) return c; if (ResourceLoader.Exists(path)) { var t = GD.Load<Texture2D>(path); if (t != null) { cache[path] = t; return t; } } }
+        var s = UpgradeIconSet.Get().Tech; return tech < s.Length ? Get(s[tech]) : null;
+    }
 }

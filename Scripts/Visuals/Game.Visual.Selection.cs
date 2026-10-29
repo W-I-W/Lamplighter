@@ -41,7 +41,7 @@ public partial class Game
     void DrawBuildGhost(EntityLayer c)
     {
         BuildEntry e = Placing;
-        if (e == null) { if (Window != Win.Build) return; var list = BuildEntriesFiltered(); if (WinCur >= list.Count) return; e = list[WinCur]; }
+        if (e == null || Window != Win.None) return;                // рамка установки — только в режиме установки; пока открыто меню строительства её на карте нет
         if (e.Tile < 0 || e.Stock <= 0) return;                    // без созданного предмета призрака нет: нечего ставить
         var t = ToTile(Aim); var center = TileCenter(t.X, t.Y);
         bool ok = e.Unlocked && W.Get(t.X, t.Y) == Tl.None && PPos.DistanceTo(center) <= 56f && ToTile(PPos) != t && W.Ground[World.Key(t.X, t.Y)] != Art.WaterG && (!e.Key.StartsWith("bld") || IsLit(center));

@@ -61,6 +61,12 @@ public partial class Game
     {
         W.ByTile.TryGetValue(World.Key(x, y), out var p);
         if (t == Tl.RiftGate) { RiftGateIx(ix); return true; }
+        if (p != null && p.Kind == PK.SparkAltar) return SparkAltarIx(p, ix);
+        if (p != null && p.Kind == PK.Survivor) return SurvivorIx(p, ix);
+        if (p != null && p.Kind == PK.RuneObelisk) return RuneIx(p, ix);
+        if (p != null && p.Kind == PK.GiantTree) return GiantTreeIx(p, ix);
+        if ((t == Tl.Pylon || t == Tl.PylonOn) && RunePylonIx(x, y, ix)) return true;
+        if ((t == Tl.Tablet || t == Tl.Pylon || t == Tl.PylonOn) && MysteryIx(x, y, t, ix)) return true;
         if (t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn) return HeartIx(x, y, t, ix);
         switch (t)
         {
@@ -92,7 +98,7 @@ public partial class Game
     static readonly int[][] MachineCost = C(It.Crystal, 3, It.Silver, 2, It.Relic, 1);
     static readonly int[][] BridgeCost = C(It.Wood, 8);
     public int MachinesRestored { get { int n = 0; foreach (var p in W.Pois) if (p.Kind == PK.Workshop && p.State == 3) n++; return n; } }
-    public float ProdMul => (Has(Tech.SilverGears) ? 1.5f : 1f) * (1f + .15f * MachinesRestored) * (1f + N("Prod"));
+    public float ProdMul => (1f + E(Tech.SilverGears)) * (1f + .15f * MachinesRestored) * (1f + N("Prod"));
 
     void RestoreMachine(int x, int y, Poi p)
     {

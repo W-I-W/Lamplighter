@@ -56,7 +56,7 @@ public partial class Game
             int wood0 = Inv[It.Wood]; Check(true, "trees: setup chopping");
             float tp = TimeToBreak(tree, "pickaxe");
             Check(W.Get(tree.X, tree.Y) == Tl.None && CrownAt(tree.X, tree.Y - 1) == -1, "trees: a chopped tree loses its trunk and crown");
-            Check(Inv[It.Wood] - wood0 >= 2 && Inv[It.Wood] - wood0 <= 3, $"trees: a tree gives 2-3 wood (got {Inv[It.Wood] - wood0})");
+            Check(Inv[It.Wood] - wood0 >= 1 && Inv[It.Wood] - wood0 <= 2, $"trees: a tree gives 1-2 wood after the yield tuning (got {Inv[It.Wood] - wood0})");
             SetObj(tree.X, tree.Y, Tl.Tree); Check(CrownAt(tree.X, tree.Y - 1) == Art.TreeTop, "trees: a regrown tree gets its crown back");
             float ta = TimeToBreak(tree, "axe");
             GD.Print($"[trees] chop time pickaxe={tp:0.00}s axe={ta:0.00}s");
@@ -94,7 +94,7 @@ public partial class Game
             }
             // страж восстанавливает здоровье, когда игрок далеко от его дома, и не лечится рядом
             Enemies.Clear(); Tp(TileCenter(tree.X, tree.Y - 1)); var bossE = SpawnEnemy(PPos + new Vector2(40 * TS, 0), EK.Warden, null, 1f); bossE.Hp = bossE.MaxHp * .4f; float hp0 = bossE.Hp;
-            for (int i = 0; i < 20; i++) UpdateEnemies(.5f);
+            for (int i = 0; i < 40; i++) UpdateEnemies(.5f);        // 20 с: босс начинает лечиться через 8 с без игрока
             Check(bossE.Hp > hp0 + bossE.MaxHp * .3f, $"boss: heals while the player is far away ({hp0:0}→{bossE.Hp:0} of {bossE.MaxHp:0})");
             bossE.Hp = bossE.MaxHp * .4f; hp0 = bossE.Hp; bossE.Pos = PPos + new Vector2(80, 0); bossE.Home = PPos; bossE.Cd = 99; bossE.T1 = 99; bossE.T3 = 99;
             for (int i = 0; i < 6; i++) UpdateEnemies(.1f);

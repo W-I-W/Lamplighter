@@ -10,7 +10,6 @@ public enum TechState { Owned, Available, Missing, Locked }
 public partial class Game
 {
     public UpgradeProgressionSystem Upgrades;
-    public int TechCur;                                      // выбранная карточка в текущей категории
     public readonly HashSet<string> TabAnim = new();         // вкладки, открытые за время игры: при открытии окна появляются с анимацией
     public float TechLearnT; public int TechLearned = -1;   // всплеск после успешного изучения (для анимаций окна)
 
@@ -36,15 +35,6 @@ public partial class Game
         Burst(PPos, new Color("#ffd23f"), 26, 110); Flash = Mathf.Max(Flash, .12f);
     }
 
-    public TechState StateOfTech(int i)
-    {
-        var t = Techs[i];
-        if (Has((Tech)i)) return TechState.Owned;
-        if (t.Reward) return t.Ok(this) ? TechState.Owned : TechState.Locked;
-        if (!t.Ok(this)) return TechState.Locked;
-        return Can(t.Cost) ? TechState.Available : TechState.Missing;
-    }
-
     /// <summary>Улучшения текущей категории (включая награды) в порядке данных.</summary>
     public List<int> TechList() { var c = Upgrades.ByPage(TechPage); return c == null ? new List<int>() : PageList(c.Page); }
 
@@ -60,14 +50,14 @@ public partial class Game
     {
         CloseWindows(); TechOpen = open; if (!open) return;
         if (!Upgrades.IsPageUnlocked(TechPage)) { var v = Upgrades.Visible(); TechPage = v.Count > 0 ? v[0].Page : 0; }
-        TechCur = 0; Upgrades.MarkSeen(Upgrades.ByPage(TechPage)?.Id ?? "");
+        EnsureTechSel(); Upgrades.MarkSeen(Upgrades.ByPage(TechPage)?.Id ?? "");
     }
 
     /// <summary>Переключение категории среди открытых.</summary>
     public void SelectTechPage(int page)
     {
         if (!Upgrades.IsPageUnlocked(page) || page == TechPage) return;
-        TechPage = page; TechCur = 0; Upgrades.MarkSeen(Upgrades.ByPage(page).Id); Sfx.Play("tick", -4, 1.2f);
+        TechPage = page; EnsureTechSel(); Upgrades.MarkSeen(Upgrades.ByPage(page).Id); Sfx.Play("tick", -4, 1.2f);
     }
 
     public void TechCycle(int dir)
@@ -76,33 +66,35 @@ public partial class Game
         int k = v.FindIndex(c => c.Page == TechPage); k = ((k + dir) % v.Count + v.Count) % v.Count; SelectTechPage(v[k].Page);
     }
 
-    /// <summary>Клавиши окна улучшений. Возвращает true, если клавиша обработана.</summary>
-    bool TechKey(Key k)
+    /// <summary>Выбранный навык должен лежать в текущей категории: иначе выбирается первый (корень).</summary>
+    public void EnsureTechSel() { var l = TechList(); if (l.Count == 0) { TechSel = -1; return; } if (TechSel < 0 || Techs[TechSel].Page != Upgrades.ByPage(TechPage)?.Page) TechSel = l[0]; }
+
+    /// <summary>Соседний навык в направлении (dx, dy): ближайший по оси с небольшим штрафом за боковое смещение.</summary>
+    public int TechNeighbour(int from, Vector2 dir)
     {
-        var list = TechList();
-        switch (k)
+        var p0 = SkillOf(from).Pos; int best = -1; float bs = float.MaxValue;
+        foreach (var i in TechList())
         {
-            case Key.Left: TechCycle(-1); return true;
-            case Key.Right: TechCycle(1); return true;
-            case Key.Up: TechCur = Math.Max(0, TechCur - 1); Sfx.Play("tick", -8, 1.5f); return true;
-            case Key.Down: TechCur = Math.Min(Math.Max(0, list.Count - 1), TechCur + 1); Sfx.Play("tick", -8, 1.5f); return true;
-            case Key.Enter: case Key.KpEnter: case Key.E: case Key.Space: if (TechCur >= 0 && TechCur < list.Count) LearnTech(list[TechCur]); return true;
+            if (i == from) continue; var d = SkillOf(i).Pos - p0; float along = d.Dot(dir), side = Mathf.Abs(d.Dot(new Vector2(-dir.Y, dir.X)));
+            if (along < .4f) continue; float sc = along + 1.6f * side; if (sc < bs) { bs = sc; best = i; }
         }
-        return false;
+        return best;
     }
 
-    /// <summary>Изучение улучшения (кнопка, Enter, цифра): условия, стоимость и награды те же, что раньше.</summary>
-    public bool LearnTech(int i)
+    /// <summary>Клавиши окна: стрелки — по дереву, Tab/PgUp/PgDn — категории, Enter/E/Space — улучшить на один уровень, Home — к выбранному.</summary>
+    bool TechKey(Key k)
     {
-        var t = Techs[i];
-        if (Has((Tech)i)) { Toast("Уже изучено"); return false; }
-        if (t.Reward) { Fail("Это награда: её даёт победа над стражем"); return false; }
-        if (!t.Ok(this)) { Fail("Пока недоступно: " + t.Req); return false; }
-        if (!Can(t.Cost)) { Fail("Не хватает: " + NeedStr(t.Cost)); return false; }
-        Pay(t.Cost); TechMask |= 1 << i; GiveXp(30);
-        Burst(PPos, new Color("#8ff0ff"), 20, 100);
-        Announce("Изучено: " + t.Name, t.Desc, new Color("#8ff0ff"), "tech");
-        TechLearned = i; TechLearnT = .6f;
-        Save(); return true;
+        EnsureTechSel();
+        switch (k)
+        {
+            case Key.Tab: TechCycle(Input.IsKeyPressed(Key.Shift) ? -1 : 1); return true;
+            case Key.Pagedown: TechCycle(1); return true;
+            case Key.Pageup: TechCycle(-1); return true;
+            case Key.Left: case Key.Right: case Key.Up: case Key.Down:
+                { var dir = k == Key.Left ? Vector2.Left : k == Key.Right ? Vector2.Right : k == Key.Up ? Vector2.Up : Vector2.Down; int n = TechSel < 0 ? -1 : TechNeighbour(TechSel, dir); if (n >= 0) { TechSel = n; Sfx.Play("tick", -8, 1.5f); } return true; }
+            case Key.Home: TechView.Remove(TechPage); return true;
+            case Key.Enter: case Key.KpEnter: case Key.E: case Key.Space: if (TechSel >= 0) LearnTech(TechSel); return true;
+        }
+        return false;
     }
 }

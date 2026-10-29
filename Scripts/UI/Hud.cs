@@ -45,9 +45,11 @@ public partial class Hud : Control
         return y;
     }
 
-    void Panel(Rect2 r, string variation = "PanelContainer")
+    /// <summary>Панель только для показа (уведомления, полоса босса, список событий): клик сквозь неё идёт в мир. blocks — панель перехватывает мышь.
+    /// Раньше любая такая панель считалась интерфейсом, и атака левой кнопкой «пропадала», если курсор был под уведомлением (в сети их особенно много).</summary>
+    void Panel(Rect2 r, string variation = "PanelContainer", bool blocks = false)
     {
-        r = new Rect2(r.Position.Round(), r.Size.Round()); panelRects.Add(r);
+        r = new Rect2(r.Position.Round(), r.Size.Round()); if (blocks) panelRects.Add(r);
         Sty(r, variation);
     }
 
@@ -65,7 +67,7 @@ public partial class Hud : Control
     Vector2 ToScreen(Vector2 w) => ((w - G.CamCenter) * Game.Zoom + G.ViewSize * .5f) / G.UiScaleVp;
 
     /// <summary>Находится ли точка (логические координаты) над панелью интерфейса.</summary>
-    public bool IsOverUi(Vector2 logical) { if (wv != null && wv.IsOver(logical) || mv != null && mv.IsOver(logical)) return true; foreach (var r in panelRects) if (r.HasPoint(logical)) return true; return G.GameHudNode != null && G.GameHudNode.IsOver(logical); }
+    public bool IsOverUi(Vector2 logical) { if (wv != null && wv.IsOver(logical) || mv != null && mv.IsOver(logical)) return true; foreach (var r in panelRects) if (r.HasPoint(logical)) return true; return G.GameHudNode != null && G.GameHudNode.IsOver(logical, G.UiScaleVp); }
 
     public override void _Process(double delta)
     {
@@ -81,6 +83,7 @@ public partial class Hud : Control
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
         DrawMarkers(vs); DrawEventMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
+        LayoutTop(vs);
         float y = DrawBanners(vs); DrawToasts(vs, y);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);
@@ -146,10 +149,26 @@ public partial class Hud : Control
     void DrawEventMarkers(Vector2 vs) { foreach (var ev in G.Events) Marker(ev.Pos, Game.EvColor(ev.Kind), Game.EvName(ev.Kind), ev.Seed, vs); }
 
     // ───────────────────────── уведомления ─────────────────────────
+    // верхняя колонка: босс, разлом, испытание, лучезарность, затем баннеры и тосты — друг под другом, на одной оси
+    protected float topCx, topMaxW, topRiftY, topTrialY, topSurgeY, topBannerY;
+    bool BossShown => G.Boss != null && G.Boss.Pos.DistanceTo(G.PPos) <= Tune.T.BossLeashTiles * 16f;
+
+    void LayoutTop(Vector2 vs)
+    {
+        float y = 4, sl = 0, sr = vs.X;
+        if (G.GameHudNode != null) (sl, sr) = G.GameHudNode.FreeSpan(0, 90, vs.X, G.UiScaleVp);
+        topCx = (sl + sr) * .5f; topMaxW = Mathf.Max(80, sr - sl - 12);
+        if (BossShown) y += 28;
+        if (G.RiftOn) { topRiftY = y; y += 28; }
+        if (G.TrialActive) { topTrialY = y; y += 18; }
+        if (G.SurgeOn) { topSurgeY = y; y += 24; }
+        topBannerY = y;
+    }
+
     void DrawBossBar(Vector2 vs)
     {
-        var b = G.Boss; if (b == null) return;
-        float w = 200, x = vs.X * .5f - w * .5f;
+        var b = G.Boss; if (b == null || !BossShown) return;      // полоса босса только пока он рядом (в сети она оставалась после смерти игрока)
+        float w = 200, x = topCx - w * .5f;
         Panel(new Rect2(x - 6, 4, w + 12, 24), "PanelGold");
         Txt(Game.EnemyName(b.Kind), new Vector2(x, 14), 9, new Color("#f0c8ff"), HorizontalAlignment.Center, w);
         Bar(new Rect2(x, 17, w, 7), b.Hp / b.MaxHp, "HpBar");
@@ -157,12 +176,12 @@ public partial class Hud : Control
 
     float DrawBanners(Vector2 vs)
     {
-        float y = G.Boss != null ? 34 : 22;
+        float y = topBannerY;
         if (G.Banners.Count == 0) return y;
         var b = G.Banners[0];                                   // уведомления идут по очереди, ни одно не теряется
         float a = Mathf.Clamp(b.Life * 1.6f, 0, 1) * Mathf.Clamp(b.Age * 6f, 0, 1), slide = Mathf.Clamp(b.Age * 8f, 0, 1);
-        float w = Mathf.Min(vs.X - 20, Mathf.Max(TextW(b.Title), TextW(b.Sub)) + 20);
-        var r = new Rect2(Mathf.Round(vs.X * .5f - w * .5f), Mathf.Round(y - (1 - slide) * 6), w, 24);
+        float w = Mathf.Min(topMaxW, Mathf.Max(TextW(b.Title), TextW(b.Sub)) + 20);
+        var r = new Rect2(Mathf.Round(topCx - w * .5f), Mathf.Round(y - (1 - slide) * 6), w, 24);
         var old = curMod; curMod = new Color(1, 1, 1, a);
         Panel(r, "PanelGold");
         Txt(b.Title, new Vector2(r.Position.X, r.Position.Y + 10), 9, new Color(b.C.R, b.C.G, b.C.B), HorizontalAlignment.Center, w);
@@ -174,9 +193,7 @@ public partial class Hud : Control
     void DrawToasts(Vector2 vs, float y)
     {
         y += 8; int from = Mathf.Max(0, G.Toasts.Count - 3);
-        float sl = 0, sr = vs.X;
-        if (G.GameHudNode != null) (sl, sr) = G.GameHudNode.FreeSpan(y - 8, y + 50, vs.X, G.UiScaleVp);
-        float cx = (sl + sr) * .5f, maxW = Mathf.Max(80, sr - sl - 24);   // центр и ширина — между боковыми панелями
+        float cx = topCx, maxW = topMaxW - 12;   // та же ось, что у баннеров: между боковыми панелями
         for (int i = from; i < G.Toasts.Count; i++)
         {
             var t = G.Toasts[i]; float a = Mathf.Clamp(t.Life, 0, 1);
@@ -211,8 +228,8 @@ public partial class Hud : Control
         }
         foreach (var id in G.TempRelics) { var d = Db.Relic(id); if (d == null) continue; var c = new Vector2(x + 4, y); Diamond(c, 4f, new Color(d.Tint.R, d.Tint.G, d.Tint.B, .6f + .4f * Mathf.Sin(G.Time * 8))); x += 11; }
         if (G.ActiveSyn.Count > 0) Txt($"✦{G.ActiveSyn.Count}", new Vector2(x, y + 3), 9, Good);
-        if (G.SurgeOn) { var rr = new Rect2(vs.X * .5f - 60, 30, 120, 8); Bar(rr, G.Surge / 8f, "LightBar"); Txt("ЛУЧЕЗАРНОСТЬ", new Vector2(rr.Position.X, rr.Position.Y + 16), 9, Gold, HorizontalAlignment.Center, 120); }
-        if (G.TrialActive) { var rr = new Rect2(vs.X * .5f - 100, G.Boss != null ? 34 : 4, 200, 14); Panel(rr, "PanelGold"); Txt($"Испытание Тьмы · {(int)G.TrialLeft} с", new Vector2(rr.Position.X, rr.Position.Y + 10), 9, new Color("#e0b8ff"), HorizontalAlignment.Center, 200); }
+        if (G.SurgeOn) { var rr = new Rect2(topCx - 60, topSurgeY, 120, 8); Bar(rr, G.Surge / 8f, "LightBar"); Txt("ЛУЧЕЗАРНОСТЬ", new Vector2(rr.Position.X, rr.Position.Y + 16), 9, Gold, HorizontalAlignment.Center, 120); }
+        if (G.TrialActive) { var rr = new Rect2(topCx - 100, topTrialY, 200, 14); Panel(rr, "PanelGold"); Txt($"Испытание Тьмы · {(int)G.TrialLeft} с", new Vector2(rr.Position.X, rr.Position.Y + 10), 9, new Color("#e0b8ff"), HorizontalAlignment.Center, 200); }
         if (G.Events.Count > 0 && G.Window == Win.None)
         {
             float ey = 92; var r = new Rect2(vs.X - 126, ey, 122, 8 + G.Events.Count * 10 + 6); Panel(r, "PanelDark");
@@ -245,6 +262,8 @@ public partial class Hud : Control
         foreach (var p in NetService.Players.Values)
         {
             if (!p.Handshaken || p.PeerId == NetService.LocalId) continue;
+            // ник и здоровье союзника видны, только когда он рядом (до 5 клеток) и на него наведён курсор
+            if (p.Shown.DistanceTo(G.PPos) > 80f || G.Aim.DistanceTo(p.Shown + new Vector2(0, -4)) > 14f) continue;
             var sp = ToScreen(p.Shown + new Vector2(0, -17));
             Txt(p.Name, sp + new Vector2(-45, -9), 9, new Color("#c9f0b0"), HorizontalAlignment.Center, 90);
             float w = 16f, k = Mathf.Clamp(p.Hp / Mathf.Max(1f, p.MaxHp), 0, 1);

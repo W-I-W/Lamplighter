@@ -17,7 +17,7 @@ public partial class Game
     float hotDot, trailT, impT;
     bool ashInit;
 
-    public float SmokeRes => Has(Tech.Fireproof) ? 0f : Has(Tech.HeatShield) ? .5f : 1f;
+    public float SmokeRes => Has(Tech.Fireproof) ? 0f : 1f - E(Tech.HeatShield) * .8333f;
     public float LightDim => (LightBlockT > 0 ? .3f : 1f) * (LeechT > 0 ? .6f : 1f) * (1f - .6f * SmokeAt(PPos) * SmokeRes);
 
     void InitAsh()
@@ -57,7 +57,7 @@ public partial class Game
 
     public void ColdDot(float amt)
     {
-        if (Has(Tech.FrostArmor)) amt *= .4f;
+        if (Has(Tech.FrostArmor)) amt *= ColdTaken;
         Hp -= amt; regenDelay = 3f; Chill(.6f);
         if (rng.Randf() < .1f) Burst(PPos, new Color("#e8faff"), 2, 40);
         if (Hp <= 0) Die();
@@ -66,7 +66,7 @@ public partial class Game
     public void DotDamage(float amt, bool fire)
     {
         if (fire && Has(Tech.Fireproof)) return;
-        if (fire && Has(Tech.HeatShield)) amt *= .4f;
+        if (fire && Has(Tech.HeatShield)) amt *= HeatTaken;
         if (fire) amt *= 1f - N("HeatResist");
         Hp -= amt; regenDelay = 3f; hotDot -= amt;
         if (hotDot < -3f) { hotDot = 0; Burst(PPos, new Color("#ff7a2a"), 3, 50); Sfx.Play("hurt", -8, 1.4f); Shake = Mathf.Max(Shake, 1.2f); }
@@ -161,17 +161,18 @@ public partial class Game
 
     Vector2 UpdateAshWarden(Enemy e, float dt, Vector2 dir, float dist)
     {
-        float hpf = e.Hp / e.MaxHp; bool rage = hpf < .33f; float mul = rage ? .6f : 1f;
+        float hpf = e.Hp / e.MaxHp; bool rage = hpf < .33f; float mul = (rage ? .6f : 1f) * BossTempoMul();
         if (rage && e.Mark.X == 0)
         {
             e.Mark = new Vector2(1, 0);
             Announce("Пепельный страж в ярости!", "Огонь горит дольше и летит вперёд", new Color("#ff7a3a"), "boss"); Shake = 5;
         }
+        if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero;
         switch (e.State)
         {
             case 0:
-                vel = dir * (rage ? 46f : 34f); e.T1 -= dt;
+                vel = dir * (rage ? 46f : 34f); e.T1 -= dt; if (TryBossSpecial(e, dt, hpf, dist, dir)) break;
                 if (dist < 24 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(12f, -dir, true); }
                 if (rage) { trailT -= dt; if (trailT <= 0) { trailT = .25f; AddZone(e.Pos, 12, 0, 3f, 9f); } }
                 if (e.T1 <= 0)

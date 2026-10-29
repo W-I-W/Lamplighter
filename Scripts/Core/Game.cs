@@ -28,8 +28,7 @@ public sealed class Toast { public string S; public float Life = 3.4f, Age; }
 public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f, Age; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
-public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
-public sealed class Villager { public Vector2 Pos; public int Job = -1; public float Walk, Stuck; public bool Working; public int Face = 1; public Vector2 Wander; public float WanderT; }
+public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked, Manual; public float WorkMul = .6f; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed partial class Ix { public List<string> Lines = new(); public Action E, U, X; public string Title, Key; }
 
 public sealed class SaveData
@@ -41,7 +40,7 @@ public sealed class SaveData
     public int[] LX, LY, LK, LL, LD; public string Explored;
     // этап 4
     public string[] WId; public int[][] WMods; public int CurW, HeroLamp; public int[] ModInv;
-    public string[] BsK, UpCats, UpNew; public int[] BsV, PlacedK, CutB;                  // запас построек; открытые категории улучшений и ещё не просмотренные                                      // запас построек и клетки, поставленные игроком
+    public string[] SkK; public int[] SkV; public string[] BsK, UpCats, UpNew; public int[] BsV, PlacedK, CutB;                  // запас построек; открытые категории улучшений и ещё не просмотренные                                      // запас построек и клетки, поставленные игроком
     public string[] Hot, Tools; public int HotSel; public string CurTool;               // хотбар (инструменты и оружие)
     public string[] Relics, Equipped, BpDone, FragK, Found; public int[] FragV;
     public int[] BPrio, BMode; public bool[] BOff, BForced; public int[] BLocal;
@@ -50,7 +49,13 @@ public sealed class SaveData
     // этап 5
     public bool Finished; public int LoreMask; public string Stamp; public float PlaySecs; public string[] Hints;
     public int RiftUnlocked = 1, RiftFirst, LegendMask, CosmMask = 1, CosmSel, RiftClears;
+    // этап 8: версия генерации мира (0 у сохранений до «живого мира» — они остаются прежними) и состояние древних фонарей (бит 0 — условие вида выполнено)
+    public int GenV; public byte[] AncDone;
+    // этап 9: жители (null у старых сохранений: тогда они восстанавливаются из спасённых мест, как раньше), ручные назначения и события деревни
+    public VillSave[] Vills; public int[] ManualB; public int VillEvents, ForgeMade, NextVillId;
 }
+
+public sealed class VillSave { public int Id, Work = -1, Home = -1, Talk; public string Name = "", Prof = "", Src = ""; public float X, Y; }
 
 public partial class Game : Node2D
 {
@@ -78,7 +83,7 @@ public partial class Game : Node2D
     const float SmeltTime = 0.9f;
     public bool HasFurnace;
     public int HeroLampLv;
-    public int TechMask; public long Ann; public bool TechOpen; public int TechPage;
+    public long Ann; public bool TechOpen; public int TechPage;
 
     public List<Particle> Parts = new();
     public List<FText> Texts = new();
@@ -102,7 +107,7 @@ public partial class Game : Node2D
         "Добыча жил: ломает до 3 соседних блоков руды сразу",
         "Добыча жил до 5 блоков, удары поджигают врагов" };
 
-    public float XpNeed => 25 + 20 * Level;
+    public float XpNeed => Tune.T.XpBase + Tune.T.XpLinear * Level + Tune.T.XpQuad * Level * Level;        // раньше 25 + 20 × уровень: двадцатый уровень набирался за 10 минут
     public int LitCount { get { int n = 0; for (int i = 1; i < W.Ancients.Count; i++) { var a = W.Ancients[i]; if (!a.Boss && a.Region == 0 && a.Lit) n++; } return n; } }
     public int LitIn(int region) { int n = 0; foreach (var a in W.Ancients) if (a.Region == region && !a.Boss && a.Lit && a != W.Ancients[0]) n++; return n; }
     public Vector2 ViewSize => GetViewportRect().Size;
@@ -114,10 +119,9 @@ public partial class Game : Node2D
         uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size;
     }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
-    public bool Has(Tech t) => ((TechMask >> (int)t) & 1) == 1;
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
     public bool WaterAt(Vector2 p) { var t = ToTile(p); return World.In(t.X, t.Y) && W.Ground[World.Key(t.X, t.Y)] == Art.WaterG; }
-    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * (Has(Tech.Lens) ? 1.3f : 1f) * (Has(Tech.HeroLamp) ? 1.25f : 1f) * (1f + .12f * HeroLampLv + N("HeroRadius")) * (Surge > 0 ? 1.4f : 1f) * LightDim;
+    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * (1f + LensBonus) * (1f + E(Tech.HeroLamp)) * (1f + .12f * HeroLampLv + N("HeroRadius")) * (Surge > 0 ? 1.4f : 1f) * LightDim;
 
     // ───────────────────────── инициализация ─────────────────────────
     public override void _Ready()
@@ -146,7 +150,7 @@ public partial class Game : Node2D
         AddChild(ents); AddChild(trunkRoot); AddChild(topRoot);                 // порядок: игрок → копии стволов → кроны (крона дерева спереди закрывает ствол дерева позади)
         overlay = new OverlayLayer { G = this }; AddChild(overlay); InitEnemyFx(); InitAmbient();
 
-        cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = true, PositionSmoothingSpeed = 9f, Position = PPos };
+        cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = false, PositionSmoothingSpeed = 9f, Position = PPos };
         cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.Wd * TS; cam.LimitBottom = World.Ht * TS;
         AddChild(cam); cam.MakeCurrent(); cam.ResetSmoothing();
 
@@ -165,8 +169,10 @@ public partial class Game : Node2D
         buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildMenu>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
         invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
         upgradeWindow = GD.Load<PackedScene>("res://Scenes/UI/UpgradeWindow.tscn").Instantiate<UpgradeWindowUI>(); upgradeWindow.G = this; uiRoot.AddChild(upgradeWindow);
+        equipWindow = GD.Load<PackedScene>("res://Scenes/UI/EquipWindow.tscn").Instantiate<EquipWindowUI>(); equipWindow.G = this; uiRoot.AddChild(equipWindow);
 
         Toast("Добудьте дерево и камень, постройте печь [B]. [M] — карта");
+        if (CarryMsg != null) { pendingMsg ??= CarryMsg; CarryMsg = null; }
         if (pendingMsg != null) Toast(pendingMsg);
         if (pendingMsg2 != null) Toast(pendingMsg2);
         InitLightTech();
@@ -231,9 +237,12 @@ public partial class Game : Node2D
     }
 
     // ───────────────────────── сохранение ─────────────────────────
+    Vector2 camPos; bool camInit;
+    public static string CarryMsg;                                       // сообщение, переживающее перезагрузку сцены
     string pendingMsg, pendingMsg2; readonly List<GEvent> pendingEvents = new();
     static int[] Flat(List<Building> bs) { var a = new int[bs.Count * It.Count]; for (int i = 0; i < bs.Count; i++) Array.Copy(bs[i].Local, 0, a, i * It.Count, It.Count); return a; }
-    string SavePath => SlotPath(0);
+    /// <summary>Одиночное и сетевое сохранения раздельны: хост сетевой игры пишет и читает save_mp.json, одиночный мир и персонаж не трогаются. Клиент ничего не сохраняет.</summary>
+    string SavePath => NetService.Role == NetRole.Host ? Path.Combine(SaveDir, "save_mp.json") : SlotPath(0);
 
     static bool ValidSave(string path)
     {
@@ -258,9 +267,9 @@ public partial class Game : Node2D
             while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
             var d = new SaveData
             {
-                Seed = W.Seed, Obj = Convert.ToBase64String(W.Obj), Lit = new bool[W.Ancients.Count],
+                Seed = W.Seed, GenV = W.GenV, AncDone = new byte[W.Ancients.Count], Vills = SaveVillagers(), ManualB = SaveManual(), VillEvents = VillEvents, ForgeMade = forgeMade, NextVillId = NextVillagerId, Obj = Convert.ToBase64String(W.Obj), Lit = new bool[W.Ancients.Count],
                 Px = PPos.X, Py = PPos.Y, Hp = Hp, MaxHp = MaxHp, Xp = Xp, Level = Level, Tier = Tier, Inv = Inv, Stock = Stock,
-                Tech = TechMask, Ann2 = Ann, Kills = Kills, BossMask = BossMask, Beacon = BeaconLevel,
+                Tech = TechMask, SkK = SaveSkills().k, SkV = SaveSkills().v, Ann2 = Ann, Kills = Kills, BossMask = BossMask, Beacon = BeaconLevel,
                 BT = new int[Buildings.Count], BX = new int[Buildings.Count], BY = new int[Buildings.Count], BL = new int[Buildings.Count],
                 PoiState = new byte[W.Pois.Count], Explored = Convert.ToBase64String(Expl),
                 UpCats = Upgrades?.SaveUnlocked(), UpNew = Upgrades?.SaveUnseen(), CutB = new List<int>(CutBush).ToArray(), BsK = new List<string>(BuildStock.Keys).ToArray(), BsV = new List<int>(BuildStock.Values).ToArray(), PlacedK = new List<int>(Placed).ToArray(), Hot = (string[])Hot.Clone(), HotSel = HotSel, Tools = new List<string>(OwnedTools).ToArray(), CurTool = CurTool, WId = Owned.ConvertAll(o => o.Id).ToArray(), WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(), CurW = CurW, HeroLamp = HeroLampLv, ModInv = ModInv,
@@ -271,7 +280,7 @@ public partial class Game : Node2D
                 Finished = Finished, LoreMask = LoreMask, Hints = new List<string>(HintsShown).ToArray(), RiftUnlocked = RiftUnlocked, RiftFirst = RiftFirst, LegendMask = LegendMask, CosmMask = CosmMask, CosmSel = CosmSel, RiftClears = RiftClears, EvV = Events.ConvertAll(e => e.V).ToArray(), EvS = Events.ConvertAll(e => e.State).ToArray(), EvW = Events.ConvertAll(e => e.Wave).ToArray(), EvSeed = Events.ConvertAll(e => e.Seed).ToArray(),
                 LX = new int[Lamps.Count], LY = new int[Lamps.Count], LK = new int[Lamps.Count], LL = new int[Lamps.Count], LD = new int[Lamps.Count]
             };
-            for (int i = 0; i < W.Ancients.Count; i++) d.Lit[i] = W.Ancients[i].Lit;
+            for (int i = 0; i < W.Ancients.Count; i++) { d.Lit[i] = W.Ancients[i].Lit; d.AncDone[i] = (byte)(W.Ancients[i].Done ? 1 : 0); }
             for (int i = 0; i < Buildings.Count; i++) { var b = Buildings[i]; d.BT[i] = (int)b.Type; d.BX[i] = b.X; d.BY[i] = b.Y; d.BL[i] = b.Level; }
             for (int i = 0; i < Lamps.Count; i++) { var l = Lamps[i]; d.LX[i] = l.X; d.LY[i] = l.Y; d.LK[i] = l.Kind; d.LL[i] = l.Level; d.LD[i] = l.Dir; }
             for (int i = 0; i < W.Pois.Count; i++)
@@ -303,7 +312,7 @@ public partial class Game : Node2D
             var d = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(path), new JsonSerializerOptions { IncludeFields = true });
             if (d == null || d.Version < 2 || string.IsNullOrEmpty(d.Obj)) return false;
             PlaySecs = d.PlaySecs;
-            W = World.Generate(d.Seed);
+            W = World.Generate(d.Seed, d.GenV);
             var obj = Convert.FromBase64String(d.Obj);
             bool legacy = d.Version < 3; var genObj = (byte[])W.Obj.Clone();
             bool wide = false;
@@ -333,8 +342,12 @@ public partial class Game : Node2D
             OverlayNewFinds(genObj, d.PoiState != null ? d.PoiState.Length : 0, legacy);
             { int lv = legacy ? 1 : Math.Max(1, d.Beacon); if (lv >= 2) foreach (var t in W.Seal1) W.Set(t.X, t.Y, Tl.None); if (lv >= 3) foreach (var t in W.Seal2) W.Set(t.X, t.Y, Tl.None); if (lv >= 4) foreach (var t in W.Seal3) W.Set(t.X, t.Y, Tl.None); if (lv >= 5) foreach (var t in W.Seal4) W.Set(t.X, t.Y, Tl.None); }
             for (int i = 0; i < W.Ancients.Count && i < d.Lit.Length; i++) if (d.Lit[i]) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
+            if (d.AncDone != null) for (int i = 0; i < W.Ancients.Count && i < d.AncDone.Length; i++) W.Ancients[i].Done = (d.AncDone[i] & 1) != 0;
+            RestoreMysteryTiles();
+            loadedVills = d.Vills; VillEvents = d.VillEvents; forgeMade = d.ForgeMade; if (d.NextVillId > NextVillagerId) NextVillagerId = d.NextVillId;
+            if (d.ManualB != null) foreach (var mk in d.ManualB) manualLoaded.Add(mk);
             PPos = new Vector2(d.Px, d.Py); Hp = d.Hp; MaxHp = d.MaxHp; Xp = d.Xp; Level = d.Level; Tier = d.Tier;
-            TechMask = d.Tech; Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
+            LoadSkills(d.SkK, d.SkV, d.Tech); Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
             InitUpgrades(d);                                       // категории улучшений: из сохранения либо из подтверждённого прогресса (тихо)
             BossMask = legacy ? (d.Boss ? 1 : 0) : d.BossMask; BeaconLevel = legacy ? 1 : Math.Max(1, d.Beacon);
             if (d.Inv != null) for (int i = 0; i < Inv.Length && i < d.Inv.Length; i++) Inv[i] = d.Inv[i];
@@ -431,7 +444,7 @@ public partial class Game : Node2D
         if (Menu == Mn.NetJoin && e is InputEventKey nk && nk.Pressed) { NetJoinKey(nk); return; }
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
         if (HotDragInput(e)) return;
-        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
+        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory && Window != Win.Equip ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
         if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0)
         {
             OverUi = UiOver(cb.Position / UiScaleVp);
@@ -449,7 +462,7 @@ public partial class Game : Node2D
             if (TechOpen && TechKey(key)) return;
             switch (key)
             {
-                case Key.E: DetailT = 3f; if (Cur.E != null) Cur.E(); else Fail("Рядом нет ничего, с чем можно взаимодействовать"); break;
+                case Key.E: DetailT = 3f; Cur.E?.Invoke(); break;
                 case Key.X: DetailT = 3f; if (Cur.X != null) Cur.X(); else Fail("Рядом нет построенного предмета, который можно разобрать"); break;
                 case Key.U: DetailT = 3f; if (Cur.U != null) Cur.U(); else Fail("Рядом нет здания или фонаря для улучшения"); break;
                 case Key.Key1: Digit(1); break;
@@ -467,7 +480,7 @@ public partial class Game : Node2D
                 case Key.Escape: if (Placing != null) { Placing = null; Toast("Строительство отменено"); } else if (TechOpen || MapOpen) CloseWindows(); else OpenMenu(Mn.Pause); break;
                 case Key.Shift: TryDash(); break;
                 case Key.Q: TryFlare(); break;
-                case Key.V: CycleWeapon(); break;
+                case Key.V: if (k.ShiftPressed) CycleOwnedWeapon(); else CycleWeapon(); break;
                 case Key.C: OpenWin(Win.Equip); break;
                 case Key.J: OpenWin(Win.Journal); break;
                 case Key.P: OpenWin(Win.Prod); break;
@@ -482,7 +495,7 @@ public partial class Game : Node2D
 
     void Digit(int n)
     {
-        if (TechOpen) { if (n >= 1) BuyTech(n - 1); return; }
+        if (TechOpen) { var vis = Upgrades.Visible(); if (n >= 1 && n <= vis.Count) SelectTechPage(vis[n - 1].Page); return; }
         if (n >= 1 && n <= HotCount) { HotSelect(n - 1); return; }                  // 1–3: выбор инструмента или оружия в хотбаре
         switch (n)                                                                  // постройки теперь — только через меню строительства [B]
         {
@@ -515,7 +528,7 @@ public partial class Game : Node2D
         UpdateIceBlocks(dt);
         UpdateHeart(dt);
         UpdateEndgame(dt);
-        UpdateRegrow(dt);
+        UpdateRegrow(dt); UpdateScarcity(dt);
         UpdatePolish(dt);
         UpdateDesign(dt);
         UpdateChunks(dt);
@@ -529,7 +542,7 @@ public partial class Game : Node2D
         UpdateBossSpawn(dt); Upgrades?.Tick(dt); UpdateNet(dt);
         UpdateSpawning(dt);
         UpdateVillage(dt);
-        UpdatePois(dt);
+        UpdatePois(dt); UpdateRunes(dt); UpdateAncientKinds(dt); LampHints();
         UpdateSmelting(dt);
         UpdateRegion(dt);
         UpdateMap(dt);
@@ -537,14 +550,18 @@ public partial class Game : Node2D
         UpdateUnlocks(dt);
         UpdateUiScale();
         OverUi = UiOver(GetViewport().GetMousePosition() / UiScaleVp);
-        RunInteraction();
+        RunInteraction(); UpdateTip(dt);
         UpdateSelectionVisual(dt);
 
         saveT += dt; if (saveT > 10) { saveT = 0; Save(); }
 
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
-        cam.Position = PPos;
-        cam.Offset = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
+        // Камера плавно следует за игроком и стоит строго на сетке физических пикселей: дробное положение давало светлые полоски между тайлами
+        float pxPerUnit = Zoom * Mathf.Max(.01f, DisplayServer.WindowGetSize().Y / Mathf.Max(1f, ViewSize.Y));
+        if (!camInit || camPos.DistanceTo(PPos) > 160f) { camPos = PPos; camInit = true; } else camPos = camPos.Lerp(PPos, 1f - Mathf.Exp(-9f * dt));
+        cam.Position = (camPos * pxPerUnit).Round() / pxPerUnit;
+        var shakeOff = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
+        cam.Offset = (shakeOff * pxPerUnit).Round() / pxPerUnit;
         UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt); UpdatePlayerFx(dt); UpdateWorldLife(dt); ambientLayer?.QueueRedraw();
         ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw();
     }
@@ -596,9 +613,11 @@ public partial class Game : Node2D
             if (KeyMap.Held("Left") || (arrows && Input.IsKeyPressed(Key.Left))) dir.X -= 1;
             if (KeyMap.Held("Right") || (arrows && Input.IsKeyPressed(Key.Right))) dir.X += 1;
         }
+        bool uiOpen = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None || FinStage != 0;
+        if (uiOpen) dir = Vector2.Zero;                                  // пока открыто окно или меню, персонаж стоит на месте
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
-        float speed = 80f * (1f + N("Speed")) * (water ? (Has(Tech.Boots) ? .9f : .55f) : 1f);
+        float speed = 80f * (1f + N("Speed")) * (water ? WaterSpeed : 1f);
         if (DashT > 0)
         {
             DashT -= dt; pVel = DashDir * 260f;
@@ -606,6 +625,7 @@ public partial class Game : Node2D
         }
         else
         {
+            if (uiOpen) { pVel = Vector2.Zero; speed = 0; }
             if (ChillT > 0) { ChillT -= dt; speed *= .62f; }
             bool slick = OnIce(PPos) && !Has(Tech.SpikeBoots);
             pVel = pVel.Lerp(dir * speed, Mathf.Min(1, dt * (slick ? 2.4f : 16f)));
@@ -620,7 +640,7 @@ public partial class Game : Node2D
         if (Hp < MaxHp)
         {
             if (IsLit(PPos)) Hp = Mathf.Min(MaxHp, Hp + 4f * dt);
-            else if (regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + .5f * dt);
+            else if (regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + Tune.T.RegenRate * dt);
         }
 
         bool act = Input.IsMouseButtonPressed(MouseButton.Left) || KeyMap.Held("Attack");
@@ -634,6 +654,9 @@ public partial class Game : Node2D
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
         || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar;
+
+    /// <summary>Что можно ломать оружием в руках (очень медленно): мягкие блоки. Руда и кристаллы только инструментом.</summary>
+    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin;
 
     static int TierNeed(Tl t) => t switch
     {
@@ -668,6 +691,11 @@ public partial class Game : Node2D
         }
         if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f || !Mineable(t))
         { MineProg = 0; MineTile = new Vector2I(-1, -1); return; }
+        if (CurW >= 0 && !WeaponCanBreak(t))
+        {
+            if (tierMsgCd <= 0) { tierMsgCd = 2; Fail("Оружием ломаются только дерево, камень и завалы: для руды возьмите кирку"); }
+            MineProg = 0; return;
+        }
         if (Tier < TierNeed(t))
         {
             if (tierMsgCd <= 0)
@@ -677,7 +705,7 @@ public partial class Game : Node2D
             }
             MineProg = 0; return;
         }
-        float eff = td.Efficiency(t) * td.MiningPower;
+        float eff = td.Efficiency(t) * td.MiningPower * (CurW >= 0 ? Tune.T.WeaponMineMul : 1f);        // оружием блоки ломаются очень медленно: для добычи нужен инструмент
         if (eff <= 0f)
         {
             if (tierMsgCd <= 0) { tierMsgCd = 2; Fail($"{td.Name} не подходит для добычи: {TileTitle(t)}"); }
@@ -685,6 +713,7 @@ public partial class Game : Node2D
         }
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
         MineNeed = t switch { Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
+        MineNeed *= Tune.T.MineTimeMul;                                    // начало игры: добыча медленнее, чтобы сырьё не набиралось слишком легко
         float before = MineProg;
         MineProg += dt * MineSpeed * eff; Swing = .2f; Diag.Add("mine_secs", dt);
         if ((int)(before * 5) != (int)(MineProg * 5)) { Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; TileShake(tile.X, tile.Y); }
@@ -701,7 +730,9 @@ public partial class Game : Node2D
 
     int ChainLimit => (Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0) + (int)N("MineChain");
 
-    void BreakTile(Vector2I tile, Tl t, bool chain)
+    void BreakTile(Vector2I tile, Tl t, bool chain) { inBreak = true; try { BreakTileCore(tile, t, chain); } finally { inBreak = false; } }
+
+    void BreakTileCore(Vector2I tile, Tl t, bool chain)
     {
         SetObj(tile.X, tile.Y, Tl.None);
         MineProg = 0; MineTile = new Vector2I(-1, -1);
@@ -742,17 +773,26 @@ public partial class Game : Node2D
         }
     }
 
+    bool inBreak;
+    /// <summary>Выпадение сырья при добыче блоков: множитель из tuning.tres, дробная часть — случайно, минимум 1 (осколки света, реликвии и ядра не меняются).</summary>
+    int Yield(int item, int n)
+    {
+        if (item == It.Shard || item == It.Relic || item == It.Core || item == It.AncCrystal || item == It.Coins) return n;
+        float v = n * Tune.T.GatherMul; int i = (int)v; if (rng.Randf() < v - i) i++; return Math.Max(1, i);
+    }
+
     public void Give(int item, int n, Vector2 at)
     {
+        if (inBreak) n = Yield(item, n);
         Inv[item] += n; Diag.Count("give_" + item);
         Texts.Add(new FText { P = at, S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });
         if (IsRareItem(item)) RareGiveFx(item, at);
         Sfx.Play("pickup", -6, 1f + .05f * (item % 5));
     }
 
-    public void GiveXp(float x)
+    public void GiveXp(float x, bool raw = false)
     {
-        Xp += x;
+        Xp += raw ? x : x * Tune.T.XpMul;
         while (Xp >= XpNeed)
         {
             Xp -= XpNeed; Level++; MaxHp += 10; Hp = MaxHp;
@@ -874,8 +914,9 @@ public partial class Game : Node2D
     void Activate(Ancient a, int idx)
     {
         if (a.Boss && !BossDown(a.BossId)) { Fail("Фонарь охраняет страж — сначала победите его"); return; }
+        if (!LampReady(a, out var lampWhy)) { Fail(lampWhy); return; }
         if (Inv[It.Shard] < a.Cost) { Fail($"Нужно осколков: {a.Cost} (есть {Inv[It.Shard]})"); return; }
-        Inv[It.Shard] -= a.Cost; a.Lit = true; a.Anim = 0; OnAncientLit(a); Diag.Mark("first_lantern"); Diag.Count("lanterns_lit");
+        Inv[It.Shard] -= a.Cost; PayRepair(a); a.Lit = true; a.Anim = 0; OnAncientLit(a); Diag.Mark("first_lantern"); Diag.Count("lanterns_lit");
         SetObj(a.Tile.X, a.Tile.Y, a.Boss ? Tl.BossOn : Tl.AncOn);
         var ex = new List<string>(); var seen = new HashSet<Tl>();
         foreach (var v in a.Veins)

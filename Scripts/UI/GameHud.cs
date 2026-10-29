@@ -50,10 +50,12 @@ public partial class GameHud : Control
         return (l, r);
     }
 
-    public bool IsOver(Vector2 p)
+    /// <summary>Точка в логических координатах интерфейса над панелью HUD. Раньше логическая точка сравнивалась с прямоугольником в пикселях окна, поэтому при масштабе интерфейса ×2–×3
+    /// клик мимо панели (правее и ниже неё) считался кликом по панели и не бил и не добывал — отсюда «иногда не срабатывает левая кнопка».</summary>
+    public bool IsOver(Vector2 logical, float scale)
     {
-        if (panels == null) return false;
-        foreach (var c in panels) if (c != null && c.IsVisibleInTree() && c.GetGlobalRect().HasPoint(p * 1f)) return true;
+        if (panels == null) return false; var vp = logical * scale;
+        foreach (var c in panels) if (c != null && c.IsVisibleInTree() && new Rect2(Vector2.Zero, c.Size).HasPoint(c.GetGlobalTransform().AffineInverse() * vp)) return true;
         return false;
     }
 
@@ -130,7 +132,7 @@ public partial class GameHud : Control
         {
             string r = G.Hot[i]; bool has = G.HotValid(r);
             var st = !has ? SlotState.Disabled : i == G.HotSel ? SlotState.Selected : SlotState.Normal;
-            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f);
+            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f); hot[i].TooltipText = has ? Loc.T(G.HotName(r)) : "";
         }
         weapon.Visible = false; UpdateDrag();
     }

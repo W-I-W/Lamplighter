@@ -101,7 +101,18 @@ public partial class Game
         var expectedClient = new Vector2((W.Spawn.X + .5f) * TS + 64, (W.Spawn.Y + .5f) * TS + 32);
         var expectedHost = new Vector2((W.Spawn.X + .5f) * TS - 64, (W.Spawn.Y + .5f) * TS);
         NetPlayer Other() => NetService.Players.Values.FirstOrDefault(p => p.PeerId != NetService.LocalId && p.Handshaken);
-        S(.3f, () => { Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; });
+        S(.3f, () => { Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; TestNoSpawn = true; });
+        var chests = W.Pois.Where(p => p.Kind == PK.Chest).Take(3).ToList();
+        void Open(Poi p) { p.State = 3; SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); }
+        bool IsOpen(Poi p) => p.State == 3 && W.Get(p.Tile.X, p.Tile.Y) == Tl.ChestOpen;
+        var ns = new System.Collections.Generic.List<Vector2I>(); Vector2I stoneT = new(-1, -1);
+        S(.05f, () =>
+        {
+            for (int r = 11; r < 20 && ns.Count < 5; r++) for (int a = -r; a <= r && ns.Count < 5; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y - r); if (W.GenObj[World.Key(tt.X, tt.Y)] == (byte)Tl.None && W.Ground[World.Key(tt.X, tt.Y)] != Art.WaterG && ns.All(q => Math.Abs(q.X - tt.X) >= 3)) ns.Add(tt); }
+            for (int r = 3; r < 30 && stoneT.X < 0; r++) for (int a = -r; a <= r && stoneT.X < 0; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y + r); if (W.GenObj[World.Key(tt.X, tt.Y)] == (byte)Tl.Stone && !ns.Contains(tt)) stoneT = tt; }
+        });
+        var surv = W.Pois.Find(p => p.Kind == PK.Survivor && p.Variant == 1 && World.RegionOf(p.Tile.X) == 0);
+        Building Saw() => Buildings.Find(b => b.Type == Tl.Sawmill);
         if (host)
         {
             S(.3f, () => Check(NetService.Role == NetRole.Host && NetService.Online && NetService.LocalId == 1, "net host: the session is open and the host is peer 1"));
@@ -111,10 +122,35 @@ public partial class Game
             }
             else
             {
+                S(.2f, () => { Open(chests[0]); Inv[It.Shard] = 99; Activate(W.Ancients[1], 1); Check(IsOpen(chests[0]) && W.Ancients[1].Lit, "net host: progress made before the client joins (chest opened, lantern lit)"); });
+                S(.2f, () => { SetObj(ns[0].X, ns[0].Y, Tl.Furnace); Placed.Add(World.Key(ns[0].X, ns[0].Y)); SetObj(ns[1].X, ns[1].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[1].X, Y = ns[1].Y, Anim = 1 }); TestGoal = "TEST-GOAL"; });
+                S(.2f, () =>
+                {
+                    var sites = new System.Collections.Generic.List<Vector2I>(); for (int r = 2; r < 9 && sites.Count < 2; r++) for (int a = -r; a <= r && sites.Count < 2; a++) { var t = new Vector2I(W.Spawn.X + a, W.Spawn.Y - r); if (sites.Count == 0 || Math.Abs(sites[0].X - t.X) >= 3) if (SafeTile(t.X, t.Y) && DecorFree(t.X, t.Y)) sites.Add(t); }
+                    var wh = CreateBuilding(0, sites[0]); wh.Forced = true; var sw = CreateBuilding(1, sites[1]); sw.Forced = true; AddVillager(9501, TileCenter(W.Spawn.X, W.Spawn.Y + 2), "lumberjack", "test"); RecomputeNetwork();
+                    Check(WorkerOf(sw)?.Id == 9501, "net host: a villager works in the sawmill before the client joins");
+                });
                 WaitStep(25f, () => NetService.Count >= 2 && Other() != null, ok => Check(ok, "net host: the client completed the handshake"));
+                S(.3f, () => { Open(chests[1]); SetObj(ns[2].X, ns[2].Y, Tl.AmpCrystal); Placed.Add(World.Key(ns[2].X, ns[2].Y)); });
+                WaitStep(20f, () => W.Get(ns[3].X, ns[3].Y) == Tl.Banner && Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y) && stoneT.X >= 0 && W.Get(stoneT.X, stoneT.Y) == Tl.None, ok => Check(ok, $"net host: the client's placed banner and lamp and a mined stone are visible here banner={W.Get(ns[3].X, ns[3].Y)} lamp={Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y)} stone={(stoneT.X >= 0 ? W.Get(stoneT.X, stoneT.Y).ToString() : "none")}"));
+                WaitStep(20f, () => IsOpen(chests[2]), ok => Check(ok, "net host: a chest opened by the client is opened here too"));
+                WaitStep(20f, () => Saw() != null && Saw().Manual && WorkerOf(Saw()) == null, ok => Check(ok, "net host: the client's worker removal command arrived and was applied"));
+                WaitStep(20f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && surv.State == 3, ok => Check(ok, "net host: the client's rescue created the villager here (one, shared)"));
+                S(.3f, () => Check(Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, "net host: the rescued villager exists exactly once"));
+                Vector2 arena = default; Enemy te = null;
+                S(.3f, () => { arena = FindDarkArena(); Tp(arena); Enemies.Clear(); Projs.Clear(); });
+                WaitStep(20f, () => Other() != null && Other().Pos.DistanceTo(arena + new Vector2(60, 0)) < 24f, ok => Check(ok, "net host: the client joined the arena"));
+                S(.3f, () => { te = SpawnEnemy(arena + new Vector2(110, 0), EK.Shade, null, 1f); te.MaxHp = te.Hp = 400f; te.Cd = 0; });
+                WaitStep(20f, () => te != null && te.Hp < 399f, ok => Check(ok, "net host: a hit made by the client reduced the host's enemy health (host-authoritative damage)"));
+                S(.3f, () => Check(te != null && te.Target == Other()?.PeerId, $"net host: the enemy chose the nearest player, not the host (target {te?.Target})"));
+                S(4f, () => { });
+                S(.3f, () => { Enemies.Clear(); });
+                Vector2 mpos = default;
+                S(.3f, () => { mpos = TileCenter(W.Spawn.X + 2, W.Spawn.Y - 24); SpawnEvent("meteor", mpos); BeaconLevel = 3; });
+                WaitStep(20f, () => { var mt = ToTile(mpos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net host: the meteor falls and leaves its ore"));
                 S(.3f, () => { Check(NetService.Count == 2, $"net host: two players in the roster ({NetService.Count})"); Check(Other()?.Name == "Клиент", $"net host: the client name was received ({Other()?.Name})"); });
                 WaitStep(15f, () => Other() != null && Other().Pos.DistanceTo(expectedClient) < 3f, ok => Check(ok, $"net host: the client position reaches the host ({Other()?.Pos})"));
-                S(.3f, () => { Tp(expectedHost); GD.Print("[net] host moved"); Shot("net_host_view"); });
+                S(.3f, () => { Check(Other() != null && Other().Light > 50f && Other().Light < 400f, $"net host: the client's light radius arrives ({Other()?.Light:0})"); Tp(expectedHost); GD.Print("[net] host moved"); Shot("net_host_view"); });
                 WaitStep(20f, () => NetService.Count == 1, ok => Check(ok, "net host: the client leaving is noticed"));
             }
         }
@@ -127,6 +163,27 @@ public partial class Game
             else
             {
                 WaitStep(25f, () => NetService.Online && NetService.Local != null && !NetService.WorldPending, ok => Check(ok, "net client: connected and received the world"));
+                WaitStep(10f, () => IsOpen(chests[0]) && W.Ancients[1].Lit, ok => Check(ok, "net client: progress made before joining arrives with the world snapshot (late join)"));
+                WaitStep(10f, () => W.Get(ns[0].X, ns[0].Y) == Tl.Furnace && Placed.Contains(World.Key(ns[0].X, ns[0].Y)) && Lamps.Any(l => l.X == ns[1].X && l.Y == ns[1].Y), ok => Check(ok && HasFurnace, $"net client: objects placed by the host before joining (furnace, lamp) are shown and the furnace counts as built (late join) furnace={W.Get(ns[0].X, ns[0].Y)} placed={Placed.Contains(World.Key(ns[0].X, ns[0].Y))} lamp={Lamps.Any(l => l.X == ns[1].X && l.Y == ns[1].Y)} lamps={Lamps.Count}"));
+                WaitStep(10f, () => Goals.Any(g => g.Title == "TEST-GOAL"), ok => Check(ok, "net client: the goal list is the host's (shared goals)"));
+                WaitStep(10f, () => W.Get(ns[2].X, ns[2].Y) == Tl.AmpCrystal, ok => Check(ok, $"net client: an object placed by the host while online appears ({W.Get(ns[2].X, ns[2].Y)})"));
+                S(.3f, () => { SetObj(ns[3].X, ns[3].Y, Tl.Banner); Placed.Add(World.Key(ns[3].X, ns[3].Y)); SetObj(ns[4].X, ns[4].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[4].X, Y = ns[4].Y, Anim = 1 }); if (stoneT.X >= 0) SetObj(stoneT.X, stoneT.Y, Tl.None); });
+                WaitStep(10f, () => IsOpen(chests[1]), ok => Check(ok, "net client: a chest opened by the host while online opens here too"));
+                WaitStep(10f, () => VillagerById(9501) != null && Saw() != null && WorkerOf(Saw())?.Id == 9501, ok => Check(ok, "net client: the host's villager, sawmill and assignment arrive with the world (late join)"));
+                WaitStep(10f, () => VillagerById(9501)?.State == VState.Working, ok => Check(ok, "net client: the villager's work state is shown (host-simulated)"));
+                S(.3f, () => { Check(!IsOpen(chests[2]), "net client: untouched chest stays closed"); Open(chests[2]); ClearWorker(Saw()); Inv[It.Wood] = 20; Inv[It.Stone] = 10; Tp(surv.Pos + new Vector2(0, 30)); RescueSurvivor(surv); });
+                WaitStep(10f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, ok => Check(ok, "net client: the rescued villager appears once for the client too"));
+                Vector2 arena = default; float hit = 0;
+                S(.3f, () => { arena = FindDarkArena(); Tp(arena + new Vector2(60, 0)); Hp = MaxHp; Invuln = 0; });
+                WaitStep(25f, () => Enemies.Any(e => e.NetId > 0), ok => Check(ok, "net client: the host's enemy is shown on the client (no local AI)"));
+                S(.3f, () => { Check(Enemies.All(e => e.NetId > 0), "net client: the client created no enemies of its own"); var e = Enemies.First(x => x.NetId > 0); Hurt(e, 8f, Vector2.Left, true); });
+                WaitStep(25f, () => Hp < MaxHp - 1f, ok => Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"));
+                S(.3f, () => { float drop = MaxHp - Hp; float one = 9f * Tune.T.EnemyDamage; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
+                S(5f, () => { });
+                WaitStep(20f, () => Events.Any(e => e.Kind == "meteor"), ok => Check(ok, "net client: the host's meteor event is shown (shared events)"));
+                WaitStep(20f, () => { var mp = Events.FirstOrDefault(e => e.Kind == "meteor"); if (mp == null) return false; var mt = ToTile(mp.Pos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net client: the meteor ore appeared for the client too"));
+                WaitStep(15f, () => BeaconLevel >= 3, ok => Check(ok, "net client: the beacon level is shared"));
+                S(1.5f, () => { });
                 S(.3f, () =>
                 {
                     Check(NetService.WorldSeed == W.Seed && W.Seed == 4242, $"net client: the client world uses the host seed ({W.Seed})");
@@ -135,7 +192,7 @@ public partial class Game
                     Tp(expectedClient);
                 });
                 WaitStep(20f, () => NetService.Players.TryGetValue(1, out var h) && h.Pos.DistanceTo(expectedHost) < 3f, ok => Check(ok, $"net client: the host position reaches the client ({(NetService.Players.TryGetValue(1, out var h2) ? h2.Pos : default)})"));
-                S(1.0f, () => { Shot("net_client_view"); Check(Remotes().Count() == 1, "net client: one remote character is drawn"); });
+                S(1.0f, () => { Check(NetService.Players.TryGetValue(1, out var hh) && hh.Light > 50f && hh.Light < 400f, $"net client: the host's light radius arrives ({(NetService.Players.TryGetValue(1, out var h3) ? h3.Light : 0):0})"); Shot("net_client_view"); Check(Remotes().Count() == 1, "net client: one remote character is drawn"); });
                 S(.3f, () => { NetService.Leave(false); Check(NetService.Role == NetRole.Offline, "net client: leaving the session works"); });
             }
         }

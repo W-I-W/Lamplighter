@@ -20,12 +20,12 @@ public partial class Game
     public static string EvName(string k) => k switch
     {
         "caravan" => "Теневой караван", "lamp" => "Осаждённый фонарь", "trader" => "Странствующий торговец", "meteor" => "Падение метеорита",
-        "rift" => "Разлом Тьмы", "elite" => "Редкий монстр", _ => "Заблудший путник"
+        "rift" => "Разлом Тьмы", "elite" => "Редкий монстр", "awaken" => "Пробуждение теней", _ => "Заблудший путник"
     };
     public static Color EvColor(string k) => k switch
     {
         "caravan" => new Color("#ffb04a"), "lamp" => new Color("#ffe27a"), "trader" => new Color("#7ad45a"), "meteor" => new Color("#fff2b0"),
-        "rift" => new Color("#c070ff"), "elite" => new Color("#ff6a5a"), _ => new Color("#8ff0ff")
+        "rift" => new Color("#c070ff"), "elite" => new Color("#ff6a5a"), "awaken" => new Color("#9a60d0"), _ => new Color("#8ff0ff")
     };
 
     EK[] RegionPool(int reg) => reg == 1 ? new[] { EK.Beetle, EK.Leech, EK.Spitter } : reg == 2 ? new[] { EK.Imp, EK.Golem, EK.Spirit } : new[] { EK.Shade, EK.Wraith, EK.Spitter };
@@ -83,6 +83,7 @@ public partial class Game
         if (LitCount >= 1 || BeaconLevel >= 2) l.Add("meteor");
         if (LitCount >= 2 || BeaconLevel >= 2) l.Add("caravan");
         if (Lamps.Count >= 1) l.Add("lamp");
+        if (LitCount >= 1) l.Add("awaken");
         if (BossDown(1)) l.Add("rift");
         if (Villagers.Count >= 1 || HasBuilding(Tl.Stall)) l.Add("trader");
         if (reg == 0 && LitCount < 1) { l.Remove("traveler"); }
@@ -91,6 +92,7 @@ public partial class Game
 
     void UpdateEvents(float dt)
     {
+        if (NetClient) { UpdateEventsClient(dt); return; }                     // события ведёт хост
         for (int i = Events.Count - 1; i >= 0; i--) { var ev = Events[i]; UpdateEvent(ev, dt); if (ev.Done) EndEvent(ev); }
         if (!EventsEnabled) return;
         evNext -= dt;
@@ -106,9 +108,9 @@ public partial class Game
     {
         Vector2? pos = at;
         if (pos == null)
-            pos = kind == "trader" ? FindLitSpot() : kind == "lamp" ? FindSpot(10, 18, true, 2) : FindSpot(11, 19, true, kind == "meteor" ? 2 : 1);
+            pos = kind == "trader" ? FindLitSpot() : kind == "lamp" ? FindSpot(10, 18, true, 2) : kind == "awaken" ? FindSpot(11, 19, true, 3) : FindSpot(11, 19, true, kind == "meteor" ? 2 : 1);
         if (pos == null) return null;
-        var ev = new GEvent { Kind = kind, Pos = pos.Value, Seed = (int)(rng.Randi() % 100000), Life = kind switch { "trader" => 170f, "caravan" => 200f, "lamp" => 150f, "meteor" => 220f, "rift" => 240f, "elite" => 170f, _ => 200f } };
+        var ev = new GEvent { Kind = kind, Pos = pos.Value, Seed = (int)(rng.Randi() % 100000), Life = kind switch { "trader" => 170f, "caravan" => 200f, "lamp" => 150f, "meteor" => 220f, "rift" => 240f, "elite" => 170f, "awaken" => 220f, _ => 200f } };
         InitEvent(ev); Events.Add(ev); return ev;
     }
 
@@ -153,6 +155,12 @@ public partial class Game
             case "lamp": ev.V = 60f; ev.Wave = 0; ev.WaveT = 4f; sub = "Защитите фонарь 45 секунд — он станет вашим"; break;
             case "trader": ev.Npc = ev.Pos; sub = "Подойдите и нажмите E: редкие товары на ограниченное время"; break;
             case "meteor": ev.State = 0; ev.V = 3.2f; sub = "С неба падает свет — осколок упадёт в отмеченном месте"; break;
+            case "awaken":
+                {
+                    var ct = ToTile(ev.Pos); ev.Count = 0; ev.V = 4f;
+                    foreach (var o in AwakenOffs) if (W.Get(ct.X + o.X, ct.Y + o.Y) == Tl.None) { SetObj(ct.X + o.X, ct.Y + o.Y, Tl.ShadowPillar); ev.Count++; }
+                    sub = "Тени пробуждаются у трёх теневых столпов: разрушьте их киркой, пока лес не наполнился тварями"; break;
+                }
             case "rift": ev.State = 0; sub = "Испытание: реликвия на время, три волны, награда"; break;
             default: ev.Npc = ev.Pos; sub = "Подойдите [E] и проводите к освещённой земле"; break;
         }
@@ -165,6 +173,32 @@ public partial class Game
         for (int i = Enemies.Count - 1; i >= 0; i--) if (Enemies[i].Ev == ev) { if (Enemies[i] == Boss) Boss = null; Enemies.RemoveAt(i); }
         if (ev.Kind == "meteor") { var t = ToTile(ev.Pos); if (W.Get(t.X, t.Y) == Tl.MeteorOre) SetObj(t.X, t.Y, Tl.None); }
         if (ev.Kind == "rift") { ClearTemp(); TrialActive = false; }
+        if (ev.Kind == "awaken") { var ct = ToTile(ev.Pos); foreach (var o in AwakenOffs) if (W.Get(ct.X + o.X, ct.Y + o.Y) == Tl.ShadowPillar) { SetObj(ct.X + o.X, ct.Y + o.Y, Tl.None); Burst(TileCenter(ct.X + o.X, ct.Y + o.Y), new Color("#9a60d0"), 10, 60); } }
+    }
+
+    /// <summary>Пробуждение теней: три теневых столпа вокруг точки события.</summary>
+    static readonly Vector2I[] AwakenOffs = { new(0, -3), new(-3, 2), new(3, 2) };
+
+    void UpdateAwaken(GEvent ev, float dt, float dist, int reg)
+    {
+        var ct = ToTile(ev.Pos); int left = 0;
+        foreach (var o in AwakenOffs) if (W.Get(ct.X + o.X, ct.Y + o.Y) == Tl.ShadowPillar) left++;
+        if (left == 0 && ev.Count > 0)
+        {
+            var r = new Random(ev.Seed); Inv[It.Coins] += 30 + r.Next(20); GrantTag(RollTag(r, 2, .3f), ev.Pos);
+            Announce("Тени усмирены", "Столпы разрушены: монеты и находка", new Color("#7ad45a"), "chest"); GiveXp(70); ev.Done = true; Save(); return;
+        }
+        if (dist > 55 * TS && ev.T > 20) { Fade(ev); ev.Done = true; return; }
+        ev.V -= dt;
+        if (ev.V > 0 || dist > 40 * TS) return;
+        ev.V = 4.5f + left;
+        int near = 0; foreach (var e in Enemies) if (e.Ev == ev) near++;
+        if (near >= 5) return;
+        foreach (var o in AwakenOffs)
+        {
+            var pt = new Vector2I(ct.X + o.X, ct.Y + o.Y); if (W.Get(pt.X, pt.Y) != Tl.ShadowPillar) continue;
+            var pos = TileCenter(pt.X, pt.Y) + new Vector2(0, 14); EvEnemy(ev, pos, PoolKind(reg)); Burst(pos, new Color("#9a60d0"), 8, 50); Sfx.Play("boss", -10, 1.6f); break;
+        }
     }
 
     // ───────────────────────── поведение ─────────────────────────
@@ -214,6 +248,7 @@ public partial class Game
                 else { var t = ToTile(ev.Pos); if (W.Get(t.X, t.Y) != Tl.MeteorOre) ev.Done = true; }
                 break;
             case "rift": UpdateRift(ev, dt); break;
+            case "awaken": UpdateAwaken(ev, dt, dist, reg); break;
             default:
                 if (ev.State == 1)
                 {
@@ -241,7 +276,7 @@ public partial class Game
     {
         Inv[It.Coins] += 40; GrantTag(RollTag(new Random(ev.Seed), 1), PPos);
         string extra = "";
-        if (ExtraVillagers < 3) { ExtraVillagers++; var wh = Buildings.Find(b => b.Type == Tl.Warehouse); Villagers.Add(new Villager { Pos = ev.Npc, Wander = wh != null ? wh.Pos : TileCenter(W.Spawn.X + 2, W.Spawn.Y) }); extra = " Путник остаётся в деревне работником!"; }
+        if (ExtraVillagers < 3) { ExtraVillagers++; var wh = Buildings.Find(b => b.Type == Tl.Warehouse); AddVillager(5000 + ExtraVillagers - 1, ev.Npc, null, "traveler"); extra = " Путник остаётся в деревне работником!"; }
         Announce("Путник спасён!", "Он благодарит: 40 монет и подарок." + extra, new Color("#8ff0ff"), "rescue"); GiveXp(50); ev.Done = true; Save();
     }
 
@@ -311,8 +346,8 @@ public partial class Game
         {
             float d = 0;   // доступность по расстоянию проверяет InteractionController
             if (ev.Kind == "trader" && d < 44) { ix.Lines.Add("Странствующий торговец: редкие товары"); ix.Lines.Add("[E] Торговаться"); ix.E = () => OpenTrade(ev); return true; }
-            if (ev.Kind == "rift" && ev.State == 0 && d < 44) { ix.Lines.Add("Разлом Тьмы: необязательное испытание"); ix.Lines.Add("[E] Войти в разлом (временная реликвия, 3 волны)"); ix.E = () => StartTrial(ev); return true; }
-            if (ev.Kind == "traveler" && ev.State == 0 && d < 44) { ix.Lines.Add("Заблудший путник просит помощи"); ix.Lines.Add("[E] Проводить к освещённой земле"); ix.E = () => { ev.State = 1; Toast("Путник идёт за вами. Доведите его до света!"); if (!Enemies.Exists(e => e.Ev == ev)) for (int i = 0; i < 2; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * 110, PoolKind(RegionAt(ev.Pos))); }; return true; }
+            if (ev.Kind == "rift" && ev.State == 0 && d < 44) { ix.Lines.Add("Разлом Тьмы: необязательное испытание"); ix.Lines.Add("[E] Войти в разлом (временная реликвия, 3 волны)"); ix.E = () => { if (NetClient) Net?.SendEventAct(ev.Seed); else StartTrial(ev); }; return true; }
+            if (ev.Kind == "traveler" && ev.State == 0 && d < 44) { ix.Lines.Add("Заблудший путник просит помощи"); ix.Lines.Add("[E] Проводить к освещённой земле"); ix.E = () => { if (NetClient) { Net?.SendEventAct(ev.Seed); return; } ev.State = 1; Toast("Путник идёт за вами. Доведите его до света!"); if (!Enemies.Exists(e => e.Ev == ev)) for (int i = 0; i < 2; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * 110, PoolKind(RegionAt(ev.Pos))); }; return true; }
             if (ev.Kind == "lamp" && d < 44) { ix.Lines.Add($"Осаждённый фонарь: прочность {(int)Mathf.Max(0, ev.V)}/60 · волна {ev.Wave}/4"); return true; }
         }
         return false;

@@ -30,7 +30,7 @@ public partial class Game
     public bool HasSave => File.Exists(SavePath) || File.Exists(BakPath);
     string SaveDir => testing ? testDir : ProjectSettings.GlobalizePath("user://");
     string SlotPath(int s) => Path.Combine(SaveDir, s == 0 ? "save.json" : $"slot{s}.json");
-    string BakPath => Path.Combine(SaveDir, "save.bak");
+    string BakPath => Path.Combine(SaveDir, NetService.Role == NetRole.Host ? "save_mp.bak" : "save.bak");
 
     // ───────────────────────── открытие/закрытие ─────────────────────────
     public void OpenMenu(Mn m) { Menu = m; MenuCur = 0; if (m == Mn.Multi) RefreshNetMenu(); if (m == Mn.Slots) RefreshSlots(); if (m == Mn.Main && !HasSave) MenuCur = 1; Sfx.Play("tick", -4, 1.1f); }
@@ -79,6 +79,13 @@ public partial class Game
     {
         if (hud == null) return;
         int hit = hud.MenuHit(e.Position / UiScaleVp);
+        // громкость: клик или перетаскивание по полосе ставит значение, клик рядом с полосой прибавляет 10% (после максимума — с нуля)
+        if (Menu == Mn.Settings && RebindAction == null && (hit == 0 || hit == 1) && (e is InputEventMouseButton vb ? vb.Pressed && vb.ButtonIndex == MouseButton.Left : e is InputEventMouseMotion && Input.IsMouseButtonPressed(MouseButton.Left)))
+        {
+            bool onBar = hud.SettingFrac(e.Position / UiScaleVp, hit, out float fr) && fr >= -.05f && fr <= 1.05f;
+            if (onBar) { float v = Mathf.Round(Mathf.Clamp(fr, 0, 1) * 10f) / 10f; MenuCur = hit; SetVolume(hit, v); return; }
+            if (e is InputEventMouseButton) { MenuCur = hit; float cur = hit == 0 ? Settings.Music : Settings.Sfx; SetVolume(hit, cur >= .95f ? 0f : cur + .1f); return; }
+        }
         if (e is InputEventMouseMotion) { if (hit >= 0 && hit != MenuCur && RebindAction == null) { MenuCur = hit; Sfx.Play("tick", -6, 1.4f); } return; }
         if (e is not InputEventMouseButton mb || !mb.Pressed) return;
         switch (mb.ButtonIndex)
@@ -142,6 +149,12 @@ public partial class Game
     }
 
     void AskConfirm(string text, Action yes, Mn back) { ConfirmText = text; confirmYes = yes; MenuBack = back; OpenMenu(Mn.Confirm); MenuCur = 1; }
+
+    void SetVolume(int which, float v)
+    {
+        v = Mathf.Clamp(v, 0, 1); if (which == 0) { if (Mathf.IsEqualApprox(Settings.Music, v)) return; Settings.Music = v; } else { if (Mathf.IsEqualApprox(Settings.Sfx, v)) return; Settings.Sfx = v; Sfx.Play("pickup"); }
+        Settings.ApplyAudio(); Settings.Save();
+    }
 
     void SettingsKey(Key k, bool enter)
     {

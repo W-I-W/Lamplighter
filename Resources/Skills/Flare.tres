@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "Flare"
+Page = 0
+MaxLevel = 5
+Pos = Vector2(2, 2)
+Icon = "res://Assets/UI/Skills/Flare.png"
+CostCurve = PackedFloat32Array(1.0, 0.3, 0.35, 0.4, 0.5)
+Parents = PackedStringArray("FarLanterns:3")
+EffLabel = "Длительность ракеты"
+Unit = "s"
+EffBase = -1
+EffPer = 1

@@ -8,6 +8,16 @@ namespace Lamplighter;
 public partial class Game
 {
     public readonly InteractionController Interact = new();
+    public const float TipDistance = 22f, TipDelay = .5f;
+    float tipHoverT; public bool TipReady;
+
+    /// <summary>Подсказка над объектом появляется, только когда курсор наведён на выбранный объект, игрок стоит почти вплотную (до 22 пикселей) и прошло полсекунды; клавиши действий работают и без неё.</summary>
+    void UpdateTip(float dt)
+    {
+        var s = Interact.Selected; var h = Interact.Hover;
+        bool ok = s != null && h != null && h.Key == s.Key && InteractionController.Distance(PPos, s.Bounds) <= TipDistance;
+        tipHoverT = ok ? tipHoverT + dt : 0f; TipReady = tipHoverT >= TipDelay;
+    }
     public bool OverUi; public float DetailT;                           // курсор над интерфейсом: мир не получает клик
 
     /// <summary>Объект мира, описываемый замыканием. Действия берутся из существующей логики (BuildingIx, TileIx, BeaconIx…).</summary>
@@ -33,12 +43,13 @@ public partial class Game
         {
             var a = W.Ancients[i]; int idx = i;
             if (a.Pos.DistanceTo(PPos) > 80) continue;
-            Add("a:" + i, i == 0 ? "Центральный маяк" : a.Boss ? "Фонарь стража" : "Древний фонарь", TileRect(a.Tile.X, a.Tile.Y), 0, ix =>
+            Add("a:" + i, i == 0 ? "Центральный маяк" : a.Boss ? "Фонарь стража" : LampKindName(a.Kind), TileRect(a.Tile.X, a.Tile.Y), 0, ix =>
             {
                 if (idx == 0) { BeaconIx(ix); return; }
                 if (a.Lit) { if (FastOk(a)) { ix.Lines.Add("Древний фонарь горит"); FastTravelIx(a, ix); } return; }
                 if (a.Boss && !BossDown(a.BossId)) ix.Lines.Add("Фонарь стража: победите стража, чтобы зажечь его");
-                else { ix.Action("E", "Зажечь древний фонарь"); if (a.Cost > 0) ix.Need(("Осколки света", a.Cost, Inv[It.Shard])); ix.Gives("Даст", "Свет и новую территорию", TipRole.Key); ix.E = () => Activate(a, idx); }
+                else if (!LampReady(a, out var why) && a.Kind != LampKind.Damaged) ix.Lines.Add(why);
+                else { ix.Action("E", a.Kind == LampKind.Damaged ? "Починить и зажечь фонарь" : "Зажечь древний фонарь"); if (a.Kind == LampKind.Damaged) foreach (var (it, n) in RepairCost) ix.Need((It.Ic(it) + It.Names[it], n, Inv[it])); if (a.Cost > 0) ix.Need((It.Ic(It.Shard) + It.Names[It.Shard], a.Cost, Inv[It.Shard])); ix.Gives("Даст", "Свет и новую территорию", TipRole.Key); ix.E = () => Activate(a, idx); }
             });
         }
         // объекты-тайлы: сундуки, святилища, зеркала, печь и т.д.
@@ -59,6 +70,12 @@ public partial class Game
             if (p.DistanceTo(PPos) > 80) continue;
             Add($"e:{ev.Seed}:{ev.Kind}", EvName(ev.Kind), new Rect2(p - new Vector2(8, 8), new Vector2(16, 16)), 2, ix => EventIx1(e, ix));
         }
+        // жители деревни: поговорить [E]
+        foreach (var v in Villagers)
+        {
+            if (v.Pos.DistanceTo(PPos) > 80) continue; var vv = v;
+            Add($"v:{v.Id}", v.Name, new Rect2(v.Pos - new Vector2(8, 10), new Vector2(16, 16)), 2, ix => VillagerIx(vv, ix), false);
+        }
         // фонари игрока
         foreach (var l in Lamps)
         {
@@ -78,7 +95,7 @@ public partial class Game
 
     static bool IsTileInteractable(Tl t) => t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
         || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn
-        || t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn || t == Tl.RiftGate;
+        || t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn || t == Tl.RiftGate || t == Tl.House || t == Tl.Tent;
 
     static string TileTitle(Tl t) => t switch
     {
@@ -117,7 +134,7 @@ public partial class Game
     }
 
     /// <summary>Курсор над любым элементом интерфейса (панели HUD, меню строительства, инвентарь, окна).</summary>
-    public bool UiOver(Vector2 logical) => (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical)) || (buildMenu != null && buildMenu.IsOver(logical)) || (upgradeWindow != null && upgradeWindow.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
+    public bool UiOver(Vector2 logical) => (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical, UiScaleVp)) || (buildMenu != null && buildMenu.IsOver(logical)) || (upgradeWindow != null && upgradeWindow.IsOver(logical)) || (equipWindow != null && equipWindow.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
     public void PressWindowKey(Key k) => WindowKey(k, false);
     public string NeedText(int[][] cost) => NeedStr(cost);
     public string NeedShortText(int[][] cost) => NeedShort(cost);
