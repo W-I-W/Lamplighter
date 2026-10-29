@@ -1,21 +1,23 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://dwfvpnl6uqr0x"]
 
-[ext_resource type="Script" path="res://Scripts/UI/GameHud.cs" id="1"]
-[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Script" uid="uid://bfs42wkywkuvf" path="res://Scripts/UI/GameHud.cs" id="1"]
+[ext_resource type="Texture2D" uid="uid://hfbbcdbsrp7" path="res://Assets/UI/ui_heart.png" id="heart"]
+[ext_resource type="Texture2D" uid="uid://d0itjy1rgcp15" path="res://Assets/UI/ui_lantern.png" id="lantern"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/Slot.tscn" id="slot"]
-[ext_resource type="Texture2D" path="res://Assets/UI/ui_heart.png" id="heart"]
-[ext_resource type="Texture2D" path="res://Assets/UI/ui_lantern.png" id="lantern"]
+[ext_resource type="Theme" uid="uid://dvlsdrh7odbti" path="res://Resources/UI/LanternTheme.tres" id="theme"]
 
-[node name="GameHud" type="Control"]
+[node name="GameHud" type="Control" unique_id=327268880]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 theme = ExtResource("theme")
 script = ExtResource("1")
 
-[node name="TopLeft" type="VBoxContainer" parent="."]
+[node name="TopLeft" type="VBoxContainer" parent="." unique_id=329245607]
 layout_mode = 1
 offset_left = 4.0
 offset_top = 4.0
@@ -24,135 +26,132 @@ offset_bottom = 60.0
 mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="Status" type="PanelContainer" parent="TopLeft"]
+[node name="Status" type="PanelContainer" parent="TopLeft" unique_id=907728027]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="H" type="HBoxContainer" parent="TopLeft/Status"]
+[node name="H" type="HBoxContainer" parent="TopLeft/Status" unique_id=1786971705]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="LvBox" type="PanelContainer" parent="TopLeft/Status/H"]
+[node name="LvBox" type="PanelContainer" parent="TopLeft/Status/H" unique_id=933929918]
 custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"Keycap"
 
-[node name="LvM" type="MarginContainer" parent="TopLeft/Status/H/LvBox"]
+[node name="LvM" type="MarginContainer" parent="TopLeft/Status/H/LvBox" unique_id=1264407175]
 layout_mode = 2
 theme_override_constants/margin_top = 3
 
-[node name="LvH" type="HBoxContainer" parent="TopLeft/Status/H/LvBox/LvM"]
+[node name="LvH" type="HBoxContainer" parent="TopLeft/Status/H/LvBox/LvM" unique_id=1366304940]
 layout_mode = 2
-alignment = 1
 theme_override_constants/separation = 2
+alignment = 1
 
-[node name="LvCap" type="Label" parent="TopLeft/Status/H/LvBox/LvM/LvH"]
+[node name="LvCap" type="Label" parent="TopLeft/Status/H/LvBox/LvM/LvH" unique_id=2053285616]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"DimLabel"
 text = "LV"
 vertical_alignment = 1
-size_flags_vertical = 4
 
-[node name="Level" type="Label" parent="TopLeft/Status/H/LvBox/LvM/LvH"]
+[node name="Level" type="Label" parent="TopLeft/Status/H/LvBox/LvM/LvH" unique_id=1065148854]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"GoldLabel"
 text = "3"
 vertical_alignment = 1
-size_flags_vertical = 4
 
-[node name="V" type="VBoxContainer" parent="TopLeft/Status/H"]
+[node name="V" type="VBoxContainer" parent="TopLeft/Status/H" unique_id=895142784]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 1
 
-[node name="HpRow" type="HBoxContainer" parent="TopLeft/Status/H/V"]
+[node name="HpRow" type="HBoxContainer" parent="TopLeft/Status/H/V" unique_id=552465015]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Heart" type="TextureRect" parent="TopLeft/Status/H/V/HpRow"]
-layout_mode = 2
+[node name="Heart" type="TextureRect" parent="TopLeft/Status/H/V/HpRow" unique_id=275334996]
 custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
 texture = ExtResource("heart")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="HpBar" type="ProgressBar" parent="TopLeft/Status/H/V/HpRow"]
+[node name="HpBar" type="ProgressBar" parent="TopLeft/Status/H/V/HpRow" unique_id=1731272149]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-custom_minimum_size = Vector2(0, 8)
 theme_type_variation = &"HpBar"
 max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="HpLabel" type="Label" parent="TopLeft/Status/H/V/HpRow"]
+[node name="HpLabel" type="Label" parent="TopLeft/Status/H/V/HpRow" unique_id=383696295]
 unique_name_in_owner = true
 layout_mode = 2
 text = "60/60"
 
-[node name="XpRow" type="HBoxContainer" parent="TopLeft/Status/H/V"]
+[node name="XpRow" type="HBoxContainer" parent="TopLeft/Status/H/V" unique_id=1810570344]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="XpBar" type="ProgressBar" parent="TopLeft/Status/H/V/XpRow"]
+[node name="XpBar" type="ProgressBar" parent="TopLeft/Status/H/V/XpRow" unique_id=2096697988]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-custom_minimum_size = Vector2(0, 4)
 theme_type_variation = &"XpBar"
 max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="Goal" type="PanelContainer" parent="TopLeft"]
+[node name="Goal" type="PanelContainer" parent="TopLeft" unique_id=2030040613]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="V" type="VBoxContainer" parent="TopLeft/Goal"]
+[node name="V" type="VBoxContainer" parent="TopLeft/Goal" unique_id=485549417]
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Title" type="RichTextLabel" parent="TopLeft/Goal/V"]
+[node name="Title" type="RichTextLabel" parent="TopLeft/Goal/V" unique_id=274790990]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
-autowrap_mode = 3
-custom_minimum_size = Vector2(160, 0)
 
-[node name="Needs" type="RichTextLabel" parent="TopLeft/Goal/V"]
+[node name="Needs" type="RichTextLabel" parent="TopLeft/Goal/V" unique_id=916308691]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
-autowrap_mode = 3
-custom_minimum_size = Vector2(160, 0)
 
-[node name="Bar" type="ProgressBar" parent="TopLeft/Goal/V"]
+[node name="Bar" type="ProgressBar" parent="TopLeft/Goal/V" unique_id=1218068940]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
 theme_type_variation = &"LightBar"
 max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="More" type="RichTextLabel" parent="TopLeft/Goal/V"]
+[node name="More" type="RichTextLabel" parent="TopLeft/Goal/V" unique_id=381875206]
 unique_name_in_owner = true
 layout_mode = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 
-[node name="TopRight" type="VBoxContainer" parent="."]
+[node name="TopRight" type="VBoxContainer" parent="." unique_id=2040332473]
+visible = false
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -164,125 +163,125 @@ offset_bottom = 60.0
 grow_horizontal = 0
 mouse_filter = 2
 
-[node name="World" type="PanelContainer" parent="TopRight"]
+[node name="World" type="PanelContainer" parent="TopRight" unique_id=1128974323]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="V" type="VBoxContainer" parent="TopRight/World"]
+[node name="V" type="VBoxContainer" parent="TopRight/World" unique_id=63025402]
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Biome" type="Label" parent="TopRight/World/V"]
+[node name="Biome" type="Label" parent="TopRight/World/V" unique_id=292729589]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Biome"
 
-[node name="LRow" type="HBoxContainer" parent="TopRight/World/V"]
+[node name="LRow" type="HBoxContainer" parent="TopRight/World/V" unique_id=634957616]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="LIcon" type="TextureRect" parent="TopRight/World/V/LRow"]
-layout_mode = 2
+[node name="LIcon" type="TextureRect" parent="TopRight/World/V/LRow" unique_id=1850416725]
 custom_minimum_size = Vector2(8, 8)
+layout_mode = 2
 texture = ExtResource("lantern")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="LBar" type="ProgressBar" parent="TopRight/World/V/LRow"]
+[node name="LBar" type="ProgressBar" parent="TopRight/World/V/LRow" unique_id=47197100]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-custom_minimum_size = Vector2(0, 6)
 theme_type_variation = &"LightBar"
 max_value = 1.0
 step = 0.001
 show_percentage = false
 
-[node name="LLabel" type="Label" parent="TopRight/World/V/LRow"]
+[node name="LLabel" type="Label" parent="TopRight/World/V/LRow" unique_id=1978628706]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Beacon" type="Label" parent="TopRight/World/V"]
+[node name="Beacon" type="Label" parent="TopRight/World/V" unique_id=1382448971]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"DimLabel"
 
-[node name="Res" type="HBoxContainer" parent="TopRight/World/V"]
+[node name="Res" type="HBoxContainer" parent="TopRight/World/V" unique_id=707893113]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Chip0" type="HBoxContainer" parent="TopRight/World/V/Res"]
+[node name="Chip0" type="HBoxContainer" parent="TopRight/World/V/Res" unique_id=141426903]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip0"]
-layout_mode = 2
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip0" unique_id=1142970121]
 custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip0"]
+[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip0" unique_id=886439196]
 layout_mode = 2
 
-[node name="Chip1" type="HBoxContainer" parent="TopRight/World/V/Res"]
+[node name="Chip1" type="HBoxContainer" parent="TopRight/World/V/Res" unique_id=813502901]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip1"]
-layout_mode = 2
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip1" unique_id=1418091982]
 custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip1"]
+[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip1" unique_id=905695940]
 layout_mode = 2
 
-[node name="Chip2" type="HBoxContainer" parent="TopRight/World/V/Res"]
+[node name="Chip2" type="HBoxContainer" parent="TopRight/World/V/Res" unique_id=1983667851]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip2"]
-layout_mode = 2
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip2" unique_id=104978639]
 custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip2"]
+[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip2" unique_id=1971416734]
 layout_mode = 2
 
-[node name="Chip3" type="HBoxContainer" parent="TopRight/World/V/Res"]
+[node name="Chip3" type="HBoxContainer" parent="TopRight/World/V/Res" unique_id=394864985]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip3"]
-layout_mode = 2
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip3" unique_id=976052832]
 custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip3"]
+[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip3" unique_id=1468246967]
 layout_mode = 2
 
-[node name="Chip4" type="HBoxContainer" parent="TopRight/World/V/Res"]
+[node name="Chip4" type="HBoxContainer" parent="TopRight/World/V/Res" unique_id=259382725]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip4"]
-layout_mode = 2
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip4" unique_id=483901926]
 custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip4"]
+[node name="Label" type="Label" parent="TopRight/World/V/Res/Chip4" unique_id=504311322]
 layout_mode = 2
 
-[node name="Bottom" type="VBoxContainer" parent="."]
+[node name="Bottom" type="VBoxContainer" parent="." unique_id=623388019]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -298,43 +297,43 @@ grow_vertical = 0
 mouse_filter = 2
 alignment = 2
 
-[node name="Hint" type="PanelContainer" parent="Bottom"]
+[node name="Hint" type="PanelContainer" parent="Bottom" unique_id=1452290948]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 theme_type_variation = &"PanelDark"
 
-[node name="HintLabel" type="Label" parent="Bottom/Hint"]
+[node name="HintLabel" type="Label" parent="Bottom/Hint" unique_id=650985687]
 unique_name_in_owner = true
 layout_mode = 2
 horizontal_alignment = 1
 
-[node name="Row" type="HBoxContainer" parent="Bottom"]
+[node name="Row" type="HBoxContainer" parent="Bottom" unique_id=1615178816]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 3
 
-[node name="Weapon" parent="Bottom/Row" instance=ExtResource("slot")]
+[node name="Weapon" parent="Bottom/Row" unique_id=876047931 instance=ExtResource("slot")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Hotbar" type="PanelContainer" parent="Bottom/Row"]
+[node name="Hotbar" type="PanelContainer" parent="Bottom/Row" unique_id=124181866]
 layout_mode = 2
 
-[node name="Slots" type="HBoxContainer" parent="Bottom/Row/Hotbar"]
+[node name="Slots" type="HBoxContainer" parent="Bottom/Row/Hotbar" unique_id=1768918577]
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Slot0" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
+[node name="Slot0" parent="Bottom/Row/Hotbar/Slots" unique_id=603229460 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Slot1" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
+[node name="Slot1" parent="Bottom/Row/Hotbar/Slots" unique_id=1807202755 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Slot2" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]
+[node name="Slot2" parent="Bottom/Row/Hotbar/Slots" unique_id=5222236 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Abilities" type="HBoxContainer" parent="."]
+[node name="Abilities" type="HBoxContainer" parent="." unique_id=1494551793]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 2
@@ -348,22 +347,22 @@ grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 1
 
-[node name="Ability0" parent="Abilities" instance=ExtResource("slot")]
+[node name="Ability0" parent="Abilities" unique_id=282613882 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Ability1" parent="Abilities" instance=ExtResource("slot")]
+[node name="Ability1" parent="Abilities" unique_id=1104451197 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Ability2" parent="Abilities" instance=ExtResource("slot")]
+[node name="Ability2" parent="Abilities" unique_id=236772987 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Ability3" parent="Abilities" instance=ExtResource("slot")]
+[node name="Ability3" parent="Abilities" unique_id=2007581940 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Ability4" parent="Abilities" instance=ExtResource("slot")]
+[node name="Ability4" parent="Abilities" unique_id=1149605628 instance=ExtResource("slot")]
 layout_mode = 2
 
-[node name="Detail" type="PanelContainer" parent="."]
+[node name="Detail" type="PanelContainer" parent="." unique_id=1730549244]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -380,17 +379,17 @@ grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="V" type="VBoxContainer" parent="Detail"]
+[node name="V" type="VBoxContainer" parent="Detail" unique_id=1624784032]
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="DTitle" type="Label" parent="Detail/V"]
+[node name="DTitle" type="Label" parent="Detail/V" unique_id=1570996849]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"GoldLabel"
 
-[node name="DBody" type="Label" parent="Detail/V"]
+[node name="DBody" type="Label" parent="Detail/V" unique_id=1396516141]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(152, 0)
 layout_mode = 2
 autowrap_mode = 3
-custom_minimum_size = Vector2(152, 0)

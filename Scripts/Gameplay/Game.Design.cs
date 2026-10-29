@@ -15,7 +15,7 @@ public partial class Game
     void Hint(string id, string text)
     {
         if (HintsShown.Contains(id) || Time - lastHintAt < 6f) return;
-        HintsShown.Add(id); lastHintAt = Time; Toast(text); Sfx.Play("tick", -3, 1.5f);
+        HintsShown.Add(id); lastHintAt = Time; Toast(text, MsgTone.Cyan); Sfx.Play("tick", -3, 1.5f);
     }
 
     /// <summary>Контекстные подсказки: каждая показывается один раз и только когда она применима.</summary>
@@ -26,13 +26,11 @@ public partial class Game
         if (early && PlaySecs < 120) Hint("move", "WASD — движение · ЛКМ — бить и добывать");
         var a1 = W.Ancients.Count > 1 ? W.Ancients[1] : null;
         if (early && !IsLit(PPos) && a1 != null) Hint("dark", "Вне света — тени. Бейте их ради осколков света");
-        foreach (var e in Enemies) if (!e.IsBoss && e.Pos.DistanceTo(PPos) < 130 && early) { Hint("enemy", "Враг! Бейте [ЛКМ], держитесь у света"); break; }
         if (a1 != null && !a1.Lit && Inv[It.Shard] >= a1.Cost && a1.Cost > 0) Hint("shards", $"Осколков хватает ({a1.Cost})! К древнему фонарю, [E]");
         if (LitCount >= 1) Hint("lit1", "Территория освобождена: строить можно [B]");
         if (HasFurnace && Tier < 1 && Inv[It.Copper] >= 5) Hint("pick", "Меди хватает: улучшите кирку у печи");
         if (!HasFurnace && Inv[It.Stone] >= 10 && Inv[It.Wood] >= 5) Hint("furnace", "Хватает на печь: создайте её в меню [B]");
         if (Inv[It.Core] > 0 && BeaconLevel < 6) Hint("core", It.Ic(It.Core) + "Ядро света! Отнесите к маяку, [E]");
-        if (Level >= 3 && LitCount >= 1) Hint("goal", "Цель: ядра света стражей. Карта — [M]");
         if (Buildings.Count >= 3 && HasBuilding(Tl.Warehouse)) Hint("auto", "Производство идёт само. Управление — [P]");
         if (TotalLit >= 3 && BossDown(1) == false) Hint("boss1", "Страж леса у особого фонаря. Готовьте оружие [C]");
         if (BossDown(1)) Hint("travel", "Быстрый путь: [U] у зажжённого фонаря");
@@ -87,16 +85,7 @@ public partial class Game
     }
 
     // ───────────────────────── возрождение ─────────────────────────
-    Vector2 RespawnPos()
-    {
-        Ancient best = W.Ancients[0]; float bd = float.MaxValue;
-        foreach (var a in W.Ancients)
-        {
-            if (!a.Lit || (a.Boss && !BossDown(a.BossId))) continue;
-            float d = a.Pos.DistanceTo(PPos); if (d < bd) { bd = d; best = a; }
-        }
-        return best.Pos + new Vector2(0, 28);
-    }
+    Vector2 RespawnPos() => W.Ancients[0].Pos + new Vector2(0, 28);       // возрождение на базе — у Центрального маяка
 
     // ───────────────────────── маркеры производства ─────────────────────────
     public static string StatusText(int s) => s switch { 1 => "нет сырья", 2 => "склад полон", 3 => "нет связи", 4 => "пауза", 5 => "режим не подходит", _ => "" };

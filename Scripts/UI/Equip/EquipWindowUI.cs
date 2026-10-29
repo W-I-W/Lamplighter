@@ -107,7 +107,7 @@ public partial class EquipWindowUI : Control
             openTw?.Kill(); openTw = CreateTween().SetParallel(); openTw.TweenProperty(panel, "modulate", Colors.White, .12f); openTw.TweenProperty(panel, "scale", Vector2.One, .12f);   // короткое открытие
         }
         rebuildT -= (float)delta;
-        string s = Signature(); if (s == sig && rebuildT > 0) return; sig = s; rebuildT = .25f; Refresh();
+        string s = Signature(); if (s == sig && (rebuildT > 0 || Input.IsMouseButtonPressed(MouseButton.Left))) return; sig = s; rebuildT = .25f; Refresh();      // не пересоздаём кнопки, пока нажата мышь: иначе нажатие теряется
     }
 
     string Signature()
@@ -311,9 +311,10 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < rows.Count; i++)
         {
             var (grp, rec) = rows[i]; var c = Card(i); c.Visible = true;
-            if (rec == null) { bool fold = G.CraftFold.Contains(grp); c.Bind(i, GroupIcon(grp), (fold ? "+ " : "- ") + T(Game.GroupName(grp)), Gold, $"{G.RecipesOf(grp).Count}", Dim, false, 0, i == G.WinCur); continue; }
+            if (rec == null) { bool fold = G.CraftFold.Contains(grp); c.Bind(i, GroupIcon(grp), (fold ? "[+] " : "[-] ") + T(Game.GroupName(grp)), Gold, $"{T("Рецептов")}: {G.RecipesOf(grp).Count}", Dim, false, 0, i == G.WinCur); c.SetTree(1); continue; }
             var st = G.StateOf(rec); string sub = st == RecState.Owned ? T("есть") : st == RecState.Missing ? T("не хватает") : (rec.Extra != null && rec.Extra() > 0 ? $"{T("в очереди")} {rec.Extra()}" : T("можно создать"));
             c.Bind(i, rec.Icon >= 0 ? UiIcons.Item(rec.Icon) : GroupIcon(grp), T(rec.Name), st == RecState.Ready ? Good : st == RecState.Owned ? Dim : Text, sub, st == RecState.Missing ? Bad : Dim, st == RecState.Owned, 0, i == G.WinCur, st == RecState.Owned);
+            c.SetTree(i + 1 >= rows.Count || rows[i + 1].r == null ? 3 : 2);
         }
         for (int i = rows.Count; i < cards.Count; i++) cards[i].Visible = false;
         if (rows.Count == 0) return; var (sg, sr) = rows[G.WinCur]; int cur = G.WinCur;
@@ -324,7 +325,7 @@ public partial class EquipWindowUI : Control
         var cost = sr.CostNow; if (cost != null) { centerBox.AddChild(Lbl("Нужно", Dim, false, "DimLabel")); foreach (var c in cost) { int have = G.Inv[c[0]]; centerBox.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : Bad)); } }
         if (sr.Multi) centerBox.AddChild(Btn($"{T("Количество")}: ×{(Game.QtySteps[G.CraftQty] == int.MaxValue ? T("макс.") + $" ({Math.Max(1, G.MaxCraft(sr))})" : Game.QtySteps[G.CraftQty].ToString())}", "Q", () => G.EqCycleQty()));
         centerBox.AddChild(Btn("Создать", "Enter", () => { G.EqCraftRow(cur); Flash(centerBox); }, stt == RecState.Ready, true));
-        rightBox.AddChild(Lbl(sr.Desc ?? "", Text, true)); rightBox.AddChild(Lbl(sg == "hand" ? "Создаётся в любом месте." : "Нужна печь или кузница рядом.", Dim, true));
+        rightBox.AddChild(Lbl($"{T("Группа")}: {T(Game.GroupName(sg))}", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(sr.Desc ?? "", Text, true)); rightBox.AddChild(Lbl(sg == "hand" ? "Создаётся в любом месте." : "Нужна печь или кузница рядом.", Dim, true));
     }
 
     // ───────────────────────── вкладка «Фонарь» ─────────────────────────

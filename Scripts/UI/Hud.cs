@@ -82,9 +82,9 @@ public partial class Hud : Control
         if (G.Menu == Mn.Main || G.Menu == Mn.Flow) { DrawMenu(vs); FinishViews(); return; }
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
-        DrawMarkers(vs); DrawEventMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
+        DrawMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
         LayoutTop(vs);
-        float y = DrawBanners(vs); DrawToasts(vs, y);
+        DrawBanners(vs);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);
         DrawEndgameHud(vs);
@@ -106,47 +106,6 @@ public partial class Hud : Control
             Lbl(ts, p - new Vector2(40, 0), false, col, HorizontalAlignment.Center, 80);
         }
     }
-
-    void Arrow(Vector2 center, Vector2 dir, Color c)
-    {
-        ArrowMark(center, dir, c);
-    }
-
-    void DrawCompass()
-    {
-        float pulse = .75f + .25f * Mathf.Sin(G.Time * 4f);
-        void One(Vector2 target, Color col, float radius)
-        {
-            var d = target - G.PPos; float dist = d.Length(); if (dist < 70) return;
-            var dir = d.Normalized(); var c = ToScreen(G.PPos) + dir * radius;
-            Arrow(c, dir, new Color(col.R, col.G, col.B, pulse));
-            Txt($"{(int)(dist / 16)}", c + dir * 10 - new Vector2(6, -3), 9, col, HorizontalAlignment.Center, 12);
-        }
-        var anc = G.CompassTarget();
-        if (anc != null) One(anc.Value, new Color(1f, .88f, .55f), 34);
-        if (G.Goals.Count > 0 && G.Goals[0].Target != null && (anc == null || G.Goals[0].Target.Value.DistanceTo(anc.Value) > 8))
-            One(G.Goals[0].Target.Value, new Color(.55f, 1f, .9f), 42);
-    }
-
-    void Marker(Vector2 wp, Color col, string name, float seed, Vector2 vs)
-    {
-        var s = ToScreen(wp); float dist = wp.DistanceTo(G.PPos) / 16; float pulse = .65f + .35f * Mathf.Sin(G.Time * 3f + seed);
-        bool inside = s.X > 16 && s.X < vs.X - 16 && s.Y > 60 && s.Y < vs.Y - 60;
-        if (inside)
-        {
-            s = s.Round();
-            Diamond(s, 3.5f, new Color(col.R, col.G, col.B, pulse));
-            Txt($"{name} · {(int)dist}", s + new Vector2(-50, 14), 9, col, HorizontalAlignment.Center, 100);
-        }
-        else
-        {
-            var c = new Vector2(Mathf.Clamp(s.X, 16, vs.X - 16), Mathf.Clamp(s.Y, 60, vs.Y - 60)); var dir = (s - vs * .5f).Normalized();
-            Arrow(c, dir, new Color(col.R, col.G, col.B, pulse)); Txt($"{(int)dist}", c - dir * 8 - new Vector2(6, -3), 9, col, HorizontalAlignment.Center, 12);
-        }
-    }
-
-    void DrawMarkers(Vector2 vs) { foreach (var p in G.MarkerPois()) Marker(p.Pos, Game.PoiColor(p.Kind), Game.PoiName(p.Kind), p.Tile.X, vs); }
-    void DrawEventMarkers(Vector2 vs) { foreach (var ev in G.Events) Marker(ev.Pos, Game.EvColor(ev.Kind), Game.EvName(ev.Kind), ev.Seed, vs); }
 
     // ───────────────────────── уведомления ─────────────────────────
     // верхняя колонка: босс, разлом, испытание, лучезарность, затем баннеры и тосты — друг под другом, на одной оси
@@ -190,51 +149,20 @@ public partial class Hud : Control
         return y + 28;
     }
 
-    void DrawToasts(Vector2 vs, float y)
-    {
-        y += 8; int from = Mathf.Max(0, G.Toasts.Count - 3);
-        float cx = topCx, maxW = topMaxW - 12;   // та же ось, что у баннеров: между боковыми панелями
-        for (int i = from; i < G.Toasts.Count; i++)
-        {
-            var t = G.Toasts[i]; float a = Mathf.Clamp(t.Life, 0, 1);
-            var lines = new List<string>(); string line = "";
-            foreach (var word in Loc.T(t.S).Split(' '))
-            {
-                string n = line == "" ? word : line + " " + word;
-                if (TextW(n) > maxW && line != "") { lines.Add(line); line = word; } else line = n;
-            }
-            if (line != "") lines.Add(line);
-            float w = 0; foreach (var l in lines) w = Mathf.Max(w, TextW(l));
-            var old = curMod; curMod = new Color(1, 1, 1, a);
-            Panel(new Rect2(Mathf.Round(cx - w * .5f - 5), y - 8, w + 10, 4 + lines.Count * 10), "PanelDark");
-            int typed = (int)(t.Age * 90f), off = 0;
-            for (int k = 0; k < lines.Count; k++)
-            {
-                int vis = Mathf.Clamp(typed - off, 0, lines[k].Length); off += lines[k].Length + 1;
-                RichLine(lines[k], new Vector2(cx - w * .5f, y + 1 + k * 10), w + 4, Text, vis >= lines[k].Length ? -1 : vis);
-            }
-            curMod = old; y += 6 + lines.Count * 10;
-        }
-    }
-
     /// <summary>Реликвии, лучезарность, испытание и события — в виде компактной полосы под шкалой босса/уведомлениями.</summary>
     void DrawStage4Hud(Vector2 vs)
     {
-        float x = 6, y = 92;                                     // под панелями здоровья и цели
-        foreach (var id in G.EquippedRelics)
+        float x = 6, y = (G.GameHudNode?.LeftBottom ?? 88) + 7;     // под панелью игрока и целью
+        foreach (var id in HudDensity.Minimal ? new List<string>() : G.EquippedRelics)
         {
             var d = Db.Relic(id); if (d == null) continue;
             var c = new Vector2(x + 4, y); Diamond(c, 4f, d.Tint); Diamond(c, 4f, Db.RarCol[d.Rarity], true); x += 11;
         }
-        foreach (var id in G.TempRelics) { var d = Db.Relic(id); if (d == null) continue; var c = new Vector2(x + 4, y); Diamond(c, 4f, new Color(d.Tint.R, d.Tint.G, d.Tint.B, .6f + .4f * Mathf.Sin(G.Time * 8))); x += 11; }
-        if (G.ActiveSyn.Count > 0) Txt($"✦{G.ActiveSyn.Count}", new Vector2(x, y + 3), 9, Good);
+        foreach (var id in HudDensity.Minimal ? new List<string>() : G.TempRelics) { var d = Db.Relic(id); if (d == null) continue; var c = new Vector2(x + 4, y); Diamond(c, 4f, new Color(d.Tint.R, d.Tint.G, d.Tint.B, .6f + .4f * Mathf.Sin(G.Time * 8))); x += 11; }
+        if (G.ActiveSyn.Count > 0 && !HudDensity.Minimal) Txt($"✦{G.ActiveSyn.Count}", new Vector2(x, y + 3), 9, Good);
         if (G.SurgeOn) { var rr = new Rect2(topCx - 60, topSurgeY, 120, 8); Bar(rr, G.Surge / 8f, "LightBar"); Txt("ЛУЧЕЗАРНОСТЬ", new Vector2(rr.Position.X, rr.Position.Y + 16), 9, Gold, HorizontalAlignment.Center, 120); }
         if (G.TrialActive) { var rr = new Rect2(topCx - 100, topTrialY, 200, 14); Panel(rr, "PanelGold"); Txt($"Испытание Тьмы · {(int)G.TrialLeft} с", new Vector2(rr.Position.X, rr.Position.Y + 10), 9, new Color("#e0b8ff"), HorizontalAlignment.Center, 200); }
-        if (G.Events.Count > 0 && G.Window == Win.None)
-        {
-            float ey = 92; var r = new Rect2(vs.X - 126, ey, 122, 8 + G.Events.Count * 10 + 6); Panel(r, "PanelDark");
-            for (int i = 0; i < G.Events.Count; i++) Txt($"◆ {Game.EvName(G.Events[i].Kind)} · {(int)(G.Events[i].Pos.DistanceTo(G.PPos) / 16)}", new Vector2(r.Position.X + 6, r.Position.Y + 12 + i * 10), 9, Game.EvColor(G.Events[i].Kind), HorizontalAlignment.Left, 110);
-        }
+        DrawEventTracker(vs);
     }
 
     /// <summary>Название и значок действия над выбранным объектом — в экранных координатах, пиксельным шрифтом.</summary>

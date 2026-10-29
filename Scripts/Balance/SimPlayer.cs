@@ -47,6 +47,7 @@ public sealed class SimPlayer
     public float SpinScale => 1f + Se(Tech.Spin);
     public float FlareDuration => 10f + Se(Tech.Flare);
     public float PulseCooldown => 12f * (1f - Se(Tech.Pulse));
+    public float RegenPerSec => T.RegenRate + Se(Tech.Regen);
     public float ReaperHeal => Se(Tech.Reaper) * T.ReaperHeal / 1.5f;
     public float HeatTaken => 1f - Se(Tech.HeatShield);
     public float ColdTaken => 1f - Se(Tech.FrostArmor);
@@ -80,6 +81,7 @@ public sealed class SimPlayer
             case Tech.Lens: return HasFurnace;
             case Tech.Dash: return Tier >= 1;
             case Tech.Reaper: return Kills >= 8;
+            case Tech.Regen: return Kills >= 5;
             case Tech.WideSwing: return HasForge;
             case Tech.FarLanterns: return HasLantern;
             case Tech.Spin: return LitCount >= 1;

@@ -20,6 +20,15 @@ public partial class GameHud : Control
     public bool GoalsOpen;                                      // раскрытый список целей
     static readonly Regex Frac = new(@"(\d+)\s*/\s*(\d+)", RegexOptions.Compiled);
     Texture2D[] abilIcons;
+    Control topLeft, topRight, lRow, resRow, xpRow; Label dbg;
+    string lastGoal = ""; float goalExpandT;                    // подсказка цели: после смены раскрыта несколько секунд, затем сворачивается в строку
+    float lastUiT; bool regionOn;
+    public bool GoalCollapsed => !goalNeeds.Visible && !goalMore.Visible;
+    public bool RegionVisible => topRight.Visible && world.IsVisibleInTree();
+    public bool DebugVisible => dbg.Visible;
+    public float LeftBottom => Bottom(topLeft);                 // нижняя граница блоков слева и справа (логические координаты) — под ними рисуются реликвии и трекер события
+    public float RightBottom => topRight != null && topRight.Visible && world.Visible ? Bottom(topRight) : 4f;
+    static float Bottom(Control c) { if (c == null) return 4f; float b = c.Position.Y; foreach (var k in c.GetChildren()) if (k is Control ch && ch.Visible) b = Mathf.Max(b, c.Position.Y + ch.Position.Y + ch.Size.Y); return b; }
 
     public override void _Ready()
     {
@@ -32,6 +41,10 @@ public partial class GameHud : Control
         for (int i = 0; i < 5; i++) abil[i] = abilities.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) chips[i] = GetNode<Control>($"%Chip{i}");
         abilIcons = new[] { "dash", "spin", "flare", "pulse", "beam" }.Select(n => GD.Load<Texture2D>($"res://Assets/UI/ability_{n}.png")).ToArray();
+        topLeft = GetNode<Control>("TopLeft"); topRight = GetNode<Control>("TopRight"); lRow = lBar.GetParent<Control>(); resRow = chips[0].GetParent<Control>(); xpRow = xp.GetParent<Control>();
+        foreach (var k in lRow.GetChildren()) if (k is TextureRect || k is ProgressBar) ((Control)k).Visible = false;      // «Фонари 2/5» — текстом, без полосы
+        regionOn = topRight.Visible; world.Modulate = new Color(1, 1, 1, .82f); goal.Modulate = new Color(1, 1, 1, .92f);
+        dbg = new Label { MouseFilter = MouseFilterEnum.Ignore, ThemeTypeVariation = "PlainLabel", Modulate = new Color(.6f, .9f, .6f, .85f), Visible = false }; AddChild(dbg);
         panels = new[] { status, goal, world, hint, detail, GetNode<Control>("Bottom/Row/Hotbar"), weapon, abilities };
     }
 
@@ -80,47 +93,61 @@ public partial class GameHud : Control
         float dt = (float)delta; flashT = Mathf.Max(0, flashT - dt);
         bool menu = G.Menu == Mn.Main || G.Menu == Mn.Flow;
         Visible = !menu && (G.Window == Win.None || G.Window == Win.Build || G.Window == Win.Inventory) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
-        UpdateStatus(); UpdateGoal(); UpdateWorld(dt); UpdateHotbar(); UpdateAbilities(); UpdateHint(dt);
+        UpdateStatus(); UpdateGoal(dt); UpdateWorld(dt); UpdateHotbar(); UpdateAbilities(); UpdateHint(dt); UpdateDebug();
     }
 
     void UpdateStatus()
     {
         level.Text = G.Level.ToString(); lvCap.Text = T("УР");
         hp.Value = Mathf.Clamp(G.Hp / G.MaxHp, 0, 1); hpLabel.Text = $"{(int)G.Hp}";
-        xp.Value = Mathf.Clamp(G.Xp / G.XpNeed, 0, 1);
+        xp.Value = Mathf.Clamp(G.Xp / G.XpNeed, 0, 1); xpRow.Visible = !HudDensity.Minimal;
     }
 
-    void UpdateGoal()
+    /// <summary>Цель/подсказка слева: после смены цели раскрыта 8 секунд (название, нужные предметы, полоса), затем сворачивается до одной строки. [G] — развернуть подробности и список целей.</summary>
+    void UpdateGoal(float dt)
     {
         var goals = G.Goals; var g = goals.Count > 0 ? goals[0] : null;
-        TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), new Color("#ffd23f"), 90f);
-        TextFx.Apply(goalNeeds, g == null ? "" : T(g.Needs), new Color("#8a96b0"), 0);
-        goalNeeds.Visible = g != null && (GoalsOpen || true);
+        string title = g == null ? "" : g.Title; if (title != lastGoal) { lastGoal = title; goalExpandT = HudDensity.Minimal ? 0f : 8f; }
+        dt = Mathf.Max(0f, (float)(G.UiTime - lastUiT)); lastUiT = (float)G.UiTime; goalExpandT = Mathf.Max(0, goalExpandT - dt);      // по игровому времени, как уведомления
+        bool open = !HudDensity.Minimal && (GoalsOpen || goalExpandT > 0);
+        TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), open ? new Color("#ffd23f") : new Color("#d9c27a"), 90f);
+        goalNeeds.Visible = open && g != null; if (goalNeeds.Visible) TextFx.Apply(goalNeeds, T(g.Needs), new Color("#8a96b0"), 0);
         var m = g != null ? Frac.Match(g.Needs ?? "") : null;
-        goalBar.Visible = m != null && m.Success && int.Parse(m.Groups[2].Value) > 0;
+        goalBar.Visible = open && m != null && m.Success && int.Parse(m.Groups[2].Value) > 0;
         if (goalBar.Visible) goalBar.Value = Mathf.Clamp(float.Parse(m.Groups[1].Value) / float.Parse(m.Groups[2].Value), 0, 1);
         string more = "";
         if (GoalsOpen) for (int i = 1; i < Math.Min(4, goals.Count); i++) more += "• " + T(goals[i].Title) + "\n";
-        if (goals.Count > 1) more += GoalsOpen ? T("[G] свернуть · [J] журнал") : string.Format(T("ещё {0} · [G] развернуть"), goals.Count - 1);
-        TextFx.Apply(goalMore, more.TrimEnd('\n'), new Color("#8a96b0"), 0); goalMore.Visible = goals.Count > 1;
+        if (GoalsOpen) more += T("[G] свернуть · [J] журнал"); else if (open && goals.Count > 1) more = string.Format(T("ещё {0} · [G] развернуть"), goals.Count - 1);
+        TextFx.Apply(goalMore, more.TrimEnd('\n'), new Color("#8a96b0"), 0); goalMore.Visible = open && more != "";
     }
 
+    /// <summary>Блок региона: название, «Фонари 2/5», «Маяк 1/6». Ресурсы — только что полученные, несколько секунд; полный список — в инвентаре [I]. В минимальном режиме блока нет.</summary>
     void UpdateWorld(float dt)
     {
+        topRight.Visible = regionOn && !HudDensity.Minimal;      // блок региона включается в сцене GameHud.tscn (узел TopRight, Visible)
         int reg = G.RegionAt(G.PPos);
         biome.Text = T(Game.RegionNames[reg]); biome.AddThemeColorOverride("font_color", Game.RegionCol(reg));
         int lit = reg == 0 ? G.LitCount : G.LitIn(reg), total = reg == 0 ? 5 : 3;
-        lBar.Value = Mathf.Clamp(lit / (float)total, 0, 1); lLabel.Text = $"{lit}/{total}";
+        lLabel.Text = $"{T("Фонари")} {lit}/{total}"; lLabel.Modulate = new Color(.78f, .82f, .9f);
         beacon.Text = $"{T("Маяк")} {G.BeaconLevel}/6";
-        // ресурсы: последние изменявшиеся (пустых не показываем; полный список — в инвентаре [I])
-        for (int i = 0; i < It.Count; i++) { if (G.Inv[i] != lastInv[i]) { lastInv[i] = G.Inv[i]; lastChange[i] = (float)Time.GetTicksMsec() / 1000f; } }
-        var order = new List<int>(); for (int i = 0; i < It.Count; i++) if (G.Inv[i] > 0) order.Add(i);
+        float now = (float)Time.GetTicksMsec() / 1000f;
+        for (int i = 0; i < It.Count; i++) { if (G.Inv[i] != lastInv[i]) { if (lastInv[i] > 0 || G.Inv[i] > 0) lastChange[i] = now; lastInv[i] = G.Inv[i]; } }
+        var order = new List<int>(); for (int i = 0; i < It.Count; i++) if (G.Inv[i] > 0 && now - lastChange[i] < 4f) order.Add(i);
         order.Sort((a, b) => lastChange[b].CompareTo(lastChange[a]));
         for (int c = 0; c < chips.Length; c++)
         {
-            var chip = chips[c]; bool has = c < order.Count; chip.Visible = has; if (!has) continue;
+            var chip = chips[c]; bool has = c < order.Count && c < 3; chip.Visible = has; if (!has) continue;
             int it = order[c]; ((TextureRect)chip.GetChild(0)).Texture = UiIcons.Item(it); ((Label)chip.GetChild(1)).Text = Short(G.Inv[it]);
         }
+        resRow.Visible = order.Count > 0;
+    }
+
+    /// <summary>Служебная строка полного режима: кадры в секунду, клетка и регион.</summary>
+    void UpdateDebug()
+    {
+        dbg.Visible = HudDensity.Full; if (!dbg.Visible) return;
+        dbg.Text = $"{Engine.GetFramesPerSecond()} fps · {(int)(G.PPos.X / 16)},{(int)(G.PPos.Y / 16)} · {G.RegionAt(G.PPos)} · enemies {G.Enemies.Count}";
+        dbg.Position = new Vector2(6, Size.Y - 14);
     }
 
     static string Short(int n) => n >= 10000 ? $"{n / 1000}k" : n >= 1000 ? $"{n / 1000f:0.#}k" : n.ToString();
@@ -132,7 +159,8 @@ public partial class GameHud : Control
         {
             string r = G.Hot[i]; bool has = G.HotValid(r);
             var st = !has ? SlotState.Disabled : i == G.HotSel ? SlotState.Selected : SlotState.Normal;
-            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f); hot[i].TooltipText = has ? Loc.T(G.HotName(r)) : "";
+            hot[i].Visible = has || G.Window != Win.None || G.DragIcon >= 0;      // пустые слоты видны только при перетаскивании и в инвентаре: хотбар не шире, чем нужно
+            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", has ? (i + 1).ToString() : "", st, 0, "", has ? 1f : .25f); hot[i].TooltipText = has ? Loc.T(G.HotName(r)) : "";
         }
         weapon.Visible = false; UpdateDrag();
     }
@@ -153,7 +181,7 @@ public partial class GameHud : Control
             float cd = list[i].cd <= 0 ? 0 : Mathf.Clamp(list[i].cd / list[i].max, 0, 1);
             abil[i].Set(abilIcons[i], "", keys[i] == "Shift" ? "Sh" : keys[i].Length > 3 ? keys[i].Substring(0, 3) : keys[i], cd <= 0 ? SlotState.Ok : SlotState.Normal, cd);
         }
-        abilities.Visible = any;
+        abilities.Visible = any && !HudDensity.Minimal;
     }
 
     /// <summary>Подсказки к объектам рисует Hud.DrawTooltip по модели TipModel; старые панели сцены (Hint/Detail) скрыты.</summary>

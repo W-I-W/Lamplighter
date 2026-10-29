@@ -32,10 +32,17 @@ public partial class Hud
         {
             case Mn.Settings:
                 {
-                    wv.Begin(vs, "Настройки", Gold, "←/→ изменить · Enter · Esc — назад", new Vector2(300, 296), 0, .82f);
+                    wv.Begin(vs, "Настройки", Gold, "←/→ изменить · Enter · Esc — назад", new Vector2(300, 318), 0, .82f);
                     string[] modes = { "Авто", "×1", "×2", "×3", "×4" };
-                    string[] v = { BarStr(Settings.Music), BarStr(Settings.Sfx), modes[Settings.UiMode], $"{Settings.Shake * 100:0}%", $"{Settings.Wind * 100:0}%", $"{Settings.Particles * 100:0}%", $"{Settings.Flash * 100:0}%", $"{Settings.Fx * 100:0}%", Settings.Fullscreen ? "да" : "нет", Settings.Fullscreen ? "—" : $"{Settings.Resolutions[Settings.Res].X}×{Settings.Resolutions[Settings.Res].Y}", Settings.Lang == "ru" ? "Русский" : "English", Settings.Diag ? "вкл" : "выкл", "", "" };
+                    string[] v = { BarStr(Settings.Music), BarStr(Settings.Sfx), modes[Settings.UiMode], $"{Settings.Shake * 100:0}%", $"{Settings.Wind * 100:0}%", $"{Settings.Particles * 100:0}%", $"{Settings.Flash * 100:0}%", $"{Settings.Fx * 100:0}%", Settings.Fullscreen ? "да" : "нет", Settings.Fullscreen ? "—" : $"{Settings.Resolutions[Settings.Res].X}×{Settings.Resolutions[Settings.Res].Y}", Settings.Lang == "ru" ? "Русский" : "English", Settings.Diag ? "вкл" : "выкл", "", "", "" };
                     for (int i = 0; i < Game.SettingsItems.Length; i++) wv.Row(i, G.MenuCur == i, Game.SettingsItems[i], v[i] == "" ? null : v[i], G.MenuCur == i ? Gold : Text, null, null, true);
+                    break;
+                }
+            case Mn.ChatCfg:
+                {
+                    wv.Begin(vs, "Чат и уведомления", Gold, "←/→ изменить · Enter · Esc — назад", new Vector2(320, 190), 0, .82f);
+                    string[] cv = { Settings.ShowNotes ? "да" : "нет", Settings.ShowChat ? "да" : "нет", Settings.ChatSize == 0 ? "обычный" : "крупный", $"{Settings.ChatBack * 100:0}%", $"{Settings.ChatSecs:0} с", "" };
+                    for (int i = 0; i < Game.ChatItems.Length; i++) wv.Row(i, G.MenuCur == i, Game.ChatItems[i], cv[i] == "" ? null : cv[i], G.MenuCur == i ? Gold : Text, null, null, true);
                     break;
                 }
             case Mn.Keys:

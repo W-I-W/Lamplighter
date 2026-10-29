@@ -73,7 +73,7 @@ public partial class WorldSelectionUI : FlowScreen
         foreach (var c in detail.GetChildren()) c.QueueFree(); var w = Sel;
         if (w == null) { var l = Px.Label("Выберите мир или создайте новый", Px.Dim, false, HorizontalAlignment.Center, true); l.Position = new Vector2(20, 100); l.Size = new Vector2(300, 40); detail.AddChild(l); return; }
         var root = new Control { Size = detail.Size, MouseFilter = MouseFilterEnum.Ignore }; detail.AddChild(root);
-        var th = Thumb(w.Id, new Vector2(320, 64)); th.Position = new Vector2(8, 8); root.AddChild(th);
+        var th = Thumb(w.Id, new Vector2(280, 56)); th.Position = new Vector2(10, 10); root.AddChild(th);      // целиком внутри рамки панели
         var nm = Px.Label(w.Name, Px.Gold, true, HorizontalAlignment.Left); nm.Position = new Vector2(10, 90); nm.Size = new Vector2(320, 20); root.AddChild(nm);
         var v = new VBoxContainer { Position = new Vector2(10, 114), Size = new Vector2(320, 120) }; v.AddThemeConstantOverride("separation", 2); root.AddChild(v);
         void Stat(string icon, string text, Color c) { var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 4); h.AddChild(new TextureRect { Texture = Px.Icon(icon), CustomMinimumSize = new Vector2(12, 12), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, MouseFilter = MouseFilterEnum.Ignore }); h.AddChild(Px.Label(text, c)); v.AddChild(h); }
@@ -143,47 +143,48 @@ public partial class WorldSelectionUI : FlowScreen
     }
 }
 
-/// <summary>Создание мира: название, seed (с кнопкой случайного), сложность. Одинаковый seed даёт одинаковую базовую карту; карта живого превью строится из того же генератора.
-/// Размер мира фиксирован генератором (640×128 клеток), поэтому выбора размера нет.</summary>
+/// <summary>Создание мира: название, сложность и свёрнутые дополнительные настройки (seed). Пустой seed выбирается случайно. После создания мир сразу запускается с выбранным героем.</summary>
 public partial class WorldCreationUI : FlowScreen
 {
     static readonly string[] Names = { "Тёмный лес", "Новое начало", "Мир друзей", "Долина фонарей", "Ночная застава", "Пепельный край", "Огни севера", "Тихая гавань" };
     static readonly RandomNumberGenerator Rng = new();
-    LineEdit name, seed; int difficulty; Button bNormal, bHard; TextureRect preview; Label previewInfo; float debounce = -1; int shownSeed = int.MinValue, mapSeed;
+    LineEdit name, seed; int difficulty; Button bNormal, bHard, bMore; Control adv; PanelContainer panel; bool open;
 
     public override void _Ready()
     {
-        base._Ready(); Rng.Randomize(); Header("Новый мир", Flow.ModeLine + " · " + (SaveManager.LoadCharacter(Flow.CharId)?.Name ?? ""));
-        var lp = Px.Panel(); lp.Position = new Vector2(0, 38); lp.Size = new Vector2(280, 246); AddChild(lp);
-        var v = new VBoxContainer { Position = new Vector2(8, 8), Size = new Vector2(264, 230) }; v.AddThemeConstantOverride("separation", 5); lp.AddChild(new Control()); lp.GetChild<Control>(0).AddChild(v);
-        v.AddChild(Px.Label("Название мира", Px.Dim));
-        name = new LineEdit { Text = Loc.T(Names[Rng.RandiRange(0, Names.Length - 1)]), MaxLength = 20, CustomMinimumSize = new Vector2(0, 20) }; Modal.Style(name); v.AddChild(name);
-        v.AddChild(Px.Label("Seed (число или слово)", Px.Dim));
-        var sr = new HBoxContainer(); sr.AddThemeConstantOverride("separation", 4); v.AddChild(sr);
-        seed = new LineEdit { Text = NewSeed().ToString(), MaxLength = 18, CustomMinimumSize = new Vector2(190, 20), SizeFlagsHorizontal = SizeFlags.ExpandFill }; Modal.Style(seed); sr.AddChild(seed);
-        seed.TextChanged += _ => debounce = .35f;
-        sr.AddChild(Px.Button("", "dice", () => { seed.Text = NewSeed().ToString(); debounce = .05f; Px.Pop(seed, .04f); }, 26, 20));
-        v.AddChild(Px.Label("Сложность", Px.Dim));
-        var dr = new HBoxContainer(); dr.AddThemeConstantOverride("separation", 4); v.AddChild(dr);
-        bNormal = Px.Button("Обычная", "shield", () => SetDiff(0), 126); bHard = Px.Button("Сложная", "skull", () => SetDiff(1), 126); dr.AddChild(bNormal); dr.AddChild(bHard);
-        var dd = Px.Label("", Px.Dim, false, HorizontalAlignment.Left, true); dd.Name = "dd"; dd.CustomMinimumSize = new Vector2(250, 36); v.AddChild(dd);
-        v.AddChild(Px.Label("Размер: стандартный (640×128 клеток, фиксирован генератором)", Px.Dim, false, HorizontalAlignment.Left, true));
+        base._Ready(); Rng.Randomize(); Header("", "");
+        panel = Px.Panel("PanelGold"); panel.CustomMinimumSize = new Vector2(300, 0); AddChild(panel);
+        var m = new MarginContainer(); foreach (var s in new[] { "left", "right", "top", "bottom" }) m.AddThemeConstantOverride("margin_" + s, 10); panel.AddChild(m);
+        var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 6); m.AddChild(v);
+        v.AddChild(Px.Label("Новый мир", Px.Gold, true, HorizontalAlignment.Center));
+        name = new LineEdit { Text = Loc.T(Names[Rng.RandiRange(0, Names.Length - 1)]), MaxLength = 20, CustomMinimumSize = new Vector2(0, 20), PlaceholderText = Loc.T("Название мира") }; Modal.Style(name); v.AddChild(name);
+        name.TextSubmitted += _ => Create();
+        var dr = new HBoxContainer(); dr.AddThemeConstantOverride("separation", 6); v.AddChild(dr);
+        bNormal = Px.Button("Обычная", "shield", () => SetDiff(0), 0, 26); bHard = Px.Button("Сложная", "skull", () => SetDiff(1), 0, 26);
+        foreach (var b in new[] { bNormal, bHard }) { b.SizeFlagsHorizontal = SizeFlags.ExpandFill; dr.AddChild(b); }
+        bNormal.TooltipText = Loc.T("Сбалансированное приключение"); bHard.TooltipText = Loc.T("Более опасные враги и боссы");
         SetDiff(0, true);
+        bMore = Px.Button("+ Дополнительные настройки", null, ToggleMore, 0, 18); bMore.SizeFlagsHorizontal = SizeFlags.ExpandFill; v.AddChild(bMore);
+        adv = new HBoxContainer { Visible = false }; ((HBoxContainer)adv).AddThemeConstantOverride("separation", 4); v.AddChild(adv);
+        seed = new LineEdit { MaxLength = 18, CustomMinimumSize = new Vector2(0, 20), SizeFlagsHorizontal = SizeFlags.ExpandFill, PlaceholderText = Loc.T("Seed: случайный") }; Modal.Style(seed); adv.AddChild(seed);
+        seed.TextSubmitted += _ => Create();
+        adv.AddChild(Px.Button("", "dice", () => { seed.Text = NewSeed().ToString(); Px.Pop(seed, .04f); }, 26, 20));
+        var br = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; br.AddThemeConstantOverride("separation", 8); v.AddChild(br);
+        br.AddChild(Px.Button("Назад", null, Back, 80, 24));
+        var cb = Px.Button("Создать мир", "check", Create, 150, 24); cb.AddThemeColorOverride("font_color", Px.Gold); cb.AddThemeColorOverride("font_hover_color", new Color("#fff2b0")); br.AddChild(cb);
+        CallDeferred(nameof(Place));
+    }
 
-        var rp = Px.Panel(); rp.Position = new Vector2(290, 38); rp.Size = new Vector2(330, 246); AddChild(rp); var rin = new Control(); rp.AddChild(rin);
-        var title = Px.Label("Карта мира по seed", Px.Cyan); title.Position = new Vector2(10, 8); rin.AddChild(title);
-        var frame = Px.Panel("Slot"); frame.Position = new Vector2(4, 24); rin.AddChild(frame);
-        preview = new TextureRect { CustomMinimumSize = new Vector2(320, 64), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, TextureFilter = TextureFilterEnum.Nearest, MouseFilter = MouseFilterEnum.Ignore }; frame.AddChild(Pad(preview, 1));
-        previewInfo = Px.Label("", Px.Dim, false, HorizontalAlignment.Left, true); previewInfo.Position = new Vector2(10, 102); previewInfo.Size = new Vector2(310, 120); rin.AddChild(previewInfo);
+    void Place() { panel.ResetSize(); panel.Position = new Vector2((FlowUI.BoxW - panel.Size.X) / 2, (FlowUI.BoxH - panel.Size.Y) / 2 - 4).Floor(); }
 
-        AddChild(Px.Button("Назад", null, Back, 90).Also(b => b.Position = new Vector2(0, 294)));
-        var br = Row(360, 294, 260, BoxContainer.AlignmentMode.End); AddChild(br); br.AddChild(Px.Button("Создать мир", "check", Create, 150));
-        debounce = .05f;
+    void ToggleMore()
+    {
+        open = !open; adv.Visible = open; bMore.Text = Loc.T(open ? "- Дополнительные настройки" : "+ Дополнительные настройки"); Sfx.Play("tick", -3, 1.3f); Place(); CallDeferred(nameof(Place));
     }
 
     static int NewSeed() => (int)(Rng.Randi() % 1000000);
 
-    /// <summary>Число используется как есть, слово даёт устойчивый seed (одно и то же слово — один и тот же мир).</summary>
+    /// <summary>Число используется как есть, слово даёт устойчивый seed (одно и то же слово — один и тот же мир). Пустая строка — 0 (вызывающий выбирает случайный).</summary>
     public static int ParseSeed(string s)
     {
         s = (s ?? "").Trim(); if (s == "") return 0;
@@ -194,37 +195,24 @@ public partial class WorldCreationUI : FlowScreen
     void SetDiff(int d, bool quiet = false)
     {
         difficulty = d; bNormal.ThemeTypeVariation = d == 0 ? "ButtonSelected" : ""; bHard.ThemeTypeVariation = d == 1 ? "ButtonSelected" : "";
-        if (FindChild("dd", true, false) is Label l) l.Text = Loc.T(d == 0 ? "Враги и боссы с базовыми значениями баланса." : "Враги и боссы крепче и бьют сильнее (множители в настройках баланса).");
         if (!quiet) Sfx.Play("tick", -3, 1.3f);
-    }
-
-    public override void _Process(double delta)
-    {
-        if (debounce < 0) return; debounce -= (float)delta; if (debounce > 0) return; debounce = -1;
-        int s = ParseSeed(seed.Text); if (s == shownSeed) return; shownSeed = s; RenderPreview(s);
-    }
-
-    void RenderPreview(int s)
-    {
-        var w = World.Generate(s); var pal = GD.Load<Texture2D>("res://Assets/UI/Map/map_palette.png").GetImage(); int cw = World.Wd / 4, ch = World.Ht / 4;
-        var img = Image.CreateEmpty(cw, ch, false, Image.Format.Rgba8);
-        for (int y = 0; y < ch; y++) for (int x = 0; x < cw; x++) img.SetPixel(x, y, pal.GetPixel(Math.Clamp(Game.MapIdxOf(w, x * 4 + 2, y * 4 + 2), 0, pal.GetWidth() - 1), 0));
-        preview.Texture = ImageTexture.CreateFromImage(img);
-        previewInfo.Text = string.Format(Loc.T("Seed {0}. Одинаковый seed и настройки дают одинаковую базовую карту; сохранения миров с одним seed независимы.\nДревних фонарей: {1} · мест интереса: {2}"), s, w.Ancients.Count, w.Pois.Count);
     }
 
     bool creating;
     void Create()
     {
-        if (creating) return; var n = SaveManager.CleanName(name.Text, ""); if (n == "") { Sfx.Play("error"); Px.Shake(name); return; }
-        creating = true; int s = ParseSeed(seed.Text); var w = SaveManager.CreateWorld(n, s, difficulty);
-        Sfx.Play("upgrade", -3, 1.3f); var t = CreateTween(); t.TweenProperty(preview, "modulate", new Color(2f, 1.8f, 1.2f), .1f); t.TweenProperty(preview, "modulate", Colors.White, .2f); t.TweenCallback(Callable.From(() => Flow.ShowWorlds(w.Id)));
+        if (creating) return; var n = SaveManager.CleanName(name.Text, ""); if (n == "") { Sfx.Play("error"); Px.Shake(name); Toast("Введите название мира"); return; }
+        string st = seed.Text.Trim(); int s = st == "" ? NewSeed() : ParseSeed(st);
+        creating = true; var w = SaveManager.CreateWorld(n, s, difficulty);
+        Flow.WorldId = w.Id; Flow.PlayWorld(w.Id);
     }
 
     public override bool OnKey(Key k)
     {
         if (k == Key.Escape) { Back(); return true; }
         if (k == Key.Enter || k == Key.KpEnter) { Create(); return true; }
+        if (k == Key.Left || k == Key.A) { SetDiff(0); return true; }
+        if (k == Key.Right || k == Key.D) { SetDiff(1); return true; }
         return false;
     }
 

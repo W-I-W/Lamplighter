@@ -27,7 +27,7 @@ public partial class Game
         var vs = ViewSize;
         darkRect.Size = vs; glowRect.Size = vs; darkRect.Position = glowRect.Position = Vector2.Zero;
         var arr = new Vector4[LightLimit]; int n = 0;
-        float fl = 1f + .05f * Mathf.Sin(Time * 11f) + .03f * Mathf.Sin(Time * 23f + 1f);
+        float fl = 1f + .035f * Mathf.Sin(Time * 2.1f) + .015f * Mathf.Sin(Time * 4.7f + 1f);      // медленное плавное дыхание света
         arr[n++] = new Vector4(PPos.X, PPos.Y, PlayerLightR * fl, 0);
         foreach (var rp in Remotes()) if (rp.Hp > 0 && n < LightLimit - 20) arr[n++] = new Vector4(rp.Shown.X, rp.Shown.Y, rp.Light * fl, 0);      // свет других игроков: каждый видит свет остальных
         foreach (var a in W.Ancients) if (a.Lit && n < LightLimit) arr[n++] = new Vector4(a.Pos.X, a.Pos.Y, AncientR(a), Mathf.Max(a.Anim < 1 ? 1 - a.Anim : 0, a.Pulse));

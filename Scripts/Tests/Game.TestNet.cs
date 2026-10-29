@@ -101,6 +101,7 @@ public partial class Game
         void Check(bool ok, string what) { if (!ok) fails++; GD.Print($"[check] {(ok ? "PASS" : "FAIL")} {what}"); }
         var expectedClient = new Vector2((W.Spawn.X + .5f) * TS + 64, (W.Spawn.Y + .5f) * TS + 32);
         var expectedHost = new Vector2((W.Spawn.X + .5f) * TS - 64, (W.Spawn.Y + .5f) * TS);
+        expectedClient = NearestFree(expectedClient, 5f, false) ?? expectedClient; expectedHost = NearestFree(expectedHost, 5f, false) ?? expectedHost;      // оба процесса считают одно и то же: точки не внутри камня (иначе игрок выталкивается)
         NetPlayer Other() => NetService.Players.Values.FirstOrDefault(p => p.PeerId != NetService.LocalId && p.Handshaken);
         S(.3f, () => { Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; TestNoSpawn = true; });
         var chests = W.Pois.Where(p => p.Kind == PK.Chest).Take(3).ToList();

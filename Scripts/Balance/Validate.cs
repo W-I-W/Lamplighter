@@ -40,7 +40,7 @@ public static class Validate
         ("Core/Game.cs", "MaxHp += 10", "здоровье за уровень"), ("Core/Game.cs", "PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1))", "урон без оружия"),
         ("Core/Game.cs", "MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1))", "скорость добычи"), ("Core/Game.cs", "XpBase + Tune.T.XpLinear * Level + Tune.T.XpQuad * Level * Level", "опыт на уровень"),
         ("Core/Game.cs", "SmeltTime = 0.9f", "время плавки"), ("Core/Game.cs", "Tl.Tree => 2.2f", "время добычи дерева"), ("Core/Game.cs", "Tl.Iron => 1, Tl.MeteorOre => 1, Tl.FrostOre => 3", "требования тира"),
-        ("Core/Game.cs", "regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + Tune.T.RegenRate * dt)", "восстановление здоровья"), ("Core/Game.cs", "Hp + 4f * dt", "восстановление в свете 4/с"),
+        ("Core/Game.cs", "regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + RegenPerSec * dt)", "восстановление здоровья"), ("Core/Game.cs", "Hp + 4f * dt", "восстановление в свете 4/с"),
         ("Combat/Game.Combat.cs", "DangerScale => 1f + .18f * LitCount + .12f * LitIn(1)", "масштаб опасности"),
     };
 

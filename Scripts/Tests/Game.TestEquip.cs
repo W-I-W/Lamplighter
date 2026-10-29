@@ -97,6 +97,12 @@ public partial class Game
         S(.3f, () => Shot("equip_craft"));
         S(.2f, () =>
         {
+            Open(2); WinCur = 0; int ok = 0, tot = 0; var g0 = CraftRows()[0].group;
+            for (int n = 0; n < 8; n++) { bool was = CraftFold.Contains(g0); WindowKey(Key.Enter, false); equipWindow.Force(); tot++; if (was != CraftFold.Contains(g0) && WinCur == 0) ok++; }
+            Check(ok == tot, $"equip: Enter folds and unfolds the craft group every time ({ok}/{tot})");
+        });
+        S(.2f, () =>
+        {
             Open(0); WindowKey(Key.Right, false); Check(WinTab == 1, "equip: → switches the tab by keyboard"); WindowKey(Key.Left, false); Check(WinTab == 0, "equip: ← switches back");
             WindowKey(Key.Down, false); Check(WinCur == 1, "equip: ↓ moves the selection");
             Check(Window == Win.Equip, "equip: the window stays open for keys");

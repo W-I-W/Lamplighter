@@ -151,7 +151,7 @@ public sealed class CombatSim
     public void Idle(float s)
     {
         float before = noDmgT; noDmgT += s; chillT -= s; P.DashCd = Math.Max(0, P.DashCd - s); P.SpinCd = Math.Max(0, P.SpinCd - s); P.FlareCd = Math.Max(0, P.FlareCd - s); P.PulseCd = Math.Max(0, P.PulseCd - s);
-        if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? 4f * s : Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * T.RegenRate));
+        if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? 4f * s : Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec));
     }
 
     // ───────────────────────── шаг боя ─────────────────────────
@@ -161,7 +161,7 @@ public sealed class CombatSim
         invuln -= dt; noDmgT += dt; chillT -= dt; atkCd -= dt; reactT -= dt;
         P.DashCd = Math.Max(0, P.DashCd - dt); P.SpinCd = Math.Max(0, P.SpinCd - dt); P.FlareCd = Math.Max(0, P.FlareCd - dt); P.PulseCd = Math.Max(0, P.PulseCd - dt);
         // восстановление: в свете 4/с, в темноте 0,35/с после 5 с без урона (Game.Update)
-        if (P.Hp < P.MaxHp) { if (Lit) P.Hp = Math.Min(P.MaxHp, P.Hp + 4f * dt); else if (noDmgT > T.RegenDelay) P.Hp = Math.Min(P.MaxHp, P.Hp + T.RegenRate * dt); }
+        if (P.Hp < P.MaxHp) { if (Lit) P.Hp = Math.Min(P.MaxHp, P.Hp + 4f * dt); else if (noDmgT > T.RegenDelay) P.Hp = Math.Min(P.MaxHp, P.Hp + P.RegenPerSec * dt); }
         int contact = 0, busy = 0; Foe target = null;
         foreach (var f in Foes)
         {

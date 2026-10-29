@@ -11,7 +11,7 @@ namespace Lamplighter.Balance;
 /// <summary>Числа боевой настройки: копия полей CombatTuning (Resources/Combat/tuning.tres) в обычном классе без Godot.</summary>
 public sealed class TuneM
 {
-    public float EnemyDamage, EnemyHp, EnemySpeed, EnemyAttackRate, SpawnCapBonus, MaxAttackers, ShadeWindup;
+    public float EnemyDamage, EnemyHp, EnemySpeed, EnemyAttackRate, SpawnCapBonus, SpawnDelayMul, SpawnCapMul, MaxAttackers, ShadeWindup;
     public float[] BiomeDamage, BiomeHp, EliteChance, BossHp, BossDamage;
     public float EliteMinLit, EliteMax, EliteHp, EliteDamage, BossTempo, HitInvuln, RegenRate, RegenDelay, DashCooldown, DashInvuln, ReaperHeal, FearLevel = 5, FearDamage, FearSpawn;
     public float GatherMul, MineTimeMul, ScarcityMul, TechCostMul, WeaponMineMul, XpMul, XpBase, XpLinear, XpQuad;

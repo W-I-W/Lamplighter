@@ -37,7 +37,7 @@ public partial class Game
         {
             Check(Ids() == "basic,depths" && fired == 1, $"upgrades: lighting a lantern in the flooded mines opens Depths ({Ids()}, events {fired})");
             Check(Upgrades.IsNew("depths") && TabAnim.Contains("depths"), "upgrades: the new category is marked new and queued for the tab animation");
-            Check(Banners.Exists(b => b.Title.StartsWith("Открыта категория")), "upgrades: a pixel notification announces the opened category");
+            Check(Notify.History.Exists(m => m.Text.StartsWith(Loc.T("Открыта категория"))), "upgrades: the log announces the opened category");
             Light(3);
         });
         S(.8f, () =>
@@ -99,7 +99,7 @@ public partial class Game
             Check(Has(Tech.Dash) && Inv[It.Iron] < c0, "ui: the Learn button learns the selected upgrade");
             TechSel = (int)Tech.Reaper; TechKey(Key.Enter); Check(!Has(Tech.Reaper), "ui: a locked branch cannot be bought while its parent is below the required level");
             TechSel = (int)Tech.Dash; TechKey(Key.Enter); Check(Lv(Tech.Dash) == 2, "ui: Enter buys exactly one more level"); TechSel = (int)Tech.Reaper; TechKey(Key.Enter); Check(Has(Tech.Reaper), "ui: the branch opens when the parent reaches level 2");
-            TechPage = 0; TechSel = -1; Flash = 0; Toasts.Clear(); Banners.Clear();
+            TechPage = 0; TechSel = -1; Flash = 0; Notify.History.Clear(); Banners.Clear();
         });
         S(.5f, () => { Log($"upgwin open={TechOpen} vis={upgradeWindow.Visible} menu={Menu} nodes={upgradeWindow.NodeCount}"); Flash = 0; Shot("upg_basic"); TechSel = (int)Tech.FarLanterns; });
         S(.4f, () => Shot("upg_available"));

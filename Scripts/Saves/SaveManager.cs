@@ -105,7 +105,7 @@ public static class SaveManager
     public static WorldSave CreateWorld(string name, int seed, int difficulty)
     {
         var w = new WorldSave { Id = NewId(), Name = CleanName(name, "Мир"), Seed = seed, Difficulty = Math.Clamp(difficulty, 0, 1), GenV = World.CurrentGen, Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds() };
-        SaveWorld(w); WriteThumb(w.Id, World.Generate(seed, w.GenV), null); return w;
+        SaveWorld(w); WriteThumb(w.Id, World.Generate(seed, w.GenV), new byte[(World.Wd / 4) * (World.Ht / 4)]); return w;      // новый мир: карта скрыта
     }
 
     public static CharacterSave CreateCharacter(string name, Look look)
@@ -121,7 +121,7 @@ public static class SaveManager
     }
 
     // ───────────────────────── миниатюра ─────────────────────────
-    /// <summary>Миниатюра 160×32: один пиксель — блок 4×4 клеток, цвета из палитры карты. Неисследованное затемнено; expl == null — мир показан целиком (только что созданный).</summary>
+    /// <summary>Миниатюра 160×32: один пиксель — блок 4×4 клеток, цвета из палитры карты. Неисследованное скрыто полностью (в новом мире карта пуста).</summary>
     public static void WriteThumb(string id, World w, byte[] expl)
     {
         try
@@ -132,7 +132,7 @@ public static class SaveManager
                 for (int bx = 0; bx < cw; bx++)
                 {
                     int idx = Game.MapIdxOf(w, bx * 4 + 2, by * 4 + 2); var c = pal != null ? pal.GetPixel(Math.Clamp(idx, 0, pal.GetWidth() - 1), 0) : new Color(.3f, .4f, .3f);
-                    if (expl != null && expl[by * cw + bx] == 0) c = c.Darkened(.72f);
+                    if (expl == null || expl[by * cw + bx] == 0) c = new Color(.03f, .04f, .08f);      // неисследованное скрыто полностью
                     img.SetPixel(bx, by, c);
                 }
             Ensure(Path.GetDirectoryName(Abs(ThumbPath(id)))); img.SavePng(Abs(ThumbPath(id)));

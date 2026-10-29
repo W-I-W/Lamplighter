@@ -53,7 +53,7 @@ public partial class NetNode : Node
     {
         if (!Multiplayer.IsServer()) return;
         rate.Remove(id);
-        if (NetService.Players.Remove(id, out var p)) { if (p.Handshaken) { NetService.RaiseNotice($"{p.Name} отключился"); NetService.RaiseLeft(p); BroadcastRoster(); } }
+        if (NetService.Players.Remove(id, out var p)) { if (p.Handshaken) { chatRate.Remove(id); G.Notify.Post(MsgKind.World, MsgTone.Info, string.Format(Loc.T("{0} покинул игру"), p.Name), null, 0, null, true); NetService.RaiseLeft(p); BroadcastRoster(); } }
     }
 
     void OnConnectedToServer()
@@ -92,7 +92,7 @@ public partial class NetNode : Node
         RpcId(id, nameof(RpcStructs), G.NetStructTiles(), G.NetStructLamps());
         BroadcastEvents(id);
         RpcId(id, nameof(RpcProgress), G.BeaconLevel, G.BossMask);
-        NetService.RaiseNotice($"{p.Name} присоединился"); NetService.RaiseJoined(p); BroadcastRoster();
+        SendChatHistory(id); G.Notify.Post(MsgKind.World, MsgTone.Good, string.Format(Loc.T("{0} присоединился к игре"), p.Name), null, 0, null, true); NetService.RaiseJoined(p); BroadcastRoster();
     }
 
     static string CleanName(string n, long id)

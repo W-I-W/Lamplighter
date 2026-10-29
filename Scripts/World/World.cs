@@ -163,7 +163,17 @@ public sealed partial class World
         w.EnsureStoryReachable();
         w.ClearBlockedCrowns();
         w.GenObj = (byte[])w.Obj.Clone();
+        w.ScaleLampCosts();
         return w;
+    }
+
+    public const float LampCostBase = 1.8f, LampCostPerTile = 1f / 80f;      // цена зажигания = базовая цена фонаря × (1,8 + расстояние от Центрального маяка в клетках / 80)
+
+    /// <summary>Чем глубже фонарь от центра мира, тем он дороже: множитель растёт с расстоянием до Центрального маяка. Стражи и сам маяк бесплатны. Расчёт без случайных чисел, поэтому карта не меняется.</summary>
+    void ScaleLampCosts()
+    {
+        var c = Ancients[0].Tile;
+        foreach (var a in Ancients) { if (a.Boss || a.Cost <= 0) continue; float d = new Vector2(a.Tile.X - c.X, a.Tile.Y - c.Y).Length(); a.Cost = Math.Max(a.Cost, Mathf.RoundToInt(a.Cost * (LampCostBase + d * LampCostPerTile))); }
     }
 
     void Cluster(Random rng, Tl t, int cx, int cy, int count, int spread, bool overwrite = false)

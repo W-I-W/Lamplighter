@@ -5,7 +5,7 @@ using System.IO;
 
 namespace Lamplighter;
 
-public enum Mn { None, Main, Pause, Settings, Keys, Credits, Confirm, Achv, Multi, NetJoin, NetInfo, Flow }
+public enum Mn { None, Main, Pause, Settings, Keys, Credits, Confirm, Achv, Multi, NetJoin, NetInfo, Flow, ChatCfg }
 
 /// <summary>Главное меню, пауза, настройки, слоты сохранений, титры и достижения.</summary>
 public partial class Game
@@ -20,7 +20,8 @@ public partial class Game
 
     public static readonly string[] MainItems = { "Играть", "Мультиплеер", "Настройки", "Достижения", "Титры", "Выход" };
     public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Настройки", "Достижения", "Сеть", "Титры", "В главное меню", "Выход" };
-    public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Ветер", "Частицы", "Вспышки", "Доп. эффекты", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Управление", "Назад" };
+    public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Ветер", "Частицы", "Вспышки", "Доп. эффекты", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Чат и уведомления", "Управление", "Назад" };
+    public static readonly string[] ChatItems = { "Показывать уведомления игры", "Показывать сообщения чата", "Размер текста чата", "Прозрачность подложки", "Время показа сообщений", "Назад" };
 
     // ───────────────────────── открытие/закрытие ─────────────────────────
     public void OpenMenu(Mn m) { Menu = m; MenuCur = 0; if (m == Mn.Multi) RefreshNetMenu(); Sfx.Play("tick", -4, 1.1f); }
@@ -36,7 +37,7 @@ public partial class Game
     public int MenuLen => Menu switch
     {
         Mn.Main => MainItems.Length, Mn.Pause => PauseItems.Length, Mn.Settings => SettingsItems.Length,
-        Mn.Keys => KeyMap.Actions.Length + 2, Mn.Confirm => 2, Mn.Achv => Ach.All.Length, Mn.Multi => 5, Mn.NetInfo => 3, _ => 1
+        Mn.Keys => KeyMap.Actions.Length + 2, Mn.ChatCfg => ChatItems.Length, Mn.Confirm => 2, Mn.Achv => Ach.All.Length, Mn.Multi => 5, Mn.NetInfo => 3, _ => 1
     };
 
     // ───────────────────────── ввод ─────────────────────────
@@ -57,6 +58,7 @@ public partial class Game
             case Mn.Main: if (enter) MainAct(MenuCur); break;
             case Mn.Pause: if (enter) PauseAct(MenuCur); break;
             case Mn.Settings: SettingsKey(k, enter); break;
+            case Mn.ChatCfg: ChatCfgKey(k, enter); break;
             case Mn.Multi: if (enter) MultiAct(MenuCur); break;
             case Mn.NetInfo: if (enter) NetInfoAct(MenuCur); break;
             case Mn.Keys: KeysKey(k, enter); break;
@@ -90,7 +92,7 @@ public partial class Game
                 break;
             case MouseButton.Right:
                 if (RebindAction != null) { MenuKey(Key.Escape); break; }
-                if (Menu == Mn.Settings && hit >= 0 && hit < 12) { MenuCur = hit; MenuKey(Key.Left); }
+                if ((Menu == Mn.Settings && hit >= 0 && hit < 12) || (Menu == Mn.ChatCfg && hit >= 0 && hit < 5)) { MenuCur = hit; MenuKey(Key.Left); }
                 else MenuBackKey();
                 break;
         }
@@ -103,7 +105,8 @@ public partial class Game
             case Mn.Main: break;
             case Mn.Pause: CloseMenu(); break;
             case Mn.Settings: Settings.Save(); OpenMenu(MenuBack); break;
-            case Mn.Keys: OpenMenu(Mn.Settings); MenuCur = 12; break;
+            case Mn.Keys: OpenMenu(Mn.Settings); MenuCur = 13; break;
+            case Mn.ChatCfg: Settings.Save(); OpenMenu(Mn.Settings); MenuCur = 12; break;
             default: OpenMenu(MenuBack); break;
         }
     }
@@ -163,8 +166,9 @@ public partial class Game
             case 9: Settings.Res = (Settings.Res + d + Settings.Resolutions.Length) % Settings.Resolutions.Length; Settings.ApplyWindow(testing); break;
             case 10: Settings.Lang = Settings.Lang == "ru" ? "en" : "ru"; Loc.SetLang(Settings.Lang); break;
             case 11: Settings.Diag = !Settings.Diag; Diag.Enabled = Settings.Diag; if (Settings.Diag) Diag.Reset(); break;
-            case 12: if (enter) { OpenMenu(Mn.Keys); } break;
-            case 13: if (enter) { Settings.Save(); OpenMenu(MenuBack); } break;
+            case 12: if (enter) { OpenMenu(Mn.ChatCfg); } break;
+            case 13: if (enter) { OpenMenu(Mn.Keys); } break;
+            case 14: if (enter) { Settings.Save(); OpenMenu(MenuBack); } break;
         }
         Sfx.Play("tick", -6, 1.2f);
     }
@@ -174,7 +178,25 @@ public partial class Game
         if (!enter) return;
         if (MenuCur < KeyMap.Actions.Length) { RebindAction = KeyMap.Actions[MenuCur]; return; }
         if (MenuCur == KeyMap.Actions.Length) { KeyMap.Reset(); Settings.Save(); Toast("Управление сброшено"); return; }
-        OpenMenu(Mn.Settings); MenuCur = 12;
+        OpenMenu(Mn.Settings); MenuCur = 13;
+    }
+
+    /// <summary>Настройки чата и журнала: два переключателя, размер текста, прозрачность подложки и время показа.</summary>
+    void ChatCfgKey(Key k, bool enter)
+    {
+        int d = k == Key.Left || k == Key.A ? -1 : k == Key.Right || k == Key.D ? 1 : 0;
+        if (d == 0 && !enter) return;
+        if (d == 0) d = 1;
+        switch (MenuCur)
+        {
+            case 0: Settings.ShowNotes = !Settings.ShowNotes; break;
+            case 1: Settings.ShowChat = !Settings.ShowChat; break;
+            case 2: Settings.ChatSize = 1 - Settings.ChatSize; break;
+            case 3: Settings.ChatBack = Mathf.Clamp(Mathf.Round((Settings.ChatBack + .15f * d) * 100f) / 100f, 0, 1); break;
+            case 4: Settings.ChatSecs = Mathf.Clamp(Settings.ChatSecs + 2f * d, 6f, 14f); break;
+            case 5: if (enter) { Settings.Save(); OpenMenu(Mn.Settings); MenuCur = 12; } break;
+        }
+        Sfx.Play("tick", -6, 1.2f);
     }
 
     // ───────────────────────── музыка ─────────────────────────

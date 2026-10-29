@@ -173,6 +173,15 @@ public partial class Game
             Check(Tune.T.MineTimeMul > 1f && Tune.T.RegrowMul < 1f && Tune.T.XpMul < 1f, "economy: mining time, regrowth and experience are tuned from the Resource");
             float m0 = Settings.Music, s0 = Settings.Sfx; SetVolume(0, .3f); SetVolume(1, .7f); Check(Mathf.IsEqualApprox(Settings.Music, .3f) && Mathf.IsEqualApprox(Settings.Sfx, .7f), "ui: volume is set by clicking the bar (values snap to 10%)");
             Settings.Music = m0; Settings.Sfx = s0; Settings.ApplyAudio(); Settings.Save();
+            // застревание: существо внутри камня выталкивается; смерть — на базе, на сложном режиме теряется уровень
+            {
+                var free = spot; int tx = (int)(free.X / TS), ty = (int)(free.Y / TS); var keep = W.Get(tx, ty); W.Set(tx, ty, Tl.Stone);
+                var moved = Move(free, new Vector2(1, 0), 5f, false); Check(!Collides(moved, 5f, false), "stuck: a creature inside a block is pushed out and free to move"); W.Set(tx, ty, keep);
+                int d0 = Diff; Diff = 1; Level = 5; MaxHp = 90; Xp = 3; PPos = spot; Die();
+                Check(Level == 4 && MaxHp == 80f && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, $"death hard: loses a level (now {Level}) and respawns at the main beacon");
+                Diff = 0; PPos = spot; Die(); Check(Level == 4 && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, "death normal: keeps the level, respawns at the main beacon"); Diff = d0;
+                int cap0 = 0; Check(Tune.T.SpawnDelayMul > 1f && Tune.T.SpawnCapMul < 1f && cap0 == 0, "spawn: pause is longer and the cap is lower than before");
+            }
             GD.Print($"[check] SUMMARY failures={fails}"); GD.Print("[check] DIFFICULTY DONE");
         });
     }

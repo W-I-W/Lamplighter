@@ -24,7 +24,6 @@ public static class It
 
 public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
-public sealed class Toast { public string S; public float Life = 3.4f, Age; }
 public sealed class Banner { public string Title, Sub; public Color C; public float Life = 3.5f, Age; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
@@ -63,7 +62,8 @@ public partial class Game : Node2D
 
     public List<Particle> Parts = new();
     public List<FText> Texts = new();
-    public List<Toast> Toasts = new();
+    public readonly GameNotificationService Notify = new();     // единый журнал: все уведомления игры и чат
+    public ChatHud Chat; public bool ChatOpen => Chat != null && Chat.IsOpen;
     public List<Banner> Banners = new();
     float saveT, regionT; int lastRegion = -1;
     public int Kills;
@@ -92,7 +92,7 @@ public partial class Game : Node2D
     {
         float wh = testing ? ViewSize.Y : DisplayServer.WindowGetSize().Y; int si = Settings.UiInt(wh);
         UiScaleVp = si * ViewSize.Y / Mathf.Max(1f, wh);
-        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (flow != null && GodotObject.IsInstanceValid(flow)) flow.Size = uiRoot.Size;
+        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (flow != null && GodotObject.IsInstanceValid(flow)) flow.Size = uiRoot.Size;
     }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
@@ -143,13 +143,12 @@ public partial class Game : Node2D
         var hl = new CanvasLayer { Layer = 10 }; AddChild(hl);
         uiRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore }; hl.AddChild(uiRoot);
         hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore }; uiRoot.AddChild(hud);
-        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode);
+        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode); Chat = new ChatHud { G = this }; uiRoot.AddChild(Chat);
         buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildMenu>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
         invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
         upgradeWindow = GD.Load<PackedScene>("res://Scenes/UI/UpgradeWindow.tscn").Instantiate<UpgradeWindowUI>(); upgradeWindow.G = this; uiRoot.AddChild(upgradeWindow);
         equipWindow = GD.Load<PackedScene>("res://Scenes/UI/EquipWindow.tscn").Instantiate<EquipWindowUI>(); equipWindow.G = this; uiRoot.AddChild(equipWindow);
 
-        Toast("Добудьте дерево и камень, постройте печь [B]. [M] — карта");
         if (CarryMsg != null) { pendingMsg ??= CarryMsg; CarryMsg = null; }
         if (pendingMsg != null) Toast(pendingMsg);
         if (pendingMsg2 != null) Toast(pendingMsg2);
@@ -229,6 +228,8 @@ public partial class Game : Node2D
         if (Menu == Mn.Flow) return;                                          // экран выбора героя и мира обрабатывает ввод сам
         if (Menu == Mn.NetJoin && e is InputEventKey nk && nk.Pressed) { NetJoinKey(nk); return; }
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
+        if (ChatOpen) { if (e is InputEventKey ck && ck.Pressed && ck.Keycode == Key.Escape) { Chat.CloseChat(); GetViewport().SetInputAsHandled(); } return; }      // чат открыт: ввод идёт в поле, игровые клавиши и мышь отключены
+        if (e is InputEventKey ek && ek.Pressed && !ek.Echo && (ek.Keycode == Key.Enter || ek.Keycode == Key.KpEnter) && Window == Win.None && !TechOpen && !MapOpen && FinStage == 0 && Chat != null) { Chat.OpenChat(); GetViewport().SetInputAsHandled(); return; }
         if (HotDragInput(e)) return;
         if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory && Window != Win.Equip ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
         if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0)
@@ -273,6 +274,7 @@ public partial class Game : Node2D
                 case Key.B: OpenWin(Win.Build); break;
                 case Key.I: OpenWin(Win.Inventory); break;
                 case Key.G: if (GameHudNode != null) GameHudNode.GoalsOpen = !GameHudNode.GoalsOpen; break;
+                case Key.H: Toast(HudDensity.Names[(int)HudDensity.Next()]); break;
                 case Key.F: TryPulse(); break;
                 case Key.F5: Save(); Toast("Игра сохранена"); break;
             }
@@ -290,7 +292,7 @@ public partial class Game : Node2D
         }
     }
 
-    public void Fail(string msg) { Toast(msg); Sfx.Play("error"); }
+    public void Fail(string msg) { Toast(msg, MsgTone.Warn); Sfx.Play("error"); }
 
     // ───────────────────────── игровой цикл ─────────────────────────
     public override void _Process(double delta)
@@ -387,8 +389,17 @@ public partial class Game : Node2D
         for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) if (Solid(x, y, phase)) return true;
         return false;
     }
+    /// <summary>Ближайшая свободная точка рядом с pos (до 4 клеток) — если существо оказалось внутри камня или поставленного блока.</summary>
+    Vector2? NearestFree(Vector2 pos, float r, bool phase)
+    {
+        for (float rad = 2f; rad <= 64f; rad += 2f)
+            for (int k = 0; k < 16; k++) { var q = pos + Vector2.FromAngle(k * Mathf.Tau / 16f) * rad; if (!Collides(q, r, phase)) return q; }
+        return null;
+    }
+
     public Vector2 Move(Vector2 pos, Vector2 d, float r, bool phase)
     {
+        if (Collides(pos, r, phase)) { var free = NearestFree(pos, r, phase); if (free != null) pos = free.Value; }        // застрявший (блок поставили на него, толчок в камень) выталкивается наружу
         var p = pos; p.X += d.X; if (Collides(p, r, phase)) p.X = pos.X;
         var q = p; q.Y += d.Y; if (Collides(q, r, phase)) q.Y = p.Y;
         return q;
@@ -410,7 +421,7 @@ public partial class Game : Node2D
             if (KeyMap.Held("Left") || (arrows && Input.IsKeyPressed(Key.Left))) dir.X -= 1;
             if (KeyMap.Held("Right") || (arrows && Input.IsKeyPressed(Key.Right))) dir.X += 1;
         }
-        bool uiOpen = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None || FinStage != 0;
+        bool uiOpen = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None || FinStage != 0 || ChatOpen;
         if (uiOpen) dir = Vector2.Zero;                                  // пока открыто окно или меню, персонаж стоит на месте
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
@@ -437,12 +448,12 @@ public partial class Game : Node2D
         if (Hp < MaxHp)
         {
             if (IsLit(PPos)) Hp = Mathf.Min(MaxHp, Hp + 4f * dt);
-            else if (regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + Tune.T.RegenRate * dt);
+            else if (regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + RegenPerSec * dt);
         }
 
         bool act = Input.IsMouseButtonPressed(MouseButton.Left) || KeyMap.Held("Attack");
         if (testing && aimOverride != null) act = false;
-        if (Placing != null || OverUi) act = false;                       // режим строительства и клики по интерфейсу не бьют и не добывают
+        if (Placing != null || OverUi || ChatOpen) act = false;                       // режим строительства и клики по интерфейсу не бьют и не добывают
         if (act) Act(dt); else if (!TestKeepMine) { MineProg = 0; MineTile = new Vector2I(-1, -1); }
     }
 
@@ -593,24 +604,30 @@ public partial class Game : Node2D
         while (Xp >= XpNeed)
         {
             Xp -= XpNeed; Level++; MaxHp += 10; Hp = MaxHp;
-            Toast($"Уровень {Level}! Здоровье +10, добыча и урон выросли");
+            Toast($"Уровень {Level}! Здоровье +10, добыча и урон выросли", MsgTone.Gold);
             Texts.Add(new FText { P = PPos + new Vector2(0, -16), S = "УРОВЕНЬ!", Life = 1.6f, C = new Color("#ffe27a") });
             Fx("level_up", PPos);
         }
     }
 
-    public void Toast(string s)
-    {
-        var same = Toasts.Find(t => t.S == s); float life = Mathf.Min(8f, 3.2f + .07f * s.Length);        // время на чтение растёт с длиной текста
-        if (same != null) { same.Life = life; return; }
-        Toasts.Add(new Toast { S = s, Life = life });
-        if (Toasts.Count > 3) Toasts.RemoveAt(0);
-    }
+    /// <summary>Короткое сообщение игроку: попадает в журнал в левом нижнем углу (см. ChatHud), отдельных панелей нет.</summary>
+    public void Toast(string s, MsgTone tone = MsgTone.Info) => Notify.Post(MsgKind.System, tone, Loc.T(s));
 
+    /// <summary>Событие игры: строка в журнале (цвет по смыслу звука/названия). Опасность боя и победы над стражами дополнительно показываются коротким баннером сверху.</summary>
     public void Announce(string title, string sub, Color c, string sfx = "discover")
     {
-        Banners.Add(new Banner { Title = title, Sub = sub, C = c, Life = Mathf.Min(9f, 4.2f + .06f * (title.Length + sub.Length)) });
-        if (Banners.Count > 6) Banners.RemoveAt(1);                      // уведомления показываются по очереди; в очереди сохраняется самое свежее
+        bool important = sfx == "boss" || title.Contains("повержен") || title.Contains("Свет погас");
+        var tone = important ? (sfx == "boss" ? MsgTone.Warn : MsgTone.Gold) : sfx switch
+        {
+            "build" or "tech" or "upgrade" => MsgTone.Gold, "ancient" or "discover" => MsgTone.Cyan, "chest" or "rescue" or "levelup" => MsgTone.Good, "error" => MsgTone.Warn, _ => MsgTone.Info
+        };
+        bool world = sfx == "ancient" || sfx == "discover";
+        Notify.Post(important ? MsgKind.Important : world ? MsgKind.World : MsgKind.System, tone, Loc.T(title), null, important ? 2 : 1);
+        if (important)
+        {
+            Banners.Add(new Banner { Title = title, Sub = sub, C = c, Life = Mathf.Min(5f, 3f + .03f * (title.Length + sub.Length)) });
+            if (Banners.Count > 3) Banners.RemoveAt(1);
+        }
         Sfx.Play(sfx);
     }
 
@@ -762,7 +779,7 @@ public partial class Game : Node2D
         for (int i = Texts.Count - 1; i >= 0; i--) { var t = Texts[i]; t.Life -= dt; t.P += new Vector2(0, -14 * dt); if (t.Life <= 0) Texts.RemoveAt(i); }
         // пока открыто окно, меню или карта, сообщения не гаснут: игрок успевает их прочитать
         float msgDt = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None ? 0f : dt;
-        for (int i = Toasts.Count - 1; i >= 0; i--) { Toasts[i].Life -= msgDt; Toasts[i].Age += msgDt; if (Toasts[i].Life <= 0) Toasts.RemoveAt(i); }
+        Notify.Tick(msgDt);
         if (Banners.Count > 0) { var cb = Banners[0]; cb.Age += msgDt; cb.Life -= msgDt * (Banners.Count > 1 ? 1.5f : 1f); if (cb.Life <= 0) Banners.RemoveAt(0); }       // по одному, по очереди
         // атмосфера биома
         int reg = RegionAt(PPos);

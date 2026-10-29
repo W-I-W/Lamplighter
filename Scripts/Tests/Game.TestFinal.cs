@@ -82,13 +82,13 @@ public partial class Game
             Pay(CostFurnace); Check("stock paid", Stock[It.Stone] == 90 && Stock[It.Wood] == 95, $"stone={Stock[It.Stone]} wood={Stock[It.Wood]}");
             Tp(TileCenter(World.IX0 + 40, 64));
             Check("no warehouse crafting when far", !Can(CostFurnace));
-            // 7) быстрый путь после победы над стражем и возрождение у ближайшего фонаря
+            // 7) быстрый путь после победы над стражем и возрождение на базе
             BossMask |= 1; var l = new List<Ancient>(); foreach (var an in W.Ancients) if (an != W.Ancients[0] && an.Region == 0 && !an.Boss && l.Count < 2) { an.Lit = true; an.Anim = 1; l.Add(an); }
             Check("fast travel list >= 3", TravelList().Count >= 3, $"n={TravelList().Count}");
             Tp(l[0].Pos + new Vector2(0, 30)); Enemies.Clear(); travelCd = 0; FastTravel(l[1]);
             Check("fast travel moved player", PPos.DistanceTo(l[1].Pos) < 60, $"dist={PPos.DistanceTo(l[1].Pos):F0}");
             Tp(l[1].Pos + new Vector2(60, 40)); Hp = 1; Invuln = 0; HurtPlayer(50, Vector2.Zero);
-            Check("respawn at nearest lit lantern", PPos.DistanceTo(l[1].Pos) < 60 && Hp > 0, $"dist={PPos.DistanceTo(l[1].Pos):F0}");
+            Check("respawn at the base (main beacon)", PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 4 && Hp > 0, $"dist={PPos.DistanceTo(W.Ancients[0].Pos):F0}");
         });
         S(.2f, () => GD.Print($"[check] SUMMARY failures={checkFails}"));
     }

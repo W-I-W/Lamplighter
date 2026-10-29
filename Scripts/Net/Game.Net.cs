@@ -16,6 +16,7 @@ public partial class Game
         Net = new NetNode { Name = "NetNode", G = this }; AddChild(Net); InitNetFx();
         if (NetService.Role == NetRole.Host && NetService.Players.TryGetValue(1, out var me)) { me.Name = NetService.LocalName; me.Look = PlayerLook; }      // сцена перезагружена (выбор героя и мира): запись хоста берёт его героя
         NetService.Notice += NetNotice; NetService.Ended += NetEnded; NetService.Invite += OnInvite;
+        Notify.Broadcast = m => { if (NetService.Active && NetService.Role == NetRole.Host) Net?.BroadcastChat(m, 0); };      // общие события мира хост рассылает клиентам
         if (!testing) NetService.WatchSteamInvites();
     }
 

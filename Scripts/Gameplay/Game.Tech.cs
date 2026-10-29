@@ -11,7 +11,8 @@ public enum Tech
     FlameEdge, HeatShield, Collector, ForgeHeat, FireLens, Fireproof,
     Prism, SpikeBoots, FrostEdge, FrostArmor,
     Marksman, QuickDraw, Piercing, Overcharge,       // навыки дальнего боя (лук и посох)
-    LensII, FarLanternsII                            // вторые ступени: открываются после максимума первых (в маске TechMask их нет, только в SkillLv)
+    LensII, FarLanternsII,                           // вторые ступени: открываются после максимума первых (в маске TechMask их нет, только в SkillLv)
+    Regen                                            // регенерация здоровья вне света (в маске TechMask её нет, только в SkillLv)
 }
 
 public sealed class TechDef
@@ -82,6 +83,7 @@ public partial class Game
         new() { Name = "Эфирный заряд", Desc = "Снаряды летят быстрее и дальше на 6% за уровень", Req = "Изучите «Меткий глаз» и зажгите 2 фонаря", Cost = C(It.Aether, 3, It.Crystal, 3, It.Shard, 6), Ok = g => g.Has(Tech.Marksman) && g.LitCount >= 2 },
         new() { Name = "Линза света II", Desc = "Ваш свет шире ещё на 4% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 6, It.Crystal, 4), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Дальний свет II", Desc = "Ваши фонари светят дальше ещё на 6% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 5, It.Crystal, 5), Ok = g => g.LitIn(1) >= 1 },
+        new() { Name = "Регенерация", Desc = "Здоровье восстанавливается быстрее вне света; каждый уровень добавляет скорость", Req = "Победите 5 врагов", Cost = C(It.Shard, 3, It.Copper, 3), Ok = g => g.Kills >= 5 },
     };
 
     public bool HasRangedWeapon() { foreach (var o in Owned) { var d = Db.Weapon(o.Id); if (d != null && d.Cls != WClass.Sword) return true; } return false; }

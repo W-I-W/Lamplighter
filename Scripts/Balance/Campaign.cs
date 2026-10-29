@@ -108,7 +108,7 @@ public sealed class Campaign
         if (dark > 0) Exposure(dark, reg, hunt, ref bucket);
     }
 
-    void Regen(float s, bool lit) { if (p.Hp < p.MaxHp) p.Hp = Math.Min(p.MaxHp, p.Hp + (lit ? 4f : T.RegenRate) * s); }
+    void Regen(float s, bool lit) { if (p.Hp < p.MaxHp) p.Hp = Math.Min(p.MaxHp, p.Hp + (lit ? 4f : p.RegenPerSec) * s); }
 
     EnemyM Pick(int reg, bool guardMode = false)
     {
@@ -136,7 +136,7 @@ public sealed class Campaign
     {
         var cs = new CombatSim(p, pr, r, reg, false);
         float done = 0, spawnT = r.Range(1f, 3f);
-        int baseCap = reg == 0 ? 3 + p.LitCount * 2 : 4 + p.LitIn(reg) * 2; int cap = Math.Min((int)(baseCap + T.SpawnCapBonus + (p.Level < T.FearLevel ? T.FearSpawn : 0)), 18);
+        int baseCap = reg == 0 ? 3 + p.LitCount * 2 : 4 + p.LitIn(reg) * 2; int cap = Math.Min(Math.Max(2, (int)Math.Ceiling((baseCap + T.SpawnCapBonus + (p.Level < T.FearLevel ? T.FearSpawn : 0)) * T.SpawnCapMul)), 18);
         while (done < work && !Over)
         {
             if (!cs.AnyAlive)
@@ -153,7 +153,7 @@ public sealed class Campaign
             }
             if (spawnT <= 0)
             {
-                spawnT = r.Range(2.2f, 3.8f); if (cs.Alive < cap) Spawn(cs, reg);
+                spawnT = r.Range(2.2f, 3.8f) * T.SpawnDelayMul; if (cs.Alive < cap) Spawn(cs, reg);
             }
         }
         Hourly();
@@ -442,7 +442,7 @@ public sealed class Campaign
         if (ts > 0) incoming += ds / ts;
         incoming *= 1f - Math.Min(.9f, pr.DodgeSkill * .8f);
         incoming *= T.At(T.BossDamage, b.Id - 1);
-        float pool = p.MaxHp + T.RegenRate * ttk * .5f + (p.Has(Tech.Reaper) ? 0 : 0);
+        float pool = p.MaxHp + p.RegenPerSec * ttk * .5f + (p.Has(Tech.Reaper) ? 0 : 0);
         return incoming * ttk / pool;
     }
 

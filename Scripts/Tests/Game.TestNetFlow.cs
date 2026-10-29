@@ -42,7 +42,14 @@ public partial class Game
                 {
                     var o = Other(); Check(o != null && o.Look.Skin == 5 && o.Look.Hair == 3 && o.Look.Cloth1 == 9 && o.Look.Variant == 2, "netflow host: the guest's own look is used");
                     Check(NetService.Players[1].Look.Hair == 6, "netflow host: the host look is in the roster");
-                    NetGrantTo(o);
+                    NetGrantTo(o); SendChat("Привет [b]хост[/b] [color=red]x[/color]");
+                });
+                WaitStepFlow(20f, () => Notify.History.Exists(m => m.Kind == MsgKind.Chat && m.Sender == "Гость" && m.Text.StartsWith("Привет от гостя")), ok => Check(ok, "netflow host: the guest's chat message arrived with the sender's name from the host's own record"));
+                S(.8f, () =>
+                {
+                    Check(Notify.History.FindAll(m => m.Text.StartsWith("Привет от гостя")).Count == 1, "netflow host: the guest message is shown once (no duplicates)");
+                    Check(Notify.History.FindAll(m => m.Text.StartsWith("флуд")).Count <= 1, "netflow host: a burst of guest messages is rate limited");
+                    Check(Notify.History.FindAll(m => m.Kind == MsgKind.World && m.Text.Contains("присоединился")).Count == 1, "netflow host: the join event is in the log once");
                 });
                 WaitStepFlow(40f, () => NetService.Count <= 1, ok => Check(ok, "netflow host: the guest left"));
                 S(.5f, () =>
@@ -74,6 +81,13 @@ public partial class Game
                     Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; TestNoSpawn = true;
                 });
                 WaitStepFlow(12f, () => Inv[It.Wood] == 38, ok => Check(ok, "netflow guest: the host-granted item arrived once"));
+                S(.3f, () => { SendChat("Привет от гостя"); for (int i = 0; i < 8; i++) SendChat("флуд " + i); });
+                WaitStepFlow(15f, () => Notify.History.Exists(m => m.Kind == MsgKind.Chat && m.Sender == "Хост" && m.Text.Contains("[b]хост[/b]")), ok => Check(ok, "netflow guest: the host's chat message arrived and its markup stayed plain text"));
+                S(.8f, () =>
+                {
+                    Check(Notify.History.FindAll(m => m.Kind == MsgKind.Chat && m.Sender == "Гость" && m.Text == "Привет от гостя").Count == 1, "netflow guest: own message comes back from the host exactly once");
+                    Check(Notify.History.FindAll(m => m.Text.StartsWith("флуд")).Count <= 1, "netflow guest: the burst was rate limited by the host");
+                });
                 S(.5f, () =>
                 {
                     Save(); var cs = SaveManager.LoadCharacter(netFlowChar);

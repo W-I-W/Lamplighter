@@ -12,6 +12,7 @@ public partial class EquipCardUI : PanelContainer
     static readonly Color Gold = new("#ffd23f"), Dim = new("#8a96b0");
     TextureRect icon; Label nameL, subL, tagL, slotL; Tween tw;
     bool selected, hover, bound; string variation = "";
+    TreeLine tree;
 
     public override void _Ready()
     {
@@ -27,7 +28,7 @@ public partial class EquipCardUI : PanelContainer
     /// <param name="equipped">показывает метку «Надето»; <paramref name="hotSlot"/> — номер слота хотбара (0 — нет); <paramref name="dim"/> — приглушённая карточка (недоступно).</param>
     public void Bind(int row, Texture2D ic, string name, Color nameCol, string sub, Color subCol, bool equipped, int hotSlot, bool sel, bool dim = false, Color? iconTint = null)
     {
-        bool newRow = !bound || row != Row; Row = row;
+        bool newRow = !bound || row != Row; Row = row; if (tree != null) tree.Visible = false;
         icon.Texture = ic; icon.Modulate = (iconTint ?? Colors.White) * (dim ? new Color(1, 1, 1, .55f) : Colors.White);
         if (nameL.Text != name) nameL.Text = name; nameL.AddThemeColorOverride("font_color", dim ? Dim : nameCol);
         subL.Visible = !string.IsNullOrEmpty(sub); if (subL.Text != sub) subL.Text = sub ?? ""; subL.AddThemeColorOverride("font_color", subCol);
@@ -38,7 +39,29 @@ public partial class EquipCardUI : PanelContainer
         Tint(); if (becameSel) Pulse(new Color(1.5f, 1.4f, 1f), .16f);
     }
 
+    /// <summary>Положение в дереве крафта: 0 — обычная карточка, 1 — заголовок группы (родитель), 2 — рецепт внутри группы (с линией-связью к родителю), 3 — последний рецепт группы.</summary>
+    public void SetTree(int kind)
+    {
+        if (tree == null)
+        {
+            if (kind == 0) return;
+            tree = new TreeLine { CustomMinimumSize = new Vector2(12, 0), MouseFilter = MouseFilterEnum.Ignore }; var h = icon.GetParent(); h.AddChild(tree); h.MoveChild(tree, 0);
+        }
+        tree.Visible = kind >= 2; tree.Last = kind == 3; tree.QueueRedraw();
+    }
+
     Color Rest() => hover ? new Color(1.2f, 1.2f, 1.2f) : Colors.White;
     void Tint() { tw?.Kill(); tw = CreateTween(); tw.TweenProperty(this, "modulate", Rest(), .08f); }
     public void Pulse(Color from, float time) { tw?.Kill(); Modulate = from; tw = CreateTween(); tw.TweenProperty(this, "modulate", Rest(), time); }
+}
+
+/// <summary>Линия «ветка» слева от рецепта: вертикаль до родителя и короткий отвод к карточке; у последнего рецепта вертикаль обрывается.</summary>
+public partial class TreeLine : Control
+{
+    public bool Last;
+    public override void _Draw()
+    {
+        var c = new Color("#c9a24a"); float x = 4, mid = Mathf.Floor(Size.Y / 2);
+        DrawRect(new Rect2(x, -6, 2, Last ? mid + 6 : Size.Y + 12), c); DrawRect(new Rect2(x, mid, 8, 2), c);
+    }
 }

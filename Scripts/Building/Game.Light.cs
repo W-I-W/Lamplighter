@@ -144,7 +144,7 @@ public partial class Game
                 if (l.Kind == 2 && l.Anim >= 1) AddBeam(new Vector2I(l.X, l.Y), Dirs[l.Dir], 10 + 4 * (l.Level - 1) + (Has(Tech.Prism) ? 6 : 0), (8f + 4f * (l.Level - 1)) * (Has(Tech.Prism) ? 1.5f : 1f), new Color("#bfe9ff"), rec);
 
         // личный луч героя (награда Хранителя глубин)
-        bool want = Has(Tech.Beam) && !blocked && (KeyMap.Held("Beam") || (testing && beamTest));
+        bool want = Has(Tech.Beam) && !blocked && !ChatOpen && (KeyMap.Held("Beam") || (testing && beamTest));
         if (BeamE <= 0) beamLock = true; if (BeamE >= 25) beamLock = false;
         BeamOn = want && !beamLock;
         if (BeamOn)

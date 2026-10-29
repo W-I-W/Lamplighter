@@ -130,8 +130,8 @@ public partial class Game
         bool guarded = nearUnlit < 9 * TS;
         int free = 0; foreach (var e in Enemies) if (e.Guard == null && !e.IsBoss && e.Pos.DistanceTo(tp) < 420f) free++;
         int baseCap = reg == 0 ? 3 + LitCount * 2 : 4 + LitIn(reg) * 2;
-        int cap = Math.Min((int)((baseCap + Tune.T.SpawnCapBonus + (guarded ? 3 : 0) + (Level < Tune.T.FearLevel ? (int)Tune.T.FearSpawn : 0)) * (targets.Count > 1 ? 1f : CombatTuning.At(Tune.T.CoopCap, CoopIdx))), 18);
-        spawnT = rng.RandfRange(2.2f, 3.8f) * (guarded ? .55f : 1f) / targets.Count;
+        int cap = Math.Min(Math.Max(2, (int)Math.Ceiling((baseCap + Tune.T.SpawnCapBonus + (guarded ? 3 : 0) + (Level < Tune.T.FearLevel ? (int)Tune.T.FearSpawn : 0)) * Tune.T.SpawnCapMul * (targets.Count > 1 ? 1f : CombatTuning.At(Tune.T.CoopCap, CoopIdx)))), 18);
+        spawnT = rng.RandfRange(2.2f, 3.8f) * Tune.T.SpawnDelayMul * (guarded ? .55f : 1f) / targets.Count;
         if (free >= cap) return;
         for (int tries = 0; tries < 24; tries++)
         {
@@ -323,8 +323,10 @@ public partial class Game
         LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
         int lost = Math.Min(25, Inv[It.Shard] / 4); Inv[It.Shard] -= lost;
+        bool lvLoss = Diff == 1 && Level > 1;                                      // сложный режим: смерть стоит уровня
+        if (lvLoss) { Level--; MaxHp = Mathf.Max(60f, MaxHp - 10f); Xp = 0; }
         PPos = RespawnPos(); Hp = MaxHp; Invuln = 2f; Save();
-        Toast(lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
+        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();
     }
 
@@ -537,10 +539,10 @@ public partial class Game
             if (!e.IsBoss && e.Kind != EK.Leech && e.Kind != EK.Swarm)
             {
                 float minD = e.Radius + 6f; var away = e.Pos - PPos; float dd = away.Length();
-                if (dd < minD) e.Pos = PPos + (dd > .01f ? away / dd : Vector2.FromAngle(e.Phase)) * minD;
+                if (dd < minD) { var np2 = PPos + (dd > .01f ? away / dd : Vector2.FromAngle(e.Phase)) * minD; if (!Collides(np2, Mathf.Min(5f, e.Radius), false)) e.Pos = np2; }
             }
             if (!e.IsBoss && e.Kind != EK.Leech)
-                foreach (var o in Enemies) if (o != e && !o.IsBoss) { var dd = e.Pos - o.Pos; float l = dd.Length(); if (l > .01f && l < 8) e.Pos += dd / l * (8 - l) * .3f; }
+                foreach (var o in Enemies) if (o != e && !o.IsBoss) { var dd = e.Pos - o.Pos; float l = dd.Length(); if (l > .01f && l < 8) { var np3 = e.Pos + dd / l * (8 - l) * .3f; if (!Collides(np3, Mathf.Min(5f, e.Radius), false)) e.Pos = np3; } }
 
             if (e.Hp <= 0) { var dead = e; Enemies.RemoveAt(i); KillEnemy(dead); }
         }

@@ -32,15 +32,30 @@ public partial class Game
         S(.1f, () => Shot("flow3_worlds"));
         S(1.8f, () => flow.ShowCreateWorld());
         S(.1f, () => Shot("flow4_create_world"));
+        S(.3f, () => { Check("flow: world screen has the compact panel", flow.Cur is WorldCreationUI); Check("flow: click Advanced opens the seed row", ClickButton("+ Дополнительные настройки")); });
+        S(.4f, () => { Check("flow: click Hard selects it", ClickButton("Сложная")); });
+        S(.3f, () => Shot("flow4b_create_world_advanced"));
+        S(.2f, () => { ClickButton("- Дополнительные настройки"); });
         S(.5f, () => { flow.QueueFree(); OpenFlow(FlowKind.Host, "steam"); });
         S(.9f, () => { flow.CharId = cA; flow.ShowWorlds(null); });
         S(.1f, () => Shot("flow5_host_worlds"));
         S(.5f, () => { flow.QueueFree(); OpenFlow(FlowKind.Guest, "steam", "109775240918889"); });
         S(.9f, () => Shot("flow6_guest_characters"));
         S(.1f, () => { flow.QueueFree(); OpenFlow(FlowKind.Solo); });
-        S(.9f, () => Modal.Ask(flow, "Удалить героя?", "«Алекс» будет удалён навсегда: предметы, оружие и навыки. Миры не пострадают.", "Удалить", () => { }));
+        S(.9f, () => Check("flow: click Delete opens dialog", ClickButton("Удалить")));
         S(.3f, () => Shot("flow7_delete_modal"));
-        S(.1f, () => { Log("flow shots done"); GD.Print("[check] SUMMARY failures=" + checkFails); GD.Print("FLOW DONE"); });
+        S(.1f, () =>
+        {
+            flow.QueueFree(); OpenFlow(FlowKind.Solo); flow.CharId = cA;
+        });
+        S(.9f, () => { flow.ShowCreateWorld(); });
+        int n0 = 0;
+        S(.15f, () => { n0 = SaveManager.ListWorlds().Count; ClickButton("Сложная"); Check("flow: Create world clicked with closed advanced settings", ClickButton("Создать мир")); });
+        S(.05f, () =>
+        {
+            var made = SaveManager.ListWorlds(); Check("flow: the world was created with a generated seed and Hard difficulty", made.Count == n0 + 1 && made.Exists(w => w.Difficulty == 1 && w.Seed >= 0 && w.Id == flow.WorldId));
+            Log("flow shots done"); GD.Print("[check] SUMMARY failures=" + checkFails); GD.Print("FLOW DONE");
+        });
     }
 
     /// <summary>Настоящий щелчок мышью по кнопке экрана выбора (по тексту).</summary>
@@ -50,7 +65,7 @@ public partial class Game
         foreach (var n in flow.FindChildren("*", "Button", true, false))
             if (n is Button b && b.Text == text && b.IsVisibleInTree())
             {
-                var p = b.GetGlobalRect().GetCenter();
+                var p = b.GetGlobalTransformWithCanvas() * (b.Size / 2); p *= (Vector2)GetWindow().Size / GetViewport().GetVisibleRect().Size;      // настоящее нажатие приходит в пикселях окна
                 Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p });
                 foreach (bool down in new[] { true, false }) Input.ParseInputEvent(new InputEventMouseButton { Position = p, GlobalPosition = p, ButtonIndex = MouseButton.Left, Pressed = down, ButtonMask = down ? MouseButtonMask.Left : 0 });
                 return true;

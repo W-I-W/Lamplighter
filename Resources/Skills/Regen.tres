@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "Regen"
+Page = 0
+MaxLevel = 5
+Pos = Vector2(3, 0)
+Icon = "res://Assets/UI/Skills/Regen.png"
+CostCurve = PackedFloat32Array(0.15, 0.2, 0.3, 0.4, 0.55)
+Parents = PackedStringArray()
+EffLabel = "Регенерация здоровья вне света (в секунду)"
+Unit = "hp"
+EffBase = 0
+EffPer = 0.25

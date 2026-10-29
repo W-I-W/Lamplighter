@@ -149,6 +149,7 @@ public partial class Game
     public float SpinScale => 1f + E(Tech.Spin);
     public float FlareDuration => 10f + E(Tech.Flare);
     public float PulseCooldown => 12f * (1f - E(Tech.Pulse));
+    public float RegenPerSec => Tune.T.RegenRate + E(Tech.Regen);                    // здоровье в секунду вне света (после RegenDelay без урона)
     public float ReaperHeal => E(Tech.Reaper) * Tune.T.ReaperHeal / 1.5f;
     public float SightTiles => E(Tech.Sight);
     public float HeatTaken => 1f - E(Tech.HeatShield);

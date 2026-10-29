@@ -26,6 +26,9 @@ public partial class Game
             for (int k = 1; k <= 5; k++) Check(Near(SkillOf(lens).Eff(k), .02f * k), $"skills: Light range I level {k} = +{2 * k}%");
             Reset(); float r0 = PlayerLightR;
             SetSkillLevel(lens, 3); Check(Near(LensBonus, .06f), "skills: 3/5 of tier I = +6%"); Check(Near(PlayerLightR / r0, 1.06f), "skills: the real light radius rises by 6%");
+            Check(Near(RegenPerSec, Tune.T.RegenRate), "skills: regeneration at level 0 is the base rate");
+            SetSkillLevel((int)Tech.Regen, 3); Check(Near(RegenPerSec, Tune.T.RegenRate + .75f), "skills: regeneration level 3 adds 0.75 hp/s");
+            SetSkillLevel((int)Tech.Regen, 5); Check(Near(RegenPerSec, Tune.T.RegenRate + 1.25f), "skills: regeneration level 5 adds 1.25 hp/s"); SetSkillLevel((int)Tech.Regen, 0);
             SetSkillLevel(lens, 5); Check(Near(PlayerLightR / r0, 1.10f), "skills: 5/5 of tier I = +10% of the base radius");
             // вторая ступень недоступна до максимума первой
             SetSkillLevel(lens, 4); LitCountOverride(true);

@@ -95,6 +95,8 @@ Run-Stage 'explore: new places, lamp kinds, rewards, saves (40 seeds)' 'explore'
 Run-Stage 'village: villagers, professions, rescue, housing, movement, economy, saves' 'village' @('VILLAGE DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'difficulty: tuning, biome and coop scaling, melee/ranged AI, attack cap, elites, dash, bosses' 'difficulty' @('DIFFICULTY DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'upgrades: categories open by discovery, window states, save and old saves' 'upgrades' @('UPGRADES DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'chat: one log for notifications and chat, Enter/Esc, input lock, history, merging' 'chat' @('CHAT DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'hud: density modes, collapsing hint, one event line, temporary resources, notifications' 'hud' @('HUD DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'equip: equipment window, cards, sockets, hotbar, relics, lantern, crafting, resolutions' 'equip' @('EQUIP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'skills: multi-level tree, costs, bonuses (+30% light), migration, icons, window' 'skills' @('SKILLS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'balance simulator parity: formulas, costs, skill unlocks, effects, enemy stats and hits-to-kill match the real Game' 'balance' @('BALANCE DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')

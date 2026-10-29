@@ -83,8 +83,10 @@ public partial class StageView : Control
         var sz = Size; DrawRect(new Rect2(Vector2.Zero, sz), new Color("#101a36"));
         for (int i = 0; i < 5; i++) DrawRect(new Rect2(0, sz.Y * (.2f * i), sz.X, sz.Y * .2f), new Color(.06f + .018f * i, .09f + .02f * i, .2f + .03f * i, 1));
         foreach (var st in new[] { (.12f, .1f), (.3f, .22f), (.55f, .08f), (.78f, .18f), (.9f, .06f), (.2f, .38f), (.7f, .34f) }) DrawRect(new Rect2(Mathf.Floor(sz.X * st.Item1), Mathf.Floor(sz.Y * st.Item2), 2, 2), new Color(.7f, .78f, 1f, .75f));
-        var grass = GD.Load<Texture2D>("res://Assets/Sprites/Tilesets/000_Grass.png"); var grass2 = GD.Load<Texture2D>("res://Assets/Sprites/Tilesets/001_Grass_v1.png");
-        if (grass != null) { float z = Zoom; float y = sz.Y - 20 - 0; int n = (int)(sz.X / (16 * z)) + 2; for (int i = 0; i < n; i++) DrawTextureRect(i % 3 == 1 && grass2 != null ? grass2 : grass, new Rect2(i * 16 * z - 6, FloorY, 16 * z, 16 * z), false); }
+        float z = Zoom, gy = FloorY; var g = new Color("#3f7a3a"); var d = new Color("#4a3426");
+        DrawRect(new Rect2(0, gy, sz.X, sz.Y - gy), d);
+        for (int i = 0; i < (int)(sz.X / (4 * z)) + 1; i++) for (int k = 0; k < 4; k++) if ((i * 7 + k * 3) % 5 == 0) DrawRect(new Rect2(i * 4 * z + (k % 2) * 2 * z, gy + (3 + k * 3) * z, z * 2, z), d.Darkened(.25f));
+        DrawRect(new Rect2(0, gy, sz.X, 4 * z), g); DrawRect(new Rect2(0, gy, sz.X, z), g.Lightened(.3f)); DrawRect(new Rect2(0, gy + 3 * z, sz.X, z), g.Darkened(.25f));
         QueueRedraw();
     }
 
@@ -153,7 +155,7 @@ public partial class Modal : Control
         var p = Px.Panel("PanelGold"); AddChild(p); p.CustomMinimumSize = new Vector2(300, 0);
         var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 6); p.AddChild(new MarginContainer().Also(m => { m.AddThemeConstantOverride("margin_left", 6); m.AddThemeConstantOverride("margin_right", 6); m.AddThemeConstantOverride("margin_top", 4); m.AddThemeConstantOverride("margin_bottom", 4); m.AddChild(v); }));
         v.AddChild(Px.Label(title, danger ? Px.Warn : Px.Gold, true, HorizontalAlignment.Center));
-        v.AddChild(Px.Label(text, Px.Text, false, HorizontalAlignment.Center, true));
+        v.AddChild(Px.Label(text, Px.Text, false, HorizontalAlignment.Center, true).Also(l => l.CustomMinimumSize = new Vector2(288, 0)));
         if (initial != null)
         {
             edit = new LineEdit { Text = initial, MaxLength = 20, CustomMinimumSize = new Vector2(0, 20), SelectAllOnFocus = true }; Style(edit); v.AddChild(edit);
@@ -164,7 +166,7 @@ public partial class Modal : Control
         p.ResetSize(); CallDeferred(nameof(Center), p); Px.FadeIn(this, .12f, 0);
     }
 
-    void Center(Control p) { p.Position = ((Size - p.Size) / 2).Floor(); }
+    void Center(Control p) { p.ResetSize(); p.Position = ((Size - p.Size) / 2).Floor(); }
 
     void Confirm() { var t = edit?.Text ?? ""; if (edit != null && t.Trim() == "") { Sfx.Play("error"); return; } var cb = onOk; Close(); cb?.Invoke(t); }
     public void Close() { onCancel?.Invoke(); QueueFree(); }

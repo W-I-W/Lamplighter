@@ -15,7 +15,7 @@ run/main_scene="res://Scenes/Main.tscn"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Lanternreach"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="uid://b2muueot3oslt"
 
 [display]
 

@@ -1,167 +1,157 @@
-[gd_resource type="Theme" load_steps=60 format=3]
+[gd_resource type="Theme" format=3 uid="uid://dvlsdrh7odbti"]
 
-[ext_resource type="FontFile" path="res://Assets/UI/Fonts/lantern.fnt" id="1"]
-[ext_resource type="Texture2D" path="res://Assets/UI/panel.png" id="2"]
-[ext_resource type="Texture2D" path="res://Assets/UI/panel_dark.png" id="3"]
-[ext_resource type="Texture2D" path="res://Assets/UI/panel_gold.png" id="4"]
-[ext_resource type="Texture2D" path="res://Assets/UI/slot.png" id="5"]
-[ext_resource type="Texture2D" path="res://Assets/UI/slot_selected.png" id="6"]
-[ext_resource type="Texture2D" path="res://Assets/UI/slot_disabled.png" id="7"]
-[ext_resource type="Texture2D" path="res://Assets/UI/slot_ok.png" id="8"]
-[ext_resource type="Texture2D" path="res://Assets/UI/button_normal.png" id="9"]
-[ext_resource type="Texture2D" path="res://Assets/UI/button_hover.png" id="10"]
-[ext_resource type="Texture2D" path="res://Assets/UI/button_pressed.png" id="11"]
-[ext_resource type="Texture2D" path="res://Assets/UI/button_disabled.png" id="12"]
-[ext_resource type="Texture2D" path="res://Assets/UI/button_selected.png" id="13"]
-[ext_resource type="Texture2D" path="res://Assets/UI/tab_normal.png" id="14"]
-[ext_resource type="Texture2D" path="res://Assets/UI/tab_selected.png" id="15"]
-[ext_resource type="Texture2D" path="res://Assets/UI/keycap.png" id="16"]
-[ext_resource type="Texture2D" path="res://Assets/UI/bar_bg.png" id="17"]
-[ext_resource type="Texture2D" path="res://Assets/UI/bar_hp.png" id="18"]
-[ext_resource type="Texture2D" path="res://Assets/UI/bar_xp.png" id="19"]
-[ext_resource type="Texture2D" path="res://Assets/UI/bar_light.png" id="20"]
-[ext_resource type="Texture2D" path="res://Assets/UI/bar_cd.png" id="21"]
-[ext_resource type="Texture2D" path="res://Assets/UI/divider.png" id="22"]
+[ext_resource type="FontFile" uid="uid://ccd3t16mxo3mp" path="res://Assets/UI/Fonts/lantern.fnt" id="1"]
+[ext_resource type="Texture2D" uid="uid://jlrhre3ktlk2" path="res://Assets/UI/panel.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://dd4tyab15l6ud" path="res://Assets/UI/panel_dark.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://drb63uoienvmt" path="res://Assets/UI/panel_gold.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://lqu2hw86dib7" path="res://Assets/UI/slot.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://xqblxv7bvvc4" path="res://Assets/UI/slot_selected.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://cktounr38prfi" path="res://Assets/UI/slot_disabled.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://2c17fgvotogo" path="res://Assets/UI/slot_ok.png" id="8"]
+[ext_resource type="Texture2D" uid="uid://befw31jsayfn5" path="res://Assets/UI/button_normal.png" id="9"]
+[ext_resource type="Texture2D" uid="uid://d2x0jr77h05qd" path="res://Assets/UI/button_hover.png" id="10"]
+[ext_resource type="Texture2D" uid="uid://cg7bln2yso1mi" path="res://Assets/UI/button_pressed.png" id="11"]
+[ext_resource type="Texture2D" uid="uid://bl1y2mvtbd5eo" path="res://Assets/UI/button_disabled.png" id="12"]
+[ext_resource type="Texture2D" uid="uid://2i04djal1c1g" path="res://Assets/UI/button_selected.png" id="13"]
+[ext_resource type="Texture2D" uid="uid://dnxgnx1v6t06p" path="res://Assets/UI/tab_normal.png" id="14"]
+[ext_resource type="Texture2D" uid="uid://blhpga6s3w8wo" path="res://Assets/UI/tab_selected.png" id="15"]
+[ext_resource type="Texture2D" uid="uid://d1vnqp7hswahj" path="res://Assets/UI/keycap.png" id="16"]
+[ext_resource type="Texture2D" uid="uid://b3xgycp0itkjv" path="res://Assets/UI/bar_bg.png" id="17"]
+[ext_resource type="Texture2D" uid="uid://dq08cc06b3d52" path="res://Assets/UI/bar_hp.png" id="18"]
+[ext_resource type="Texture2D" uid="uid://d1b1inf2g53rh" path="res://Assets/UI/bar_xp.png" id="19"]
+[ext_resource type="Texture2D" uid="uid://dxed7erdg5w1t" path="res://Assets/UI/bar_light.png" id="20"]
+[ext_resource type="Texture2D" uid="uid://c8tsmigstfh58" path="res://Assets/UI/bar_cd.png" id="21"]
 
-[sub_resource type="StyleBoxTexture" id="sb_panel"]
-texture = ExtResource("2")
-texture_margin_left = 6
-texture_margin_top = 6
-texture_margin_right = 6
-texture_margin_bottom = 6
+[sub_resource type="StyleBoxTexture" id="sb_btn_d2"]
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+texture = ExtResource("12")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_panel_dark"]
-texture = ExtResource("3")
-texture_margin_left = 5
-texture_margin_top = 5
-texture_margin_right = 5
-texture_margin_bottom = 5
-
-[sub_resource type="StyleBoxTexture" id="sb_panel_gold"]
-texture = ExtResource("4")
-texture_margin_left = 6
-texture_margin_top = 6
-texture_margin_right = 6
-texture_margin_bottom = 6
-
-[sub_resource type="StyleBoxTexture" id="sb_slot"]
-texture = ExtResource("5")
-texture_margin_left = 5
-texture_margin_top = 5
-texture_margin_right = 5
-texture_margin_bottom = 5
-
-[sub_resource type="StyleBoxTexture" id="sb_slot_selected"]
-texture = ExtResource("6")
-texture_margin_left = 5
-texture_margin_top = 5
-texture_margin_right = 5
-texture_margin_bottom = 5
-
-[sub_resource type="StyleBoxTexture" id="sb_slot_disabled"]
-texture = ExtResource("7")
-texture_margin_left = 5
-texture_margin_top = 5
-texture_margin_right = 5
-texture_margin_bottom = 5
-
-[sub_resource type="StyleBoxTexture" id="sb_slot_ok"]
-texture = ExtResource("8")
-texture_margin_left = 5
-texture_margin_top = 5
-texture_margin_right = 5
-texture_margin_bottom = 5
-
-[sub_resource type="StyleBoxTexture" id="sb_button_normal"]
+[sub_resource type="StyleBoxTexture" id="sb_btn_n2"]
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
 texture = ExtResource("9")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_button_hover"]
-texture = ExtResource("10")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
-
-[sub_resource type="StyleBoxTexture" id="sb_button_pressed"]
-texture = ExtResource("11")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
+[sub_resource type="StyleBoxTexture" id="sb_btn_s2"]
+content_margin_left = 6.0
+content_margin_top = 2.0
+content_margin_right = 6.0
+content_margin_bottom = 2.0
+texture = ExtResource("13")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxTexture" id="sb_button_disabled"]
 texture = ExtResource("12")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxTexture" id="sb_button_selected"]
 texture = ExtResource("13")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_tab_normal"]
-texture = ExtResource("14")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
+[sub_resource type="StyleBoxTexture" id="sb_button_hover"]
+texture = ExtResource("10")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_tab_selected"]
-texture = ExtResource("15")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
+[sub_resource type="StyleBoxTexture" id="sb_button_normal"]
+texture = ExtResource("9")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_keycap"]
-texture = ExtResource("16")
-texture_margin_left = 3
-texture_margin_top = 3
-texture_margin_right = 3
-texture_margin_bottom = 3
+[sub_resource type="StyleBoxTexture" id="sb_button_pressed"]
+texture = ExtResource("11")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxTexture" id="sb_bar_bg"]
 texture = ExtResource("17")
-texture_margin_left = 2
-texture_margin_top = 2
-texture_margin_right = 2
-texture_margin_bottom = 2
-
-[sub_resource type="StyleBoxTexture" id="sb_bar_hp"]
-texture = ExtResource("18")
-texture_margin_left = 1
-texture_margin_top = 1
-texture_margin_right = 1
-texture_margin_bottom = 1
-
-[sub_resource type="StyleBoxTexture" id="sb_bar_xp"]
-texture = ExtResource("19")
-texture_margin_left = 1
-texture_margin_top = 1
-texture_margin_right = 1
-texture_margin_bottom = 1
-
-[sub_resource type="StyleBoxTexture" id="sb_bar_light"]
-texture = ExtResource("20")
-texture_margin_left = 1
-texture_margin_top = 1
-texture_margin_right = 1
-texture_margin_bottom = 1
+texture_margin_left = 2.0
+texture_margin_top = 2.0
+texture_margin_right = 2.0
+texture_margin_bottom = 2.0
 
 [sub_resource type="StyleBoxTexture" id="sb_bar_cd"]
 texture = ExtResource("21")
-texture_margin_left = 1
-texture_margin_top = 1
-texture_margin_right = 1
-texture_margin_bottom = 1
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_bar_hp"]
+texture = ExtResource("18")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_keycap"]
+texture = ExtResource("16")
+texture_margin_left = 3.0
+texture_margin_top = 3.0
+texture_margin_right = 3.0
+texture_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxTexture" id="sb_bar_light"]
+texture = ExtResource("20")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxTexture" id="sb_panel"]
+texture = ExtResource("2")
+texture_margin_left = 6.0
+texture_margin_top = 6.0
+texture_margin_right = 6.0
+texture_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="sb_panel_dark"]
+texture = ExtResource("3")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxTexture" id="sb_panel_gold"]
+texture = ExtResource("4")
+texture_margin_left = 6.0
+texture_margin_top = 6.0
+texture_margin_right = 6.0
+texture_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="sb_bar_xp"]
+texture = ExtResource("19")
+texture_margin_left = 1.0
+texture_margin_top = 1.0
+texture_margin_right = 1.0
+texture_margin_bottom = 1.0
 
 [sub_resource type="StyleBoxEmpty" id="sb_empty"]
 content_margin_left = 3.0
@@ -170,177 +160,184 @@ content_margin_right = 3.0
 content_margin_bottom = 1.0
 
 [sub_resource type="StyleBoxTexture" id="sb_row_sel"]
-texture = ExtResource("13")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
 content_margin_left = 3.0
 content_margin_top = 1.0
 content_margin_right = 3.0
 content_margin_bottom = 1.0
+texture = ExtResource("13")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_tab_n2"]
+[sub_resource type="StyleBoxTexture" id="sb_slot"]
+texture = ExtResource("5")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxTexture" id="sb_slot_disabled"]
+texture = ExtResource("7")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxTexture" id="sb_slot_ok"]
+texture = ExtResource("8")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxTexture" id="sb_slot_selected"]
+texture = ExtResource("6")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxTexture" id="sb_tab_normal"]
 texture = ExtResource("14")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
-content_margin_left = 5.0
-content_margin_top = 1.0
-content_margin_right = 5.0
-content_margin_bottom = 1.0
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxTexture" id="sb_tab_selected"]
+texture = ExtResource("15")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxTexture" id="sb_tab_s2"]
-texture = ExtResource("15")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
 content_margin_left = 5.0
 content_margin_top = 1.0
 content_margin_right = 5.0
 content_margin_bottom = 1.0
+texture = ExtResource("15")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxTexture" id="sb_btn_n2"]
-texture = ExtResource("9")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
-content_margin_left = 6.0
-content_margin_top = 2.0
-content_margin_right = 6.0
-content_margin_bottom = 2.0
-
-[sub_resource type="StyleBoxTexture" id="sb_btn_s2"]
-texture = ExtResource("13")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
-content_margin_left = 6.0
-content_margin_top = 2.0
-content_margin_right = 6.0
-content_margin_bottom = 2.0
-
-[sub_resource type="StyleBoxTexture" id="sb_btn_d2"]
-texture = ExtResource("12")
-texture_margin_left = 4
-texture_margin_top = 4
-texture_margin_right = 4
-texture_margin_bottom = 4
-content_margin_left = 6.0
-content_margin_top = 2.0
-content_margin_right = 6.0
-content_margin_bottom = 2.0
-
-
+[sub_resource type="StyleBoxTexture" id="sb_tab_n2"]
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+texture = ExtResource("14")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
 [resource]
 default_font = ExtResource("1")
 default_font_size = 9
+BigLabel/base_type = &"Label"
+BigLabel/colors/font_color = Color(1, 1, 1, 1)
+BigLabel/constants/shadow_offset_x = 2
+BigLabel/constants/shadow_offset_y = 2
+BigLabel/font_sizes/font_size = 18
+BtnDisabled/base_type = &"PanelContainer"
+BtnDisabled/styles/panel = SubResource("sb_btn_d2")
+BtnNormal/base_type = &"PanelContainer"
+BtnNormal/styles/panel = SubResource("sb_btn_n2")
+BtnSelected/base_type = &"PanelContainer"
+BtnSelected/styles/panel = SubResource("sb_btn_s2")
+Button/colors/font_color = Color(0.847, 0.878, 0.941, 1)
+Button/colors/font_disabled_color = Color(0.4, 0.44, 0.52, 1)
+Button/colors/font_hover_color = Color(1, 0.824, 0.247, 1)
+Button/colors/font_pressed_color = Color(1, 0.824, 0.247, 1)
+Button/styles/disabled = SubResource("sb_button_disabled")
+Button/styles/focus = SubResource("sb_button_selected")
+Button/styles/hover = SubResource("sb_button_hover")
+Button/styles/normal = SubResource("sb_button_normal")
+Button/styles/pressed = SubResource("sb_button_pressed")
+ButtonSelected/base_type = &"Button"
+ButtonSelected/styles/hover = SubResource("sb_button_selected")
+ButtonSelected/styles/normal = SubResource("sb_button_selected")
+ButtonSelected/styles/pressed = SubResource("sb_button_selected")
+CdBar/base_type = &"ProgressBar"
+CdBar/styles/background = SubResource("sb_bar_bg")
+CdBar/styles/fill = SubResource("sb_bar_cd")
+CountLabel/base_type = &"Label"
+CountLabel/colors/font_outline_color = Color(0.043, 0.059, 0.102, 1)
+CountLabel/constants/outline_size = 1
+DimLabel/base_type = &"Label"
+DimLabel/colors/font_color = Color(0.541, 0.588, 0.69, 1)
+GoldLabel/base_type = &"Label"
+GoldLabel/colors/font_color = Color(1, 0.824, 0.247, 1)
+GoodLabel/base_type = &"Label"
+GoodLabel/colors/font_color = Color(0.608, 0.878, 0.478, 1)
+HSeparator/constants/separation = 3
+HpBar/base_type = &"ProgressBar"
+HpBar/styles/background = SubResource("sb_bar_bg")
+HpBar/styles/fill = SubResource("sb_bar_hp")
+Keycap/base_type = &"PanelContainer"
+Keycap/styles/panel = SubResource("sb_keycap")
 Label/colors/font_color = Color(0.847, 0.878, 0.941, 1)
 Label/colors/font_shadow_color = Color(0.035, 0.047, 0.078, 1)
+Label/constants/line_spacing = 1
 Label/constants/shadow_offset_x = 1
 Label/constants/shadow_offset_y = 1
-Label/constants/line_spacing = 1
+Lantern/colors/bad = Color(0.94, 0.42, 0.37, 1)
+Lantern/colors/dim = Color(0.541, 0.588, 0.69, 1)
+Lantern/colors/gold = Color(0.91, 0.722, 0.29, 1)
+Lantern/colors/gold_hi = Color(1, 0.824, 0.247, 1)
+Lantern/colors/good = Color(0.608, 0.878, 0.478, 1)
+Lantern/colors/ink = Color(0.035, 0.047, 0.078, 1)
+Lantern/colors/text = Color(0.847, 0.878, 0.941, 1)
+Lantern/colors/warn = Color(1, 0.7, 0.42, 1)
+LightBar/base_type = &"ProgressBar"
+LightBar/styles/background = SubResource("sb_bar_bg")
+LightBar/styles/fill = SubResource("sb_bar_light")
 Panel/styles/panel = SubResource("sb_panel")
 PanelContainer/styles/panel = SubResource("sb_panel")
 PanelDark/base_type = &"PanelContainer"
 PanelDark/styles/panel = SubResource("sb_panel_dark")
 PanelGold/base_type = &"PanelContainer"
 PanelGold/styles/panel = SubResource("sb_panel_gold")
-Slot/base_type = &"PanelContainer"
-Slot/styles/panel = SubResource("sb_slot")
-SlotSelected/base_type = &"PanelContainer"
-SlotSelected/styles/panel = SubResource("sb_slot_selected")
-SlotDisabled/base_type = &"PanelContainer"
-SlotDisabled/styles/panel = SubResource("sb_slot_disabled")
-SlotOk/base_type = &"PanelContainer"
-SlotOk/styles/panel = SubResource("sb_slot_ok")
-Keycap/base_type = &"PanelContainer"
-Keycap/styles/panel = SubResource("sb_keycap")
-Button/styles/normal = SubResource("sb_button_normal")
-Button/styles/hover = SubResource("sb_button_hover")
-Button/styles/pressed = SubResource("sb_button_pressed")
-Button/styles/disabled = SubResource("sb_button_disabled")
-Button/styles/focus = SubResource("sb_button_selected")
-Button/colors/font_color = Color(0.847, 0.878, 0.941, 1)
-Button/colors/font_hover_color = Color(1, 0.824, 0.247, 1)
-Button/colors/font_pressed_color = Color(1, 0.824, 0.247, 1)
-Button/colors/font_disabled_color = Color(0.4, 0.44, 0.52, 1)
-ButtonSelected/base_type = &"Button"
-ButtonSelected/styles/normal = SubResource("sb_button_selected")
-ButtonSelected/styles/hover = SubResource("sb_button_selected")
-ButtonSelected/styles/pressed = SubResource("sb_button_selected")
-Tab/base_type = &"Button"
-Tab/styles/normal = SubResource("sb_tab_normal")
-Tab/styles/hover = SubResource("sb_button_hover")
-Tab/styles/pressed = SubResource("sb_tab_selected")
-TabSelected/base_type = &"Button"
-TabSelected/styles/normal = SubResource("sb_tab_selected")
-TabSelected/styles/hover = SubResource("sb_tab_selected")
-TabSelected/styles/pressed = SubResource("sb_tab_selected")
-TabSelected/colors/font_color = Color(1, 0.824, 0.247, 1)
+PlainLabel/base_type = &"Label"
+PlainLabel/colors/font_color = Color(1, 1, 1, 1)
+ProgressBar/constants/outline_size = 0
 ProgressBar/styles/background = SubResource("sb_bar_bg")
 ProgressBar/styles/fill = SubResource("sb_bar_xp")
-ProgressBar/constants/outline_size = 0
-HpBar/base_type = &"ProgressBar"
-HpBar/styles/background = SubResource("sb_bar_bg")
-HpBar/styles/fill = SubResource("sb_bar_hp")
-XpBar/base_type = &"ProgressBar"
-XpBar/styles/background = SubResource("sb_bar_bg")
-XpBar/styles/fill = SubResource("sb_bar_xp")
-LightBar/base_type = &"ProgressBar"
-LightBar/styles/background = SubResource("sb_bar_bg")
-LightBar/styles/fill = SubResource("sb_bar_light")
-CdBar/base_type = &"ProgressBar"
-CdBar/styles/background = SubResource("sb_bar_bg")
-CdBar/styles/fill = SubResource("sb_bar_cd")
-GoldLabel/base_type = &"Label"
-GoldLabel/colors/font_color = Color(1, 0.824, 0.247, 1)
-CountLabel/base_type = &"Label"
-CountLabel/colors/font_outline_color = Color(0.043, 0.059, 0.102, 1)
-CountLabel/constants/outline_size = 1
-DimLabel/base_type = &"Label"
-DimLabel/colors/font_color = Color(0.541, 0.588, 0.69, 1)
-WarnLabel/base_type = &"Label"
-WarnLabel/colors/font_color = Color(1, 0.7, 0.42, 1)
-GoodLabel/base_type = &"Label"
-GoodLabel/colors/font_color = Color(0.608, 0.878, 0.478, 1)
-HSeparator/constants/separation = 3
-BtnNormal/base_type = &"PanelContainer"
-BtnNormal/styles/panel = SubResource("sb_btn_n2")
-BtnSelected/base_type = &"PanelContainer"
-BtnSelected/styles/panel = SubResource("sb_btn_s2")
-BtnDisabled/base_type = &"PanelContainer"
-BtnDisabled/styles/panel = SubResource("sb_btn_d2")
-TabNormal/base_type = &"PanelContainer"
-TabNormal/styles/panel = SubResource("sb_tab_n2")
-TabActive/base_type = &"PanelContainer"
-TabActive/styles/panel = SubResource("sb_tab_s2")
 RichTextLabel/colors/default_color = Color(0.847, 0.878, 0.941, 1)
 RichTextLabel/colors/font_shadow_color = Color(0.035, 0.047, 0.078, 1)
+RichTextLabel/constants/line_separation = 1
 RichTextLabel/constants/shadow_offset_x = 1
 RichTextLabel/constants/shadow_offset_y = 1
-RichTextLabel/constants/line_separation = 1
 RowNormal/base_type = &"PanelContainer"
 RowNormal/styles/panel = SubResource("sb_empty")
 RowSelected/base_type = &"PanelContainer"
 RowSelected/styles/panel = SubResource("sb_row_sel")
-PlainLabel/base_type = &"Label"
-PlainLabel/colors/font_color = Color(1, 1, 1, 1)
-BigLabel/base_type = &"Label"
-BigLabel/colors/font_color = Color(1, 1, 1, 1)
-BigLabel/constants/shadow_offset_x = 2
-BigLabel/constants/shadow_offset_y = 2
-BigLabel/font_sizes/font_size = 18
-Lantern/colors/gold = Color(0.91, 0.722, 0.29, 1)
-Lantern/colors/gold_hi = Color(1, 0.824, 0.247, 1)
-Lantern/colors/text = Color(0.847, 0.878, 0.941, 1)
-Lantern/colors/dim = Color(0.541, 0.588, 0.69, 1)
-Lantern/colors/warn = Color(1, 0.7, 0.42, 1)
-Lantern/colors/good = Color(0.608, 0.878, 0.478, 1)
-Lantern/colors/bad = Color(0.94, 0.42, 0.37, 1)
-Lantern/colors/ink = Color(0.035, 0.047, 0.078, 1)
+Slot/base_type = &"PanelContainer"
+Slot/styles/panel = SubResource("sb_slot")
+SlotDisabled/base_type = &"PanelContainer"
+SlotDisabled/styles/panel = SubResource("sb_slot_disabled")
+SlotOk/base_type = &"PanelContainer"
+SlotOk/styles/panel = SubResource("sb_slot_ok")
+SlotSelected/base_type = &"PanelContainer"
+SlotSelected/styles/panel = SubResource("sb_slot_selected")
+Tab/base_type = &"Button"
+Tab/styles/hover = SubResource("sb_button_hover")
+Tab/styles/normal = SubResource("sb_tab_normal")
+Tab/styles/pressed = SubResource("sb_tab_selected")
+TabActive/base_type = &"PanelContainer"
+TabActive/styles/panel = SubResource("sb_tab_s2")
+TabNormal/base_type = &"PanelContainer"
+TabNormal/styles/panel = SubResource("sb_tab_n2")
+TabSelected/base_type = &"Button"
+TabSelected/colors/font_color = Color(1, 0.824, 0.247, 1)
+TabSelected/styles/hover = SubResource("sb_tab_selected")
+TabSelected/styles/normal = SubResource("sb_tab_selected")
+TabSelected/styles/pressed = SubResource("sb_tab_selected")
+WarnLabel/base_type = &"Label"
+WarnLabel/colors/font_color = Color(1, 0.7, 0.42, 1)
+XpBar/base_type = &"ProgressBar"
+XpBar/styles/background = SubResource("sb_bar_bg")
+XpBar/styles/fill = SubResource("sb_bar_xp")

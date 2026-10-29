@@ -19,6 +19,7 @@ public partial class CombatTuning : Resource
     [Export] public float EnemyAttackRate = 1.15f;             // как быстро восстанавливаются паузы между атаками
     [Export] public float[] BiomeDamage = { 1f, 1.15f, 1.3f, 1.5f, 1.7f };
     [Export] public float[] BiomeHp = { 1f, 1.2f, 1.4f, 1.6f, 1.8f };
+    [Export] public float SpawnDelayMul = 1.8f, SpawnCapMul = .6f;     // реже появляются (×1,8 к паузе) и меньше одновременно (×0,6 к лимиту): лес можно спокойно обживать
     [Export] public int SpawnCapBonus = 2;                     // дополнительные враги на территории
     [Export] public int MaxAttackers = 3;                      // одновременно готовящихся ближних атак
     [Export] public float ShadeWindup = .38f;                  // подготовка рывка тени
