@@ -97,6 +97,7 @@ public partial class Game
 
     void BuildNetScript(bool host)
     {
+        SkillLv[(int)Tech.Spark] = 1; RecomputeEffects();                                // у героев тестов есть личный свет: проверяется передача его радиуса
         int fails = 0; string expect = OS.GetEnvironment("LAMP_NET_EXPECT");
         void Check(bool ok, string what) { if (!ok) fails++; GD.Print($"[check] {(ok ? "PASS" : "FAIL")} {what}"); }
         var expectedClient = new Vector2((W.Spawn.X + .5f) * TS + 64, (W.Spawn.Y + .5f) * TS + 32);

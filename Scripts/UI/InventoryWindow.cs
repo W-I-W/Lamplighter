@@ -23,7 +23,8 @@ public partial class InventoryWindow : Control
         while (slots.Count <= i)
         {
             var s = GD.Load<PackedScene>("res://Scenes/UI/Slot.tscn").Instantiate<UiSlot>(); int idx = slots.Count; s.Index = idx;
-            s.Clicked += i2 => G.WinCur = i2; grid.AddChild(s); slots.Add(s);
+            s.Clicked += i2 => G.WinCur = i2; s.RightClicked += i2 => { if (i2 < shown.Count && G.ResUi != null && G.ResUi.HasActions(shown[i2])) { G.WinCur = i2; G.ResUi.Open(shown[i2]); } };
+            grid.AddChild(s); slots.Add(s);
         }
         return slots[i];
     }
@@ -40,7 +41,7 @@ public partial class InventoryWindow : Control
             int it = vis[i], n = G.Inv[it]; bool sel = i == G.WinCur;
             if (!listChanged && shownCnt[i] == n && !(sel != (i == shownSel))) continue;       // ячейка не изменилась
             var s = Slot(i); s.Visible = true; shownCnt[i] = n;
-            s.Set(UiIcons.Item(it), n >= 10000 ? $"{n / 1000}k" : n.ToString(), "", sel ? SlotState.Selected : SlotState.Normal, 0, "", 1f);
+            s.Set(UiIcons.Item(it), n >= 10000 ? $"{n / 1000}k" : n.ToString(), "", sel ? SlotState.Selected : SlotState.Normal, 0, "", n > 0 ? 1f : .45f);
         }
         shownSel = G.WinCur;
         if (vis.Count == 0) { nameL.Text = Loc.T("Инвентарь пуст"); desc.Text = Loc.T("Добывайте ресурсы: они появятся здесь"); return; }
@@ -48,6 +49,7 @@ public partial class InventoryWindow : Control
         nameL.Text = $"{It.Ic(c)} {Loc.T(It.Names[c])} ×{G.Inv[c]}";
         string d = Game.Tradable(c) ? string.Format(Loc.T("Цена продажи: {0} · цена покупки: {1}"), G.SellPrice(c), G.BuyPrice(c)) : Loc.T("Не продаётся");
         if (G.Stock[c] > 0) d += "\n" + string.Format(Loc.T("На складе: {0}"), G.Stock[c]);
+        d += "\n" + Loc.T("ПКМ — действия");
         if (d != lastDesc) { lastDesc = d; desc.Text = d; }
     }
 }

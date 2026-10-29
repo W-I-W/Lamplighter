@@ -134,7 +134,7 @@ public partial class Game
     }
 
     /// <summary>Курсор над любым элементом интерфейса (панели HUD, меню строительства, инвентарь, окна).</summary>
-    public bool UiOver(Vector2 logical) => (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical, UiScaleVp)) || (buildMenu != null && buildMenu.IsOver(logical)) || (upgradeWindow != null && upgradeWindow.IsOver(logical)) || (equipWindow != null && equipWindow.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
+    public bool UiOver(Vector2 logical) => (ResUi != null && ResUi.Active) || (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical, UiScaleVp)) || (buildMenu != null && buildMenu.IsOver(logical)) || (upgradeWindow != null && upgradeWindow.IsOver(logical)) || (equipWindow != null && equipWindow.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
     public void PressWindowKey(Key k) => WindowKey(k, false);
     public string NeedText(int[][] cost) => NeedStr(cost);
     public int HaveOf(int item) => HaveAny(item);

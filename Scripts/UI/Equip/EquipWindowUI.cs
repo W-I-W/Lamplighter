@@ -12,14 +12,15 @@ public partial class EquipWindowUI : Control
 {
     public Game G;
     static readonly Color Gold = new("#ffd23f"), Dim = new("#8a96b0"), Good = new("#9be07a"), Bad = new("#f06a5e"), Cyan = new("#8ff0ff"), Text = new("#d8e0f0");
-    Control panel; HBoxContainer tabsBox; VBoxContainer list, centerBox, rightBox; ScrollContainer scroll, rscroll; Label title, closeHint, foot;
+    Control panel, listPanel, rightPanel, centerPanel; HBoxContainer tabsBox; VBoxContainer list, centerBox, rightBox; ScrollContainer scroll, rscroll; Label title, closeHint, foot;
     readonly List<Button> tabs = new(); readonly List<EquipCardUI> cards = new(); readonly List<EquipSocketUI> sockets = new();
     PackedScene cardScene, socketScene; bool wasOpen; string sig = ""; float rebuildT; int lastTab = -1; Tween openTw, bodyTw;
     static readonly string[] TabNames = { "Оружие", "Реликвии", "Создание", "Фонарь" };
+    static readonly string[] TabQuestions = { "Что вы держите и что можно взять в руки", "Найденные реликвии и их бонусы", "Что можно создать прямо сейчас", "Ваш фонарь и его улучшения" };
 
     public override void _Ready()
     {
-        ZIndex = 4040; panel = GetNode<Control>("%Panel"); tabsBox = GetNode<HBoxContainer>("%Tabs"); list = GetNode<VBoxContainer>("%List"); scroll = GetNode<ScrollContainer>("%Scroll");
+        ZIndex = 4040; panel = GetNode<Control>("%Panel"); listPanel = GetNode<Control>("%Scroll").GetParent<Control>(); rightPanel = GetNode<Control>("%RScroll").GetParent<Control>(); centerPanel = GetNode<Control>("%CenterBox").GetParent<Control>(); tabsBox = GetNode<HBoxContainer>("%Tabs"); list = GetNode<VBoxContainer>("%List"); scroll = GetNode<ScrollContainer>("%Scroll");
         centerBox = GetNode<VBoxContainer>("%CenterBox"); rightBox = GetNode<VBoxContainer>("%RightBox"); rscroll = GetNode<ScrollContainer>("%RScroll");
         title = GetNode<Label>("%Title"); closeHint = GetNode<Label>("%CloseHint"); foot = GetNode<Label>("%Foot");
         cardScene = GD.Load<PackedScene>("res://Scenes/UI/EquipCard.tscn"); socketScene = GD.Load<PackedScene>("res://Scenes/UI/EquipSocket.tscn");
@@ -71,8 +72,8 @@ public partial class EquipWindowUI : Control
     {
         var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; h.AddThemeConstantOverride("separation", 4);
         h.AddChild(Icon(ic, 12)); var n = Lbl(name, Dim); n.SizeFlagsHorizontal = SizeFlags.ExpandFill; h.AddChild(n);
-        h.AddChild(Lbl(value, valCol ?? Text));
-        if (delta != null) h.AddChild(Lbl(delta, better ? Good : Bad));
+        h.AddChild(Lbl(value, valCol ?? Text, false, null, true));
+        if (delta != null) h.AddChild(Lbl(delta, better ? Good : Bad, false, null, true));
         return h;
     }
 
@@ -139,10 +140,13 @@ public partial class EquipWindowUI : Control
     // ───────────────────────── перестроение ─────────────────────────
     void Refresh()
     {
-        title.Text = T("Экипировка"); closeHint.Text = T("Esc — закрыть"); foot.Text = T("←/→ вкладки · ↑/↓ выбор · двойной щелчок — главное действие");
+        title.Text = T("Снаряжение"); closeHint.Text = T("Esc — закрыть"); foot.Text = T(TabQuestions[Mathf.Clamp(G.WinTab, 0, 3)]);
         RefreshTabs();
-        Clear(centerBox); Clear(rightBox);
+        Clear(centerBox); Clear(rightBox); if (stationHint != null) stationHint.Visible = false;
         switch (G.WinTab) { case 0: BuildWeapons(); break; case 1: BuildRelics(); break; case 2: BuildCraft(); break; default: BuildLantern(); break; }
+        // пустые части не растягиваем: без списка (пустые реликвии) центр занимает его место, без сведений скрыта правая панель
+        bool anyList = false; foreach (var cd in cards) if (cd.Visible) { anyList = true; break; }
+        listPanel.Visible = anyList || G.WinTab == 2; rightPanel.Visible = rightBox.GetChildCount() > 0; centerPanel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         if (lastTab != G.WinTab) { lastTab = G.WinTab; scroll.ScrollVertical = 0; bodyTw?.Kill(); var body = scroll.GetParent().GetParent<Control>(); body.Modulate = new Color(1, 1, 1, 0); bodyTw = CreateTween(); bodyTw.TweenProperty(body, "modulate", Colors.White, .14f); }
     }
 
@@ -170,71 +174,73 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < total; i++)
         {
             var c = Card(i); c.Visible = true; var r = G.EquipRef(i); int hs = r != null ? G.HotSlotOf(r) + 1 : 0; bool held = G.EqIsHeld(i);
-            if (i < nt) { var td = ToolDef.Get(tl[i]); string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; c.Bind(i, UiIcons.Item(td.Icon), T(nm), Text, T("Инструмент"), Dim, held, hs, i == G.WinCur); }
+            if (i < nt) { var td = ToolDef.Get(tl[i]); string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; c.Bind(i, UiIcons.Item(td.Icon), T(nm), Text, held ? T("Сейчас в руках") : hs > 0 ? $"{T("В хотбаре")}: {T("слот")} {hs}" : T("Инструмент"), held ? Good : hs > 0 ? Cyan : Dim, held, hs, i == G.WinCur); }
             else { var d = Db.Weapon(G.Owned[i - nt].Id); c.Bind(i, UiIcons.Item(G.HotIcon(Game.RefWeapon(d.Id))), T(d.Name), Db.RarCol[(int)d.Rar], $"{T(Db.ClassNames[(int)d.Cls])} · {T(Db.RarName[(int)d.Rar])}", Dim, held, hs, i == G.WinCur); }
         }
         for (int i = total; i < cards.Count; i++) cards[i].Visible = false;
         if (G.WinCur < nt) BuildToolDetails(tl[G.WinCur]); else BuildWeaponDetails(G.WinCur - nt);
     }
 
+    /// <summary>Назначение в хотбар: три пиктограммы-слота. Клик по слоту ставит сюда предмет, клик по слоту с этим предметом освобождает его.</summary>
     void BuildHotbarAssign(int row)
     {
         var r = G.EquipRef(row); if (r == null) return; int cur = G.HotSlotOf(r);
-        centerBox.AddChild(Lbl("Назначить в слот хотбара", Dim, false, "DimLabel"));
-        var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 3); centerBox.AddChild(h);
+        centerBox.AddChild(Lbl("В хотбар", Dim, false, "DimLabel"));
+        var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 4); centerBox.AddChild(h);
         for (int s = 0; s < Game.HotCount; s++)
         {
-            int slot = s; var b = new Button { Text = (s + 1).ToString(), FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(34, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            if (cur == s) { b.AddThemeColorOverride("font_color", Gold); b.Text = "[" + (s + 1) + "]"; b.TooltipText = T("Сейчас в этом слоте"); }
-            else { var occ = G.Hot[s]; b.TooltipText = occ != null ? T("Заменит") + ": " + T(G.HotName(occ)) : T("Свободный слот"); }
-            b.Pressed += () => { G.EqHotAssign(row, slot); Flash(centerBox); }; h.AddChild(b);
+            int slot = s; var occ = G.Hot[s]; var chip = new HotSlotChipUI { Slot = s, Mine = cur == s, Occupant = occ != null && G.HotValid(occ) ? UiIcons.Item(G.HotIcon(occ)) : null };
+            chip.TooltipText = cur == s ? T("Сейчас в этом слоте. Клик — освободить") : occ != null && G.HotValid(occ) ? T("Заменит") + ": " + T(G.HotName(occ)) : T("Свободный слот");
+            chip.Clicked = () => { if (cur == slot) G.EqHotClear(row); else G.EqHotAssign(row, slot); Flash(centerBox); }; h.AddChild(chip);
         }
-        centerBox.AddChild(Lbl("Shift + 1–3", Dim, false, "DimLabel"));
     }
+
+    static string Level3(float v, float lo, float hi, string a, string b, string c) => v < lo ? T(a) : v < hi ? T(b) : T(c);
 
     void BuildToolDetails(string id)
     {
-        int row = G.WinCur; var td = ToolDef.Get(id); string nm = id == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; bool held = G.EqIsHeld(row);
-        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 6); head.AddChild(Icon(UiIcons.Item(td.Icon), 32));
-        var tt = new VBoxContainer(); tt.AddChild(Lbl(nm, Gold, true, "GoldLabel")); tt.AddChild(Lbl(held ? "Надето" : "Инструмент", held ? Good : Dim)); head.AddChild(tt); centerBox.AddChild(head);
-        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон врагам", $"{Mathf.RoundToInt(td.CombatDamage * 100)}%"));
-        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), "Добыча", $"×{td.MiningPower:0.#}", Cyan));
-        centerBox.AddChild(Btn(held ? "Уже в руках" : "Экипировать", "Enter", () => { G.EqEquipRow(row); Flash(centerBox); }, !held, true));
-        if (G.HotSlotOf(Game.RefTool(id)) >= 0) centerBox.AddChild(Btn("Убрать из хотбара", "X", () => G.EqHotClear(row)));
+        int row = G.WinCur; var td = ToolDef.Get(id); string nm = id == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; bool held = G.EqIsHeld(row); int slot = G.HotSlotOf(Game.RefTool(id));
+        string status = held ? "Сейчас в руках" : slot >= 0 ? $"{T("В хотбаре")}: {T("слот")} {slot + 1}" : "Можно взять в руки";
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(td.Icon), null, T(nm), Gold, T(status), held ? Good : slot >= 0 ? Cyan : Dim, T(td.Desc)));
+        var ok = new List<string>(); if (td.EffWood > 0) ok.Add(T("дерево")); if (td.EffStone > 0) ok.Add(T("камень")); if (td.EffOre > 0) ok.Add(T("руда")); if (td.EffRubble > 0) ok.Add(T("завалы"));
+        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", Level3(td.CombatDamage, .7f, 1.2f, "низкий", "обычный", "высокий")));
+        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), "Добыча", Level3(td.MiningPower, 1.05f, 1.7f, "обычная", "быстрая", "очень быстрая"), Cyan));
+        if (ok.Count > 0) centerBox.AddChild(Lbl($"{T("Подходит")}: {string.Join(", ", ok)}", Dim, true, null, true));
+        if (!held) centerBox.AddChild(MainActionButtonUI.Make("Взять в руки", () => { G.EqEquipRow(row); Flash(centerBox); }, true));
         BuildHotbarAssign(row);
-        rightBox.AddChild(Lbl(td.Desc, Text, true));
-        rightBox.AddChild(Lbl("Эффективность", Gold, false, "GoldLabel"));
-        foreach (var (n, v) in new[] { ("Дерево", td.EffWood), ("Камень", td.EffStone), ("Руда", td.EffOre), ("Завалы", td.EffRubble) }) rightBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), n, v <= 0 ? "—" : $"×{v:0.#}", v <= 0 ? Dim : Text));
+        if (G.Owned.Count == 0) rightBox.AddChild(EmptyStatePanelUI.Make(UiIcons.Item(UiIcons.Sword), 0, T("Пока только базовый инструмент"), T("Создайте оружие у печи или кузницы — оно появится здесь.")));
     }
 
     void BuildWeaponDetails(int idx)
     {
-        if (idx < 0 || idx >= G.Owned.Count) return; var ow = G.Owned[idx]; var w = Db.Weapon(ow.Id); int row = G.ToolList().Count + idx; bool held = G.EqIsHeld(row);
-        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 6); head.AddChild(Icon(UiIcons.Item(G.HotIcon(Game.RefWeapon(w.Id))), 32, null));
-        var tt = new VBoxContainer(); tt.AddChild(Lbl(w.Name, Db.RarCol[(int)w.Rar], true)); tt.AddChild(Lbl($"{T(Db.ClassNames[(int)w.Cls])} · {T(Db.RarName[(int)w.Rar])}", Dim)); head.AddChild(tt); centerBox.AddChild(head);
+        if (idx < 0 || idx >= G.Owned.Count) return; var ow = G.Owned[idx]; var w = Db.Weapon(ow.Id); int row = G.ToolList().Count + idx; bool held = G.EqIsHeld(row); int slot = G.HotSlotOf(Game.RefWeapon(w.Id));
+        string status = held ? "Сейчас в руках" : slot >= 0 ? $"{T("В хотбаре")}: {T("слот")} {slot + 1}" : "Можно взять в руки";
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(G.HotIcon(Game.RefWeapon(w.Id))), null, T(w.Name), Db.RarCol[(int)w.Rar], T(status), held ? Good : slot >= 0 ? Cyan : Dim, $"{T(Db.ClassNames[(int)w.Cls])} · {T(Db.RarName[(int)w.Rar])}"));
         float dmg = G.WeaponDmg(w), rate = 1f / w.Cd; var cmp = held ? null : HeldWeaponDef();
         string D(float a, float b2, string fmt = "0.0#") { float d = a - b2; return Mathf.Abs(d) < .005f ? null : (d > 0 ? "+" : "") + d.ToString(fmt); }
         centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", dmg.ToString("0.#"), Text, cmp == null ? null : D(dmg, G.WeaponDmg(cmp)), cmp == null || dmg >= G.WeaponDmg(cmp)));
-        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Hammer), "Скорость", $"{rate:0.0}/{T("с")}", Text, cmp == null ? null : D(rate, 1f / cmp.Cd, "0.0"), cmp == null || rate >= 1f / cmp.Cd));
-        if (w.Cls == WClass.Sword) centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), "Дальность", $"{w.Reach:0}", Text, cmp != null && cmp.Cls == WClass.Sword ? D(w.Reach, cmp.Reach, "0") : null, cmp == null || w.Reach >= cmp.Reach));
-        else centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Bow), "Скорость снаряда", $"{w.Speed:0}", Text, cmp != null && cmp.Cls != WClass.Sword ? D(w.Speed, cmp.Speed, "0") : null, cmp == null || w.Speed >= cmp.Speed));
-        centerBox.AddChild(Stat(UiIcons.Item(It.Shard), "Слоты вставок", $"{ow.Mods.Count}/{w.Slots}", Cyan));
-        // ячейки вставок
-        var sh = new HBoxContainer(); sh.AddThemeConstantOverride("separation", 4); centerBox.AddChild(sh);
-        while (sockets.Count < w.Slots) sockets.Add(null);
-        for (int s = 0; s < w.Slots; s++)
+        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Hammer), "Скорость", Level3(rate, .9f, 1.6f, "медленная", "обычная", "быстрая"), Text, cmp == null ? null : D(rate, 1f / cmp.Cd, "0.0"), cmp == null || rate >= 1f / cmp.Cd));
+        if (w.Cls == WClass.Sword) centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), "Дальность", Level3(w.Reach, 24f, 34f, "ближняя", "средняя", "дальняя")));
+        else centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Bow), "Дальность", T("стреляет издалека")));
+        if (w.Slots > 0)
         {
-            var so = socketScene.Instantiate<EquipSocketUI>(); sh.AddChild(so); int si = s;
-            if (s < ow.Mods.Count) { var m = Db.Mods[ow.Mods[s]]; so.Bind(s, UiIcons.Item(Game.ModIcon(m.Id)), Game.ModTint(m.Id), G.EqSocket == s, $"{T(m.Name)}\n{T(m.Desc)}\n{T("ПКМ — снять")}"); }
-            else so.Bind(s, null, Colors.White, G.EqSocket == s, T("Пустая ячейка: нажмите, чтобы выбрать вставку"));
-            so.Picked += x => { G.EqSocket = x.Index; G.EqPick = -1; Sfx.Play("tick", -8, 1.5f); }; so.Removed += x => { if (x.Index < ow.Mods.Count && held) { x.Flash(Cyan); G.EqRemove(x.Index); } };
+            centerBox.AddChild(Stat(UiIcons.Item(It.Shard), "Вставки", $"{ow.Mods.Count}/{w.Slots}", Cyan));
+            var sh = new HBoxContainer(); sh.AddThemeConstantOverride("separation", 4); centerBox.AddChild(sh);
+            while (sockets.Count < w.Slots) sockets.Add(null);
+            for (int s = 0; s < w.Slots; s++)
+            {
+                var so = socketScene.Instantiate<EquipSocketUI>(); sh.AddChild(so); int si = s;
+                if (s < ow.Mods.Count) { var m = Db.Mods[ow.Mods[s]]; so.Bind(s, UiIcons.Item(Game.ModIcon(m.Id)), Game.ModTint(m.Id), G.EqSocket == s, $"{T(m.Name)}\n{T(m.Desc)}\n{T("ПКМ — снять")}"); }
+                else so.Bind(s, null, Colors.White, G.EqSocket == s, T("Пустая ячейка: нажмите, чтобы выбрать вставку"));
+                so.Picked += x => { G.EqSocket = x.Index; G.EqPick = -1; Sfx.Play("tick", -8, 1.5f); }; so.Removed += x => { if (x.Index < ow.Mods.Count && held) { x.Flash(Cyan); G.EqRemove(x.Index); } };
+            }
         }
-        centerBox.AddChild(Btn(held ? "Уже в руках" : "Экипировать", "Enter", () => { G.EqEquipRow(row); Flash(centerBox); }, !held, true));
-        if (G.HotSlotOf(Game.RefWeapon(w.Id)) >= 0) centerBox.AddChild(Btn("Убрать из хотбара", "X", () => G.EqHotClear(row)));
+        if (!held) centerBox.AddChild(MainActionButtonUI.Make("Взять в руки", () => { G.EqEquipRow(row); Flash(centerBox); }, true));
         BuildHotbarAssign(row);
         // правая панель: описание, эффекты, выбор вставки
         rightBox.AddChild(Lbl(w.Desc, Text, true));
-        if (held) { var eff = G.EffectsText(); if (eff != "") { rightBox.AddChild(Lbl("Эффекты", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(eff, Cyan, true)); } }
+        if (held) { var eff = G.EffectsText(); if (eff != "") { rightBox.AddChild(Lbl("Бонусы", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(eff, Cyan, true)); } }
+        if (w.Slots <= 0) return;
         if (!held) { rightBox.AddChild(Lbl("Чтобы менять вставки, возьмите оружие в руки.", Dim, true)); return; }
         BuildSocketPanel(ow, w);
     }
@@ -282,25 +288,24 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < n; i++)
         {
             var d = Db.Relic(G.OwnedRelics[i]); var c = Card(i); c.Visible = true; if (d == null) { c.Visible = false; continue; }
-            c.Bind(i, UiIcons.Item(It.Relic), T(d.Title), Db.RarCol[d.Rarity], T(Db.RarName[d.Rarity]), Dim, G.EquippedRelics.Contains(d.Id), 0, i == G.WinCur, false, d.Tint);
+            bool eqd = G.EquippedRelics.Contains(d.Id);
+            c.Bind(i, UiIcons.Item(It.Relic), T(d.Title), Db.RarCol[d.Rarity], eqd ? T("Надета") : T(Db.RarName[d.Rarity]), eqd ? Good : Dim, eqd, 0, i == G.WinCur, false, d.Tint);
         }
         for (int i = n; i < cards.Count; i++) cards[i].Visible = false;
-        centerBox.AddChild(Lbl($"{T("Слоты")}: {G.EquippedRelics.Count}/{G.RelicSlots}", Dim, false, "DimLabel", true));
+        if (n == 0)
+        {
+            // пустая вкладка должна выглядеть живой: три слота-силуэта и подсказка, где искать
+            centerBox.AddChild(EmptyStatePanelUI.Make(UiIcons.Item(It.Relic), Math.Max(3, G.RelicSlots), T("У вас пока нет реликвий"), T("Их можно найти в сундуках, купить у торговцев или получить за опасные вылазки.")));
+            return;
+        }
+        centerBox.AddChild(Lbl($"{T("Надето")}: {G.EquippedRelics.Count} {T("из")} {G.RelicSlots}", Dim, false, "DimLabel", true));
         var sh = new HBoxContainer(); sh.AddThemeConstantOverride("separation", 3); centerBox.AddChild(sh);
-        for (int s = 0; s < G.RelicSlots; s++) { var sq = new PanelContainer { ThemeTypeVariation = s < G.EquippedRelics.Count ? "SlotOk" : "Slot", CustomMinimumSize = new Vector2(20, 20) }; if (s < G.EquippedRelics.Count) { var rd = Db.Relic(G.EquippedRelics[s]); var ti = Icon(UiIcons.Item(It.Relic), 14, rd?.Tint); ti.TooltipText = rd != null ? T(rd.Title) : ""; sq.AddChild(ti); sq.TooltipText = rd != null ? T(rd.Title) : ""; sq.MouseFilter = MouseFilterEnum.Stop; } sh.AddChild(sq); }
-        if (n == 0) { centerBox.AddChild(Lbl("Реликвий нет: ищите в сундуках и у торговцев", Dim, true)); return; }
+        for (int s = 0; s < G.RelicSlots; s++) { var sq = new PanelContainer { ThemeTypeVariation = s < G.EquippedRelics.Count ? "SlotOk" : "Slot", CustomMinimumSize = new Vector2(22, 22) }; if (s < G.EquippedRelics.Count) { var rd = Db.Relic(G.EquippedRelics[s]); var ti = Icon(UiIcons.Item(It.Relic), 14, rd?.Tint); ti.TooltipText = rd != null ? T(rd.Title) : ""; sq.AddChild(ti); sq.TooltipText = rd != null ? T(rd.Title) : ""; sq.MouseFilter = MouseFilterEnum.Stop; } sh.AddChild(sq); }
         var rel = Db.Relic(G.OwnedRelics[G.WinCur]); if (rel == null) return; bool eq = G.EquippedRelics.Contains(rel.Id); int cur = G.WinCur;
-        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 6); head.AddChild(Icon(UiIcons.Item(It.Relic), 32, rel.Tint));
-        var tt = new VBoxContainer(); tt.AddChild(Lbl(rel.Title, Db.RarCol[rel.Rarity], true)); tt.AddChild(Lbl(Db.RarName[rel.Rarity], Dim)); head.AddChild(tt); centerBox.AddChild(head);
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(It.Relic), rel.Tint, T(rel.Title), Db.RarCol[rel.Rarity], eq ? T("Сейчас экипировано") : T(Db.RarName[rel.Rarity]), eq ? Good : Dim));
         bool full = !eq && G.EquippedRelics.Count >= G.RelicSlots;
-        centerBox.AddChild(Btn(eq ? "Снять" : "Надеть", "Enter", () => { G.EqToggleRelic(G.OwnedRelics[cur]); Flash(centerBox); }, eq || !full, true));
-        if (full) centerBox.AddChild(Lbl("Все слоты заняты: сначала снимите другую реликвию.", Bad, true));
-        rightBox.AddChild(Lbl(rel.Desc, Text, true));
-        rightBox.AddChild(Lbl("Свойства", Gold, false, "GoldLabel"));
-        rightBox.AddChild(Lbl(rel.Tags.Length > 0 ? string.Join(", ", rel.Tags) : "без тегов", Cyan, true));
-        if (eq) { var el = new List<string>(); foreach (var e in rel.Effects) el.Add(e); if (el.Count > 0) { rightBox.AddChild(Lbl("Активный эффект", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(string.Join(", ", el), Good, true)); } }
-        var tc = new List<string>(); foreach (var kv in G.TagCount) tc.Add($"{kv.Key} ×{kv.Value}");
-        if (tc.Count > 0) { rightBox.AddChild(Lbl("Теги надетых", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(string.Join(", ", tc), Dim, true)); }
+        centerBox.AddChild(MainActionButtonUI.Make(eq ? "Снять" : "Надеть", () => { G.EqToggleRelic(G.OwnedRelics[cur]); Flash(centerBox); }, eq || !full, full ? T("Все слоты заняты: сначала снимите другую реликвию.") : null));
+        rightBox.AddChild(Lbl("Что даёт", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(rel.Desc, Text, true));
     }
 
     // ───────────────────────── вкладка «Создание» ─────────────────────────
@@ -311,44 +316,62 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < rows.Count; i++)
         {
             var (grp, rec) = rows[i]; var c = Card(i); c.Visible = true;
-            if (rec == null) { bool fold = G.CraftFold.Contains(grp); c.Bind(i, GroupIcon(grp), (fold ? "[+] " : "[-] ") + T(Game.GroupName(grp)), Gold, $"{T("Рецептов")}: {G.RecipesOf(grp).Count}", Dim, false, 0, i == G.WinCur); c.SetTree(1); continue; }
-            var st = G.StateOf(rec); string sub = st == RecState.Owned ? T("есть") : st == RecState.Missing ? T("не хватает") : (rec.Extra != null && rec.Extra() > 0 ? $"{T("в очереди")} {rec.Extra()}" : T("можно создать"));
-            c.Bind(i, rec.Icon >= 0 ? UiIcons.Item(rec.Icon) : GroupIcon(grp), T(rec.Name), st == RecState.Ready ? Good : st == RecState.Owned ? Dim : Text, sub, st == RecState.Missing ? Bad : Dim, st == RecState.Owned, 0, i == G.WinCur, st == RecState.Owned);
+            if (rec == null)
+            {
+                bool fold = G.CraftFold.Contains(grp); int ready = 0; foreach (var r0 in G.RecipesOf(grp)) if (G.StateOf(r0) == RecState.Ready) ready++;
+                c.Bind(i, GroupIcon(grp), (fold ? "[+] " : "[-] ") + T(Game.GroupName(grp)), Gold, ready > 0 ? $"{T("Можно создать")}: {ready}" : T("Пока ничего не доступно"), ready > 0 ? Good : Dim, false, 0, i == G.WinCur); c.SetTree(1); continue;
+            }
+            var st = G.StateOf(rec); string sub = st == RecState.Owned ? T("Уже есть") : st == RecState.Missing ? T("Не хватает ресурсов") : (rec.Extra != null && rec.Extra() > 0 ? $"{T("в очереди")} {rec.Extra()}" : T("Можно создать"));
+            c.Bind(i, rec.Icon >= 0 ? UiIcons.Item(rec.Icon) : GroupIcon(grp), T(rec.Name), st == RecState.Ready ? Text : Dim, sub, st == RecState.Ready ? Good : Dim, false, 0, i == G.WinCur, st != RecState.Ready);
             c.SetTree(i + 1 >= rows.Count || rows[i + 1].r == null ? 3 : 2);
         }
         for (int i = rows.Count; i < cards.Count; i++) cards[i].Visible = false;
+        // подсказка про станцию: без печи или кузницы рядом доступен только ручной крафт
+        if (stationHint == null) { stationHint = new Label { ThemeTypeVariation = "DimLabel", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(150, 0), MouseFilter = MouseFilterEnum.Ignore }; }
+        if (stationHint.GetParent() != list) list.AddChild(stationHint); list.MoveChild(stationHint, list.GetChildCount() - 1);
+        stationHint.Visible = G.ActiveStation() == null; stationHint.Text = T("Подойдите к печи или кузнице, чтобы создавать больше предметов.");
         if (rows.Count == 0) return; var (sg, sr) = rows[G.WinCur]; int cur = G.WinCur;
-        if (sr == null) { centerBox.AddChild(Lbl(Game.GroupName(sg), Gold, true, "GoldLabel")); centerBox.AddChild(Lbl($"{T("Рецептов")}: {G.RecipesOf(sg).Count}", Dim, false, null, true)); centerBox.AddChild(Btn(G.CraftFold.Contains(sg) ? "Развернуть" : "Свернуть", "Enter", () => G.EqCraftRow(cur), true, true)); return; }
+        if (sr == null) { centerBox.AddChild(EmptyStatePanelUI.Make(GroupIcon(sg), 0, T(Game.GroupName(sg)), T("Выберите рецепт слева. Доступные рецепты — первыми."))); centerBox.AddChild(MainActionButtonUI.Make(G.CraftFold.Contains(sg) ? "Развернуть" : "Свернуть", () => G.EqCraftRow(cur), true)); return; }
         var stt = G.StateOf(sr);
-        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 6); head.AddChild(Icon(sr.Icon >= 0 ? UiIcons.Item(sr.Icon) : GroupIcon(sg), 32));
-        var tt = new VBoxContainer(); tt.AddChild(Lbl(sr.Name, stt == RecState.Ready ? Good : Gold, true)); tt.AddChild(Lbl(stt == RecState.Owned ? "Уже есть" : stt == RecState.Ready ? "Можно создать" : "Не хватает материалов", stt == RecState.Missing ? Bad : Dim)); head.AddChild(tt); centerBox.AddChild(head);
-        var cost = sr.CostNow; if (cost != null) { centerBox.AddChild(Lbl("Нужно", Dim, false, "DimLabel")); foreach (var c in cost) { int have = G.Inv[c[0]]; centerBox.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : Bad)); } }
+        string status = stt == RecState.Owned ? "Уже есть" : stt == RecState.Ready ? "Можно создать" : "Не хватает ресурсов";
+        centerBox.AddChild(ItemDetailsCardUI.Make(sr.Icon >= 0 ? UiIcons.Item(sr.Icon) : GroupIcon(sg), null, T(sr.Name), stt == RecState.Ready ? Good : Gold, T(status), stt == RecState.Ready ? Good : stt == RecState.Owned ? Dim : new Color("#ffb36a"), T(sr.Desc ?? "")));
+        var cost = sr.CostNow; if (cost != null && cost.Length > 0) { centerBox.AddChild(Lbl("Нужно", Dim, false, "DimLabel")); foreach (var c in cost) { int have = G.Inv[c[0]]; centerBox.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : new Color("#ffb36a"))); } }
         if (sr.Multi) centerBox.AddChild(Btn($"{T("Количество")}: ×{(Game.QtySteps[G.CraftQty] == int.MaxValue ? T("макс.") + $" ({Math.Max(1, G.MaxCraft(sr))})" : Game.QtySteps[G.CraftQty].ToString())}", "Q", () => G.EqCycleQty()));
-        centerBox.AddChild(Btn("Создать", "Enter", () => { G.EqCraftRow(cur); Flash(centerBox); }, stt == RecState.Ready, true));
-        rightBox.AddChild(Lbl($"{T("Группа")}: {T(Game.GroupName(sg))}", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(sr.Desc ?? "", Text, true)); rightBox.AddChild(Lbl(sg == "hand" ? "Создаётся в любом месте." : "Нужна печь или кузница рядом.", Dim, true));
+        centerBox.AddChild(MainActionButtonUI.Make("Создать", () => { G.EqCraftRow(cur); Flash(centerBox); }, stt == RecState.Ready, stt == RecState.Owned ? T("Это уже у вас есть.") : stt == RecState.Missing ? T("Добудьте недостающие ресурсы.") : null));
+        rightBox.AddChild(Lbl(sg == "hand" ? "Создаётся в любом месте." : sg == "furnace" ? "Создаётся у печи." : "Создаётся у кузницы.", Dim, true));
     }
 
+    Label stationHint;
+
     // ───────────────────────── вкладка «Фонарь» ─────────────────────────
+    static readonly string[] LampStages = { "больше радиус света", "свет наносит урон врагам", "аура света вокруг героя" };
+    static readonly string[] Roman = { "I", "II", "III" };
+
     void BuildLantern()
     {
-        var c = Card(0); c.Visible = true; c.Bind(0, UiIcons.Tile(Art.Lantern), T("Фонарь героя"), new Color("#fff2b0"), $"{T("Уровень")} {G.HeroLampLv}/3", Dim, true, 0, true);
+        int lv = G.HeroLampLv;
+        var c = Card(0); c.Visible = true; c.Bind(0, UiIcons.Tile(Art.Lantern), T("Фонарь героя"), new Color("#fff2b0"), $"{T("Ступень")} {lv} {T("из")} 3", Dim, true, 0, true);
         for (int i = 1; i < cards.Count; i++) cards[i].Visible = false; G.WinCur = 0;
-        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 6); head.AddChild(Icon(UiIcons.Tile(Art.Lantern), 32));
-        var tt = new VBoxContainer(); tt.AddChild(Lbl("Фонарь героя", new Color("#fff2b0"), true)); tt.AddChild(Lbl($"{T("Уровень")} {G.HeroLampLv}/3", Gold)); head.AddChild(tt); centerBox.AddChild(head);
-        centerBox.AddChild(Stat(UiIcons.Tile(Art.Lantern), "Радиус света", $"{(int)G.PlayerLightR} px", Gold));
-        var bar = new ProgressBar { MinValue = 0, MaxValue = 320, Value = G.PlayerLightR, ShowPercentage = false, CustomMinimumSize = new Vector2(0, 8), ThemeTypeVariation = "LightBar", MouseFilter = MouseFilterEnum.Ignore }; centerBox.AddChild(bar);
-        if (G.HeroLampLv < 3)
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Tile(Art.Lantern), null, T("Фонарь героя"), new Color("#fff2b0"), lv >= 3 ? T("Улучшен полностью") : $"{T("Ступень")} {lv} {T("из")} 3", lv >= 3 ? Good : Gold, T("Ваш личный свет: он идёт за вами в Тьму.")));
+        var stepBar = new ProgressBar { MinValue = 0, MaxValue = 3, Value = lv, ShowPercentage = false, CustomMinimumSize = new Vector2(0, 8), ThemeTypeVariation = "LightBar", MouseFilter = MouseFilterEnum.Ignore }; centerBox.AddChild(stepBar);
+        if (G.HasHandLamp) centerBox.AddChild(Stat(UiIcons.Tile(Art.Lantern), "Радиус света", $"{(int)G.PlayerLightR}", Gold));
+        else centerBox.AddChild(Lbl("Света пока нет: изучите «Искру света» в дереве навыков [T].", new Color("#ffb36a"), true));
+        if (lv < 3)
         {
-            var cost = Game.HeroCostFor(G.HeroLampLv); bool bp = G.BpDone.Contains("bp_herolamp");
-            centerBox.AddChild(Lbl("Следующий уровень", Dim, false, "DimLabel")); foreach (var cc in cost) { int have = G.Inv[cc[0]]; centerBox.AddChild(Stat(UiIcons.Item(cc[0]), It.Names[cc[0]], $"{have}/{cc[1]}", have >= cc[1] ? Good : Bad)); }
-            centerBox.AddChild(Btn("Улучшить", "Enter", () => { G.EqUpgradeLamp(); Flash(centerBox); }, bp && G.Can(cost), true));
-            if (!bp) centerBox.AddChild(Lbl("Нужен чертёж «Фонарь героя» (журнал [J])", Bad, true));
+            var cost = Game.HeroCostFor(lv); bool bp = G.BpDone.Contains("bp_herolamp"); bool can = bp && G.Can(cost);
+            string why = !bp ? T("Сначала найдите чертёж «Фонарь героя».") : !can ? T("Не хватает") + ": " + T(G.MissingText(cost)) : null;
+            centerBox.AddChild(MainActionButtonUI.Make("Улучшить фонарь", () => { G.EqUpgradeLamp(); Flash(centerBox); }, can, why));
         }
-        else centerBox.AddChild(Lbl("Максимальный уровень", Good));
-        rightBox.AddChild(Lbl("Улучшения", Gold, false, "GoldLabel"));
-        string[] ups = { "Уровень 1: +12% радиуса света", "Уровень 2: свет жжёт врагов", "Уровень 3: аура света вокруг героя" };
-        for (int i = 0; i < 3; i++) rightBox.AddChild(Lbl((i < G.HeroLampLv ? "✓ " : "· ") + T(ups[i]), i < G.HeroLampLv ? Good : Dim, true));
-        int cry = 0; foreach (var l in G.Lamps) if (l.Kind == 2) cry++;
-        rightBox.AddChild(Lbl($"{T("Фонарей")}: {G.Lamps.Count} ({T("кристальных")} {cry}) · {T("кристаллы +12% (до 3)")}", Dim, true, null, true));
+        rightBox.AddChild(Lbl("Улучшения фонаря", Gold, false, "GoldLabel"));
+        for (int i = 0; i < 3; i++)
+        {
+            bool done = i < lv, next = i == lv; var col = done ? Good : next ? Text : Dim;
+            rightBox.AddChild(Lbl($"{(done ? "✓" : next ? ">" : "·")} {Roman[i]} — {T(LampStages[i])}", col, true, null, true));
+        }
+        if (lv < 3)
+        {
+            rightBox.AddChild(Lbl("Для следующей ступени", Gold, false, "GoldLabel"));
+            foreach (var cc in Game.HeroCostFor(lv)) { int have = G.Inv[cc[0]]; rightBox.AddChild(Stat(UiIcons.Item(cc[0]), It.Names[cc[0]], $"{have}/{cc[1]}", have >= cc[1] ? Good : new Color("#ffb36a"))); }
+        }
     }
 }

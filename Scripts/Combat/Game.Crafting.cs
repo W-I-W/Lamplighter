@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Lamplighter;
 
@@ -91,7 +92,7 @@ public partial class Game
     public List<(string group, Recipe r)> CraftRows()
     {
         var rows = new List<(string, Recipe)>();
-        foreach (var g in CraftGroups()) { rows.Add((g, null)); if (!CraftFold.Contains(g)) foreach (var r in RecipesOf(g)) rows.Add((g, r)); }
+        foreach (var g in CraftGroups()) { rows.Add((g, null)); if (!CraftFold.Contains(g)) foreach (var r in RecipesOf(g).OrderBy(x => StateOf(x) == RecState.Ready ? 0 : StateOf(x) == RecState.Missing ? 1 : 2)) rows.Add((g, r)); }      // доступное выше, недоступное и уже созданное ниже
         return rows;
     }
 

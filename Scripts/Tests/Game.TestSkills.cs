@@ -24,8 +24,9 @@ public partial class Game
             // уровни и бонусы первой и второй ступени
             Check(SkillMax(lens) == 5 && SkillMax(lens2) == 5, "skills: both light tiers have 5 levels");
             for (int k = 1; k <= 5; k++) Check(Near(SkillOf(lens).Eff(k), .02f * k), $"skills: Light range I level {k} = +{2 * k}%");
-            Reset(); Check(!HasHandLamp && Near(LampMul, .3f), "lamp: a new hero has no hand lamp and only a faint glow"); float r0 = PlayerLightR / LampMul;
-            SetSkillLevel(lens, 1); Check(HasHandLamp && Near(LampMul, .5f), "lamp: the first Light Lens level gives the hand lamp, its light is dim (x0.5)");
+            Reset(); Check(!HasHandLamp && PlayerLightR == 0f, "spark: a new hero has no personal light at all (radius 0)"); Check(!ParentsOwned(lens) && StateOfTech(lens) == TechState.Locked, "spark: the light range skills stay closed until the Spark is learned");
+            Inv[It.Wood] = 99; Inv[It.Stone] = 99; Check(LearnTech((int)Tech.Spark) && HasHandLamp && Near(LampMul, .6f) && Hp > 0, "spark: the Spark of Light is bought with wood and stone only and gives the light"); SparkT = 99f; Check(ParentsOwned(lens), "spark: it opens the light range skills");
+            Reset(); SetSkillLevel((int)Tech.Spark, 1); float r0 = PlayerLightR / LampMul;
             SetSkillLevel(lens, 3); Check(Near(LensBonus, .06f), "skills: 3/5 of tier I = +6%"); Check(Near(PlayerLightR / LampMul / r0, 1.06f), "skills: the real light radius rises by 6%");
             Check(Near(RegenPerSec, Tune.T.RegenRate), "skills: regeneration at level 0 is the base rate");
             SetSkillLevel((int)Tech.Regen, 3); Check(Near(RegenPerSec, Tune.T.RegenRate + .75f), "skills: regeneration level 3 adds 0.75 hp/s");
@@ -39,7 +40,7 @@ public partial class Game
             for (int k = 1; k <= 5; k++) { SetSkillLevel(lens2, k); Check(Near(LensBonus, .10f + .04f * k) && Near(PlayerLightR / LampMul / r0, 1.10f + .04f * k), $"skills: tier II level {k}: total +{10 + 4 * k}%"); }
             Check(Near(PlayerLightR / LampMul / r0, 1.30f), "skills: both tiers maxed = +30% light radius");
             // покупка ровно одного уровня, цена растёт, нельзя без ресурсов и сверх максимума
-            Reset(); HasFurnace = true; var c1 = LevelCost(lens, 1); var c5 = LevelCost(lens, 5); int Sum(int[][] c) => c.Sum(x => x[1]);
+            Reset(); SetSkillLevel((int)Tech.Spark, 1); HasFurnace = true; var c1 = LevelCost(lens, 1); var c5 = LevelCost(lens, 5); int Sum(int[][] c) => c.Sum(x => x[1]);
             bool rising = true; for (int k = 2; k <= 5; k++) if (Sum(LevelCost(lens, k)) < Sum(LevelCost(lens, k - 1))) rising = false;
             Check(rising && Sum(c5) > Sum(c1), $"skills: level cost grows ({Sum(c1)} → {Sum(c5)})");
             Check(!LearnTech(lens) && Lv(Tech.Lens) == 0, "skills: nothing is bought without resources");
@@ -117,6 +118,7 @@ public partial class Game
             cv._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = c0 }); cv._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = c0 });
             Check(TechSel == (int)Tech.Lens && Lv(Tech.Lens) == 0, "window: a click without moving selects the node but still buys nothing");
             // кнопка улучшения показывает следующий уровень
+            SetSkillLevel((int)Tech.Spark, 1);
             upgradeWindow.ForceRefresh(); Check(upgradeWindow.Details.LearnText.Contains("1/5"), $"window: the button reads the next level ({upgradeWindow.Details.LearnText})");
             Inv[It.Copper] = 40; Inv[It.Shard] = 20; upgradeWindow.ForceRefresh(); upgradeWindow.ClickLearn(); Check(Lv(Tech.Lens) == 1, "window: the button buys one level");
             upgradeWindow.ForceRefresh(); Check(upgradeWindow.Details.LearnText.Contains("2/5"), $"window: after the purchase the button reads 2/5 ({upgradeWindow.Details.LearnText})");

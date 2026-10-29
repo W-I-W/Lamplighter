@@ -105,6 +105,7 @@ public partial class Game
         if (lv == 0 && !t.Ok(this)) { Fail("Пока недоступно: " + t.Req); return false; }
         var cost = LevelCost(i, lv + 1); if (!Can(cost)) { Fail("Не хватает: " + NeedStr(cost)); return false; }
         Pay(cost); SetSkillLevel(i, lv + 1); GiveXp(lv == 0 ? 30 : 8);
+        if (i == (int)Tech.Spark && lv == 0) SparkLit();
         Burst(PPos, new Color("#8ff0ff"), lv == 0 ? 20 : 10, 100);
         if (lv == 0) Announce("Изучено: " + t.Name, t.Desc, new Color("#8ff0ff"), "tech");
         else if (lv + 1 == mx) Announce("Максимальный уровень: " + t.Name, "Открыты связанные навыки", new Color("#ffd23f"), "tech");
@@ -119,6 +120,14 @@ public partial class Game
     }
 
     // ───────────────────────── сохранение и миграция ─────────────────────────
+    /// <summary>Первый свет героя: золотая вспышка, расходящийся круг, свет разгорается за полторы секунды, звук открытия и запись в чате.</summary>
+    void SparkLit()
+    {
+        SparkT = 0f; Flash = Mathf.Max(Flash, .45f); Sfx.Play("ancient", -2, 1.15f);
+        var gold = new Color("#ffe27a"); Burst(PPos, gold, 36, 150); Burst(PPos + new Vector2(0, -6), new Color("#fff6c8"), 18, 70); Fx("level_up", PPos);
+        Notify.Post(MsgKind.World, MsgTone.Gold, Loc.T("Искра света: вокруг вас появился свет. Тьма отступает"), null, 1);
+    }
+
     public (string[] k, int[] v) SaveSkills()
     {
         var k = new List<string>(); var v = new List<int>(); for (int i = 0; i < SkillLv.Length; i++) if (SkillLv[i] > 0) { k.Add(((Tech)i).ToString()); v.Add(SkillLv[i]); }
@@ -143,9 +152,12 @@ public partial class Game
     static int LegacyLevel(int i) { var t = (Tech)i; return t == Tech.Dash || t == Tech.Spin || t == Tech.Flare || t == Tech.Pulse || Techs[i].Reward ? 1 : SkillMax(i); }
 
     // ───────────────────────── расчёт эффектов ─────────────────────────
-    /// <summary>Ручная лампа появляется, когда изучен первый уровень света (Линза света I) или улучшен фонарь героя. Без неё свет героя — слабое пятно (×0,3), первая лампа светит тускло (×0,5) и разгорается до полной яркости вместе с уровнями Линзы I и II.</summary>
-    public bool HasHandLamp => SkillLv[(int)Tech.Lens] > 0 || HeroLampLv > 0;
-    public float LampMul { get { int l = SkillLv[(int)Tech.Lens] + SkillLv[(int)Tech.LensII]; return !HasHandLamp ? .3f : Mathf.Lerp(.5f, 1f, Mathf.Clamp((l - 1) / 9f, 0f, 1f)); } }
+    /// <summary>Личного света нет, пока не изучена «Искра света» (радиус 0). После неё — небольшой круг (×0,6 от прежней основы), который растёт навыками «Дальность света I и II» (+30%).
+    /// Свет стартовой поляны — это свет Центрального маяка, он не принадлежит герою. SparkT — секунды с момента изучения: круг света разгорается плавно.</summary>
+    public bool HasHandLamp => SkillLv[(int)Tech.Spark] > 0;
+    public float LampMul => HasHandLamp ? .6f : 0f;
+    public float SparkT = 99f;
+    public float SparkGrow => SparkT >= 1.6f ? 1f : Mathf.SmoothStep(0f, 1f, SparkT / 1.6f);
     public float LensBonus => E(Tech.Lens) + E(Tech.LensII);
     public float FarLampBonus => E(Tech.FarLanterns) + E(Tech.FarLanternsII);
     public float DashCooldown => Tune.T.DashCooldown * (1f - E(Tech.Dash));

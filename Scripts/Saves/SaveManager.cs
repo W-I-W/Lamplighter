@@ -66,8 +66,7 @@ public static class SaveManager
             var id = Path.GetFileNameWithoutExtension(f); var c = LoadCharacter(id); if (c == null || c.Id != id) continue;
             var ci = new CharInfo { Id = c.Id, Name = c.Name, Stamp = c.Stamp, Look = c.Look ?? new Look(), PlaySecs = c.PlaySecs, Level = c.Level, Tier = c.Tier, MaxHp = c.MaxHp, Created = c.Created };
             if (c.SkV != null) foreach (var v in c.SkV) ci.SkillPts += v;
-            if (c.SkK != null && c.SkV != null) for (int i = 0; i < c.SkK.Length && i < c.SkV.Length; i++) if (c.SkK[i] == "Lens" && c.SkV[i] > 0) ci.HasLamp = true;
-            if (c.HeroLamp > 0) ci.HasLamp = true;
+            if (c.SkK != null && c.SkV != null) for (int i = 0; i < c.SkK.Length && i < c.SkV.Length; i++) if (c.SkK[i] == "Spark" && c.SkV[i] > 0) ci.HasLamp = true;
             ci.Weapons = c.WId?.Length ?? 0; ci.Relics = c.Relics?.Length ?? 0;
             ci.Weapon = c.WId != null && c.WId.Length > 0 ? c.WId[Math.Clamp(c.CurW, 0, c.WId.Length - 1)] : ""; ci.Tool = c.CurTool ?? "pickaxe";
             res.Add(ci);

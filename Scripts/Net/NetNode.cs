@@ -88,7 +88,7 @@ public partial class NetNode : Node
         p.Look = Look.FromInts(look); p.Handshaken = true; p.LastRecv = now; p.Hp = 100; p.MaxHp = 100; p.Pos = p.Shown = G.PPos;
         RpcId(id, nameof(RpcWelcome), G.W.Seed, NetConst.GenVersion, (long)id, G.PPos.X, G.PPos.Y, BuildRoster());
         RpcId(id, nameof(RpcWorldState), G.NetSnapshotPoi(), G.NetSnapshotAnc());
-        BroadcastVillage(id);
+        BroadcastVillage(id); BroadcastDrops(id);
         RpcId(id, nameof(RpcStructs), G.NetStructTiles(), G.NetStructLamps());
         BroadcastEvents(id);
         RpcId(id, nameof(RpcProgress), G.BeaconLevel, G.BossMask);

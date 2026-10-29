@@ -85,7 +85,8 @@ public partial class Game
     void PlaceNow() { if (Placing != null) PlaceEntry(Placing); }
 
     /// <summary>Предметы, которые видны в инвентаре: только с количеством больше нуля (данные нулевых ресурсов остаются в игре).</summary>
-    public List<int> InvVisible() { var l = new List<int>(); for (int i = 0; i < It.Count; i++) if (Inv[i] > 0) l.Add(i); return l; }
+    /// <summary>Ресурсы в инвентаре; у склада — ещё и те, что лежат только на складе (их можно взять через меню).</summary>
+    public List<int> InvVisible() { var l = new List<int>(); bool wh = NearWarehouse; for (int i = 0; i < It.Count; i++) if (Inv[i] > 0 || (wh && Stock[i] > 0 && i != It.Coins)) l.Add(i); return l; }
 
     // ───────────────────────── ввод ─────────────────────────
     bool WindowKey(Key k, bool shift)

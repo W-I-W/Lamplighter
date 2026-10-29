@@ -45,6 +45,8 @@ public partial class Game
                 foreach (var p in w.Pois) if (p.Kind != PK.Lore) { int d = Math.Max(Math.Abs(p.Tile.X - w.Spawn.X), Math.Abs(p.Tile.Y - w.Spawn.Y)); if (d < nearP) nearP = d; }
                 { var cs = new List<string>(); var c0 = w.Ancients[0].Tile; foreach (var an in w.Ancients) if (!an.Boss && an.Cost > 0) cs.Add($"r{an.Region}:{an.Cost}@{(int)new Vector2(an.Tile.X - c0.X, an.Tile.Y - c0.Y).Length()}"); Log($"seed {seed}: lantern costs [{string.Join(" ", cs)}]");
                   foreach (var an in w.Ancients) if (!an.Boss && an.Cost > 0 && an.Cost < 3) { Log($"seed {seed}: lantern too cheap ({an.Cost})"); fails++; } }
+                { var nd = World.StartNeeds(); var hv = w.StartCounts(); bool okStart = hv.trees >= nd.trees && hv.stones >= nd.stones && hv.copper >= nd.copper && w.Walkable(w.Spawn.X, w.Spawn.Y);
+                  Log($"seed {seed}: start resources trees {hv.trees}/{nd.trees} stones {hv.stones}/{nd.stones} copper {hv.copper}/{nd.copper}"); if (!okStart) { Log($"seed {seed}: START RESOURCES MISSING"); fails++; } }
                 if (nearA > 60 || nearA < 12 || nearP > 30) { Log($"seed {seed}: EARLY PACING nearestLantern={nearA} (cost {cost1}) nearestPoi={nearP}"); fails++; }
                 Log($"seed {seed}: max gap to landmark per region=[{string.Join(",", gap)}] cells>36: [{string.Join(",", big)}]");
                 Log($"seed {seed}: ancients ok={ok} bad={bad} bosses={bosses}/5 pois={w.Pois.Count} badPois={badPoi} perRegion=[{string.Join(",", perReg)}] arena={w.IceArena}");
@@ -64,6 +66,6 @@ public partial class Game
             }
             Log(fails == 0 ? "WORLD AUDIT PASSED" : $"WORLD AUDIT FAILED seeds={fails}");
         });
-        static int[] SeedList() { var l = new List<int>(); for (int i = 1; i <= 40; i++) l.Add(i * 7919 % 100003); return l.ToArray(); }
+        static int[] SeedList() { var l = new List<int>(); for (int i = 1; i <= 120; i++) l.Add(i * 7919 % 100003); return l.ToArray(); }
 }
 }

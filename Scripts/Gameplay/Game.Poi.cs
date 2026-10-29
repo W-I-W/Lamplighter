@@ -230,6 +230,12 @@ public partial class Game
         int rescued = Villagers.Count;
         var a1 = W.Ancients[1]; var boss1 = BossLantern(1);
         bool Lv2() { foreach (var b in Buildings) if (b.Level >= 2) return true; return false; }
+        // начало игры: короткая цепочка «ресурсы → навыки → Искра света → Тьма»; показывается по одной цели, опытному герою не повторяется
+        var sparkCost = LevelCost((int)Tech.Spark, 1); bool spark = Has(Tech.Spark);
+        Add("Собрать первые ресурсы", spark || Can(sparkCost), NeedShort(sparkCost));
+        Add("Открыть навыки [T]", spark || (Ann & TutTechOpened) != 0, "Дерево улучшений: клавиша T");
+        Add("Изучить «Искру света»", spark, "Первый свет: [T] → Искра света");
+        Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1 || HasFurnace, "Выйдите за границу света маяка");
         Add("Построить печь [B]", HasFurnace, NeedShort(CostFurnace));
         Add("Создать оружие [C]", Owned.Count > 0, "Меч, лук и посох — вкладка «Создание» у печи");
         Add("Медная кирка у печи [E]", Tier >= 1, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));

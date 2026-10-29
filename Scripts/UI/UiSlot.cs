@@ -9,6 +9,7 @@ public enum SlotState { Normal, Selected, Disabled, Ok }
 public partial class UiSlot : PanelContainer
 {
     [Signal] public delegate void ClickedEventHandler(int index);
+    [Signal] public delegate void RightClickedEventHandler(int index);
     public int Index;
     TextureRect icon; Label letter, count, key; ColorRect cd;
     SlotState state = (SlotState)(-1);
@@ -21,6 +22,7 @@ public partial class UiSlot : PanelContainer
     public override void _GuiInput(InputEvent e)
     {
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left) EmitSignal(SignalName.Clicked, Index);
+        else if (e is InputEventMouseButton rb && rb.Pressed && rb.ButtonIndex == MouseButton.Right) EmitSignal(SignalName.RightClicked, Index);
     }
 
     public void Set(Texture2D tex, string cnt, string keyText, SlotState st, float cooldown = 0f, string ch = "", float alpha = 1f)

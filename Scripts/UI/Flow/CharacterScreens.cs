@@ -130,7 +130,7 @@ public partial class CharacterSelectionUI : FlowScreen
         if (k == Key.Escape) { Back(); return true; }
         return false;
     }
-    internal static bool HasLampOf(CharacterSave c) { if (c == null) return false; if (c.HeroLamp > 0) return true; if (c.SkK != null && c.SkV != null) for (int i = 0; i < c.SkK.Length && i < c.SkV.Length; i++) if (c.SkK[i] == "Lens" && c.SkV[i] > 0) return true; return false; }
+    internal static bool HasLampOf(CharacterSave c) { if (c == null) return false; if (c.SkK != null && c.SkV != null) for (int i = 0; i < c.SkK.Length && i < c.SkV.Length; i++) if (c.SkK[i] == "Spark" && c.SkV[i] > 0) return true; return false; }
 }
 
 /// <summary>Создание героя: имя, цвет кожи, причёска, цвет волос, два цвета одежды и фасон. Предпросмотр меняется сразу; внешность не влияет на характеристики.</summary>

@@ -12,7 +12,8 @@ public enum Tech
     Prism, SpikeBoots, FrostEdge, FrostArmor,
     Marksman, QuickDraw, Piercing, Overcharge,       // навыки дальнего боя (лук и посох)
     LensII, FarLanternsII,                           // вторые ступени: открываются после максимума первых (в маске TechMask их нет, только в SkillLv)
-    Regen                                            // регенерация здоровья вне света (в маске TechMask её нет, только в SkillLv)
+    Regen,                                           // регенерация здоровья вне света (в маске TechMask её нет, только в SkillLv)
+    Spark                                            // «Искра света»: первый личный свет героя, открывает остальные световые навыки
 }
 
 public sealed class TechDef
@@ -84,6 +85,7 @@ public partial class Game
         new() { Name = "Линза света II", Desc = "Ваш свет шире ещё на 4% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 6, It.Crystal, 4), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Дальний свет II", Desc = "Ваши фонари светят дальше ещё на 6% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 5, It.Crystal, 5), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Регенерация", Desc = "Здоровье восстанавливается быстрее вне света; каждый уровень добавляет скорость", Req = "Победите 5 врагов", Cost = C(It.Shard, 3, It.Copper, 3), Ok = g => g.Kills >= 5 },
+        new() { Name = "Искра света", Desc = "Вокруг вас появляется круг света: можно исследовать Тьму. Открывает улучшения света", Req = "Соберите дерево и камень", Cost = C(It.Wood, 3, It.Stone, 2), Ok = g => true },
     };
 
     public bool HasRangedWeapon() { foreach (var o in Owned) { var d = Db.Weapon(o.Id); if (d != null && d.Cls != WClass.Sword) return true; } return false; }

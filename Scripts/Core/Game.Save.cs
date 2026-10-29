@@ -70,6 +70,7 @@ public partial class Game
         var d = worldSave;
         d.GenV = W.GenV; d.Seed = W.Seed; d.PlaySecs = WorldSecs; d.Difficulty = Diff;
         d.Obj = Convert.ToBase64String(W.Obj); d.Explored = Convert.ToBase64String(Expl); d.Stock = (int[])Stock.Clone();
+        d.DropItem = Drops.Select(x => x.Item).ToArray(); d.DropCount = Drops.Select(x => x.Count).ToArray(); d.DropX = Drops.Select(x => x.Pos.X).ToArray(); d.DropY = Drops.Select(x => x.Pos.Y).ToArray();
         d.Lit = new bool[W.Ancients.Count]; d.AncDone = new byte[W.Ancients.Count]; d.PoiState = new byte[W.Pois.Count];
         for (int i = 0; i < W.Ancients.Count; i++) { d.Lit[i] = W.Ancients[i].Lit; d.AncDone[i] = (byte)(W.Ancients[i].Done ? 1 : 0); }
         for (int i = 0; i < W.Pois.Count; i++) { var p = W.Pois[i]; d.PoiState[i] = (byte)((p.State == 1 ? 0 : p.State) | (p.Seen ? 16 : 0) | (p.Revealed ? 32 : 0)); }
@@ -126,6 +127,10 @@ public partial class Game
             if (d.ManualB != null) foreach (var mk in d.ManualB) manualLoaded.Add(mk);
             BossMask = d.BossMask; BeaconLevel = Math.Max(1, d.Beacon);
             if (d.Stock != null) for (int i = 0; i < Stock.Length && i < d.Stock.Length; i++) Stock[i] = d.Stock[i];
+            Drops.Clear();
+            if (d.DropItem != null && d.DropCount != null && d.DropX != null && d.DropY != null)
+                for (int i = 0; i < d.DropItem.Length && i < d.DropCount.Length && i < d.DropX.Length && i < d.DropY.Length; i++)
+                    if (Movable(d.DropItem[i]) && d.DropCount[i] > 0 && d.DropCount[i] <= MaxStack) Drops.Add(new WorldDrop { Id = nextDropId++, Item = d.DropItem[i], Count = d.DropCount[i], Pos = new Vector2(d.DropX[i], d.DropY[i]), Owner = -1 });
             if (d.BT != null)
                 for (int i = 0; i < d.BT.Length; i++)
                 {

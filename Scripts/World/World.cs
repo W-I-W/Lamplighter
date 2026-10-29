@@ -162,6 +162,7 @@ public sealed partial class World
         if (genV >= 1) w.GenExplore(seed);
         w.EnsureStoryReachable();
         w.ClearBlockedCrowns();
+        w.EnsureStartResources(seed);
         w.GenObj = (byte[])w.Obj.Clone();
         w.ScaleLampCosts();
         return w;

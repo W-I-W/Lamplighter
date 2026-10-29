@@ -83,7 +83,7 @@ public partial class Game
         int f = moving ? (int)p.Walk % 2 : 0; float bob = moving ? -Mathf.Abs(Mathf.Sin(p.Walk)) : 0;
         c.DrawSetTransform(pos + new Vector2(0, bob), 0, new Vector2(p.Face < 0 ? -1 : 1, 1));
         var mod = Colors.White; if ((p.Flags & 1) != 0) mod = new Color(.6f, 1f, 1f, .8f);
-        LookArt.Draw(c, p.Look, f, Def("player").Offset, mod, 16, 1, p.Light > 30f);      // у игрока без лампы свет — слабое пятно
+        LookArt.Draw(c, p.Look, f, Def("player").Offset, mod, 16, 1, p.Light > 1f);      // у игрока без лампы свет — слабое пятно
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
         if ((p.Flags & 2) != 0)                                  // замах: тот предмет, что у игрока в руках, и такой же рабочий цикл, как у своего персонажа
         {

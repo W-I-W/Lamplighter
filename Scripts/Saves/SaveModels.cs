@@ -58,6 +58,7 @@ public sealed class WorldSave
 {
     public int Version = 1, GenV, Seed, Difficulty; public string Id = "", Name = "", Stamp = ""; public long Created; public float PlaySecs;
     public string Obj, Explored; public bool[] Lit; public byte[] AncDone, PoiState;
+    public int[] DropItem, DropCount; public float[] DropX, DropY;               // предметы на земле
     public int[] Stock; public int BossMask, Beacon, TradeEpoch, ExtraV, VillEvents, ForgeMade, NextVillId, LoreMask, RiftUnlocked = 1, RiftFirst, RiftClears; public bool Finished;
     public int[] BT, BX, BY, BL, BPrio, BMode, BLocal; public bool[] BOff, BForced; public int[] LX, LY, LK, LL, LD;
     public string[] UpCats, UpNew, Bought; public int[] CutB, PlacedK; public float[] Demand; public float EvNext;

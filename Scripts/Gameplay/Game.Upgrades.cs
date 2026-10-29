@@ -49,6 +49,7 @@ public partial class Game
     public void OpenTech(bool open)
     {
         CloseWindows(); TechOpen = open; if (!open) return;
+        Ann |= TutTechOpened;
         if (!Upgrades.IsPageUnlocked(TechPage)) { var v = Upgrades.Visible(); TechPage = v.Count > 0 ? v[0].Page : 0; }
         EnsureTechSel(); Upgrades.MarkSeen(Upgrades.ByPage(TechPage)?.Id ?? "");
     }

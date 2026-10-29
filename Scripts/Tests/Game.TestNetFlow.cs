@@ -51,6 +51,19 @@ public partial class Game
                     Check(Notify.History.FindAll(m => m.Text.StartsWith("флуд")).Count <= 1, "netflow host: a burst of guest messages is rate limited");
                     Check(Notify.History.FindAll(m => m.Kind == MsgKind.World && m.Text.Contains("присоединился")).Count == 1, "netflow host: the join event is in the log once");
                 });
+                S(.3f, () => { var o = Other(); Check(o != null && TrySend(o.PeerId, It.Wood, 3), "netflow host: a direct transfer to the guest is accepted"); Check(Inv[It.Wood] == 8, "netflow host: the sender's stack shrank at once"); });
+                WaitStepFlow(15f, () => Inv[It.Wood] == 11, ok => Check(ok, "netflow host: the guest's return transfer arrived exactly once"));
+                S(.3f, () => { Check(TryDrop(It.Wood, 4) && Inv[It.Wood] == 7 && Drops.Count == 1, "netflow host: a stack was dropped on the ground"); });
+                WaitStepFlow(15f, () => Drops.Count == 0, ok => Check(ok, "netflow host: the stack was picked up by the guest and removed once"));
+                S(.8f, () => Check(Inv[It.Wood] == 7, "netflow host: the dropper does not get the stack back as well"));
+                WaitStepFlow(15f, () => Inv[It.Wood] == 11, ok => Check(ok, "netflow host: the guest passed the stack back"));
+                S(.3f, () =>
+                {
+                    Vector2I t = default; for (int r = 2; r < 8 && t == default; r++) for (int dx = -r; dx <= r && t == default; dx++) if (W.Get(W.Spawn.X + dx, W.Spawn.Y + r) == Tl.None && W.Get(W.Spawn.X + dx + 1, W.Spawn.Y + r) == Tl.None) t = new Vector2I(W.Spawn.X + dx, W.Spawn.Y + r);
+                    CreateBuilding(0, t); netT = 0; Check(HasBuilding(Tl.Warehouse), "netflow host: the shared chest (warehouse) is built");
+                });
+                WaitStepFlow(15f, () => Stock[It.Wood] == 2, ok => Check(ok, "netflow host: the guest's deposit reached the world storage"));
+                WaitStepFlow(15f, () => Stock[It.Wood] == 0, ok => Check(ok, "netflow host: the guest's withdrawal left the storage empty"));
                 WaitStepFlow(40f, () => NetService.Count <= 1, ok => Check(ok, "netflow host: the guest left"));
                 S(.5f, () =>
                 {
@@ -88,6 +101,16 @@ public partial class Game
                     Check(Notify.History.FindAll(m => m.Kind == MsgKind.Chat && m.Sender == "Гость" && m.Text == "Привет от гостя").Count == 1, "netflow guest: own message comes back from the host exactly once");
                     Check(Notify.History.FindAll(m => m.Text.StartsWith("флуд")).Count <= 1, "netflow guest: the burst was rate limited by the host");
                 });
+                WaitStepFlow(15f, () => Inv[It.Wood] == 41, ok => Check(ok, "netflow guest: the host's transfer arrived once"));
+                S(.3f, () => { Check(TrySend(1, It.Wood, 3) && Inv[It.Wood] == 38, "netflow guest: transferred back to the host"); if (NetService.Players.TryGetValue(1, out var hp)) Tp(hp.Pos); });      // встаём рядом с хостом: стопка будет в зоне подбора
+                WaitStepFlow(15f, () => Inv[It.Wood] == 42, ok => Check(ok, "netflow guest: picked up the stack dropped by the host"));
+                S(.8f, () => Check(Drops.Count == 0 && Inv[It.Wood] == 42, "netflow guest: picked up once and the ground is empty"));
+                S(.3f, () => { Check(TrySend(1, It.Wood, 4) && Inv[It.Wood] == 38, "netflow guest: passed the stack back"); });
+                WaitStepFlow(20f, () => HasBuilding(Tl.Warehouse), ok => Check(ok, "netflow guest: sees the host's warehouse"));
+                S(.3f, () => { Check(TryChest(true, It.Wood, 2) && Inv[It.Wood] == 36, "netflow guest: deposit into the shared chest"); });
+                WaitStepFlow(15f, () => Stock[It.Wood] == 2, ok => Check(ok, "netflow guest: the chest shows the same amount as the host"));
+                S(.3f, () => { Check(TryChest(false, It.Wood, 2), "netflow guest: withdrawal request"); });
+                WaitStepFlow(15f, () => Inv[It.Wood] == 38 && Stock[It.Wood] == 0, ok => Check(ok, "netflow guest: took the items back, the chest is empty"));
                 S(.5f, () =>
                 {
                     Save(); var cs = SaveManager.LoadCharacter(netFlowChar);

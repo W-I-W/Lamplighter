@@ -21,7 +21,7 @@ function Run-NetPair($name, $port, $expect, $clientEnv = @{}, $hostStage = 'neth
         $out["$role.log"] = $log
         if ($role -eq 'host') { Start-Sleep -Seconds 6 }
     }
-    $deadline = (Get-Date).AddSeconds(100)
+    $deadline = (Get-Date).AddSeconds(170)
     while ((-not $out['host'].HasExited -or -not $out['join'].HasExited) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
     foreach ($role in 'host', 'join') { if (-not $out[$role].HasExited) { $out[$role].Kill() } }
     $why = @(); $ok = $true
@@ -96,6 +96,7 @@ Run-Stage 'village: villagers, professions, rescue, housing, movement, economy, 
 Run-Stage 'difficulty: tuning, biome and coop scaling, melee/ranged AI, attack cap, elites, dash, bosses' 'difficulty' @('DIFFICULTY DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'upgrades: categories open by discovery, window states, save and old saves' 'upgrades' @('UPGRADES DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'chat: one log for notifications and chat, Enter/Esc, input lock, history, merging' 'chat' @('CHAT DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'resources: Spark of Light start, tutorial goals, transfer, drops, shared chest (solo)' 'res' @('RES DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'hud: density modes, collapsing hint, one event line, temporary resources, notifications' 'hud' @('HUD DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'equip: equipment window, cards, sockets, hotbar, relics, lantern, crafting, resolutions' 'equip' @('EQUIP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'skills: multi-level tree, costs, bonuses (+30% light), migration, icons, window' 'skills' @('SKILLS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')

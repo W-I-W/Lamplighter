@@ -371,6 +371,17 @@ public partial class Game
     // ───────────────────────── открытия ─────────────────────────
     float unlockT;
     public List<Goal> Goals = new();
+    public const long TutTechOpened = 1L << 60, TutExplored = 1L << 61;       // признаки героя: открывал дерево навыков, выходил в Тьму со светом
+    static readonly string[] TutorialTitles = { "Собрать первые ресурсы", "Открыть навыки [T]", "Изучить «Искру света»", "Исследовать Тьму" };
+    string lastTutorial = "";
+
+    /// <summary>Начальная цель одной короткой строкой в чат: только когда сменилась цель обучения.</summary>
+    void TutorialChat()
+    {
+        string t = Goals.Count > 0 && Array.IndexOf(TutorialTitles, Goals[0].Title) >= 0 ? Goals[0].Title : "";
+        if (t != "" && t != lastTutorial) Notify.Post(MsgKind.System, MsgTone.Cyan, Loc.T("Цель") + ": " + Loc.T(t));
+        lastTutorial = t;
+    }
 
     void UpdateUnlocks(float dt)
     {
@@ -389,6 +400,8 @@ public partial class Game
                 Ann |= 1L << (12 + i);
                 Announce("Доступно улучшение: " + Techs[i].Name, "Меню [T], вкладка «" + TechPages[Techs[i].Page] + "»", new Color("#8ff0ff"), "tech");
             }
+        if (Has(Tech.Spark) && (Ann & TutExplored) == 0 && PPos.DistanceTo(W.Ancients[0].Pos) > AncientR(W.Ancients[0]) + 12f) Ann |= TutExplored;
         if (!NetClient) Goals = BuildGoals();             // в кооперативе цели общие: клиент показывает список хоста
+        TutorialChat();
     }
 }
