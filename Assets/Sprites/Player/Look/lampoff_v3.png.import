@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dnbbtxsag6wrn"
-path="res://.godot/imported/detail.png-34feb43218bbfa427687e427d95fded7.ctex"
+uid="uid://doe3wugb0spj2"
+path="res://.godot/imported/lampoff_v3.png-ee5da2a0017a9781dc676dad95cacd2f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Player/Look/detail.png"
-dest_files=["res://.godot/imported/detail.png-34feb43218bbfa427687e427d95fded7.ctex"]
+source_file="res://Assets/Sprites/Player/Look/lampoff_v3.png"
+dest_files=["res://.godot/imported/lampoff_v3.png-ee5da2a0017a9781dc676dad95cacd2f.ctex"]
 
 [params]
 

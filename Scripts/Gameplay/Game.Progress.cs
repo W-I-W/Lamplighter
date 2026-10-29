@@ -142,7 +142,7 @@ public partial class Game
         {
             if (lastRegion >= 0 && regionT <= 0)
             {
-                Announce(RegionNames[r], RegionFlavor[r], RegionCol(r), "discover");
+                Sfx.Play("discover");      // название локации показывает RegionTitleHud
                 regionT = 6;
             }
             lastRegion = r;

@@ -146,7 +146,7 @@ public partial class Game
         float bob = pVel.LengthSquared() > 100 ? -Mathf.Abs(Mathf.Sin(Walk)) : 0;
         c.DrawSetTransform(PPos + new Vector2(0, bob + (water ? 2 : 0)), 0, new Vector2(Facing, 1));
         var mod = DashT > 0 ? new Color(.6f, 1f, 1f, .8f) : Colors.White;
-        LookArt.Draw(c, PlayerLook, f, Def("player").Offset, mod, water ? 13 : 16);
+        LookArt.Draw(c, PlayerLook, f, Def("player").Offset, mod, water ? 13 : 16, 1, HasHandLamp);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
         if (water) Gfx.Rect(c, new Rect2(PPos.X - 7, PPos.Y + 1, 14, 2), new Color(.5f, .8f, 1f, .45f));
         if (Swing > 0)
@@ -156,10 +156,14 @@ public partial class Game
             float t = 1 - Swing / .22f, ang, sg = d.X < 0 ? -1 : 1;   // зеркалим замах при прицеле влево
             if (mining)
             {
-                // цикл долбления: замах назад (медленно) и резкий удар вперёд
-                float ph = (Time * 4.5f) % 1f; if (ph < mineLastPh) MineStrikeFx(); mineLastPh = ph;
-                float k = ph < .65f ? ph / .65f : 1f - (ph - .65f) / .35f;
-                ang = d.Angle() + sg * Mathf.Lerp(.55f, -1.45f, k * k);
+                // удар с возвратом: замах назад (быстро замедляется), резкий удар вниз, короткая задержка на ударе и плавный возврат в исходное положение
+                float ph = (Time * 3f) % 1f; if (mineLastPh < .5f && ph >= .5f) MineStrikeFx(); mineLastPh = ph;
+                float rest = .35f, back = 1.35f, hit = -1.25f, off;
+                if (ph < .30f) { float u = ph / .30f; off = Mathf.Lerp(rest, back, 1f - (1f - u) * (1f - u)); }                     // замах: сначала быстро, к концу замедляется
+                else if (ph < .50f) { float u = (ph - .30f) / .20f; off = Mathf.Lerp(back, hit, u * u * u); }                        // удар: разгон до самого конца
+                else if (ph < .62f) { float u = (ph - .50f) / .12f; off = Mathf.Lerp(hit, hit + .18f, u); }                          // отдача на ударе
+                else { float u = (ph - .62f) / .38f; off = Mathf.Lerp(hit + .18f, rest, u * u * (3f - 2f * u)); }                     // возврат
+                ang = d.Angle() + sg * off;
             }
             else ang = d.Angle() + sg * (-1.0f + t * 2.0f);
             DrawHeldItem(c, PPos + new Vector2(0, -3), ang);

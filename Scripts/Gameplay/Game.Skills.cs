@@ -143,6 +143,9 @@ public partial class Game
     static int LegacyLevel(int i) { var t = (Tech)i; return t == Tech.Dash || t == Tech.Spin || t == Tech.Flare || t == Tech.Pulse || Techs[i].Reward ? 1 : SkillMax(i); }
 
     // ───────────────────────── расчёт эффектов ─────────────────────────
+    /// <summary>Ручная лампа появляется, когда изучен первый уровень света (Линза света I) или улучшен фонарь героя. Без неё свет героя — слабое пятно (×0,3), первая лампа светит тускло (×0,5) и разгорается до полной яркости вместе с уровнями Линзы I и II.</summary>
+    public bool HasHandLamp => SkillLv[(int)Tech.Lens] > 0 || HeroLampLv > 0;
+    public float LampMul { get { int l = SkillLv[(int)Tech.Lens] + SkillLv[(int)Tech.LensII]; return !HasHandLamp ? .3f : Mathf.Lerp(.5f, 1f, Mathf.Clamp((l - 1) / 9f, 0f, 1f)); } }
     public float LensBonus => E(Tech.Lens) + E(Tech.LensII);
     public float FarLampBonus => E(Tech.FarLanterns) + E(Tech.FarLanternsII);
     public float DashCooldown => Tune.T.DashCooldown * (1f - E(Tech.Dash));

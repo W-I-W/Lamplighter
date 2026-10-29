@@ -32,6 +32,11 @@ LANTERN = {  # x 12..14, y 7..13
     11: {12: 'l', 13: 'l', 14: 'l'},
     12: {12: 'l', 13: 'l', 14: 'l'},
 }
+LANTERN_COMPACT = {  # фасон «Разведчик»: маленькая лампа на плечевом ремне, x 12..13, y 9..11
+    9: {12: 'f', 13: 'f'},
+    10: {12: 'l', 13: 'i'},
+    11: {12: 'l', 13: 'l'},
+}
 VARIANTS = {
     0: [  # куртка: рукава и пояс — второй цвет
         '....bbaaaabb....',
@@ -56,6 +61,14 @@ VARIANTS = {
         '....aaaaaaaa....',
         '....aaaaaaaa....',
         '.....bbbbbb.....',
+    ],
+    3: [  # разведчик: жилет с шарфом и широким ремнём, лампа маленькая на плече
+        '....bbbbbbbb....',
+        '....baaaaaab....',
+        '....baaaaaab....',
+        '....bbbbbbbb....',
+        '....aaaaaaaa....',
+        '.....aaaaaa.....',
     ],
 }
 CAPE_EXTRA = {14: {3: 'b', 4: 'b'}}  # плащ свисает на втором ряду ног
@@ -89,7 +102,7 @@ def frame_grid(variant, hair, frame):
     g = blank()
     put_rows(g, HEAD, 0)
     put_rows(g, VARIANTS[variant], 8)
-    for y, row in LANTERN.items():
+    for y, row in (LANTERN_COMPACT if variant == 3 else LANTERN).items():
         for x, ch in row.items():
             g[y][x] = ch
     if variant == 1:
@@ -165,10 +178,20 @@ def hair_layer(hair):
     return fn
 
 
-def detail_layer(f):
+def detail_layer(variant, part='base'):
+    """part: base — глаза, ноги, ручка лампы; lamp — горящая лампа (жёлтая); lampoff — потухшая (серо-синяя, без свечения)."""
+    return lambda f: _detail(variant, f, part)
+
+
+def _detail(variant, f, part):
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    g = frame_grid(0, 6, f)
-    pal = {'e': (22, 26, 44), 'm': (42, 47, 69), 'f': (58, 63, 77), 'l': (255, 216, 107), 'i': (255, 251, 224)}
+    g = frame_grid(variant, 6, f)
+    pals = {
+        'base': {'e': (22, 26, 44), 'm': (42, 47, 69), 'f': (58, 63, 77)},
+        'lamp': {'l': (255, 216, 107), 'i': (255, 251, 224)},
+        'lampoff': {'l': (72, 78, 104), 'i': (112, 120, 150)},
+    }
+    pal = pals[part]
     for y in range(H):
         for x in range(W):
             c = g[y][x]
@@ -176,7 +199,7 @@ def detail_layer(f):
                 below = g[y + 1][x] if y + 1 < H else None
                 col = pal[c]
                 if c == 'l' and below != 'l':
-                    col = (232, 176, 72)
+                    col = (232, 176, 72) if part == 'lamp' else (52, 57, 78)
                 im.putpixel((x, y), col + (255,))
     return im
 
@@ -201,8 +224,10 @@ def save(name, img):
 
 
 save('skin.png', make_sheet(skin_layer))
-save('detail.png', make_sheet(detail_layer))
 for v in VARIANTS:
+    save(f'detail_v{v}.png', make_sheet(detail_layer(v)))
+    save(f'lamp_v{v}.png', make_sheet(detail_layer(v, 'lamp')))
+    save(f'lampoff_v{v}.png', make_sheet(detail_layer(v, 'lampoff')))
     save(f'cloth1_v{v}.png', make_sheet(cloth_layer(v, {'a'})))
     save(f'cloth2_v{v}.png', make_sheet(cloth_layer(v, {'b'})))
     for h in HAIR:

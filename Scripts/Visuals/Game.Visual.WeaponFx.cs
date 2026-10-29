@@ -62,7 +62,7 @@ public partial class Game
         {
             float a = (1f - g.T / .22f) * .45f;
             c.DrawSetTransform(g.P + new Vector2(0, fy), 0, new Vector2(g.Face, 1));
-            LookArt.Draw(c, PlayerLook, 0, d.Offset - new Vector2(0, fy), new Color(.6f, .85f, 1f, a));
+            LookArt.Draw(c, PlayerLook, 0, d.Offset - new Vector2(0, fy), new Color(.6f, .85f, 1f, a), 16, 1, HasHandLamp);
         }
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }

@@ -153,7 +153,7 @@ public partial class Game
                 WaitStep(20f, () => { var mt = ToTile(mpos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net host: the meteor falls and leaves its ore"));
                 S(.3f, () => { Check(NetService.Count == 2, $"net host: two players in the roster ({NetService.Count})"); Check(Other()?.Name == "Клиент", $"net host: the client name was received ({Other()?.Name})"); });
                 WaitStep(15f, () => Other() != null && Other().Pos.DistanceTo(expectedClient) < 3f, ok => Check(ok, $"net host: the client position reaches the host ({Other()?.Pos})"));
-                S(.3f, () => { Check(Other() != null && Other().Light > 50f && Other().Light < 400f, $"net host: the client's light radius arrives ({Other()?.Light:0})"); Tp(expectedHost); GD.Print("[net] host moved"); Shot("net_host_view"); });
+                S(.3f, () => { Check(Other() != null && Other().Light > 10f && Other().Light < 400f, $"net host: the client's light radius arrives ({Other()?.Light:0})"); Tp(expectedHost); GD.Print("[net] host moved"); Shot("net_host_view"); });
                 WaitStep(20f, () => NetService.Count == 1, ok => Check(ok, "net host: the client leaving is noticed"));
             }
         }
@@ -196,7 +196,7 @@ public partial class Game
                     Tp(expectedClient);
                 });
                 WaitStep(20f, () => NetService.Players.TryGetValue(1, out var h) && h.Pos.DistanceTo(expectedHost) < 3f, ok => Check(ok, $"net client: the host position reaches the client ({(NetService.Players.TryGetValue(1, out var h2) ? h2.Pos : default)})"));
-                S(1.0f, () => { Check(NetService.Players.TryGetValue(1, out var hh) && hh.Light > 50f && hh.Light < 400f, $"net client: the host's light radius arrives ({(NetService.Players.TryGetValue(1, out var h3) ? h3.Light : 0):0})"); Shot("net_client_view"); Check(Remotes().Count() == 1, "net client: one remote character is drawn"); });
+                S(1.0f, () => { Check(NetService.Players.TryGetValue(1, out var hh) && hh.Light > 10f && hh.Light < 400f, $"net client: the host's light radius arrives ({(NetService.Players.TryGetValue(1, out var h3) ? h3.Light : 0):0})"); Shot("net_client_view"); Check(Remotes().Count() == 1, "net client: one remote character is drawn"); });
                 S(.3f, () => { NetService.Leave(false); Check(NetService.Role == NetRole.Offline, "net client: leaving the session works"); });
             }
         }

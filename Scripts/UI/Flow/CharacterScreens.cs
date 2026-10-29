@@ -40,7 +40,7 @@ public partial class CharacterSelectionUI : FlowScreen
             var card = new Card { Key = ci.Id, CustomMinimumSize = new Vector2(250, 50) }; var id = ci.Id;
             card.Clicked = () => Select(id); card.Activated = () => { Select(id); PlaySel(); };
             var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 6); card.AddChild(Pad(h, 4));
-            var slot = Px.Panel("Slot"); slot.CustomMinimumSize = new Vector2(38, 38); var lv = new LookView { Look = ci.Look, Zoom = 2, Position = new Vector2(3, 3) }; var holder = new Control { CustomMinimumSize = new Vector2(30, 30), MouseFilter = MouseFilterEnum.Ignore }; holder.AddChild(lv); slot.AddChild(Pad(holder, 1)); h.AddChild(slot);
+            var slot = Px.Panel("Slot"); slot.CustomMinimumSize = new Vector2(38, 38); var lv = new LookView { Look = ci.Look, Lamp = ci.HasLamp, Zoom = 2, Position = new Vector2(3, 3) }; var holder = new Control { CustomMinimumSize = new Vector2(30, 30), MouseFilter = MouseFilterEnum.Ignore }; holder.AddChild(lv); slot.AddChild(Pad(holder, 1)); h.AddChild(slot);
             var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 1); v.SizeFlagsHorizontal = SizeFlags.ExpandFill; h.AddChild(v);
             v.AddChild(Px.Label(ci.Name, Px.Gold));
             v.AddChild(Px.Label(string.Format(Loc.T("ур. {0} · здор. {1} · навыки {2}"), ci.Level, Mathf.RoundToInt(ci.MaxHp), ci.SkillPts), Px.Text));
@@ -73,7 +73,7 @@ public partial class CharacterSelectionUI : FlowScreen
         if (selSave == null) { var l = Px.Label("Выберите героя или создайте нового", Px.Dim, false, HorizontalAlignment.Center, true); l.Position = new Vector2(20, 100); l.Size = new Vector2(300, 40); detail.AddChild(l); return; }
         var c0 = selSave; var root = new Control { Size = detail.Size, MouseFilter = MouseFilterEnum.Ignore }; detail.AddChild(root);
         var stage = new StageView { Position = new Vector2(8, 8), Size = new Vector2(126, 170), Zoom = 6, FloorY = 96 + 0 }; root.AddChild(stage);
-        var lv = new LookView { Look = c0.Look ?? new Look(), Zoom = 6, Walking = walking, Position = new Vector2(15, 20) }; stage.AddChild(lv);
+        var lv = new LookView { Look = c0.Look ?? new Look(), Lamp = HasLampOf(c0), Zoom = 6, Walking = walking, Position = new Vector2(15, 20) }; stage.AddChild(lv);
         var nm = Px.Label(c0.Name, Px.Gold, true, HorizontalAlignment.Center); nm.Position = new Vector2(8, 182); nm.Size = new Vector2(126, 20); root.AddChild(nm);
         var wb = Px.Button(walking ? "Ходьба" : "Покой", "walk", null, 126, 20); wb.Position = new Vector2(8, 206); wb.Pressed += () => { walking = !walking; lv.Walking = walking; wb.Text = Loc.T(walking ? "Ходьба" : "Покой"); }; root.AddChild(wb);
 
@@ -130,6 +130,7 @@ public partial class CharacterSelectionUI : FlowScreen
         if (k == Key.Escape) { Back(); return true; }
         return false;
     }
+    internal static bool HasLampOf(CharacterSave c) { if (c == null) return false; if (c.HeroLamp > 0) return true; if (c.SkK != null && c.SkV != null) for (int i = 0; i < c.SkK.Length && i < c.SkV.Length; i++) if (c.SkK[i] == "Lens" && c.SkV[i] > 0) return true; return false; }
 }
 
 /// <summary>Создание героя: имя, цвет кожи, причёска, цвет волос, два цвета одежды и фасон. Предпросмотр меняется сразу; внешность не влияет на характеристики.</summary>
@@ -223,6 +224,7 @@ public partial class CharacterCreationUI : FlowScreen
         if (k == Key.Enter || k == Key.KpEnter) { Create(); return true; }
         return false;
     }
+
 
     public override void Back()
     {

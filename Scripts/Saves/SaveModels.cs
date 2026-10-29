@@ -7,14 +7,14 @@ namespace Lamplighter;
 /// <summary>Внешность героя: индексы в палитрах. Не влияет на характеристики. Передаётся по сети как шесть чисел.</summary>
 public sealed class Look
 {
-    public const int SkinN = 8, HairN = 7, HairColN = 10, ClothN = 12, VariantN = 3;
+    public const int SkinN = 8, HairN = 7, HairColN = 10, ClothN = 12, VariantN = 4;
     public int Skin, Hair, HairCol, Cloth1 = 1, Cloth2 = 4, Variant;
 
     public static readonly Color[] SkinCols = { new("#fbe3cf"), new("#f0c8a0"), new("#e0ac7c"), new("#c58c5a"), new("#a56b3f"), new("#7d4a2a"), new("#5a3320"), new("#9ec9a0") };
     public static readonly Color[] HairCols = { new("#2a1c14"), new("#5a3a22"), new("#8a5a2c"), new("#c9954a"), new("#e8d27a"), new("#b8442a"), new("#d8d8e0"), new("#4a6ac8"), new("#8a4ac8"), new("#3aa86a") };
     public static readonly Color[] ClothCols = { new("#c84a3a"), new("#4a6dc0"), new("#3a9a5a"), new("#d8a838"), new("#8a4ac8"), new("#2f3a56"), new("#e8e4d8"), new("#d8703a"), new("#3ab0b8"), new("#c8548a"), new("#6a6a78"), new("#7a5230") };
     public static readonly string[] HairNames = { "Короткая", "Ёжик", "Длинная", "Хвост", "Капюшон", "Шапка", "Лысый" };
-    public static readonly string[] VariantNames = { "Куртка", "Плащ", "Туника" };
+    public static readonly string[] VariantNames = { "Куртка", "Плащ", "Туника", "Разведчик" };
 
     public Look Clone() => (Look)MemberwiseClone();
 
@@ -71,7 +71,7 @@ public sealed class VillSave { public int Id, Work = -1, Home = -1, Talk; public
 public sealed class CharInfo
 {
     public string Id = "", Name = "", Stamp = ""; public Look Look = new(); public float PlaySecs; public int Level = 1, Tier, SkillPts, Weapons, Relics; public float MaxHp = 60; public string Weapon = "", Tool = "";
-    public long Created; public bool Ok = true;
+    public long Created; public bool Ok = true, HasLamp;
 }
 
 public sealed class WorldInfo

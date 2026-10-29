@@ -42,7 +42,8 @@ public sealed class SimPlayer
     public float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));          // Game.MineSpeed
     public float LensBonus => Se(Tech.Lens) + Se(Tech.LensII);
     public float FarLampBonus => Se(Tech.FarLanterns) + Se(Tech.FarLanternsII);
-    public float LightR => (72f + 8 * Tier + 2 * Level) * (1f + LensBonus) * (1f + Se(Tech.HeroLamp)) * (1f + N("HeroRadius"));   // Game.PlayerLightR (без фонаря героя и «лучезарности»)
+    public float LampMul { get { int l = Sk[(int)Tech.Lens] + Sk[(int)Tech.LensII]; return Sk[(int)Tech.Lens] <= 0 ? .3f : .5f + .5f * Math.Clamp((l - 1) / 9f, 0f, 1f); } }      // Game.LampMul
+    public float LightR => (72f + 8 * Tier + 2 * Level) * LampMul * (1f + LensBonus) * (1f + Se(Tech.HeroLamp)) * (1f + N("HeroRadius"));   // Game.PlayerLightR (без фонаря героя и «лучезарности»)
     public float DashCooldown => T.DashCooldown * (1f - Se(Tech.Dash));
     public float SpinScale => 1f + Se(Tech.Spin);
     public float FlareDuration => 10f + Se(Tech.Flare);

@@ -41,7 +41,7 @@ public partial class Game : Node2D
     public World W;
     int srcId;
     const int LightLimit = 96;                       // должен совпадать с размером массива lights в Assets/Shaders/Lighting/lights_common.gdshaderinc
-    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; Control uiRoot; public GameHud GameHudNode; BuildMenu buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
+    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; Control uiRoot; public GameHud GameHudNode; BuildWindowUI buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
     public float UiScaleVp = 2f;
     public readonly RandomNumberGenerator rng = new();
 
@@ -63,7 +63,7 @@ public partial class Game : Node2D
     public List<Particle> Parts = new();
     public List<FText> Texts = new();
     public readonly GameNotificationService Notify = new();     // единый журнал: все уведомления игры и чат
-    public ChatHud Chat; public bool ChatOpen => Chat != null && Chat.IsOpen;
+    public ChatHud Chat; public RegionTitleHud RegionTitle; public bool ChatOpen => Chat != null && Chat.IsOpen;
     public List<Banner> Banners = new();
     float saveT, regionT; int lastRegion = -1;
     public int Kills;
@@ -92,12 +92,12 @@ public partial class Game : Node2D
     {
         float wh = testing ? ViewSize.Y : DisplayServer.WindowGetSize().Y; int si = Settings.UiInt(wh);
         UiScaleVp = si * ViewSize.Y / Mathf.Max(1f, wh);
-        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (flow != null && GodotObject.IsInstanceValid(flow)) flow.Size = uiRoot.Size;
+        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (RegionTitle != null) RegionTitle.Size = uiRoot.Size; if (flow != null && GodotObject.IsInstanceValid(flow)) flow.Size = uiRoot.Size;
     }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
     public bool WaterAt(Vector2 p) { var t = ToTile(p); return World.In(t.X, t.Y) && W.Ground[World.Key(t.X, t.Y)] == Art.WaterG; }
-    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * (1f + LensBonus) * (1f + E(Tech.HeroLamp)) * (1f + .12f * HeroLampLv + N("HeroRadius")) * (Surge > 0 ? 1.4f : 1f) * LightDim;
+    public float PlayerLightR => (72f + 8 * Tier + 2 * Level) * LampMul * (1f + LensBonus) * (1f + E(Tech.HeroLamp)) * (1f + .12f * HeroLampLv + N("HeroRadius")) * (Surge > 0 ? 1.4f : 1f) * LightDim;
 
     // ───────────────────────── инициализация ─────────────────────────
     public override void _Ready()
@@ -107,7 +107,7 @@ public partial class Game : Node2D
         Diag.Enabled = OS.GetEnvironment("LAMP_DIAG") != "";
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != ""; testDir = OS.GetEnvironment("LAMP_AUTOTEST");
         Settings.Load(); if (testing && OS.GetEnvironment("LAMP_LANG") != "") { Settings.Lang = OS.GetEnvironment("LAMP_LANG"); Loc.LogMissing = true; }
-        Settings.Apply(testing); Ach.Load(); if (Settings.Diag) Diag.Enabled = true; if (Diag.Enabled && testing) Diag.OutPath = System.IO.Path.Combine(testDir, "diagnostics.json");
+        Settings.Apply(testing); ThemeFix.Apply(GD.Load<Theme>(Hud.ThemePath)); Ach.Load(); if (Settings.Diag) Diag.Enabled = true; if (Diag.Enabled && testing) Diag.OutPath = System.IO.Path.Combine(testDir, "diagnostics.json");
         Art.Build();
         Db.Init();
         AddChild(new Sfx()); AddChild(new Music());
@@ -143,8 +143,8 @@ public partial class Game : Node2D
         var hl = new CanvasLayer { Layer = 10 }; AddChild(hl);
         uiRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore }; hl.AddChild(uiRoot);
         hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore }; uiRoot.AddChild(hud);
-        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode); Chat = new ChatHud { G = this }; uiRoot.AddChild(Chat);
-        buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildMenu>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
+        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode); Chat = new ChatHud { G = this }; uiRoot.AddChild(Chat); RegionTitle = new RegionTitleHud { G = this }; uiRoot.AddChild(RegionTitle);
+        buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildWindowUI>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
         invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
         upgradeWindow = GD.Load<PackedScene>("res://Scenes/UI/UpgradeWindow.tscn").Instantiate<UpgradeWindowUI>(); upgradeWindow.G = this; uiRoot.AddChild(upgradeWindow);
         equipWindow = GD.Load<PackedScene>("res://Scenes/UI/EquipWindow.tscn").Instantiate<EquipWindowUI>(); equipWindow.G = this; uiRoot.AddChild(equipWindow);

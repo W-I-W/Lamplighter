@@ -16,10 +16,10 @@ public static class LookArt
         t = GD.Load<Texture2D>(Dir + n + ".png"); cache[n] = t; return t;
     }
 
-    public static bool Available() => T("skin") != null && T("detail") != null;
+    public static bool Available() => T("skin") != null && T("detail_v0") != null;
 
     /// <summary>Рисует кадр героя (frame 0/1) в клетке 16×16 с левым верхним углом pos; height &lt; 16 обрезает низ (стоит в воде). scale — для крупного предпросмотра в интерфейсе.</summary>
-    public static void Draw(CanvasItem c, Look l, int frame, Vector2 pos, Color mod, float height = 16, float scale = 1)
+    public static void Draw(CanvasItem c, Look l, int frame, Vector2 pos, Color mod, float height = 16, float scale = 1, bool lamp = true)
     {
         l ??= new Look(); l.Clamp();
         float h = Mathf.Clamp(height, 1, 16); var src = new Rect2(frame * 16, 0, 16, h); var dst = new Rect2(pos, new Vector2(16, h) * scale);
@@ -28,7 +28,8 @@ public static class LookArt
         L("skin", Look.SkinCols[l.Skin]);
         L($"cloth1_v{l.Variant}", Look.ClothCols[l.Cloth1]);
         L($"cloth2_v{l.Variant}", Look.ClothCols[l.Cloth2]);
-        L("detail", Colors.White);
+        L($"detail_v{l.Variant}", Colors.White);
+        L(lamp ? $"lamp_v{l.Variant}" : $"lampoff_v{l.Variant}", Colors.White);      // лампа горит (есть у героя) или потухла и не светится
         L($"hair_{l.Hair}", Look.HairCols[l.HairCol]);
     }
 }

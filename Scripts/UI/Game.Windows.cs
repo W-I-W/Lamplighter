@@ -27,7 +27,7 @@ public partial class Game
     public List<WeaponDef> CraftableWeapons() { var l = new List<WeaponDef>(); foreach (var w in Db.Weapons) if (w.Cost != null) l.Add(w); return l; }
     public List<Building> ProdList() => Buildings.FindAll(b => IsProducer(b.Type));
 
-    public static readonly string[] BuildCatNames = { "Всё", "Базовое", "Производство", "Декор" };
+    public static readonly string[] BuildCatNames = { "Базовое", "Производство", "Декор" };
 
     /// <summary>Все постройки с категорией и иконкой тайла (для меню строительства). Cat: 1 — базовое, 2 — производство, 3 — декор.</summary>
     public List<BuildEntry> BuildEntries()
@@ -51,8 +51,14 @@ public partial class Game
         return l;
     }
 
-    /// <summary>Постройки выбранной категории (BuildCat; 0 — все).</summary>
-    public List<BuildEntry> BuildEntriesFiltered() { var all = BuildEntries(); if (BuildCat == 0) return all; return all.FindAll(e => e.Cat == BuildCat); }
+    /// <summary>Постройки выбранной категории (BuildCat: 0 — базовое, 1 — производство, 2 — декор).</summary>
+    /// <summary>Доступное — первым, закрытое — после него и приглушённое; закрытых показываем не больше трёх (ближайшие к открытию), чтобы в начале игры не было десятков вариантов.</summary>
+    public List<BuildEntry> BuildEntriesFiltered()
+    {
+        var all = BuildEntries().FindAll(e => e.Cat == BuildCat + 1);
+        var open = all.FindAll(e => e.Unlocked); var shut = all.FindAll(e => !e.Unlocked); if (shut.Count > 3) shut = shut.GetRange(0, 3);
+        open.AddRange(shut); return open;
+    }
 
     public List<int> SellList()
     {
@@ -94,9 +100,9 @@ public partial class Game
                 case Key.Up: WinCur = Math.Max(0, WinCur - cols); return true;
                 case Key.Down: WinCur = Math.Min(Math.Max(0, wlen - 1), WinCur + cols); return true;
                 case Key.Q: if (Window == Win.Build) { var ql = BuildEntriesFiltered(); if (WinCur < ql.Count) CraftBuild(ql[WinCur]); return true; } break;
-                case Key.Tab: if (Window == Win.Build) { BuildCat = (BuildCat + 1) % 4; WinCur = 0; Sfx.Play("tick", -6, 1.3f); } return true;
+                case Key.Tab: if (Window == Win.Build) { BuildCat = (BuildCat + 1) % BuildCatNames.Length; WinCur = 0; Sfx.Play("tick", -6, 1.3f); } return true;
                 case Key.Enter: case Key.KpEnter:
-                    if (Window == Win.Build) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else if (e.Stock > 0) { Placing = e; Window = Win.None; Toast("[ЛКМ] — поставить · [ПКМ] — отмена"); } else CraftBuild(e); } }
+                    if (Window == Win.Build) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else if (e.Stock > 0) { Placing = e; Window = Win.None; } else CraftBuild(e); } }
                     return true;
                 case Key.Escape: CloseWindows(); return true;
                 case Key.B: if (Window == Win.Build) { CloseWindows(); return true; } break;

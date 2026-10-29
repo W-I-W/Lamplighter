@@ -24,19 +24,20 @@ public partial class Game
             // уровни и бонусы первой и второй ступени
             Check(SkillMax(lens) == 5 && SkillMax(lens2) == 5, "skills: both light tiers have 5 levels");
             for (int k = 1; k <= 5; k++) Check(Near(SkillOf(lens).Eff(k), .02f * k), $"skills: Light range I level {k} = +{2 * k}%");
-            Reset(); float r0 = PlayerLightR;
-            SetSkillLevel(lens, 3); Check(Near(LensBonus, .06f), "skills: 3/5 of tier I = +6%"); Check(Near(PlayerLightR / r0, 1.06f), "skills: the real light radius rises by 6%");
+            Reset(); Check(!HasHandLamp && Near(LampMul, .3f), "lamp: a new hero has no hand lamp and only a faint glow"); float r0 = PlayerLightR / LampMul;
+            SetSkillLevel(lens, 1); Check(HasHandLamp && Near(LampMul, .5f), "lamp: the first Light Lens level gives the hand lamp, its light is dim (x0.5)");
+            SetSkillLevel(lens, 3); Check(Near(LensBonus, .06f), "skills: 3/5 of tier I = +6%"); Check(Near(PlayerLightR / LampMul / r0, 1.06f), "skills: the real light radius rises by 6%");
             Check(Near(RegenPerSec, Tune.T.RegenRate), "skills: regeneration at level 0 is the base rate");
             SetSkillLevel((int)Tech.Regen, 3); Check(Near(RegenPerSec, Tune.T.RegenRate + .75f), "skills: regeneration level 3 adds 0.75 hp/s");
             SetSkillLevel((int)Tech.Regen, 5); Check(Near(RegenPerSec, Tune.T.RegenRate + 1.25f), "skills: regeneration level 5 adds 1.25 hp/s"); SetSkillLevel((int)Tech.Regen, 0);
-            SetSkillLevel(lens, 5); Check(Near(PlayerLightR / r0, 1.10f), "skills: 5/5 of tier I = +10% of the base radius");
+            SetSkillLevel(lens, 5); Check(Near(PlayerLightR / LampMul / r0, 1.10f), "skills: 5/5 of tier I = +10% of the base radius");
             // вторая ступень недоступна до максимума первой
             SetSkillLevel(lens, 4); LitCountOverride(true);
             Check(!ParentsOwned(lens2) && StateOfTech(lens2) == TechState.Locked, "skills: tier II is locked until tier I is maxed (4/5)");
             foreach (var cc in LevelCost(lens2, 1)) Inv[cc[0]] = 99; Check(!LearnTech(lens2) && Lv(Tech.LensII) == 0, "skills: tier II cannot be bought early even with resources");
             SetSkillLevel(lens, 5); Check(ParentsOwned(lens2), "skills: tier II opens at 5/5 of tier I");
-            for (int k = 1; k <= 5; k++) { SetSkillLevel(lens2, k); Check(Near(LensBonus, .10f + .04f * k) && Near(PlayerLightR / r0, 1.10f + .04f * k), $"skills: tier II level {k}: total +{10 + 4 * k}%"); }
-            Check(Near(PlayerLightR / r0, 1.30f), "skills: both tiers maxed = +30% light radius");
+            for (int k = 1; k <= 5; k++) { SetSkillLevel(lens2, k); Check(Near(LensBonus, .10f + .04f * k) && Near(PlayerLightR / LampMul / r0, 1.10f + .04f * k), $"skills: tier II level {k}: total +{10 + 4 * k}%"); }
+            Check(Near(PlayerLightR / LampMul / r0, 1.30f), "skills: both tiers maxed = +30% light radius");
             // покупка ровно одного уровня, цена растёт, нельзя без ресурсов и сверх максимума
             Reset(); HasFurnace = true; var c1 = LevelCost(lens, 1); var c5 = LevelCost(lens, 5); int Sum(int[][] c) => c.Sum(x => x[1]);
             bool rising = true; for (int k = 2; k <= 5; k++) if (Sum(LevelCost(lens, k)) < Sum(LevelCost(lens, k - 1))) rising = false;

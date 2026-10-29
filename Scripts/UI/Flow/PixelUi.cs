@@ -21,7 +21,7 @@ public static class Px
     public static Button Button(string text, string icon, Action act, float w = 0, float h = 22)
     {
         var b = new Button { Text = Loc.T(text), FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(w, h) };
-        if (icon != null) b.AddChild(new TextureRect { Texture = Px.Icon(icon), Position = new Vector2(5, (h - 16) / 2), Size = new Vector2(16, 16), MouseFilter = Control.MouseFilterEnum.Ignore });      // значок слева, текст по центру всей кнопки
+        if (icon != null) b.AddChild(new TextureRect { Texture = Px.Icon(icon), Position = new Vector2(5, (h - 16) / 2 + 1), Size = new Vector2(16, 16), MouseFilter = Control.MouseFilterEnum.Ignore });      // значок слева, текст по центру всей кнопки
         b.Pressed += () => { Sfx.Play("tick", -3, 1.3f); act?.Invoke(); };
         return b;
     }
@@ -57,7 +57,7 @@ public static class Px
 /// <summary>Герой из PNG-слоёв в увеличенном виде. Ожидание — лёгкое покачивание, ходьба — смена кадров шага; Flip — взгляд влево.</summary>
 public partial class LookView : Control
 {
-    public Look Look = Game.DefaultLook(); public bool Walking, Flip; float zoom = 4, t;
+    public Look Look = Game.DefaultLook(); public bool Walking, Flip, Lamp; float zoom = 4, t;
     public float Zoom { get => zoom; set { zoom = value; CustomMinimumSize = new Vector2(16, 16) * zoom; Size = CustomMinimumSize; } }
 
     public override void _Ready() { MouseFilter = MouseFilterEnum.Ignore; TextureFilter = TextureFilterEnum.Nearest; }
@@ -68,7 +68,7 @@ public partial class LookView : Control
         int frame = Walking ? (int)(t * 6) % 2 : 0; float bob = Walking ? (frame == 1 ? -1 : 0) : (Mathf.Sin(t * 2.4f) > .35f ? -1 : 0);
         float z = zoom;
         if (Flip) DrawSetTransform(new Vector2(16 * z, 0), 0, new Vector2(-1, 1));
-        LookArt.Draw(this, Look, frame, new Vector2(0, bob * z), Colors.White, 16, z);
+        LookArt.Draw(this, Look, frame, new Vector2(0, bob * z), Colors.White, 16, z, Lamp);
         DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 }

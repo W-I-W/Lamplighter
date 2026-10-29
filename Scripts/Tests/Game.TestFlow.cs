@@ -17,7 +17,7 @@ public partial class Game
         S(.3f, () =>
         {
             var a = SaveManager.CreateCharacter("Алекс", new Look { Skin = 2, Hair = 2, HairCol = 3, Cloth1 = 1, Cloth2 = 0, Variant = 1 }); a.Level = 9; a.MaxHp = 130; a.Kills = 240; a.PlaySecs = 7300; a.Xp = 120; a.WId = new[] { "sword1", "bow1" }; a.SkK = new[] { "Lens", "Dash" }; a.SkV = new[] { 3, 1 }; a.Equipped = new[] { "r_embersp" }; a.CurTool = "pickaxe"; SaveManager.SaveCharacter(a); cA = a.Id;
-            var b = SaveManager.CreateCharacter("Марк", new Look { Skin = 5, Hair = 1, HairCol = 7, Cloth1 = 6, Cloth2 = 8, Variant = 2 }); cB = b.Id;
+            var b = SaveManager.CreateCharacter("Марк", new Look { Skin = 5, Hair = 1, HairCol = 7, Cloth1 = 6, Cloth2 = 8, Variant = 3 }); b.SkK = new[] { "Lens" }; b.SkV = new[] { 1 }; SaveManager.SaveCharacter(b); cB = b.Id;
             var w1 = SaveManager.CreateWorld("Тёмный лес", 12345, 0); var w2 = SaveManager.CreateWorld("Новое начало", 777, 1); SaveManager.CreateWorld("Мир друзей", 42, 0);
             Check("flow: lists created", SaveManager.ListCharacters().Count == 3 && SaveManager.ListWorlds().Count == 4, $"chars={SaveManager.ListCharacters().Count} worlds={SaveManager.ListWorlds().Count}");
         });

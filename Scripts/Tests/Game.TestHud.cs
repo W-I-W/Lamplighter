@@ -27,6 +27,21 @@ public partial class Game
         S(.5f, () => { Check("hud: full shows the debug line", GameHudNode.DebugVisible); Shot("hud6_full"); HudDensity.Mode = HudMode.Normal; Events.Clear(); });
         S(.2f, () => { OpenWin(Win.Equip); });
         S(.6f, () => { Check("hud: the equipment window ([C]) fills in on a fresh hero", equipWindow.CardCount > 0); Shot("hud7_equip_fresh"); CloseWindows(); });
+        S(.1f, () => { var an = W.Ancients.Find(x => x.Region == 1 && !x.Boss); if (an != null) Tp(an.Pos + new Vector2(0, 40)); });
+        S(1.6f, () => { });
+        S(.3f, () => { Check("hud: walking into another location replaces the title with the new name", RegionTitle.Showing && RegionTitle.Text == Loc.T(RegionNames[1])); Shot("hud8_region_title"); Tp(TileCenter(W.Spawn.X, W.Spawn.Y)); });
+        S(.2f, () => { Inv[It.Stone] = 3; Inv[It.Wood] = 0; OpenWin(Win.Build); });
+        S(.6f, () =>
+        {
+            var l = BuildEntriesFiltered(); Check("build: the compact window opens with a short list", buildMenu.PanelVisible && l.Count > 0 && l.Count <= 4 + 3 + 24);
+            Check("build: at most three locked entries are shown", l.FindAll(e => !e.Unlocked).Count <= 3);
+            Check("build: with not enough resources the action line has no create command", buildMenu.ActionText.StartsWith("Tab"));
+            Shot("build1_short");
+            Inv[It.Stone] = 60; Inv[It.Wood] = 60; BuildCat = 0; WinCur = l.FindIndex(e => e.Key == "furnace");
+        });
+        S(.5f, () => { Check("build: when resources suffice the line offers Enter — create", buildMenu.ActionText.StartsWith("Enter — создать")); Shot("build2_ready"); PressWindowKey(Key.Enter); });
+        S(.4f, () => { Check("build: after crafting the line offers placing and one more", buildMenu.ActionText.Contains("Enter — поставить")); Shot("build3_stock"); PressWindowKey(Key.Enter); });
+        S(.5f, () => { Check("build: in placement mode the window is closed and one short hint remains", Placing != null && !buildMenu.PanelVisible && buildMenu.PlaceHintVisible); Shot("build4_placing"); Placing = null; });
         S(.2f, () => { Check("hud: H cycles the mode", HudDensity.Next() == HudMode.Minimal && HudDensity.Next() == HudMode.Full && HudDensity.Next() == HudMode.Normal); Log("hud done"); GD.Print("[check] SUMMARY failures=" + checkFails); GD.Print("HUD DONE"); });
     }
 }
