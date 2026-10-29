@@ -78,7 +78,7 @@ public partial class GameHud : Control
     {
         if (G == null || G.W == null) return;
         float dt = (float)delta; flashT = Mathf.Max(0, flashT - dt);
-        bool menu = G.Menu == Mn.Main;
+        bool menu = G.Menu == Mn.Main || G.Menu == Mn.Flow;
         Visible = !menu && (G.Window == Win.None || G.Window == Win.Build || G.Window == Win.Inventory) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
         UpdateStatus(); UpdateGoal(); UpdateWorld(dt); UpdateHotbar(); UpdateAbilities(); UpdateHint(dt);
     }

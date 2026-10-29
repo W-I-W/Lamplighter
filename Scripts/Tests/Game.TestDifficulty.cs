@@ -119,7 +119,7 @@ public partial class Game
             Enemies.Clear(); Projs.Clear(); PPos = spot; Hp = MaxHp; TestPlayers = 0;
             var w = SpawnEnemy(spot + new Vector2(60, 0), EK.Warden, null, 1f); Check(Mathf.Abs(w.MaxHp - 170f * Tune.T.BossHp[0]) < .01f, $"boss: the first guardian has {w.MaxHp:0} health (base 170 × {Tune.T.BossHp[0]})");
             w.Pos = spot + new Vector2(10, 0); w.Home = w.Pos; w.State = 0; w.Atk = 0; w.T1 = 5f; Invuln = 0; float h = Hp; UpdateEnemies(.033f);
-            Check(Mathf.Abs((h - Hp) - 12f * Tune.T.BossDamage[0]) < .05f, $"boss: contact damage is scaled by the Resource ({h - Hp:0.0} = 12 × {Tune.T.BossDamage[0]})");
+            Check(Mathf.Abs((h - Hp) - 12f * Tune.T.BossDamage[0] * FearMul) < .05f, $"boss: contact damage is scaled by the Resource ({h - Hp:0.0} = 12 × {Tune.T.BossDamage[0]})");
             Enemies.Clear(); TestPlayers = 4; var w4 = SpawnEnemy(spot + new Vector2(60, 0), EK.Warden, null, 1f); Check(w4.MaxHp > w.MaxHp * 1.5f && BossTempoMul() < 1f, $"boss: four players — more health ({w4.MaxHp:0}) and a faster tempo (×{BossTempoMul():0.00})");
             TestPlayers = 0; Enemies.Clear();
         });

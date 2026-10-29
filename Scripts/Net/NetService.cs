@@ -22,6 +22,7 @@ public static class NetService
 
     public static event Action<NetPlayer> PlayerJoined, PlayerLeft;
     public static event Action<string> Notice;                     // короткие сообщения для игрока
+    public static event Action<string, string> Invite;             // приглашение (транспорт, цель): игра сначала предлагает выбрать героя, подключение выполняет она сама
     public static event Action Ended;                              // сеанс завершён (хост вышел, потеря связи, выход)
 
     public static bool Active => Role != NetRole.Offline && State != NetState.Failed;
@@ -98,9 +99,9 @@ public static class NetService
     {
         if (steamWatch) return; steamWatch = true;
         var st = SteamTransport.Shared; if (!st.IsAvailable(out _)) return;
-        st.JoinRequested += id => { Notice?.Invoke("Приглашение Steam: подключение…"); Join("steam", id.ToString()); };
+        st.JoinRequested += id => Invite?.Invoke("steam", id.ToString());
         var args = OS.GetCmdlineArgs();
-        for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "+connect_lobby" && long.TryParse(args[i + 1], out var lobby)) Join("steam", lobby.ToString());
+        for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "+connect_lobby" && long.TryParse(args[i + 1], out var lobby)) Invite?.Invoke("steam", lobby.ToString());
     }
 
     /// <summary>Каждый кадр без активного сеанса: обработка обратных вызовов Steam (приглашения).</summary>

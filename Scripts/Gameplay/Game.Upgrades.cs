@@ -20,7 +20,7 @@ public partial class Game
         return false;
     }
 
-    void InitUpgrades(SaveData d)
+    void InitUpgrades(WorldSave d)
     {
         Upgrades = new UpgradeProgressionSystem(this);
         Upgrades.Restore(d?.UpCats, d?.UpNew);

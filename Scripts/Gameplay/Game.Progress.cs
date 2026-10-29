@@ -178,7 +178,8 @@ public partial class Game
     public bool IsExplored(Vector2 p) { int cx = (int)(p.X / TS / 4), cy = (int)(p.Y / TS / 4); return cx >= 0 && cy >= 0 && cx < CW && cy < World.Ht / 4 && Expl[cy * CW + cx] != 0; }
 
     /// <summary>Индекс цвета клетки на карте в палитре Assets/UI/Map/map_palette.png (порядок цветов — в tools/GraphicsGenerator/make_map_palette.py).</summary>
-    public int MapIdx(int x, int y)
+    public int MapIdx(int x, int y) => MapIdxOf(W, x, y);
+    public static int MapIdxOf(World W, int x, int y)
     {
         var t = W.Get(x, y); int reg = World.RegionOf(x); byte g = W.Ground[World.Key(x, y)];
         switch (t)

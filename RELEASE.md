@@ -28,13 +28,9 @@ godot --headless --path . --export-release "Windows Desktop" build/Lanther.exe
 | `perf` | stress scene (30 enemies, lamps, buildings) — fails below 60 fps |
 | `final` / `reload` | chunk borders, production while chunks are unloaded, resource regrowth, death + save, no duplicate unique rewards, finished-save reload (no finale re-trigger, bosses stay dead) |
 
-Migration of pre-stage-5 saves (world width 384 → 640): `LAMP_STAGE=makev4` writes a save, `.patch/crop4.py` crops it to the old format, `LAMP_LOAD=1` loads it.
-
 ## Saves
 
-`user://save.json` (current), `user://save.bak` (last valid previous save), `user://slot1..3.json` (manual), `save_prev.json` (created by *New game* / loading a slot).
-Writes are atomic (temp file → replace) and the previous file is copied to `save.bak` only if it parses. A damaged `save.json` falls back to `save.bak`.
-Versions 2–4 load and migrate to 5 (new regions are generated from the seed; unlocked seals are re-applied from the beacon level).
+Heroes and worlds are separate files: `user://characters/<id>.json` and `user://worlds/<id>.json` (+ `.png` thumbnail), see `docs/SAVES.md`. Writes are atomic (temp file → replace) and the previous file is copied to `.bak` only if it parses; a damaged file falls back to its `.bak`. Old single-file saves (`save.json`, slots) are not supported.
 
 ## Steam
 
@@ -62,7 +58,7 @@ To add a language: copy `lang/en.json` to `lang/xx.json`, translate the values, 
 
 ## Stage 6 notes (gameplay design pass)
 
-* Test saves for four stages live in `testsaves/{early,mid,late,post}/save.json` (seed 4242). Use: `LAMP_AUTOTEST=<copy of the folder> LAMP_LOAD=1` + any stage, or `LAMP_STAGE=savesmoke`. Regenerate with `LAMP_STAGE=mksave LAMP_SAVE=<name>`. They never touch the player's `user://` saves.
+* Test saves for four stages live in `testsaves/{early,mid,late,post}/{characters,worlds}/` (hero `testchar`, world `testworld`, seed 4242). Use: `LAMP_AUTOTEST=<copy of the folder> LAMP_LOAD=1` + any stage, or `LAMP_STAGE=savesmoke`. Regenerate with `LAMP_STAGE=mksave LAMP_SAVE=<name>`. They never touch the player's `user://` saves.
 * Diagnostics: Settings → "Diagnostics (local only)" or `LAMP_DIAG=1`. Writes `user://diagnostics.json` (first-event times, mining/dark time, deaths, ability counts, fps, nodes, chunks, memory). Nothing is sent anywhere; off by default.
 * These are technical checks, not playtests. Questions about fun/pacing need real players: watch the first 30 minutes with diagnostics on and compare `first_events_secs` with the 5/10/20/30-minute targets.
 

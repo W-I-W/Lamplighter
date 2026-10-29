@@ -15,7 +15,7 @@ public partial class Game
     {
         int fails = 0;
         void Check(bool ok, string what) { if (!ok) fails++; GD.Print($"[check] {(ok ? "PASS" : "FAIL")} {what}"); }
-        SaveData ReadSave() => JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SavePath), new JsonSerializerOptions { IncludeFields = true });
+        WorldSave ReadSave() => SaveManager.LoadWorld(GameSession.WorldId);
         Poi P(PK k) => W.Pois.Find(p => p.Kind == k && (k != PK.Camp || p.Variant == 8) && World.RegionOf(p.Tile.X) == 0);
         Ancient Lamp(LampKind k) { foreach (var a in W.Ancients) if (a.Kind == k && !a.Boss && a != W.Ancients[0]) return a; return null; }
         int Idx(Ancient a) => W.Ancients.IndexOf(a);

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TerrainBlendConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Visuals/TerrainBlendConfig.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Enabled = true
+BlendWidth = 2.0
+WidthJitter = 1.0
+DitherIntensity = 0.5
+Roughness = 0.55
+ScatterDensity = 0.6
+DecorDensity = 0.12
+SeedSalt = 0

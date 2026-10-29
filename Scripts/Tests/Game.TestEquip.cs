@@ -67,7 +67,7 @@ public partial class Game
             Open(0); equipWindow.ClickCard(0); equipWindow.Force(); Check(equipWindow.SocketCount == 0, "equip: tools have no socket cells");
             equipWindow.PressButton("Экипировать"); Check(CurW < 0, "equip: the Equip button puts a tool in hand");
             int row = ToolList().Count + 1; EqHotAssign(row, 1); Check(HotSlotOf(EquipRef(row)) == 1, "equip: hotbar assignment");
-            Save(); var txt = System.IO.File.ReadAllText(SavePath); Check(txt.Contains(Db.Weapon(Owned[1].Id).Id), "equip: the save contains the weapon");
+            Save(); var txt = System.IO.File.ReadAllText(CharPath); Check(txt.Contains(Db.Weapon(Owned[1].Id).Id), "equip: the save contains the weapon");
         });
         S(.3f, () =>
         {

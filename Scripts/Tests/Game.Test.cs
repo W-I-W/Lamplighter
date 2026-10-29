@@ -38,8 +38,6 @@ public partial class Game
     void AutoTest(float dt)
     {
         if (OS.GetEnvironment("LAMP_STAGE") == "genres") { Db.SaveDefaults(); GetTree().Quit(); return; }
-        if (OS.GetEnvironment("LAMP_STAGE") == "makeold") { MakeOldSave(); GetTree().Quit(); return; }
-        if (OS.GetEnvironment("LAMP_STAGE") == "makev4") { BeaconLevel = 4; Save(); GetTree().Quit(); return; }
         if (!noHeal) Hp = MaxHp;
         if (OS.GetEnvironment("LAMP_LOAD") != "" && OS.GetEnvironment("LAMP_STAGE") != "reload" && OS.GetEnvironment("LAMP_STAGE") != "savesmoke" && OS.GetEnvironment("LAMP_STAGE") != "interactload" && OS.GetEnvironment("LAMP_STAGE") != "ui")
         {
@@ -59,23 +57,6 @@ public partial class Game
         sw = s.wait;
     }
 
-    /// <summary>Создаёт сохранение формата этапа 2 (лес 128x128), чтобы проверить миграцию.</summary>
-    void MakeOldSave()
-    {
-        var old = new byte[World.N * World.N];
-        for (int y = 0; y < World.N; y++) for (int x = 0; x < World.N; x++) old[y * World.N + x] = W.Obj[y * World.Wd + x];
-        var d = new SaveData
-        {
-            Version = 2, Seed = W.Seed, Obj = Convert.ToBase64String(old), Lit = new bool[7], Px = 1000, Py = 1000, Hp = 90, MaxHp = 90, Xp = 10, Level = 7, Tier = 2, Tech = 0b1111, Kills = 30, Boss = true,
-            Inv = new int[9] { 50, 40, 3, 2, 9, 7, 6, 1, 2 }, Stock = new int[9], BT = new int[] { (int)Tl.Warehouse }, BX = new int[] { 66 }, BY = new int[] { 66 }, BL = new int[] { 2 },
-            PoiState = new byte[35]
-        };
-        d.Lit[1] = true; d.Lit[2] = true; d.Lit[6] = true; for (int i = 0; i < 6; i++) d.PoiState[i] = 3 | 16;
-        W.Obj[0] = W.Obj[0];
-        System.IO.File.WriteAllText(SavePath, System.Text.Json.JsonSerializer.Serialize(d, new System.Text.Json.JsonSerializerOptions { IncludeFields = true }));
-        Log("old-format save written");
-    }
-
     void S(float wait, Action a) => script.Add((wait, a));
 
     void BuildScript()
@@ -89,6 +70,8 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "heart") { BuildHeartScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "end") { BuildEndScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "menu") { BuildMenuScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "flow") { BuildFlowScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "sessions") { BuildSessionsScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "loc") { BuildLocScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "econ") { BuildEconScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "ui") { BuildUiScript(); return; }
@@ -100,6 +83,8 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "steamprobe") { BuildSteamProbeScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "netmenu") { BuildNetMenuScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "nethost") { BuildNetScript(true); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "netflowhost") { BuildNetFlowScript(true); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "netflowjoin") { BuildNetFlowScript(false); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "netjoin") { BuildNetScript(false); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "upgrades") { BuildUpgradesScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "equip") { BuildEquipScript(); return; }
@@ -110,6 +95,8 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "interact") { BuildInteractScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interactload") { BuildInteractLoadScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "texcheck") { BuildTexCheckScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "blend") { BuildBlendScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "balance") { BuildBalanceScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "soak") { BuildSoakScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "combat") { BuildCombatScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "mksave") { BuildMkSaveScript(); return; }

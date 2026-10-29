@@ -15,6 +15,7 @@ public partial class Game
         string ln = OS.GetEnvironment("LAMP_NET"); if (!testing || ln == "") return;
         int port = int.TryParse(OS.GetEnvironment("LAMP_NET_PORT"), out var pp) ? pp : NetConst.DefaultPort;
         string nm = OS.GetEnvironment("LAMP_NET_NAME"); NetService.LocalName = nm != "" ? nm : ln.StartsWith("join") ? "Клиент" : "Хост";
+        PlayerLook = ln.StartsWith("join") ? new Look { Skin = 5, Hair = 3, HairCol = 2, Cloth1 = 9, Cloth2 = 10, Variant = 2 } : new Look { Skin = 2, Hair = 6, HairCol = 1, Cloth1 = 3, Cloth2 = 4, Variant = 1 };      // у хоста и гостя разная внешность
         string fv = OS.GetEnvironment("LAMP_NET_FAKEVER"); NetService.VersionOverride = fv != "" ? fv : null;
         if (ln == "host") NetService.StartHost("enet", new NetHostOptions { Port = port });
         else if (ln == "hoststeam") NetService.StartHost("steam", new NetHostOptions { FriendsOnly = true });
@@ -131,6 +132,7 @@ public partial class Game
                     Check(WorkerOf(sw)?.Id == 9501, "net host: a villager works in the sawmill before the client joins");
                 });
                 WaitStep(25f, () => NetService.Count >= 2 && Other() != null, ok => Check(ok, "net host: the client completed the handshake"));
+                S(.2f, () => { var o = Other(); Check(o != null && o.Look.Skin == 5 && o.Look.Hair == 3 && o.Look.Cloth1 == 9 && o.Look.Variant == 2, "net host: the guest's appearance arrived with the handshake (validated by the host)"); });
                 S(.3f, () => { Open(chests[1]); SetObj(ns[2].X, ns[2].Y, Tl.AmpCrystal); Placed.Add(World.Key(ns[2].X, ns[2].Y)); });
                 WaitStep(20f, () => W.Get(ns[3].X, ns[3].Y) == Tl.Banner && Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y) && stoneT.X >= 0 && W.Get(stoneT.X, stoneT.Y) == Tl.None, ok => Check(ok, $"net host: the client's placed banner and lamp and a mined stone are visible here banner={W.Get(ns[3].X, ns[3].Y)} lamp={Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y)} stone={(stoneT.X >= 0 ? W.Get(stoneT.X, stoneT.Y).ToString() : "none")}"));
                 WaitStep(20f, () => IsOpen(chests[2]), ok => Check(ok, "net host: a chest opened by the client is opened here too"));
@@ -178,7 +180,7 @@ public partial class Game
                 WaitStep(25f, () => Enemies.Any(e => e.NetId > 0), ok => Check(ok, "net client: the host's enemy is shown on the client (no local AI)"));
                 S(.3f, () => { Check(Enemies.All(e => e.NetId > 0), "net client: the client created no enemies of its own"); var e = Enemies.First(x => x.NetId > 0); Hurt(e, 8f, Vector2.Left, true); });
                 WaitStep(25f, () => Hp < MaxHp - 1f, ok => Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"));
-                S(.3f, () => { float drop = MaxHp - Hp; float one = 9f * Tune.T.EnemyDamage; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
+                S(.3f, () => { float drop = MaxHp - Hp; float one = 9f * Tune.T.EnemyDamage * FearMul; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
                 S(5f, () => { });
                 WaitStep(20f, () => Events.Any(e => e.Kind == "meteor"), ok => Check(ok, "net client: the host's meteor event is shown (shared events)"));
                 WaitStep(20f, () => { var mp = Events.FirstOrDefault(e => e.Kind == "meteor"); if (mp == null) return false; var mt = ToTile(mp.Pos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net client: the meteor ore appeared for the client too"));
@@ -189,6 +191,7 @@ public partial class Game
                     Check(NetService.WorldSeed == W.Seed && W.Seed == 4242, $"net client: the client world uses the host seed ({W.Seed})");
                     Check(NetService.Players.ContainsKey(1) && NetService.Players[1].Name == "Хост", "net client: the host is in the roster with its name");
                     Check(NetService.Local != null && NetService.Local.Name == "Клиент", "net client: the roster contains this player");
+                    Check(NetService.Players[1].Look.Skin == 2 && NetService.Players[1].Look.Hair == 6 && NetService.Players[1].Look.Variant == 1, "net client: the host's appearance arrived in the roster");
                     Tp(expectedClient);
                 });
                 WaitStep(20f, () => NetService.Players.TryGetValue(1, out var h) && h.Pos.DistanceTo(expectedHost) < 3f, ok => Check(ok, $"net client: the host position reaches the client ({(NetService.Players.TryGetValue(1, out var h2) ? h2.Pos : default)})"));

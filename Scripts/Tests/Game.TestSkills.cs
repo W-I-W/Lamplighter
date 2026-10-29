@@ -63,9 +63,9 @@ public partial class Game
         {
             // сохранение уровней и пересчёт без накопления
             Reset(); SetSkillLevel((int)Tech.Lens, 5); SetSkillLevel((int)Tech.LensII, 2); SetSkillLevel((int)Tech.Dash, 3); float rr = PlayerLightR; Save();
-            var d = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SavePath), new JsonSerializerOptions { IncludeFields = true });
+            var d = SaveManager.LoadCharacter(GameSession.CharacterId);
             Check(d.SkK != null && Array.IndexOf(d.SkK, "Lens") >= 0 && d.SkV[Array.IndexOf(d.SkK, "Lens")] == 5 && d.SkV[Array.IndexOf(d.SkK, "LensII")] == 2, "save: levels of every skill are written");
-            for (int n = 0; n < 3; n++) { var (k, v) = SaveSkills(); LoadSkills(k, v, d.Tech); RecomputeEffects(); }
+            for (int n = 0; n < 3; n++) { var (k, v) = SaveSkills(); LoadSkills(k, v, 0); RecomputeEffects(); }
             Check(Lv(Tech.Lens) == 5 && Lv(Tech.LensII) == 2 && Lv(Tech.Dash) == 3 && Near(PlayerLightR, rr), "save: loading three times neither adds nor loses a bonus");
             // миграция старых сохранений: только маска, без уровней
             Reset(); int mask = (1 << (int)Tech.Lens) | (1 << (int)Tech.Dash) | (1 << (int)Tech.FarLanterns) | (1 << (int)Tech.Marksman) | (1 << (int)Tech.WideSwing); var inv0 = (int[])Inv.Clone();

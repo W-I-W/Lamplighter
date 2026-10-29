@@ -123,7 +123,7 @@ public partial class Game
     public void NetGrant(int[] items)
     {
         int tot = 0, row = 0;
-        for (int i = 0; i < It.Count && i < items.Length; i++) if (items[i] > 0) { Inv[i] += items[i]; tot += items[i]; Texts.Add(new FText { P = PPos + new Vector2(0, -12 - row++ * 13), S = $"{It.Ic(i)}+{items[i]} {It.Names[i]}", Life = 1.2f, C = It.Col[i] }); }
+        for (int i = 0; i < It.Count && i < items.Length; i++) if (items[i] > 0 && items[i] <= 999) { Inv[i] += items[i]; tot += items[i]; Texts.Add(new FText { P = PPos + new Vector2(0, -12 - row++ * 13), S = $"{It.Ic(i)}+{items[i]} {It.Names[i]}", Life = 1.2f, C = It.Col[i] }); }
         if (tot > 0) Sfx.Play("pickup");
     }
 }

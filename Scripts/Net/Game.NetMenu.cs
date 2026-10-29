@@ -2,7 +2,7 @@ using Godot;
 
 namespace Lamplighter;
 
-/// <summary>Меню «Мультиплеер»: создание игры, подключение по адресу или к лобби Steam, сетевая информация во время игры.
+/// <summary>Меню «Мультиплеер»: создание игры (герой → мир → лобби) и подключение к лобби Steam или адресу (герой → подключение к миру хоста).
 /// Steam-пункты доступны только когда транспорт Steam действительно может работать (плагин GodotSteam + запущенный Steam); иначе показывается причина.</summary>
 public partial class Game
 {
@@ -19,22 +19,30 @@ public partial class Game
     {
         switch (i)
         {
-            case 0: HostGame("enet"); break;
-            case 1: NetJoinSteam = false; if (NetAddr == "") NetAddr = "127.0.0.1"; NetService.Status = ""; OpenMenu(Mn.NetJoin); break;
-            case 2: if (NetSteamOk) HostGame("steam"); else { Fail(NetSteamWhy); } break;
-            case 3: NetFriendsOnly = !NetFriendsOnly; Sfx.Play("tick", -4, 1.2f); break;
-            case 4: if (NetSteamOk) { NetJoinSteam = true; NetAddr = ""; NetService.Status = ""; OpenMenu(Mn.NetJoin); } else Fail(NetSteamWhy); break;
-            case 5: MenuBackKey(); break;
+            case 0: if (NetSteamOk) OpenFlow(FlowKind.Host, "steam"); else Fail(NetSteamWhy); break;
+            case 1: if (NetSteamOk) { NetJoinSteam = true; NetAddr = ""; NetService.Status = ""; OpenMenu(Mn.NetJoin); } else Fail(NetSteamWhy); break;
+            case 2: OpenFlow(FlowKind.Host, "enet"); break;
+            case 3: NetJoinSteam = false; if (NetAddr == "") NetAddr = "127.0.0.1"; NetService.Status = ""; OpenMenu(Mn.NetJoin); break;
+            case 4: MenuBackKey(); break;
         }
     }
 
-    void HostGame(string transport)
+    /// <summary>Гость: сначала выбор героя, затем подключение. Адрес или ID лобби известны заранее (ввод или приглашение Steam).</summary>
+    public void OpenGuestFlow(string transport, string target)
     {
-        var o = new NetHostOptions { FriendsOnly = NetFriendsOnly };
-        if (HasSave) Save();                                                // одиночный прогресс записывается до перехода в сетевой мир
-        if (!NetService.StartHost(transport, o)) { Sfx.Play("error"); Toast(NetService.Status); return; }
-        CarryMsg = transport == "enet" ? $"Сетевая игра открыта (порт {o.Port}). Это отдельное сохранение: одиночный мир не затронут" : "Сетевая игра: создание лобби Steam… (отдельное сохранение)";
-        skipMenu = true; forceNew = false; GetTree().ReloadCurrentScene();     // сетевой мир и персонаж загружаются из save_mp.json или создаются заново
+        GameSession.PendingTransport = transport; GameSession.PendingTarget = target; NetJoinSteam = transport == "steam"; NetAddr = target;
+        if (Menu == Mn.None) Menu = Mn.Main;
+        OpenFlow(FlowKind.Guest, transport, target);
+    }
+
+    /// <summary>Приглашение Steam или аргумент +connect_lobby. В игре: герой сохраняется и игрок возвращается в меню выбора героя.</summary>
+    void OnInvite(string transport, string target)
+    {
+        if (!IsInsideTree() || testing) return;
+        if (uiRoot == null) { GameSession.PendingTransport = transport; GameSession.PendingTarget = target; return; }      // приглашение пришло при запуске: меню откроет StartMenuOnLaunch
+        if (GameSession.Active) { GameSession.PendingTransport = transport; GameSession.PendingTarget = target; LeaveToMenu("Приглашение Steam: выберите героя"); return; }
+        if (NetService.State == NetState.Connecting || NetService.State == NetState.Handshaking) return;
+        OpenGuestFlow(transport, target);
     }
 
     void NetInfoAct(int i)
@@ -51,16 +59,21 @@ public partial class Game
         }
     }
 
-    /// <summary>Ввод адреса или идентификатора лобби: клавиатура с Unicode, Ctrl+V — вставка.</summary>
+    /// <summary>Ввод адреса или идентификатора лобби: клавиатура с Unicode, Ctrl+V — вставка. Enter — выбор героя и подключение.</summary>
     void NetJoinKey(InputEventKey k)
     {
-        if (k.Keycode == Key.Escape) { OpenMenu(Mn.Multi); return; }
+        bool busy = NetService.State == NetState.Connecting || NetService.State == NetState.Handshaking;
+        if (k.Keycode == Key.Escape)
+        {
+            if (busy || GameSession.Mode == SessionMode.Guest) { NetService.Leave(false); GameSession.Clear(); NetService.Status = ""; }
+            OpenMenu(Mn.Multi); return;
+        }
+        if (busy) return;
         if (k.Keycode == Key.Enter || k.Keycode == Key.KpEnter)
         {
             if (k.Echo) return;
-            NetService.LocalName = NetService.LocalName == "" ? "Игрок" : NetService.LocalName;
-            bool ok = NetService.Join(NetJoinSteam ? "steam" : "enet", NetAddr);
-            if (!ok) Sfx.Play("error"); else Sfx.Play("tick");
+            if (NetAddr.Trim() == "") { Sfx.Play("error"); return; }
+            Sfx.Play("tick"); OpenGuestFlow(NetJoinSteam ? "steam" : "enet", NetAddr.Trim());
             return;
         }
         if (k.Keycode == Key.Backspace) { if (NetAddr.Length > 0) NetAddr = NetAddr.Substring(0, NetAddr.Length - 1); return; }

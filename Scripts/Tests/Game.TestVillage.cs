@@ -16,7 +16,7 @@ public partial class Game
     {
         int fails = 0;
         void Check(bool ok, string what) { if (!ok) fails++; GD.Print($"[check] {(ok ? "PASS" : "FAIL")} {what}"); }
-        SaveData ReadSave() => JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SavePath), new JsonSerializerOptions { IncludeFields = true });
+        WorldSave ReadSave() => SaveManager.LoadWorld(GameSession.WorldId);
         var sites = new List<Vector2I>();
         Building B(Tl t) => Buildings.Find(b => b.Type == t);
         Villager Mk(int id, string prof) => AddVillager(id, TileCenter(W.Spawn.X + 1, W.Spawn.Y + 2), prof, "test");

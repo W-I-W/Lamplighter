@@ -2,13 +2,10 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 
 namespace Lamplighter;
 
-public enum Mn { None, Main, Pause, Settings, Slots, Keys, Credits, Confirm, Achv, Multi, NetJoin, NetInfo }
-
-public sealed class SlotInfo { public int Slot; public bool Exists; public int Level, Beacon; public bool Finished; public string Stamp = ""; public float Secs; }
+public enum Mn { None, Main, Pause, Settings, Keys, Credits, Confirm, Achv, Multi, NetJoin, NetInfo, Flow }
 
 /// <summary>Главное меню, пауза, настройки, слоты сохранений, титры и достижения.</summary>
 public partial class Game
@@ -17,35 +14,29 @@ public partial class Game
     public const string BuildStr = "Windows · Godot 4.7 .NET";
 
     public Mn Menu; public Mn MenuBack; public int MenuCur;
-    public bool SlotSaveMode; public string ConfirmText = ""; Action confirmYes;
+    public string ConfirmText = ""; Action confirmYes;
     public string RebindAction;                      // ждём клавишу для действия
-    public List<SlotInfo> Slots = new();
     public float UiTime, PlaySecs;
-    static bool skipMenu;
 
-    public static readonly string[] MainItems = { "Продолжить", "Новая игра", "Загрузить игру", "Мультиплеер", "Настройки", "Достижения", "Титры", "Выход" };
-    public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Загрузить игру", "Настройки", "Достижения", "Сеть", "Титры", "В главное меню", "Выход" };
+    public static readonly string[] MainItems = { "Играть", "Мультиплеер", "Настройки", "Достижения", "Титры", "Выход" };
+    public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Настройки", "Достижения", "Сеть", "Титры", "В главное меню", "Выход" };
     public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Ветер", "Частицы", "Вспышки", "Доп. эффекты", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Управление", "Назад" };
 
-    public bool HasSave => File.Exists(SavePath) || File.Exists(BakPath);
-    string SaveDir => testing ? testDir : ProjectSettings.GlobalizePath("user://");
-    string SlotPath(int s) => Path.Combine(SaveDir, s == 0 ? "save.json" : $"slot{s}.json");
-    string BakPath => Path.Combine(SaveDir, NetService.Role == NetRole.Host ? "save_mp.bak" : "save.bak");
-
     // ───────────────────────── открытие/закрытие ─────────────────────────
-    public void OpenMenu(Mn m) { Menu = m; MenuCur = 0; if (m == Mn.Multi) RefreshNetMenu(); if (m == Mn.Slots) RefreshSlots(); if (m == Mn.Main && !HasSave) MenuCur = 1; Sfx.Play("tick", -4, 1.1f); }
+    public void OpenMenu(Mn m) { Menu = m; MenuCur = 0; if (m == Mn.Multi) RefreshNetMenu(); Sfx.Play("tick", -4, 1.1f); }
     void CloseMenu() { Menu = Mn.None; RebindAction = null; Settings.Save(); }
 
     public void StartMenuOnLaunch()
     {
-        if (testing || skipMenu) { skipMenu = false; return; }
-        Menu = Mn.Main; MenuCur = HasSave ? 0 : 1;
+        if (testing || GameSession.Active) return;
+        Menu = Mn.Main; MenuCur = 0;
+        if (GameSession.PendingTarget != null) { var t = GameSession.PendingTransport; var a = GameSession.PendingTarget; GameSession.PendingTarget = null; OpenGuestFlow(t, a); }
     }
 
     public int MenuLen => Menu switch
     {
-        Mn.Main => MainItems.Length, Mn.Pause => PauseItems.Length, Mn.Settings => SettingsItems.Length, Mn.Slots => 4,
-        Mn.Keys => KeyMap.Actions.Length + 2, Mn.Confirm => 2, Mn.Achv => Ach.All.Length, Mn.Multi => 6, Mn.NetInfo => 3, _ => 1
+        Mn.Main => MainItems.Length, Mn.Pause => PauseItems.Length, Mn.Settings => SettingsItems.Length,
+        Mn.Keys => KeyMap.Actions.Length + 2, Mn.Confirm => 2, Mn.Achv => Ach.All.Length, Mn.Multi => 5, Mn.NetInfo => 3, _ => 1
     };
 
     // ───────────────────────── ввод ─────────────────────────
@@ -56,6 +47,7 @@ public partial class Game
             if (k != Key.Escape && k != Key.None) { KeyMap.Rebind(RebindAction, k); Settings.Save(); Sfx.Play("upgrade", -4, 1.4f); }
             RebindAction = null; return;
         }
+        if (Menu == Mn.Flow) return;
         bool enter = k == Key.Enter || k == Key.KpEnter || k == Key.Space;
         if (k == Key.Up || k == Key.W) { MenuCur = (MenuCur + MenuLen - 1) % MenuLen; Sfx.Play("tick", -6, 1.4f); return; }
         if (k == Key.Down || k == Key.S) { MenuCur = (MenuCur + 1) % MenuLen; Sfx.Play("tick", -6, 1.4f); return; }
@@ -65,7 +57,6 @@ public partial class Game
             case Mn.Main: if (enter) MainAct(MenuCur); break;
             case Mn.Pause: if (enter) PauseAct(MenuCur); break;
             case Mn.Settings: SettingsKey(k, enter); break;
-            case Mn.Slots: if (enter) SlotAct(MenuCur); break;
             case Mn.Multi: if (enter) MultiAct(MenuCur); break;
             case Mn.NetInfo: if (enter) NetInfoAct(MenuCur); break;
             case Mn.Keys: KeysKey(k, enter); break;
@@ -121,14 +112,12 @@ public partial class Game
     {
         switch (i)
         {
-            case 0: if (HasSave) CloseMenu(); else Sfx.Play("error"); break;
-            case 1: if (HasSave) AskConfirm("Начать заново? Сохранение будет заменено.", NewGame, Mn.Main); else NewGame(); break;
-            case 2: MenuBack = Mn.Main; SlotSaveMode = false; OpenMenu(Mn.Slots); break;
-            case 3: MenuBack = Mn.Main; OpenMenu(Mn.Multi); break;
-            case 4: MenuBack = Mn.Main; OpenMenu(Mn.Settings); break;
-            case 5: MenuBack = Mn.Main; OpenMenu(Mn.Achv); break;
-            case 6: MenuBack = Mn.Main; OpenMenu(Mn.Credits); break;
-            case 7: Save(); NetService.Leave(false); GetTree().Quit(); break;
+            case 0: OpenFlow(FlowKind.Solo); break;
+            case 1: MenuBack = Mn.Main; OpenMenu(Mn.Multi); break;
+            case 2: MenuBack = Mn.Main; OpenMenu(Mn.Settings); break;
+            case 3: MenuBack = Mn.Main; OpenMenu(Mn.Achv); break;
+            case 4: MenuBack = Mn.Main; OpenMenu(Mn.Credits); break;
+            case 5: Save(); NetService.Leave(false); GetTree().Quit(); break;
         }
     }
 
@@ -137,14 +126,13 @@ public partial class Game
         switch (i)
         {
             case 0: CloseMenu(); break;
-            case 1: MenuBack = Mn.Pause; SlotSaveMode = true; OpenMenu(Mn.Slots); break;
-            case 2: MenuBack = Mn.Pause; SlotSaveMode = false; OpenMenu(Mn.Slots); break;
-            case 3: MenuBack = Mn.Pause; OpenMenu(Mn.Settings); break;
-            case 4: MenuBack = Mn.Pause; OpenMenu(Mn.Achv); break;
-            case 5: MenuBack = Mn.Pause; OpenMenu(Mn.NetInfo); break;
-            case 6: MenuBack = Mn.Pause; OpenMenu(Mn.Credits); break;
-            case 7: Save(); NetService.Leave(false); skipMenu = false; forceNew = false; GetTree().ReloadCurrentScene(); break;
-            case 8: Save(); NetService.Leave(false); GetTree().Quit(); break;
+            case 1: SaveAll(true); Toast("Герой и мир сохранены"); Sfx.Play("upgrade", -3, 1.3f); break;
+            case 2: MenuBack = Mn.Pause; OpenMenu(Mn.Settings); break;
+            case 3: MenuBack = Mn.Pause; OpenMenu(Mn.Achv); break;
+            case 4: MenuBack = Mn.Pause; OpenMenu(Mn.NetInfo); break;
+            case 5: MenuBack = Mn.Pause; OpenMenu(Mn.Credits); break;
+            case 6: SaveAll(true); LeaveToMenu(); break;
+            case 7: SaveAll(true); NetService.Leave(false); GetTree().Quit(); break;
         }
     }
 
@@ -189,56 +177,12 @@ public partial class Game
         OpenMenu(Mn.Settings); MenuCur = 12;
     }
 
-    // ───────────────────────── слоты ─────────────────────────
-    public void RefreshSlots()
-    {
-        Slots.Clear();
-        for (int s = 0; s <= 3; s++)
-        {
-            var si = new SlotInfo { Slot = s }; var p = SlotPath(s);
-            if (File.Exists(p))
-                try
-                {
-                    using var doc = JsonDocument.Parse(File.ReadAllText(p)); var r = doc.RootElement; si.Exists = true;
-                    if (r.TryGetProperty("Level", out var l)) si.Level = l.GetInt32();
-                    if (r.TryGetProperty("Beacon", out var b)) si.Beacon = b.GetInt32();
-                    if (r.TryGetProperty("Finished", out var f)) si.Finished = f.GetBoolean();
-                    if (r.TryGetProperty("Stamp", out var st)) si.Stamp = st.GetString() ?? "";
-                    if (r.TryGetProperty("PlaySecs", out var ps)) si.Secs = (float)ps.GetDouble();
-                }
-                catch { si.Exists = false; }
-            Slots.Add(si);
-        }
-    }
-
-    void SlotAct(int i)
-    {
-        if (SlotSaveMode)
-        {
-            if (i == 0) { Fail("Автосохранение обновляется само"); return; }
-            Save(); try { File.Copy(SavePath, SlotPath(i), true); Toast($"Игра сохранена в слот {i}"); Sfx.Play("upgrade", -3, 1.3f); RefreshSlots(); } catch (Exception e) { Fail("Не удалось сохранить: " + e.Message); }
-            return;
-        }
-        if (!Slots[i].Exists) { Sfx.Play("error"); return; }
-        AskConfirm("Загрузить? Несохранённое пропадёт.", () => LoadSlot(i), Mn.Slots);
-    }
-
-    void LoadSlot(int i)
-    {
-        try
-        {
-            if (i != 0) { if (File.Exists(SavePath)) File.Copy(SavePath, Path.Combine(SaveDir, "save_prev.json"), true); File.Copy(SlotPath(i), SavePath, true); }
-            skipMenu = true; GetTree().ReloadCurrentScene();
-        }
-        catch (Exception e) { Fail("Не удалось загрузить: " + e.Message); }
-    }
-
     // ───────────────────────── музыка ─────────────────────────
     float musicT;
     void UpdateMusic(float dt)
     {
         musicT -= dt; if (musicT > 0) return; musicT = .5f;
-        string t = Menu == Mn.Main ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
+        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
         Music.Play(t);
     }
 
@@ -251,16 +195,13 @@ public partial class Game
         S(.4f, () => Shot("m2_settings"));
         S(.1f, () => { OpenMenu(Mn.Keys); });
         S(.4f, () => Shot("m3_keys"));
-        S(.1f, () => { MenuBack = Mn.Pause; SlotSaveMode = true; OpenMenu(Mn.Slots); });
-        S(.4f, () => Shot("m4_slots"));
         S(.1f, () => { MenuBack = Mn.Main; OpenMenu(Mn.Achv); Ach.Unlock("first_light", this); });
         S(.4f, () => Shot("m5_achv"));
         S(.1f, () => { OpenMenu(Mn.Credits); });
         S(.6f, () => Shot("m6_credits"));
         S(.1f, () => { Menu = Mn.None; OpenMenu(Mn.Pause); });
         S(.4f, () => Shot("m7_pause"));
-        S(.1f, () => { MenuKey(Key.Down); MenuKey(Key.Enter); Log($"slots menu={Menu} save={SlotSaveMode}"); MenuKey(Key.Down); MenuKey(Key.Enter); Log($"save to slot1 exists={File.Exists(SlotPath(1))} valid={ValidSave(SlotPath(1))}"); });
-        S(.2f, () => { Save(); Save(); Log($"bak exists={File.Exists(BakPath)} valid={ValidSave(BakPath)}"); File.WriteAllText(SavePath, "{ corrupted"); Log($"main valid={ValidSave(SavePath)} -> would load backup={ValidSave(BakPath)}"); Save(); Log($"after resave main valid={ValidSave(SavePath)}"); });
+        S(.1f, () => { Save(); Save(); Log($"world exists={File.Exists(ProjectSettings.GlobalizePath(SavePath))} valid={ValidSave(SavePath)} bak={File.Exists(ProjectSettings.GlobalizePath(SavePath) + ".bak")}"); File.WriteAllText(ProjectSettings.GlobalizePath(SavePath), "{ corrupted"); Log($"main valid={ValidSave(SavePath)} -> would load backup={SaveManager.LoadWorld(GameSession.WorldId) != null}"); Save(); Log($"after resave main valid={ValidSave(SavePath)}"); });
         S(.1f, () => { Menu = Mn.None; var before = KeyMap.Map["Interact"]; KeyMap.Rebind("Interact", Key.G); Log($"rebind: translate(G)={KeyMap.Translate(Key.G)} translate(E)={KeyMap.Translate(Key.E)}"); KeyMap.Reset(); Log($"reset translate(E)={KeyMap.Translate(Key.E)}"); Settings.Lang = "en"; });
     }
 }

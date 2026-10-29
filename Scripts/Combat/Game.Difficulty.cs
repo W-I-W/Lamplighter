@@ -20,11 +20,15 @@ public partial class Game
     public (float dmg, float hp) EnemyMuls(EK k, Vector2 p)
     {
         var t = Tune.T; int reg = Math.Clamp(World.RegionOf((int)(p.X / TS)), 0, 4), ci = CoopIdx; int bid = BossIdOf(k);
-        if (bid > 0) return (1f, CombatTuning.At(t.BossHp, bid - 1) * CombatTuning.At(t.CoopBossHp, ci));
-        return (t.EnemyDamage * CombatTuning.At(t.BiomeDamage, reg), t.EnemyHp * CombatTuning.At(t.BiomeHp, reg) * CombatTuning.At(t.CoopEnemyHp, ci));
+        bool hard = Diff == 1;
+        if (bid > 0) return (1f, CombatTuning.At(t.BossHp, bid - 1) * CombatTuning.At(t.CoopBossHp, ci) * (hard ? t.HardBossHp : 1f));
+        return (t.EnemyDamage * CombatTuning.At(t.BiomeDamage, reg) * (hard ? t.HardEnemyDamage : 1f), t.EnemyHp * CombatTuning.At(t.BiomeHp, reg) * CombatTuning.At(t.CoopEnemyHp, ci) * (hard ? t.HardEnemyHp : 1f));
     }
 
-    public float BossDamageMul(EK k) { int b = BossIdOf(k); return b > 0 ? CombatTuning.At(Tune.T.BossDamage, b - 1) : 1f; }
+    /// <summary>Страх тени: герой ниже FearLevel получает больше урона (1 ур. при 0,45 и пороге 5 — ×2,8), поэтому выходить во тьму до пятого уровня страшно.</summary>
+    public float FearMul => Level >= Tune.T.FearLevel ? 1f : 1f + Tune.T.FearDamage * (Tune.T.FearLevel - Level);
+
+    public float BossDamageMul(EK k) { int b = BossIdOf(k); return b > 0 ? CombatTuning.At(Tune.T.BossDamage, b - 1) * (Diff == 1 ? Tune.T.HardBossDamage : 1f) : 1f; }
     public float BossTempoMul() => Tune.T.BossTempo * CombatTuning.At(Tune.T.CoopBossTempo, CoopIdx);
 
     // ───────────────────────── одновременные атаки ─────────────────────────

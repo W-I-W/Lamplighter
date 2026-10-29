@@ -17,7 +17,7 @@ public partial class Game
         string Ids() => string.Join(",", Upgrades.Visible().Select(c => c.Id));
         Ancient Lantern(int region) { foreach (var a in W.Ancients) if (a.Region == region && !a.Boss && a != W.Ancients[0]) return a; return null; }
         void Light(int region) { var a = Lantern(region); if (a != null) { a.Lit = true; a.Anim = 1; } }
-        SaveData ReadSave() => JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SavePath), new JsonSerializerOptions { IncludeFields = true });
+        WorldSave ReadSave() => SaveManager.LoadWorld(GameSession.WorldId);
         S(.4f, () =>
         {
             Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); Upgrades.CategoryUnlocked += _ => fired++;

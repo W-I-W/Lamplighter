@@ -146,7 +146,7 @@ public partial class Game
         float bob = pVel.LengthSquared() > 100 ? -Mathf.Abs(Mathf.Sin(Walk)) : 0;
         c.DrawSetTransform(PPos + new Vector2(0, bob + (water ? 2 : 0)), 0, new Vector2(Facing, 1));
         var mod = DashT > 0 ? new Color(.6f, 1f, 1f, .8f) : Colors.White;
-        DrawFrame(c, Def("player"), f, mod, water ? 13 : -1);
+        LookArt.Draw(c, PlayerLook, f, Def("player").Offset, mod, water ? 13 : 16);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
         if (water) Gfx.Rect(c, new Rect2(PPos.X - 7, PPos.Y + 1, 14, 2), new Color(.5f, .8f, 1f, .45f));
         if (Swing > 0)

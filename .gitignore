@@ -32,3 +32,5 @@ build/
 
 # Steam: тестовый AppID 480 только для разработки (не попадает в экспорт)
 steam_appid.txt
+balance/out/
+balance/STOP

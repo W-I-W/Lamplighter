@@ -79,7 +79,7 @@ public partial class Hud : Control
     {
         panelRects.Clear();
         var vs = Size; if (vs.X < 100 || vs.Y < 60) return;
-        if (G.Menu == Mn.Main) { DrawMenu(vs); FinishViews(); return; }
+        if (G.Menu == Mn.Main || G.Menu == Mn.Flow) { DrawMenu(vs); FinishViews(); return; }
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
         DrawMarkers(vs); DrawEventMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);

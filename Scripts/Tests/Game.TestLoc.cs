@@ -33,7 +33,7 @@ public partial class Game
         S(.25f, () => { CloseWindows(); Window = Win.Rift; WinTab = 0; });
         S(.25f, () => { WinTab = 1; });
         S(.25f, () => { WinTab = 2; });
-        foreach (var m in new[] { Mn.Main, Mn.Pause, Mn.Settings, Mn.Keys, Mn.Slots, Mn.Achv, Mn.Credits })
+        foreach (var m in new[] { Mn.Main, Mn.Pause, Mn.Settings, Mn.Keys, Mn.Achv, Mn.Credits })
         { var mm = m; S(.25f, () => { CloseWindows(); MenuBack = Mn.Pause; OpenMenu(mm); }); }
         S(.25f, () => { AskConfirm("Загрузить? Несохранённое пропадёт.", () => { }, Mn.Pause); });
         S(.25f, () => { Menu = Mn.None; FinStage = 2; FinScene = 1; });

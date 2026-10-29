@@ -14,41 +14,51 @@ public partial class Game
     void InitNet()
     {
         Net = new NetNode { Name = "NetNode", G = this }; AddChild(Net); InitNetFx();
-        NetService.Notice += NetNotice; NetService.Ended += NetEnded;
+        if (NetService.Role == NetRole.Host && NetService.Players.TryGetValue(1, out var me)) { me.Name = NetService.LocalName; me.Look = PlayerLook; }      // сцена перезагружена (выбор героя и мира): запись хоста берёт его героя
+        NetService.Notice += NetNotice; NetService.Ended += NetEnded; NetService.Invite += OnInvite;
         if (!testing) NetService.WatchSteamInvites();
     }
 
-    public override void _ExitTree() { Sfx.Hook = null; NetService.Notice -= NetNotice; NetService.Ended -= NetEnded; }
+    public override void _ExitTree() { Sfx.Hook = null; NetService.Notice -= NetNotice; NetService.Ended -= NetEnded; NetService.Invite -= OnInvite; }
 
     void NetNotice(string s) { if (IsInsideTree()) Toast(s); }
 
     /// <summary>Флаги состояния для сети: бит0 — рывок, бит1 — замах (виден союзникам).</summary>
     public int NetFlags() => (DashT > 0 ? 1 : 0) | (Swing > 0 ? 2 : 0);
 
-    /// <summary>Сеанс завершён (хост вышел или связь потеряна): возврат в главное меню с локальным миром.</summary>
+    /// <summary>Сеанс завершён (хост вышел или связь потеряна): последнее состояние героя сохраняется, возврат в главное меню.</summary>
     void NetEnded()
     {
-        if (!IsInsideTree()) return;
-        skipMenu = false; forceNew = false; GetTree().ReloadCurrentScene();
+        if (!IsInsideTree() || !GameSession.Active) return;
+        LeaveToMenu("Сетевая игра завершена");
     }
 
-    /// <summary>Каждый кадр: клиент, получивший мир от хоста, входит в игру. Если его мир отличается — сцена перезагружается с seed хоста.</summary>
+    /// <summary>Каждый кадр: гость, получивший мир от хоста, входит в игру. Сцена перезагружается, чтобы загрузить героя в мир хоста.</summary>
     void UpdateNet(float dt)
     {
         NetWorldTick(dt); NetVillageTick(dt); NetCombatTick(dt); NetStructTick(dt); NetGoalTick(dt); NetEventTick(dt); NetProgressTick(dt);
-        if (NetService.Role == NetRole.Offline || !NetService.WorldPending) return;
-        NetService.WorldPending = false;
-        if (NetService.WorldSeed.HasValue && W.Seed != NetService.WorldSeed.Value) { skipMenu = true; GetTree().ReloadCurrentScene(); return; }
-        if (NetService.Role == NetRole.Client) { PPos = NetService.SpawnPos + new Vector2(14, 0); Menu = Mn.None; cam?.ResetSmoothing(); }
+        NetJoinTick();
     }
 
-    /// <summary>Выйти из сетевого сеанса по воле игрока. Хост остаётся в своём мире, клиент возвращается в главное меню.</summary>
+    /// <summary>Гость получил мир хоста (работает и в меню подключения, и в игре).</summary>
+    void NetJoinTick()
+    {
+        if (GameSession.Mode == SessionMode.Guest && !guestLoaded && NetService.State == NetState.Failed) { GameSession.Clear(); return; }
+        if (NetService.Role == NetRole.Offline || !NetService.WorldPending) return;
+        NetService.WorldPending = false;
+        if (NetService.Role != NetRole.Client) return;
+        if (!guestLoaded && (!testing || GameSession.Mode == SessionMode.Guest || (NetService.WorldSeed.HasValue && W.Seed != NetService.WorldSeed.Value))) { GetTree().ReloadCurrentScene(); return; }
+        PPos = NetService.SpawnPos + new Vector2(14, 0); Menu = Mn.None; cam?.ResetSmoothing();
+    }
+
+    /// <summary>Выйти из сетевого сеанса по воле игрока. Хост остаётся в своём мире (одиночная игра), гость возвращается в главное меню. Герой сохраняется.</summary>
     public void NetLeave()
     {
-        bool client = NetService.Role == NetRole.Client;
-        if (!client) Save();                                                    // сетевое сохранение хоста
+        bool guest = GameSession.Mode == SessionMode.Guest; Save();
         NetService.Leave(false);
-        skipMenu = false; forceNew = false; CarryMsg = "Сетевая игра закрыта: вы снова в одиночном мире"; GetTree().ReloadCurrentScene();
+        if (guest) { GameSession.Clear(); CarryMsg = "Вы отключились от игры"; }
+        else { GameSession.Mode = SessionMode.Solo; CarryMsg = "Сетевая игра закрыта: вы снова в одиночной игре"; }
+        GetTree().ReloadCurrentScene();
     }
 
     // ───────────────────────── удалённые персонажи ─────────────────────────
@@ -71,8 +81,8 @@ public partial class Game
         bool moving = pos.DistanceSquaredTo(p.PrevShown) > .02f;
         int f = moving ? (int)p.Walk % 2 : 0; float bob = moving ? -Mathf.Abs(Mathf.Sin(p.Walk)) : 0;
         c.DrawSetTransform(pos + new Vector2(0, bob), 0, new Vector2(p.Face < 0 ? -1 : 1, 1));
-        var mod = NetTints[NetSlot(p)]; if ((p.Flags & 1) != 0) mod = new Color(.6f, 1f, 1f, .8f);
-        DrawFrame(c, Def("player"), f, mod);
+        var mod = Colors.White; if ((p.Flags & 1) != 0) mod = new Color(.6f, 1f, 1f, .8f);
+        LookArt.Draw(c, p.Look, f, Def("player").Offset, mod);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
         if ((p.Flags & 2) != 0)                                  // замах: тот предмет, что у игрока в руках, и такой же рабочий цикл, как у своего персонажа
         {

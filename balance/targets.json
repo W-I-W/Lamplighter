@@ -1,0 +1,83 @@
+{
+  "Profiles": {
+    "novice": {
+      "WinMin": 0.35,
+      "WinMax": 0.65,
+      "HoursMin": 6,
+      "HoursMax": 20,
+      "DeathsPerHourMax": 14,
+      "QuitMax": 0.3,
+      "Milestones": {
+        "boss1": [
+          0.5,
+          2.0
+        ]
+      }
+    },
+    "average": {
+      "WinMin": 0.6,
+      "WinMax": 0.85,
+      "HoursMin": 4,
+      "HoursMax": 12,
+      "DeathsPerHourMax": 9,
+      "QuitMax": 0.12,
+      "Milestones": {
+        "boss1": [
+          0.4,
+          1.2
+        ]
+      }
+    },
+    "expert": {
+      "WinMin": 0.8,
+      "WinMax": 0.95,
+      "HoursMin": 3,
+      "HoursMax": 8,
+      "DeathsPerHourMax": 7,
+      "QuitMax": 0.08,
+      "Milestones": {
+        "boss1": [
+          0.3,
+          0.9
+        ]
+      }
+    },
+    "optimizer": {
+      "WinMin": 0.85,
+      "WinMax": 0.97,
+      "HoursMin": 2.5,
+      "HoursMax": 7,
+      "DeathsPerHourMax": 7,
+      "QuitMax": 0.08,
+      "Milestones": {
+        "boss1": [
+          0.25,
+          0.8
+        ]
+      }
+    }
+  },
+  "NoviceExpertMin": 1.4,
+  "NoviceExpertMax": 4,
+  "OptimizerSpeedMin": 0.65,
+  "BuildSpreadMax": 0.1,
+  "BuildTimeRatioMax": 1.35,
+  "BossAttemptsMax": 3.5,
+  "BossFirstTryMax": 0.85,
+  "FirstBossMinMinutes": 25,
+  "StuckMax": 0.03,
+  "SurplusMax": 0.6,
+  "EnemyOutlier": 3,
+  "MinSims": 300,
+  "MinPerArch": 40,
+  "SkillMinGainPct": 0.4,
+  "SkillEffRatioMax": 4,
+  "SkillEffRatioMin": 0.15,
+  "WDifficulty": 1,
+  "WPace": 1,
+  "WSkillGap": 0.6,
+  "WBuilds": 0.8,
+  "WEconomy": 0.4,
+  "WBoss": 0.6,
+  "WSkills": 0.5
+}

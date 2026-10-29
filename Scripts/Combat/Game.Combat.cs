@@ -130,7 +130,7 @@ public partial class Game
         bool guarded = nearUnlit < 9 * TS;
         int free = 0; foreach (var e in Enemies) if (e.Guard == null && !e.IsBoss && e.Pos.DistanceTo(tp) < 420f) free++;
         int baseCap = reg == 0 ? 3 + LitCount * 2 : 4 + LitIn(reg) * 2;
-        int cap = Math.Min((int)((baseCap + Tune.T.SpawnCapBonus + (guarded ? 3 : 0)) * (targets.Count > 1 ? 1f : CombatTuning.At(Tune.T.CoopCap, CoopIdx))), 18);
+        int cap = Math.Min((int)((baseCap + Tune.T.SpawnCapBonus + (guarded ? 3 : 0) + (Level < Tune.T.FearLevel ? (int)Tune.T.FearSpawn : 0)) * (targets.Count > 1 ? 1f : CombatTuning.At(Tune.T.CoopCap, CoopIdx))), 18);
         spawnT = rng.RandfRange(2.2f, 3.8f) * (guarded ? .55f : 1f) / targets.Count;
         if (free >= cap) return;
         for (int tries = 0; tries < 24; tries++)
@@ -309,7 +309,7 @@ public partial class Game
         if (fire && Has(Tech.Fireproof)) return;
         if (fire && Has(Tech.HeatShield)) dmg *= HeatTaken;
         if (fire) dmg *= 1f - N("HeatResist");
-        dmg *= ctxDmg; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
+        dmg *= ctxDmg * FearMul; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
         pVel += kb * 120f; Sfx.Play("hurt");
         Fx("player_hurt", PPos, fire ? new Color("#ff9a2e") : null);
         Texts.Add(new FText { P = PPos + new Vector2(0, -12), S = "-" + (int)Mathf.Round(dmg), Life = .8f, C = new Color("#ff6060") });

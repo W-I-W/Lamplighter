@@ -85,7 +85,7 @@ public partial class Game
             Buildings.RemoveAt(Buildings.Count - 1);
             // сохранение: хотбар записывается
             HotAssign(1, "tool:axe"); Save();
-            var text = File.Exists(SavePath) ? File.ReadAllText(SavePath) : "";
+            var text = File.Exists(CharPath) ? File.ReadAllText(CharPath) : "";
             Check(text.Contains("tool:axe") && text.Contains("weapon:sword1"), "save: hotbar assignments are written to the save file");
             // строительство: режим размещения
             // постройки как предметы: создать → поставить → разобрать → поставить снова
@@ -100,7 +100,7 @@ public partial class Game
             if (lamp != null) { DemolishLamp(lamp); Check(Lamps.Count == lamps0 + 1, "build: demolish asks for confirmation first"); DemolishLamp(lamp); }
             Check(Lamps.Count == lamps0 && StockOf("lamp0") == 1 && W.Get(tgt.X, tgt.Y) == Tl.None && Inv[It.Wood] == wood1, "build: demolishing returns the item to stock without a refund of resources");
             Aim = TileCenter(tgt.X, tgt.Y); Placing = le; PlaceNow(); Check(Lamps.Count == lamps0 + 1 && StockOf("lamp0") == 0, "build: the demolished item can be placed again");
-            Save(); var bt = File.ReadAllText(SavePath); Check(bt.Contains("BsK"), "save: build stock is written to the save file");
+            Save(); var bt = File.ReadAllText(CharPath); Check(bt.Contains("BsK"), "save: build stock is written to the save file");
             Placing = null;
             GD.Print($"[check] SUMMARY failures={fails}");
         });

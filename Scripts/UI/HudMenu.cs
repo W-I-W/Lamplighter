@@ -23,9 +23,9 @@ public partial class Hud
         if (G.Menu == Mn.Main || G.Menu == Mn.Pause)
         {
             mv.Begin(true, G.Menu == Mn.Main ? .92f : .82f, "↑/↓ выбор · Enter" + (G.Menu == Mn.Pause ? " · Esc — продолжить" : ""), true);
-            mv.Titles("LANTHER", "", Gold, new Color("#9fd8ff"));
+            mv.Titles("LANTHER", G.Menu == Mn.Pause ? G.SessionLine : "", Gold, new Color("#9fd8ff"));
             var items = G.Menu == Mn.Main ? Game.MainItems : Game.PauseItems;
-            for (int i = 0; i < items.Length; i++) mv.Item(i, G.MenuCur == i, items[i], G.Menu == Mn.Main && i == 0 && !G.HasSave);
+            for (int i = 0; i < items.Length; i++) mv.Item(i, G.MenuCur == i, items[i], false);
             return;
         }
         switch (G.Menu)
@@ -46,17 +46,6 @@ public partial class Hud
                     {
                         string name = i < n ? KeyMap.Labels[i] : i == n ? "Сбросить" : "Назад"; string val = i < n ? (G.RebindAction == KeyMap.Actions[i] ? "нажмите…" : KeyMap.Name(KeyMap.Actions[i])) : null;
                         wv.Row(i, G.MenuCur == i, name, val, G.MenuCur == i ? Gold : Text, null, null, true);
-                    }
-                    break;
-                }
-            case Mn.Slots:
-                {
-                    wv.Begin(vs, G.SlotSaveMode ? "Сохранить игру" : "Загрузить игру", Gold, "Enter — выбрать · Esc — назад", new Vector2(300, 210), 0, .82f);
-                    for (int i = 0; i < G.Slots.Count; i++)
-                    {
-                        var s = G.Slots[i]; string name = i == 0 ? "Автосохранение" : $"Слот {i}";
-                        string info = s.Exists ? string.Format(Loc.T("ур.{0} · маяк {1}/6 · {2}ч {3}м"), s.Level, s.Beacon, (int)(s.Secs / 3600), (int)(s.Secs % 3600 / 60)) + (s.Finished ? Loc.T(" · пройдена") : "") : "пусто";
-                        wv.Row(i, G.MenuCur == i, name, s.Stamp != "" ? s.Stamp : null, G.SlotSaveMode && i == 0 ? Dim : Text, info, Dim, true);
                     }
                     break;
                 }
@@ -83,8 +72,9 @@ public partial class Hud
             case Mn.Multi:
                 {
                     wv.Begin(vs, "Мультиплеер", Gold, "↑/↓ · Enter · Esc — назад", new Vector2(360, 230), 0, .82f);
-                    string[] rows = { "Создать игру (локальная сеть)", "Присоединиться по адресу", "Steam: создать лобби", "Steam: " + (G.NetFriendsOnly ? "только друзья" : "публичное лобби"), "Steam: войти по ID лобби", "Назад" };
-                    bool[] ok = { true, true, G.NetSteamOk, G.NetSteamOk, G.NetSteamOk, true };
+                    string[] rows = { "Steam: создать игру", "Steam: войти по ID лобби", "Локальная сеть: создать игру", "Локальная сеть: подключиться по адресу", "Назад" };
+                    bool[] ok = { G.NetSteamOk, G.NetSteamOk, true, true, true };
+                    wv.Text(false, "Хост выбирает героя и мир, гость — только героя: он попадает в мир хоста.", Dim, true, 3);
                     for (int i = 0; i < rows.Length; i++) wv.Row(i, G.MenuCur == i, rows[i], null, !ok[i] ? Muted : G.MenuCur == i ? Gold : Text, null, null, true);
                     if (!G.NetSteamOk) wv.Text(false, Loc.T("Steam недоступен: ") + Loc.T(G.NetSteamWhy), Warn, true, 3);
                     if (NetService.State == NetState.Failed) wv.Text(false, NetService.Status, Bad, true, 2);
@@ -92,7 +82,8 @@ public partial class Hud
                 }
             case Mn.NetJoin:
                 {
-                    wv.Begin(vs, G.NetJoinSteam ? "Вход в лобби Steam" : "Подключение к игре", Gold, "Enter — подключиться · Esc — назад", new Vector2(340, 150), 0, .82f);
+                    wv.Begin(vs, G.NetJoinSteam ? "Вход в лобби Steam" : "Подключение к игре", Gold, "Enter — выбрать героя и подключиться · Esc — назад", new Vector2(340, 150), 0, .82f);
+                    if (GameSession.Mode == SessionMode.Guest) wv.Text(false, Loc.T("Герой") + ": " + NetService.LocalName, Cyan);
                     wv.Text(false, G.NetJoinSteam ? "ID лобби:" : "Адрес хоста (порт по умолчанию 24865):", Dim);
                     wv.Text(false, G.NetAddr + (((int)(G.UiTime * 2) % 2 == 0) ? "_" : " "), Text, false);
                     bool busy = NetService.State == NetState.Connecting || NetService.State == NetState.Handshaking;

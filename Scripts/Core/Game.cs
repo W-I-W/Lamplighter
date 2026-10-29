@@ -31,31 +31,6 @@ public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, B
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked, Manual; public float WorkMul = .6f; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
 public sealed partial class Ix { public List<string> Lines = new(); public Action E, U, X; public string Title, Key; }
 
-public sealed class SaveData
-{
-    public int Version = 5, Seed; public string Obj; public bool[] Lit;
-    public float Px, Py, Hp, MaxHp, Xp; public int Level, Tier, Tech, Ann, Kills, BossMask, Beacon; public long Ann2;
-    public int[] Inv, Stock;
-    public int[] BT, BX, BY, BL; public byte[] PoiState; public bool Boss;
-    public int[] LX, LY, LK, LL, LD; public string Explored;
-    // этап 4
-    public string[] WId; public int[][] WMods; public int CurW, HeroLamp; public int[] ModInv;
-    public string[] SkK; public int[] SkV; public string[] BsK, UpCats, UpNew; public int[] BsV, PlacedK, CutB;                  // запас построек; открытые категории улучшений и ещё не просмотренные                                      // запас построек и клетки, поставленные игроком
-    public string[] Hot, Tools; public int HotSel; public string CurTool;               // хотбар (инструменты и оружие)
-    public string[] Relics, Equipped, BpDone, FragK, Found; public int[] FragV;
-    public int[] BPrio, BMode; public bool[] BOff, BForced; public int[] BLocal;
-    public int TradeEpoch, ExtraV; public string[] Bought; public float[] Demand; public float EvNext;
-    public string[] EvK; public float[] EvX, EvY, EvT, EvL, EvV; public int[] EvS, EvW, EvSeed;
-    // этап 5
-    public bool Finished; public int LoreMask; public string Stamp; public float PlaySecs; public string[] Hints;
-    public int RiftUnlocked = 1, RiftFirst, LegendMask, CosmMask = 1, CosmSel, RiftClears;
-    // этап 8: версия генерации мира (0 у сохранений до «живого мира» — они остаются прежними) и состояние древних фонарей (бит 0 — условие вида выполнено)
-    public int GenV; public byte[] AncDone;
-    // этап 9: жители (null у старых сохранений: тогда они восстанавливаются из спасённых мест, как раньше), ручные назначения и события деревни
-    public VillSave[] Vills; public int[] ManualB; public int VillEvents, ForgeMade, NextVillId;
-}
-
-public sealed class VillSave { public int Id, Work = -1, Home = -1, Talk; public string Name = "", Prof = "", Src = ""; public float X, Y; }
 
 public partial class Game : Node2D
 {
@@ -63,7 +38,6 @@ public partial class Game : Node2D
     public const float ZoomBase = 3f;
     /// <summary>Масштаб мира. Подгоняется под окно так, чтобы пиксель арта занимал целое число пикселей экрана (при дробном масштабе между тайлами мелькают линии).</summary>
     public static float Zoom = ZoomBase;
-    static bool forceNew, showPrologue;
 
     public World W;
     int srcId;
@@ -118,7 +92,7 @@ public partial class Game : Node2D
     {
         float wh = testing ? ViewSize.Y : DisplayServer.WindowGetSize().Y; int si = Settings.UiInt(wh);
         UiScaleVp = si * ViewSize.Y / Mathf.Max(1f, wh);
-        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size;
+        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (flow != null && GodotObject.IsInstanceValid(flow)) flow.Size = uiRoot.Size;
     }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
@@ -128,6 +102,7 @@ public partial class Game : Node2D
     // ───────────────────────── инициализация ─────────────────────────
     public override void _Ready()
     {
+        if (Balance.BalanceCli.Requested()) { Balance.BalanceCli.Run(this); return; }          // симулятор баланса: мир не создаётся, сохранения не читаются
         rng.Randomize();
         Diag.Enabled = OS.GetEnvironment("LAMP_DIAG") != "";
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != ""; testDir = OS.GetEnvironment("LAMP_AUTOTEST");
@@ -138,8 +113,9 @@ public partial class Game : Node2D
         AddChild(new Sfx()); AddChild(new Music());
         testing = OS.GetEnvironment("LAMP_AUTOTEST") != "";
         testDir = OS.GetEnvironment("LAMP_AUTOTEST");
-        if (NetService.Role == NetRole.Client && NetService.WorldSeed.HasValue) { NewWorld(NetService.WorldSeed.Value); PPos = NetService.SpawnPos + new Vector2(14, 0); }   // клиент: мир хоста, не локальное сохранение
-        else if (!LoadGame()) NewWorld(testing ? 4242 : (int)(rng.Randi() % 1000000));
+        if (testing) SaveManager.Root = testDir;
+        if (testing && !GameSession.Active) TestSession();
+        if (!LoadSession()) NewWorld(testing ? 4242 : 1337);                                // без сеанса — декорация главного меню: ничего не сохраняется
         InitNet(); StartNetFromEnv();
         if (Upgrades == null) InitUpgrades(null);
         ApplyBeaconRadius();
@@ -154,7 +130,7 @@ public partial class Game : Node2D
 
         cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = false, PositionSmoothingSpeed = 9f, Position = PPos };
         cam.LimitLeft = 0; cam.LimitTop = 0; cam.LimitRight = World.Wd * TS; cam.LimitBottom = World.Ht * TS;
-        AddChild(cam); cam.MakeCurrent(); cam.ResetSmoothing();
+        AddChild(cam); cam.MakeCurrent(); cam.ResetSmoothing(); SnapCamera(0);       // до первого _Process: загрузка занимает время, и первый кадр иначе рисуется с дробным зумом (полоски)
 
         var dl = new CanvasLayer { Layer = 5 }; AddChild(dl);
         var vcat = VisualCatalog.Get();
@@ -181,7 +157,7 @@ public partial class Game : Node2D
         foreach (var ev in pendingEvents) { InitEventState(ev); Events.Add(ev); }
         EventsEnabled = !testing;
         StartMenuOnLaunch();
-        if (showPrologue || (!testing && !HasSave && Menu == Mn.None)) { showPrologue = false; OpenStory("Фонарщик", string.Join("\n\n", Story.Prologue), "Пролог"); }
+        if (freshWorld && !testing && Menu == Mn.None && GameSession.Mode != SessionMode.Guest) OpenStory("Фонарщик", string.Join("\n\n", Story.Prologue), "Пролог");
         GD.Print($"[Lamplighter] seed={W.Seed} ancients={W.Ancients.Count} pois={W.Pois.Count}");
     }
 
@@ -242,207 +218,15 @@ public partial class Game : Node2D
     Vector2 camPos; bool camInit;
     public static string CarryMsg;                                       // сообщение, переживающее перезагрузку сцены
     string pendingMsg, pendingMsg2; readonly List<GEvent> pendingEvents = new();
-    static int[] Flat(List<Building> bs) { var a = new int[bs.Count * It.Count]; for (int i = 0; i < bs.Count; i++) Array.Copy(bs[i].Local, 0, a, i * It.Count, It.Count); return a; }
-    /// <summary>Одиночное и сетевое сохранения раздельны: хост сетевой игры пишет и читает save_mp.json, одиночный мир и персонаж не трогаются. Клиент ничего не сохраняет.</summary>
-    string SavePath => NetService.Role == NetRole.Host ? Path.Combine(SaveDir, "save_mp.json") : SlotPath(0);
-
-    static bool ValidSave(string path)
-    {
-        try { if (!File.Exists(path)) return false; using var doc = JsonDocument.Parse(File.ReadAllText(path)); return doc.RootElement.TryGetProperty("Version", out var v) && v.GetInt32() >= 2 && doc.RootElement.TryGetProperty("Obj", out _); }
-        catch { return false; }
-    }
-
-    /// <summary>Атомарная запись: во временный файл, затем замена; перед заменой последний корректный файл сохраняется как save.bak.</summary>
-    void WriteSave(string json)
-    {
-        var path = SavePath; var tmp = path + ".tmp";
-        File.WriteAllText(tmp, json);
-        try { if (ValidSave(path)) File.Copy(path, BakPath, true); } catch { }
-        File.Move(tmp, path, true);
-    }
-
-    public void Save()
-    {
-        if (NetService.Role == NetRole.Client) return;           // клиент не пишет мир хоста поверх локального сохранения
-        try
-        {
-            while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
-            var d = new SaveData
-            {
-                Seed = W.Seed, GenV = W.GenV, AncDone = new byte[W.Ancients.Count], Vills = SaveVillagers(), ManualB = SaveManual(), VillEvents = VillEvents, ForgeMade = forgeMade, NextVillId = NextVillagerId, Obj = Convert.ToBase64String(W.Obj), Lit = new bool[W.Ancients.Count],
-                Px = PPos.X, Py = PPos.Y, Hp = Hp, MaxHp = MaxHp, Xp = Xp, Level = Level, Tier = Tier, Inv = Inv, Stock = Stock,
-                Tech = TechMask, SkK = SaveSkills().k, SkV = SaveSkills().v, Ann2 = Ann, Kills = Kills, BossMask = BossMask, Beacon = BeaconLevel,
-                BT = new int[Buildings.Count], BX = new int[Buildings.Count], BY = new int[Buildings.Count], BL = new int[Buildings.Count],
-                PoiState = new byte[W.Pois.Count], Explored = Convert.ToBase64String(Expl),
-                UpCats = Upgrades?.SaveUnlocked(), UpNew = Upgrades?.SaveUnseen(), CutB = new List<int>(CutBush).ToArray(), BsK = new List<string>(BuildStock.Keys).ToArray(), BsV = new List<int>(BuildStock.Values).ToArray(), PlacedK = new List<int>(Placed).ToArray(), Hot = (string[])Hot.Clone(), HotSel = HotSel, Tools = new List<string>(OwnedTools).ToArray(), CurTool = CurTool, WId = Owned.ConvertAll(o => o.Id).ToArray(), WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(), CurW = CurW, HeroLamp = HeroLampLv, ModInv = ModInv,
-                Relics = OwnedRelics.ToArray(), Equipped = EquippedRelics.ToArray(), BpDone = new List<string>(BpDone).ToArray(), FragK = new List<string>(Frag.Keys).ToArray(), FragV = new List<int>(Frag.Values).ToArray(), Found = Found.ToArray(),
-                BPrio = Buildings.ConvertAll(b => b.Prio).ToArray(), BMode = Buildings.ConvertAll(b => b.Mode).ToArray(), BOff = Buildings.ConvertAll(b => b.Off).ToArray(), BForced = Buildings.ConvertAll(b => b.Forced).ToArray(),
-                BLocal = Flat(Buildings), TradeEpoch = TradeEpoch, ExtraV = ExtraVillagers, Bought = new List<string>(Bought).ToArray(), Demand = Demand, EvNext = evNext,
-                EvK = Events.ConvertAll(e => e.Kind).ToArray(), EvX = Events.ConvertAll(e => e.Pos.X).ToArray(), EvY = Events.ConvertAll(e => e.Pos.Y).ToArray(), EvT = Events.ConvertAll(e => e.T).ToArray(), EvL = Events.ConvertAll(e => e.Life).ToArray(),
-                Finished = Finished, LoreMask = LoreMask, Hints = new List<string>(HintsShown).ToArray(), RiftUnlocked = RiftUnlocked, RiftFirst = RiftFirst, LegendMask = LegendMask, CosmMask = CosmMask, CosmSel = CosmSel, RiftClears = RiftClears, EvV = Events.ConvertAll(e => e.V).ToArray(), EvS = Events.ConvertAll(e => e.State).ToArray(), EvW = Events.ConvertAll(e => e.Wave).ToArray(), EvSeed = Events.ConvertAll(e => e.Seed).ToArray(),
-                LX = new int[Lamps.Count], LY = new int[Lamps.Count], LK = new int[Lamps.Count], LL = new int[Lamps.Count], LD = new int[Lamps.Count]
-            };
-            for (int i = 0; i < W.Ancients.Count; i++) { d.Lit[i] = W.Ancients[i].Lit; d.AncDone[i] = (byte)(W.Ancients[i].Done ? 1 : 0); }
-            for (int i = 0; i < Buildings.Count; i++) { var b = Buildings[i]; d.BT[i] = (int)b.Type; d.BX[i] = b.X; d.BY[i] = b.Y; d.BL[i] = b.Level; }
-            for (int i = 0; i < Lamps.Count; i++) { var l = Lamps[i]; d.LX[i] = l.X; d.LY[i] = l.Y; d.LK[i] = l.Kind; d.LL[i] = l.Level; d.LD[i] = l.Dir; }
-            for (int i = 0; i < W.Pois.Count; i++)
-            {
-                var p = W.Pois[i];
-                d.PoiState[i] = (byte)((p.State == 1 ? 0 : p.State) | (p.Seen ? 16 : 0) | (p.Revealed ? 32 : 0));
-            }
-            d.Stamp = DateTime.Now.ToString("dd.MM.yyyy HH:mm"); d.PlaySecs = PlaySecs;
-            WriteSave(JsonSerializer.Serialize(d, new JsonSerializerOptions { IncludeFields = true }));
-        }
-        catch (Exception e) { GD.PushWarning("save failed: " + e.Message); }
-    }
-
-    const int OldWd = 384;
-    bool LoadGame()
-    {
-        if (forceNew) { forceNew = false; return false; }
-        if (testing && OS.GetEnvironment("LAMP_LOAD") == "") return false;
-        if (LoadFrom(SavePath)) return true;
-        if (ValidSave(BakPath) && LoadFrom(BakPath)) { pendingMsg = "Основное сохранение повреждено — загружена резервная копия"; return true; }
-        return false;
-    }
-
-    bool LoadFrom(string path)
-    {
-        try
-        {
-            if (!File.Exists(path)) return false;
-            var d = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(path), new JsonSerializerOptions { IncludeFields = true });
-            if (d == null || d.Version < 2 || string.IsNullOrEmpty(d.Obj)) return false;
-            PlaySecs = d.PlaySecs;
-            W = World.Generate(d.Seed, d.GenV);
-            var obj = Convert.FromBase64String(d.Obj);
-            bool legacy = d.Version < 3; var genObj = (byte[])W.Obj.Clone();
-            bool wide = false;
-            if (!legacy)
-            {
-                if (obj.Length == OldWd * World.Ht)
-                {
-                    // сохранение до этапа 5: мир был шириной 384 — переносим его в новый, остальное берём из генерации
-                    wide = true;
-                    for (int y = 0; y < World.Ht; y++) Array.Copy(obj, y * OldWd, W.Obj, y * World.Wd, OldWd);
-                    for (int y = W.IceGateY - 3; y <= W.IceGateY + 3; y++) for (int x = 358; x < OldWd; x++) W.Obj[y * World.Wd + x] = genObj[y * World.Wd + x];
-                }
-                else if (obj.Length != W.Obj.Length) return false;
-                else W.Obj = obj;
-            }
-            else
-            {
-                if (obj.Length != World.N * World.N) return false;
-                // перенос старого леса 128x128 в новый мир (проход к шахтам остаётся новым)
-                for (int y = 0; y < World.N; y++)
-                    for (int x = 0; x < World.N; x++)
-                    {
-                        if (x >= 116 && y >= 61 && y <= 67) continue;
-                        W.Obj[y * World.Wd + x] = obj[y * World.N + x];
-                    }
-            }
-            OverlayNewFinds(genObj, d.PoiState != null ? d.PoiState.Length : 0, legacy);
-            { int lv = legacy ? 1 : Math.Max(1, d.Beacon); if (lv >= 2) foreach (var t in W.Seal1) W.Set(t.X, t.Y, Tl.None); if (lv >= 3) foreach (var t in W.Seal2) W.Set(t.X, t.Y, Tl.None); if (lv >= 4) foreach (var t in W.Seal3) W.Set(t.X, t.Y, Tl.None); if (lv >= 5) foreach (var t in W.Seal4) W.Set(t.X, t.Y, Tl.None); }
-            for (int i = 0; i < W.Ancients.Count && i < d.Lit.Length; i++) if (d.Lit[i]) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
-            if (d.AncDone != null) for (int i = 0; i < W.Ancients.Count && i < d.AncDone.Length; i++) W.Ancients[i].Done = (d.AncDone[i] & 1) != 0;
-            RestoreMysteryTiles();
-            loadedVills = d.Vills; VillEvents = d.VillEvents; forgeMade = d.ForgeMade; if (d.NextVillId > NextVillagerId) NextVillagerId = d.NextVillId;
-            if (d.ManualB != null) foreach (var mk in d.ManualB) manualLoaded.Add(mk);
-            PPos = new Vector2(d.Px, d.Py); Hp = d.Hp; MaxHp = d.MaxHp; Xp = d.Xp; Level = d.Level; Tier = d.Tier;
-            LoadSkills(d.SkK, d.SkV, d.Tech); Kills = d.Kills; Ann = legacy ? 0 : d.Ann2;
-            InitUpgrades(d);                                       // категории улучшений: из сохранения либо из подтверждённого прогресса (тихо)
-            BossMask = legacy ? (d.Boss ? 1 : 0) : d.BossMask; BeaconLevel = legacy ? 1 : Math.Max(1, d.Beacon);
-            if (d.Inv != null) for (int i = 0; i < Inv.Length && i < d.Inv.Length; i++) Inv[i] = d.Inv[i];
-            if (legacy && d.Boss) { Inv[It.Core]++; pendingMsg = "Сохранение обновлено: получено ядро света"; }
-            if (d.Stock != null) for (int i = 0; i < Stock.Length && i < d.Stock.Length; i++) Stock[i] = d.Stock[i];
-            if (d.BT != null) for (int i = 0; i < d.BT.Length; i++)
-                {
-                    var bb = new Building { Type = (Tl)d.BT[i], X = d.BX[i], Y = d.BY[i], Level = d.BL[i] };
-                    if (!legacy)
-                    {
-                        if (d.BPrio != null && i < d.BPrio.Length) bb.Prio = d.BPrio[i]; if (d.BMode != null && i < d.BMode.Length) bb.Mode = d.BMode[i];
-                        if (d.BOff != null && i < d.BOff.Length) bb.Off = d.BOff[i]; if (d.BForced != null && i < d.BForced.Length) bb.Forced = d.BForced[i];
-                        if (d.BLocal != null && (i + 1) * It.Count <= d.BLocal.Length) Array.Copy(d.BLocal, i * It.Count, bb.Local, 0, It.Count);
-                    }
-                    else bb.Forced = true;
-                    Buildings.Add(bb);
-                }
-            if (legacy) { Ann = -1L; pendingMsg2 = "Сохранение обновлено: постройки подключены к складу"; }
-            if (d.PoiState != null)
-                for (int i = 0; i < W.Pois.Count && i < d.PoiState.Length; i++)
-                {
-                    var b = d.PoiState[i]; var p = W.Pois[i];
-                    p.State = (byte)(b & 15); p.Seen = (b & 16) != 0; p.Revealed = (b & 32) != 0;
-                }
-            if (!legacy)
-            {
-                TradeEpoch = d.TradeEpoch; ExtraVillagers = d.ExtraV; if (d.Bought != null) foreach (var b in d.Bought) Bought.Add(b);
-                if (d.Demand != null) for (int i = 0; i < Demand.Length && i < d.Demand.Length; i++) Demand[i] = d.Demand[i];
-                evNext = d.EvNext > 0 ? d.EvNext : 150;
-                if (d.EvK != null) for (int i = 0; i < d.EvK.Length; i++) pendingEvents.Add(new GEvent { Kind = d.EvK[i], Pos = new Vector2(d.EvX[i], d.EvY[i]), T = d.EvT[i], Life = d.EvL[i], V = d.EvV[i], State = d.EvS[i], Wave = d.EvW[i], Seed = d.EvSeed[i] });
-            }
-            if (!legacy && d.LX != null)
-                for (int i = 0; i < d.LX.Length; i++) Lamps.Add(new Lamp { X = d.LX[i], Y = d.LY[i], Kind = d.LK[i], Level = d.LL[i], Dir = d.LD[i], Anim = 1 });
-            else
-                for (int y = 0; y < World.N; y++) for (int x = 0; x < World.N; x++) if (W.Get(x, y) == Tl.Lantern) Lamps.Add(new Lamp { X = x, Y = y, Anim = 1 });
-            if (d.WId != null) for (int i = 0; i < d.WId.Length; i++) { var o = new OwnedWeapon { Id = d.WId[i] }; if (d.WMods != null && i < d.WMods.Length && d.WMods[i] != null) o.Mods.AddRange(d.WMods[i]); if (Db.Weapon(o.Id) != null) Owned.Add(o); }
-            CurW = Math.Min(d.CurW, Owned.Count - 1); HeroLampLv = d.HeroLamp;
-            if (d.Tools != null) { OwnedTools.Clear(); foreach (var t in d.Tools) if (System.Array.IndexOf(ToolDef.Ids, t) >= 0) OwnedTools.Add(t); } OwnedTools.Add("pickaxe");
-            CurTool = d.CurTool != null && OwnedTools.Contains(d.CurTool) ? d.CurTool : "pickaxe";
-            if (d.CutB != null) foreach (var cb in d.CutB) CutBush.Add(cb);
-            if (d.BsK != null) for (int i = 0; i < d.BsK.Length && i < d.BsV.Length; i++) if (d.BsV[i] > 0) BuildStock[d.BsK[i]] = d.BsV[i];
-            if (d.PlacedK != null) foreach (var pk in d.PlacedK) Placed.Add(pk); else InitPlaced();
-            if (d.Hot != null) for (int i = 0; i < HotCount && i < d.Hot.Length; i++) Hot[i] = d.Hot[i];
-            HotSel = Math.Clamp(d.HotSel, 0, HotCount - 1);
-            if (d.ModInv != null) for (int i = 0; i < ModInv.Length && i < d.ModInv.Length; i++) ModInv[i] = d.ModInv[i];
-            if (d.Relics != null) OwnedRelics.AddRange(d.Relics); if (d.Equipped != null) EquippedRelics.AddRange(d.Equipped);
-            if (d.BpDone != null) foreach (var b in d.BpDone) BpDone.Add(b);
-            if (d.FragK != null && d.FragV != null) for (int i = 0; i < d.FragK.Length && i < d.FragV.Length; i++) Frag[d.FragK[i]] = d.FragV[i];
-            if (d.Found != null) Found.AddRange(d.Found);
-            if (d.Hints != null) foreach (var h in d.Hints) HintsShown.Add(h); else HintsShown.Add("move");
-            Finished = d.Finished; LoreMask = d.LoreMask; if (Finished) Dawn = 1;
-            RiftUnlocked = Math.Max(1, d.RiftUnlocked); RiftFirst = d.RiftFirst; LegendMask = d.LegendMask; CosmMask = d.CosmMask | 1; CosmSel = d.CosmSel; RiftClears = d.RiftClears;
-            if (d.Explored != null)
-            {
-                var e = Convert.FromBase64String(d.Explored);
-                if (e.Length == Expl.Length) Expl = e;
-                else if (e.Length == (OldWd / 4) * (World.Ht / 4)) for (int y = 0; y < World.Ht / 4; y++) Array.Copy(e, y * (OldWd / 4), Expl, y * (World.Wd / 4), OldWd / 4);
-            }
-            return true;
-        }
-        catch (Exception e) { GD.PushWarning("load failed: " + e.Message); return false; }
-    }
-
-    /// <summary>Старые сохранения не знают о новых находках: переносим их плитки из свежесгенерированного мира.</summary>
-    void OverlayNewFinds(byte[] gen, int known, bool legacy)
-    {
-        for (int i = known; i < W.Pois.Count; i++)
-        {
-            var p = W.Pois[i]; if (legacy && World.RegionOf(p.Tile.X) != 0) continue;
-            for (int y = p.Tile.Y - 5; y <= p.Tile.Y + 5; y++)
-                for (int x = p.Tile.X - 5; x <= p.Tile.X + 5; x++)
-                {
-                    if (!World.In(x, y)) continue; int k = World.Key(x, y);
-                    if (W.Obj[k] == (byte)Tl.None && gen[k] != (byte)Tl.None) W.Obj[k] = gen[k];
-                }
-        }
-    }
-
     public override void _Notification(int what)
     {
-        if (what == NotificationWMCloseRequest) { Save(); Diag.Write(this); }
-    }
-
-    void NewGame()
-    {
-        try { if (File.Exists(SavePath)) { File.Copy(SavePath, Path.Combine(SaveDir, "save_prev.json"), true); File.Delete(SavePath); } if (File.Exists(BakPath)) File.Delete(BakPath); } catch { }
-        forceNew = true; skipMenu = true; showPrologue = true;
-        GetTree().ReloadCurrentScene();
+        if (what == NotificationWMCloseRequest) { SaveAll(true); Diag.Write(this); }
     }
 
     // ───────────────────────── ввод ─────────────────────────
     public override void _Input(InputEvent e)
     {
+        if (Menu == Mn.Flow) return;                                          // экран выбора героя и мира обрабатывает ввод сам
         if (Menu == Mn.NetJoin && e is InputEventKey nk && nk.Pressed) { NetJoinKey(nk); return; }
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
         if (HotDragInput(e)) return;
@@ -516,8 +300,9 @@ public partial class Game : Node2D
         Time += dt;
         Aim = aimOverride ?? GetGlobalMousePosition();
         if (testing) AutoTest(dt);
+        if (!IsInsideTree()) return;                                            // сцена перезагружена прямо в этом кадре (смена героя или мира)
         UiTime += dt; UpdateMusic(dt); UpdateUiScale();
-        if (Menu != Mn.None) { UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
+        if (Menu != Mn.None) { NetJoinTick(); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         PlaySecs += dt; achT -= dt; if (achT <= 0) { achT = 2f; Ach.Check(this); }
         if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         if (FinStage == 1) UpdateFinale(dt);
@@ -558,6 +343,13 @@ public partial class Game : Node2D
         saveT += dt; if (saveT > 10) { saveT = 0; Save(); }
 
         Shake = Mathf.Max(0, Shake - dt * 14); Flash = Mathf.Max(0, Flash - dt * 1.2f);
+        SnapCamera(dt);
+        UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt); UpdatePlayerFx(dt); UpdateWorldLife(dt); ambientLayer?.QueueRedraw();
+        ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw();
+    }
+
+    void SnapCamera(float dt)
+    {
         // Камера плавно следует за игроком и стоит строго на сетке физических пикселей: дробное положение давало светлые полоски между тайлами
         // масштаб окна по осям берём из итогового преобразования: размер вьюпорта округляется, и X-масштаб чуть отличается от Y — отсюда вертикальные/горизонтальные щели между тайлами
         var ft = GetViewport().GetFinalTransform(); float scX = Mathf.Max(.01f, ft.X.X), winScale = Mathf.Max(.01f, ft.Y.Y);
@@ -569,8 +361,6 @@ public partial class Game : Node2D
         var shakeOff = Shake > 0 ? new Vector2(rng.RandfRange(-1, 1), rng.RandfRange(-1, 1)) * Shake * Settings.Shake : Vector2.Zero;
         cam.Offset = (shakeOff * pxPerUnit).Round() / pxPerUnit;
         if (backdrop != null) { var half = ViewSize / Zoom * .5f + new Vector2(32, 32); backdrop.Position = cam.Position - half; backdrop.Size = half * 2; }      // подложка под землёй следует за камерой
-        UpdateShaders(dt); UpdateVegetation(dt); UpdateEnemyVisuals(dt); UpdatePlayerFx(dt); UpdateWorldLife(dt); ambientLayer?.QueueRedraw();
-        ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw();
     }
 
     // ───────────────────────── свет ─────────────────────────

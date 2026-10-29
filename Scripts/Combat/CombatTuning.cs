@@ -9,6 +9,9 @@ namespace Lamplighter;
 [GlobalClass]
 public partial class CombatTuning : Resource
 {
+    // сложность мира «Сложная» (множители поверх обычных; «Обычная» = 1)
+    [Export] public float HardEnemyHp = 1.35f, HardEnemyDamage = 1.3f, HardBossHp = 1.3f, HardBossDamage = 1.2f;
+
     // обычные враги
     [Export] public float EnemyDamage = 1.6f;                 // урон ближних и дальних атак
     [Export] public float EnemyHp = 1.5f;
@@ -35,6 +38,8 @@ public partial class CombatTuning : Resource
     [Export] public float RegenRate = .35f, RegenDelay = 5f;
     [Export] public float DashCooldown = 2.2f, DashInvuln = .2f;
     [Export] public float ReaperHeal = 1.5f;
+    [Export] public int FearLevel = 5;                         // ниже этого уровня тень смертельна: урон по герою растёт на FearDamage за каждый недостающий уровень, врагов больше на FearSpawn
+    [Export] public float FearDamage = .45f, FearSpawn = 2f;
     [Export] public float GatherMul = .65f, MineTimeMul = 1.35f, RegrowMul = .6f;         // добыча: множитель выпадения сырья, время добычи, скорость восстановления деревьев и руды
     [Export] public float ScarcityMul = 1f;                    // множитель минимального числа ресурсов рядом с игроком (появление при нехватке)
     [Export] public float TechCostMul = 2f;                    // множитель цены навыков [T]

@@ -35,7 +35,8 @@ public partial class NetNode : Node
         if (NetService.Role == NetRole.Host)
         {
             NetService.LocalId = 1; NetService.State = NetState.Online; NetService.Status = "Игра открыта";
-            if (!NetService.Players.ContainsKey(1)) NetService.Players[1] = new NetPlayer { PeerId = 1, Name = NetService.LocalName, Handshaken = true, UserId = t.UserIdOf(1), Hp = G?.Hp ?? 100, MaxHp = G?.MaxHp ?? 100, Pos = G?.PPos ?? default, Shown = G?.PPos ?? default };
+            if (NetService.Players.TryGetValue(1, out var me)) { me.Name = NetService.LocalName; me.Look = G?.PlayerLook ?? Game.DefaultLook(); }      // после перезагрузки сцены (выбор героя и мира) запись хоста обновляется
+            else NetService.Players[1] = new NetPlayer { PeerId = 1, Name = NetService.LocalName, Handshaken = true, UserId = t.UserIdOf(1), Look = G?.PlayerLook ?? Game.DefaultLook(), Hp = G?.Hp ?? 100, MaxHp = G?.MaxHp ?? 100, Pos = G?.PPos ?? default, Shown = G?.PPos ?? default };
         }
     }
 
@@ -58,7 +59,7 @@ public partial class NetNode : Node
     void OnConnectedToServer()
     {
         NetService.LocalId = Multiplayer.GetUniqueId(); NetService.State = NetState.Handshaking; NetService.Status = "Проверка версии…";
-        RpcId(1, nameof(RpcHello), NetConst.Protocol, NetService.VersionOverride ?? Game.VersionStr, NetConst.GenVersion, NetService.LocalName);
+        RpcId(1, nameof(RpcHello), NetConst.Protocol, NetService.VersionOverride ?? Game.VersionStr, NetConst.GenVersion, NetService.LocalName, (GameSession.GuestLook ?? G?.PlayerLook ?? Game.DefaultLook()).ToInts());
     }
 
     void OnConnectionFailed() { NetService.Fail("Не удалось подключиться к хосту"); DetachPeer(); }
@@ -71,7 +72,7 @@ public partial class NetNode : Node
 
     // ───────────────────────── рукопожатие ─────────────────────────
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    public void RpcHello(string protocol, string version, int gen, string name)
+    public void RpcHello(string protocol, string version, int gen, string name, int[] look)
     {
         if (!Multiplayer.IsServer()) return;
         long id = Multiplayer.GetRemoteSenderId();
@@ -84,7 +85,7 @@ public partial class NetNode : Node
         var verified = NetService.Transport?.UserNameOf(id) ?? "";             // имя из Steam проверено транспортом и не подменяется клиентом
         p.Name = CleanName(verified != "" ? verified : name, id);
         string baseName = p.Name; for (int dup = 2; NetService.Players.Values.Any(x => x != p && x.Handshaken && x.Name == p.Name); dup++) p.Name = $"{baseName} {dup}";     // у двух игроков не бывает одного имени
-        p.Handshaken = true; p.LastRecv = now; p.Hp = 100; p.MaxHp = 100; p.Pos = p.Shown = G.PPos;
+        p.Look = Look.FromInts(look); p.Handshaken = true; p.LastRecv = now; p.Hp = 100; p.MaxHp = 100; p.Pos = p.Shown = G.PPos;
         RpcId(id, nameof(RpcWelcome), G.W.Seed, NetConst.GenVersion, (long)id, G.PPos.X, G.PPos.Y, BuildRoster());
         RpcId(id, nameof(RpcWorldState), G.NetSnapshotPoi(), G.NetSnapshotAnc());
         BroadcastVillage(id);
@@ -332,7 +333,7 @@ public partial class NetNode : Node
     Godot.Collections.Array BuildRoster()
     {
         var a = new Godot.Collections.Array();
-        foreach (var p in NetService.Players.Values.Where(x => x.Handshaken)) a.Add(new Godot.Collections.Dictionary { ["id"] = p.PeerId, ["name"] = p.Name, ["user"] = (long)p.UserId });
+        foreach (var p in NetService.Players.Values.Where(x => x.Handshaken)) a.Add(new Godot.Collections.Dictionary { ["id"] = p.PeerId, ["name"] = p.Name, ["user"] = (long)p.UserId, ["look"] = p.Look.ToInts() });
         return a;
     }
 
@@ -348,7 +349,7 @@ public partial class NetNode : Node
         {
             var d = v.AsGodotDictionary(); long id = (long)d["id"]; ids.Add(id);
             if (!NetService.Players.TryGetValue(id, out var p)) { p = new NetPlayer { PeerId = id, Handshaken = true, Joined = now }; NetService.Players[id] = p; if (id != NetService.LocalId) NetService.RaiseJoined(p); }
-            p.Name = (string)d["name"]; p.UserId = (ulong)(long)d["user"]; p.Handshaken = true;
+            p.Name = (string)d["name"]; p.UserId = (ulong)(long)d["user"]; p.Handshaken = true; if (d.ContainsKey("look")) p.Look = Look.FromInts(d["look"].AsInt32Array());
         }
         foreach (var id in NetService.Players.Keys.ToList()) if (!ids.Contains(id)) { var p = NetService.Players[id]; NetService.Players.Remove(id); NetService.RaiseLeft(p); if (id != NetService.LocalId) NetService.RaiseNotice($"{p.Name} отключился"); }
     }

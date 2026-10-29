@@ -11,7 +11,7 @@ public partial class Game
 {
     const int CS = 32;
     const int ChunksX = World.Wd / CS, ChunksY = World.Ht / CS;
-    sealed class Chunk { public TileMapLayer G, F, O, B, T, K; }
+    sealed class Chunk { public TileMapLayer G, F, O, B, T, K, X1, X2, D; }
     readonly Chunk[] chunks = new Chunk[ChunksX * ChunksY];
     ColorRect backdrop; Node2D groundRoot, objRoot, crownRoot, trunkRoot, topRoot; BreakAreaLayer breakArea; TileSet chunkSet;
     public int LoadedChunks; public float LastChunkMs;
@@ -25,7 +25,8 @@ public partial class Game
         for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
         srcId = chunkSet.AddSource(src);
         groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); trunkRoot = new Node2D(); topRoot = new Node2D();
-        AddChild(groundRoot); backdrop = new ColorRect { Color = new Color(.35f, .55f, .26f), MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = -1 }; groundRoot.AddChild(backdrop); AddChild(foliageRoot); AddChild(objRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); AddChild(crownRoot); InitVegetation();
+        blendRoot = new Node2D(); decorRoot = new Node2D(); InitBlend();
+        AddChild(groundRoot); AddChild(blendRoot); AddChild(decorRoot); backdrop = new ColorRect { Color = new Color(.35f, .55f, .26f), MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = -1 }; groundRoot.AddChild(backdrop); AddChild(foliageRoot); AddChild(objRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); AddChild(crownRoot); InitVegetation();
     }
 
     Chunk ChunkAt(int x, int y)
@@ -41,13 +42,16 @@ public partial class Game
         var c = new Chunk
         {
             G = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = waterMat },
+            X1 = new TileMapLayer { TileSet = blendSet, Position = new Vector2(cx * CS * TS, cy * CS * TS) },     // переходы между поверхностями (визуальные): слабый материал снизу
+            X2 = new TileMapLayer { TileSet = blendSet, Position = new Vector2(cx * CS * TS, cy * CS * TS) },     // …и сильный поверх
+            D = new TileMapLayer { TileSet = blendSet, Position = new Vector2(cx * CS * TS, cy * CS * TS) },      // декор: травинки, камешки, пятна
             F = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
             O = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
             B = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },     // кроны деревьев под игроком (игрок спереди дерева)
             T = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat, Modulate = new Color(1, 1, 1, TreeFadeAlpha) },     // кроны деревьев: выше игрока, без коллизии; полупрозрачны, чтобы видеть игрока/постройку за деревом
             K = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Modulate = new Color(1, 1, 1, TreeFadeAlpha) }                         // стволы, закрывающие игрока, когда он стоит позади дерева
         };
-        FillFoliage(c.F, cx, cy);
+        FillFoliage(c.F, cx, cy); FillBlend(c, cx, cy);
         for (int y = 0; y < CS; y++)
             for (int x = 0; x < CS; x++)
             {
@@ -57,14 +61,14 @@ public partial class Game
                 if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0));
                 int crown = CrownId(wx, wy); if (crown >= 0) c.B.SetCell(new Vector2I(x, y), srcId, new Vector2I(crown, 0));
             }
-        groundRoot.AddChild(c.G); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); crownRoot.AddChild(c.B); topRoot.AddChild(c.T); trunkRoot.AddChild(c.K); chunks[ci] = c; LoadedChunks++;
+        groundRoot.AddChild(c.G); blendRoot.AddChild(c.X1); blendRoot.AddChild(c.X2); decorRoot.AddChild(c.D); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); crownRoot.AddChild(c.B); topRoot.AddChild(c.T); trunkRoot.AddChild(c.K); chunks[ci] = c; LoadedChunks++;
         LastChunkMs = (float)sw.Elapsed.TotalMilliseconds;
     }
 
     void UnloadChunk(int ci)
     {
         var c = chunks[ci]; if (c == null) return;
-        c.G.QueueFree(); c.F.QueueFree(); c.O.QueueFree(); c.B.QueueFree(); c.T.QueueFree(); c.K.QueueFree(); chunks[ci] = null; LoadedChunks--;
+        c.G.QueueFree(); c.X1.QueueFree(); c.X2.QueueFree(); c.D.QueueFree(); c.F.QueueFree(); c.O.QueueFree(); c.B.QueueFree(); c.T.QueueFree(); c.K.QueueFree(); chunks[ci] = null; LoadedChunks--;
     }
 
     /// <summary>Загружает/выгружает чанки вокруг камеры. force — загрузить всё нужное сразу (старт, телепорт).</summary>
