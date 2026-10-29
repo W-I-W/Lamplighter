@@ -291,25 +291,5 @@ def pine(cx, base, h, col):
         bg.putpixel((cx, y), col + (255,))
 
 
-for cx in range(5, 640, 17):
-    if rnd.random() < .7:
-        h = rnd.randint(18, 36)
-        pine(cx + rnd.randint(-4, 4), 292 + rnd.randint(-8, 6), h, (8, 14, 28) if rnd.random() < .6 else (12, 20, 38))
-# фонарь и тёплое свечение внизу справа
-lx, ly = 590, 44
-for r in range(60, 0, -1):
-    a = (1 - r / 60) ** 2 * .55
-    for dy in range(-r, r + 1):
-        for dx in range(-r, r + 1):
-            if dx * dx + dy * dy <= r * r:
-                x, y = lx + dx, ly + dy
-                if 0 <= x < 640 and 0 <= y < 360:
-                    p = bg.getpixel((x, y))
-                    bg.putpixel((x, y), (int(p[0] + (255 - p[0]) * a * .55), int(p[1] + (190 - p[1]) * a * .5), int(p[2] + (90 - p[2]) * a * .3), 255))
-for y in range(ly - 4, ly + 22):
-    bg.putpixel((lx, y), (20, 22, 40, 255)); bg.putpixel((lx + 1, y), (20, 22, 40, 255))
-for y in range(ly - 10, ly - 3):
-    for x in range(lx - 3, lx + 5):
-        bg.putpixel((x, y), (255, 216, 107, 255) if 0 < y - (ly - 10) < 6 and -3 < x - lx < 4 else (20, 22, 40, 255))
 bg.save(os.path.join(FLOW, 'flow_bg.png'))
 print('look layers and flow art written')
