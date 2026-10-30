@@ -316,6 +316,8 @@ public partial class Game
         if (Hp <= 0) Die();
     }
 
+    Vector2? aiRespawn;                                                            // точка возрождения, пока UpdateEnemies временно подменяет PPos
+
     void Die()
     {
         EventsOnDeath(); RiftOnDeath();
@@ -327,7 +329,7 @@ public partial class Game
         bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта
         if (lvLoss) { Level--; MaxHp = Mathf.Max(60f, MaxHp - 10f); Xp = 0; }
         else if (xpLoss) Xp = 0;
-        PPos = RespawnPos(); Hp = MaxHp; Invuln = 2f; Save();
+        PPos = RespawnPos(); aiRespawn = PPos; Hp = MaxHp; Invuln = 2f; Save();
         Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();
     }
@@ -359,10 +361,11 @@ public partial class Game
     void UpdateEnemies(float dt)
     {
         if (NetClient) { ClientEnemies(dt); return; }
-        var realP = PPos; RecordTrail(dt, realP); int attached = 0; CountBusyAttackers(); stillT = pVel.Length() < 8f ? stillT + dt : 0f;
+        var realP = PPos; aiRespawn = null; RecordTrail(dt, realP); int attached = 0; CountBusyAttackers(); stillT = pVel.Length() < 8f ? stillT + dt : 0f;
         for (int i = Enemies.Count - 1; i >= 0; i--)
         {
             if (i >= Enemies.Count) continue;                                  // смерть врага (взрыв, цепочка) могла убрать нескольких сразу
+            if (aiRespawn is Vector2 rp) { realP = rp; aiRespawn = null; }     // игрок погиб от удара этого же прохода — не возвращаем его на место смерти
             var e = Enemies[i]; PPos = realP; ChooseTarget(e, dt, realP);
             EliteTick(e, dt); if (e.Over > 0) e.Over -= dt; e.Cd -= dt * EnemyCdMul(e); ctxDmg = BossDamageMul(e.Kind); int projN = Projs.Count;
             e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt);
@@ -407,11 +410,11 @@ public partial class Game
             {
                 case EK.Shade:
                     // подкрадывается, замирает с заметной подготовкой (тень вздрагивает), рывок, затем короткая пауза — тут её можно ударить
-                    if (e.State == 1) { vel = Vector2.Zero; e.Tele -= dt; if (e.Tele <= 0) { e.State = 2; e.Dash = .22f; e.DashDir = dir; Sfx.Play("dash", -8, 1.3f); } }
+                    if (e.State == 1) { vel = Vector2.Zero; e.Tele -= dt; if (e.Tele <= 0) { e.State = 2; e.Dash = Mathf.Clamp((dist + 8f) / Mathf.Max(60f, 150f * k), .22f, .7f); e.DashDir = dir; Sfx.Play("dash", -8, 1.3f); } }      // рывок рассчитан на расстояние: в свете враг медленнее, но до игрока всё равно доходит
                     else if (e.State == 2)
                     {
                         e.Dash -= dt; vel = e.DashDir * 150f * k;
-                        if (dist < 13 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(9f * e.Scale, -dir); }
+                        if (dist < 14 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(9f * e.Scale, -dir); }
                         if (e.Dash <= 0) { e.State = 3; e.T2 = .8f; }
                     }
                     else if (e.State == 3) { e.T2 -= dt; vel = perp * (e.Id2 ? 28f : -28f) * k; if (e.T2 <= 0) { e.State = 0; e.Cd = rng.RandfRange(.5f, 1.1f); } }
@@ -424,11 +427,11 @@ public partial class Game
                     break;
                 case EK.Wraith:
                     e.Cd -= dt;
-                    if (e.Tele > 0) { e.Tele -= dt; if (e.Tele <= 0) { e.Dash = .32f; e.DashDir = dir; } }
+                    if (e.Tele > 0) { e.Tele -= dt; if (e.Tele <= 0) { e.Dash = Mathf.Clamp((dist + 10f) / Mathf.Max(60f, 170f * k), .32f, .8f); e.DashDir = dir; } }
                     else if (e.Dash > 0)
                     {
                         e.Dash -= dt; vel = e.DashDir * 170f * k;
-                        if (dist < 12 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(7f * e.Scale, -dir); }
+                        if (dist < 13 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(7f * e.Scale, -dir); }
                     }
                     else
                     {
@@ -548,6 +551,7 @@ public partial class Game
 
             if (e.Hp <= 0) { var dead = e; Enemies.RemoveAt(i); KillEnemy(dead); }
         }
+        if (aiRespawn is Vector2 rp2) { realP = rp2; aiRespawn = null; }
         PPos = realP; aiRemote = 0;
         if (attached == 0) LeechT = Mathf.Max(0, LeechT - dt);
     }

@@ -173,6 +173,13 @@ public partial class Game
             Check(Tune.T.MineTimeMul > 1f && Tune.T.RegrowMul < 1f && Tune.T.XpMul < 1f, "economy: mining time, regrowth and experience are tuned from the Resource");
             float m0 = Settings.Music, s0 = Settings.Sfx; SetVolume(0, .3f); SetVolume(1, .7f); Check(Mathf.IsEqualApprox(Settings.Music, .3f) && Mathf.IsEqualApprox(Settings.Sfx, .7f), "ui: volume is set by clicking the bar (values snap to 10%)");
             Settings.Music = m0; Settings.Sfx = s0; Settings.ApplyAudio(); Settings.Save();
+            // враг в освещённой зоне (замедлен вдвое) не должен бесконечно кружить рядом и не наносить урона
+            {
+                var lit = TileCenter(W.Spawn.X, W.Spawn.Y); Tp(lit); Enemies.Clear(); Projs.Clear(); Hp = MaxHp; Invuln = 0; noHeal = true; bool wasLit = IsLit(PPos);
+                spot = lit; var sh = Mk(EK.Shade, new Vector2(38, 0)); float hp0 = Hp; Sim(6f);
+                Check(wasLit && Hp < hp0, $"melee: a shade next to the player in the light still reaches and hurts them ({hp0 - Hp:0.#} damage, lit={wasLit})");
+                Enemies.Clear(); Hp = MaxHp;
+            }
             // застревание: существо внутри камня выталкивается; смерть — на базе, на сложном режиме теряется уровень
             {
                 var free = spot; int tx = (int)(free.X / TS), ty = (int)(free.Y / TS); var keep = W.Get(tx, ty); W.Set(tx, ty, Tl.Stone);
