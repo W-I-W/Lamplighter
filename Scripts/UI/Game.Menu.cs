@@ -200,11 +200,19 @@ public partial class Game
     }
 
     // ───────────────────────── музыка ─────────────────────────
-    float musicT;
+    float musicT, combatT, prevHp = -1, hurtT;
+    /// <summary>Музыка следует за игроком: меню → финал → босс → бой (рядом ≥2 врагов, элита или урон) → биом; при низком HP темп падает.</summary>
     void UpdateMusic(float dt)
     {
+        if (prevHp < 0) prevHp = Hp;
+        if (Hp < prevHp - .5f) hurtT = 6f;
+        prevHp = Hp; hurtT = Mathf.Max(0, hurtT - dt);
         musicT -= dt; if (musicT > 0) return; musicT = .5f;
-        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
+        int near = 0; bool elite = false;
+        foreach (var e in Enemies) if (!e.Hidden && e.Hp > 0 && e.Kind != EK.Decoy && e.Kind != EK.Mirage && e.Pos.DistanceTo(PPos) < 150f) { near++; elite |= e.Elite; }
+        if (near >= 2 || elite || (near >= 1 && hurtT > 0)) combatT = 8f; else combatT = Mathf.Max(0, combatT - .5f);
+        Music.Health(MaxHp > 0 ? Hp / MaxHp : 1f);
+        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : combatT > 0 ? "battle" : RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
         Music.Play(t);
     }
 

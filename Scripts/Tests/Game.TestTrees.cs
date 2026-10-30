@@ -52,6 +52,8 @@ public partial class Game
             PPos = TileCenter(tree.X - 1, tree.Y + 1); UpdateTreeOcclusion(); Check(CrownLayer(tree.X, tree.Y - 1) == 'B', "trees: standing diagonally below is in front");
             PPos = TileCenter(tree.X + 1, tree.Y); UpdateTreeOcclusion(); Check(!TrunkCopyAt(tree.X, tree.Y), "trees: standing beside the trunk does not cover the player");
             PPos = TileCenter(tree.X - 1, tree.Y - 2); UpdateTreeOcclusion(); Check(TrunkCopyAt(tree.X, tree.Y), "trees: standing behind and to the side still shows the trunk copy");
+            // камень над стволом не съедает крону: она рисуется поверх камня
+            { int cx = tree.X, cy = tree.Y - 1; var keep = W.Get(cx, cy); SetObj(cx, cy, Tl.Stone); Check(CrownAt(cx, cy) == Art.TreeTop, "trees: a rock in the crown cell does not remove the crown"); Check(CrownLayer(cx, cy) == 'T', "trees: the crown is drawn above the rock"); SetObj(cx, cy, keep); }
             // рубка: клик по кроне бьёт ствол; кирка заметно медленнее топора
             int wood0 = Inv[It.Wood]; Check(true, "trees: setup chopping");
             float tp = TimeToBreak(tree, "pickaxe");

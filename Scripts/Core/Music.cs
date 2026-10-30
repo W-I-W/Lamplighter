@@ -12,7 +12,7 @@ public partial class Music : Node
     AudioStreamPlayer a, b, cur;
     string curName = "";
     readonly Dictionary<string, AudioStream> cache = new();
-    float fade = 1f;
+    float fade = 1f, fadeDur = 2.5f, low, lowTarget;
     public static readonly string[] Tracks = { "menu", "forest", "mines", "ash", "ice", "heart", "boss", "finale" };
 
     public override void _Ready()
@@ -23,11 +23,13 @@ public partial class Music : Node
     }
 
     public static void Play(string name) => Inst?.Switch(name);
+    /// <summary>Здоровье игрока: чем ниже (0..1), тем медленнее и тяжелее звучит музыка.</summary>
+    public static void Health(float ratio) { if (Inst != null) Inst.lowTarget = Mathf.Clamp((.4f - ratio) / .4f, 0f, 1f); }
 
     void Switch(string name)
     {
         if (name == curName) return;
-        curName = name; Start(PickVariant(name));
+        curName = name; fadeDur = name == "battle" || name == "boss" ? 1f : 2.5f; Start(PickVariant(name));
     }
 
     string curKey = "";
@@ -66,7 +68,8 @@ public partial class Music : Node
     {
         if (cur == null) return;
         if (!cur.Playing && fade >= 1f && curName != "") Start(PickVariant(curName));
-        fade = Mathf.Min(1f, fade + (float)delta / 2.5f);
+        fade = Mathf.Min(1f, fade + (float)delta / fadeDur);
+        low = Mathf.Lerp(low, lowTarget, Mathf.Min(1f, (float)delta * 1.5f)); a.PitchScale = b.PitchScale = 1f - .08f * low;
         cur.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, fade)) - 4f;
         if (old != null && old != cur) { old.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, 1f - fade)) - 4f; if (fade >= 1f) { old.Stop(); old = null; } }
     }
