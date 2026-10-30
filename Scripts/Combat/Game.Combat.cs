@@ -324,9 +324,11 @@ public partial class Game
         Diag.Count("deaths");
         int lost = Math.Min(25, Inv[It.Shard] / 4); Inv[It.Shard] -= lost;
         bool lvLoss = Diff == 1 && Level > 1;                                      // сложный режим: смерть стоит уровня
+        bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта
         if (lvLoss) { Level--; MaxHp = Mathf.Max(60f, MaxHp - 10f); Xp = 0; }
+        else if (xpLoss) Xp = 0;
         PPos = RespawnPos(); Hp = MaxHp; Invuln = 2f; Save();
-        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
+        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();
     }
 

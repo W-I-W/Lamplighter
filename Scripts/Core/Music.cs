@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-/// <summary>Фоновая музыка: заменяется файлами res://Assets/Audio/Music/NAME.ogg|mp3|wav, иначе синтезируется бесшовная петля (16 с).</summary>
+/// <summary>Фоновая музыка: заменяется файлами res://Assets/Audio/Music/NAME[_2,_3].ogg|mp3|wav (несколько треков на тему чередуются), иначе синтезируется бесшовная петля (16 с).</summary>
 public partial class Music : Node
 {
     public static Music Inst;
@@ -27,9 +27,37 @@ public partial class Music : Node
     void Switch(string name)
     {
         if (name == curName) return;
-        curName = name; fade = 0;
-        var next = cur == a ? b : a; var stream = Get(name);
+        curName = name; Start(PickVariant(name));
+    }
+
+    string curKey = "";
+    readonly Random pick = new();
+
+    /// <summary>Файлы NAME.mp3, NAME_2.mp3, NAME_3.mp3… — несколько треков на одну тему; без файлов остаётся синтез.</summary>
+    static bool HasFile(string key)
+    {
+        foreach (var ext in new[] { "ogg", "mp3", "wav" })
+            if (ResourceLoader.Exists($"res://Assets/Audio/Music/{key}.{ext}") || FileAccess.FileExists($"user://music/{key}.{ext}")) return true;
+        return false;
+    }
+
+    string PickVariant(string name)
+    {
+        var v = new List<string>();
+        if (HasFile(name)) v.Add(name);
+        for (int i = 2; HasFile($"{name}_{i}"); i++) v.Add($"{name}_{i}");
+        if (v.Count == 0) return name;
+        if (v.Count == 1) return v[0];
+        string k; do k = v[pick.Next(v.Count)]; while (k == curKey && v.Count > 1);
+        return k;
+    }
+
+    void Start(string key)
+    {
+        var stream = Get(key);
         if (stream == null) return;
+        curKey = key; fade = 0;
+        var next = cur == a ? b : a;
         next.Stream = stream; next.VolumeDb = -80; next.Play(); old = cur; cur = next;
     }
     AudioStreamPlayer old;
@@ -37,6 +65,7 @@ public partial class Music : Node
     public override void _Process(double delta)
     {
         if (cur == null) return;
+        if (!cur.Playing && fade >= 1f && curName != "") Start(PickVariant(curName));
         fade = Mathf.Min(1f, fade + (float)delta / 2.5f);
         cur.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, fade)) - 4f;
         if (old != null && old != cur) { old.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, 1f - fade)) - 4f; if (fade >= 1f) { old.Stop(); old = null; } }
@@ -52,7 +81,7 @@ public partial class Music : Node
                 if (!(root.StartsWith("res") ? ResourceLoader.Exists(p) : FileAccess.FileExists(p))) continue;
                 AudioStream st = null;
                 if (ext == "ogg") { st = AudioStreamOggVorbis.LoadFromFile(ProjectSettings.GlobalizePath(p)); if (st is AudioStreamOggVorbis o) o.Loop = true; }
-                else if (ext == "mp3") { var f = FileAccess.Open(p, FileAccess.ModeFlags.Read); if (f != null) { var m = new AudioStreamMP3 { Data = f.GetBuffer((long)f.GetLength()), Loop = true }; st = m; } }
+                else if (ext == "mp3") { var f = FileAccess.Open(p, FileAccess.ModeFlags.Read); if (f != null) { var m = new AudioStreamMP3 { Data = f.GetBuffer((long)f.GetLength()), Loop = false }; st = m; } }
                 else { var f = FileAccess.Open(p, FileAccess.ModeFlags.Read); if (f != null) st = AudioStreamWav.LoadFromBuffer(f.GetBuffer((long)f.GetLength())); }
                 if (st != null) { cache[name] = st; return st; }
             }
