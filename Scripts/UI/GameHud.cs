@@ -23,9 +23,10 @@ public partial class GameHud : Control
     Control topLeft, topRight, lRow, resRow, xpRow; Label dbg;
     string lastGoal = ""; float goalExpandT;                    // подсказка цели: после смены раскрыта несколько секунд, затем сворачивается в строку
     float lastUiT; bool regionOn;
-    public bool GoalCollapsed => !goalNeeds.Visible && !goalMore.Visible;
+    public bool GoalCollapsed => !goalBar.Visible;
     public bool RegionVisible => topRight.Visible && world.IsVisibleInTree();
     public bool DebugVisible => dbg.Visible;
+    public void ClickGoalForTest() => goal.EmitSignal(Control.SignalName.GuiInput, new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left });
     public float LeftBottom => Bottom(topLeft);                 // нижняя граница блоков слева и справа (логические координаты) — под ними рисуются реликвии и трекер события
     public float RightBottom => topRight != null && topRight.Visible && world.Visible ? Bottom(topRight) : 4f;
     static float Bottom(Control c) { if (c == null) return 4f; float b = c.Position.Y; foreach (var k in c.GetChildren()) if (k is Control ch && ch.Visible) b = Mathf.Max(b, c.Position.Y + ch.Position.Y + ch.Size.Y); return b; }
@@ -41,6 +42,9 @@ public partial class GameHud : Control
         for (int i = 0; i < 5; i++) abil[i] = abilities.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) chips[i] = GetNode<Control>($"%Chip{i}");
         abilIcons = new[] { "dash", "spin", "flare", "pulse", "beam" }.Select(n => GD.Load<Texture2D>($"res://Assets/UI/ability_{n}.png")).ToArray();
+        // клик мышью по блоку цели разворачивает и сворачивает подробности (то же, что клавиша G)
+        goal.MouseFilter = MouseFilterEnum.Stop; goal.MouseDefaultCursorShape = CursorShape.PointingHand; foreach (var k in goal.FindChildren("*", "Control", true, false)) ((Control)k).MouseFilter = MouseFilterEnum.Ignore;
+        goal.GuiInput += e => { if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left) { GoalsOpen = !GoalsOpen; Sfx.Play("tick", -6, 1.3f); goal.AcceptEvent(); } };
         topLeft = GetNode<Control>("TopLeft"); topRight = GetNode<Control>("TopRight"); lRow = lBar.GetParent<Control>(); resRow = chips[0].GetParent<Control>(); xpRow = xp.GetParent<Control>();
         foreach (var k in lRow.GetChildren()) if (k is TextureRect || k is ProgressBar) ((Control)k).Visible = false;      // «Фонари 2/5» — текстом, без полосы
         regionOn = topRight.Visible; world.Modulate = new Color(1, 1, 1, .82f); goal.Modulate = new Color(1, 1, 1, .92f);
@@ -111,14 +115,15 @@ public partial class GameHud : Control
         dt = Mathf.Max(0f, (float)(G.UiTime - lastUiT)); lastUiT = (float)G.UiTime; goalExpandT = Mathf.Max(0, goalExpandT - dt);      // по игровому времени, как уведомления
         bool open = !HudDensity.Minimal && (GoalsOpen || goalExpandT > 0);
         TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), open ? new Color("#ffd23f") : new Color("#d9c27a"), 90f);
-        goalNeeds.Visible = open && g != null; if (goalNeeds.Visible) TextFx.Apply(goalNeeds, T(g.Needs), new Color("#8a96b0"), 0);
+        bool lite = !HudDensity.Minimal;                          // нужные ресурсы и подсказка клавиши видны всегда; полоса и список целей — только в раскрытом виде
+        goalNeeds.Visible = lite && g != null; if (goalNeeds.Visible) TextFx.Apply(goalNeeds, T(g.Needs), new Color("#8a96b0"), 0);
         var m = g != null ? Frac.Match(g.Needs ?? "") : null;
         goalBar.Visible = open && m != null && m.Success && int.Parse(m.Groups[2].Value) > 0;
         if (goalBar.Visible) goalBar.Value = Mathf.Clamp(float.Parse(m.Groups[1].Value) / float.Parse(m.Groups[2].Value), 0, 1);
         string more = "";
         if (GoalsOpen) for (int i = 1; i < Math.Min(4, goals.Count); i++) more += "• " + T(goals[i].Title) + "\n";
-        if (GoalsOpen) more += T("[G] свернуть · [J] журнал"); else if (open && goals.Count > 1) more = string.Format(T("ещё {0} · [G] развернуть"), goals.Count - 1);
-        TextFx.Apply(goalMore, more.TrimEnd('\n'), new Color("#8a96b0"), 0); goalMore.Visible = open && more != "";
+        if (GoalsOpen) more += T("[G] свернуть · [J] журнал"); else if (goals.Count > 1) more = string.Format(T("ещё {0} · [G] развернуть"), goals.Count - 1);
+        TextFx.Apply(goalMore, more.TrimEnd('\n'), new Color("#8a96b0"), 0); goalMore.Visible = lite && more != "";
     }
 
     /// <summary>Блок региона: название, «Фонари 2/5», «Маяк 1/6». Ресурсы — только что полученные, несколько секунд; полный список — в инвентаре [I]. В минимальном режиме блока нет.</summary>

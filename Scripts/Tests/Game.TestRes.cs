@@ -57,11 +57,11 @@ public partial class Game
         S(.4f, () => { Check(ResUi.Active, "menu: opens on a resource"); Shot("res4_menu"); ResUi.DialogForTest(1); });
         S(.4f, () => { Shot("res5_drop_dialog"); ResUi.Close(); CloseWindows(); Check(!ResUi.Active, "menu: closes"); Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
         // анимация добычи: замах вверх, удар вниз, возврат (три фазы цикла)
-        foreach (var (name, ph) in new[] { ("res6_swing_windup", .27f), ("res6_swing_strike", .49f), ("res6_swing_return", .85f) })
+        foreach (var (name, ph) in new[] { ("res6_swing_windup", .27f), ("res6_swing_strike", .49f), ("res6_swing_return", .85f), ("res6_swing_left_strike", -.49f) })
         {
             string nm = name; float phase = ph;
-            S(.3f, () => { Tp(TileCenter(W.Spawn.X, W.Spawn.Y)); TestKeepMine = true; TestAim(new Vector2(40, 0)); Facing = 1; MineTile = new Vector2I(W.Spawn.X + 2, W.Spawn.Y); MineProg = .1f; MineNeed = 1f; AtkCd = 0; Swing = 5f; Invuln = 0; });
-            S(.02f, () => { Swing = 5f; MineProg = .1f; Time = Mathf.Floor(Time * 3f) / 3f + phase / 3f; });
+            S(.3f, () => { Tp(TileCenter(W.Spawn.X, W.Spawn.Y)); TestKeepMine = true; bool left = phase < 0; TestAim(new Vector2(left ? -40 : 40, 0)); Facing = left ? -1 : 1; MineTile = new Vector2I(W.Spawn.X + (left ? -2 : 2), W.Spawn.Y); MineProg = .1f; MineNeed = 1f; AtkCd = 0; Swing = 5f; Invuln = 0; });
+            S(.02f, () => { Swing = 5f; MineProg = .1f; Time = Mathf.Floor(Time * 3f) / 3f + Mathf.Abs(phase) / 3f; });
             S(.01f, () => Shot(nm));
         }
     }

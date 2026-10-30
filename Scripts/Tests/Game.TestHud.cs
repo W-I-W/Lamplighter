@@ -21,7 +21,7 @@ public partial class Game
         S(1.2f, () => { });
         S(45f, () => Shot("hud2_normal_notes"));
         S(.1f, () => { Log($"hud t={UiTime:F1}"); Check("hud: tutorial hint collapsed to one line after a few seconds", GameHudNode.GoalCollapsed);  Shot("hud3_normal_collapsed"); });
-        S(.1f, () => { GameHudNode.GoalsOpen = true; });
+        S(.1f, () => { GameHudNode.GoalsOpen = false; GameHudNode.ClickGoalForTest(); Check("hud: a mouse click on the goal block expands the details", GameHudNode.GoalsOpen); GameHudNode.ClickGoalForTest(); Check("hud: a second click collapses them", !GameHudNode.GoalsOpen); GameHudNode.ClickGoalForTest(); });
         S(.4f, () => { Check("hud: [G] expands details", !GameHudNode.GoalCollapsed); Shot("hud4_normal_expanded"); GameHudNode.GoalsOpen = false; HudDensity.Mode = HudMode.Minimal; });
         S(.5f, () => { Check("hud: minimal hides the region block", !GameHudNode.RegionVisible); Shot("hud5_minimal"); HudDensity.Mode = HudMode.Full; });
         S(.5f, () => { Check("hud: full shows the debug line", GameHudNode.DebugVisible); Shot("hud6_full"); HudDensity.Mode = HudMode.Normal; Events.Clear(); });

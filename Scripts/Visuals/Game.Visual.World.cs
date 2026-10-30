@@ -158,11 +158,11 @@ public partial class Game
             {
                 // удар с возвратом: замах назад (быстро замедляется), резкий удар вниз, короткая задержка на ударе и плавный возврат в исходное положение
                 float ph = (Time * 3f) % 1f; if (mineLastPh < .5f && ph >= .5f) MineStrikeFx(); mineLastPh = ph;
-                float rest = .35f, back = -1.35f, hit = 1.25f, off;      // положительный угол — вниз, отрицательный — вверх: замах поднимает инструмент, удар опускает
+                float rest = .2f, back = -1.35f, hit = .72f, off;      // положительный угол — вниз, отрицательный — вверх: замах поднимает инструмент, удар опускает не ниже ног (≈ 41° под горизонталью)
                 if (ph < .30f) { float u = ph / .30f; off = Mathf.Lerp(rest, back, 1f - (1f - u) * (1f - u)); }                     // замах: сначала быстро, к концу замедляется
                 else if (ph < .50f) { float u = (ph - .30f) / .20f; off = Mathf.Lerp(back, hit, u * u * u); }                        // удар: разгон до самого конца
-                else if (ph < .62f) { float u = (ph - .50f) / .12f; off = Mathf.Lerp(hit, hit - .18f, u); }                          // отдача на ударе
-                else { float u = (ph - .62f) / .38f; off = Mathf.Lerp(hit - .18f, rest, u * u * (3f - 2f * u)); }                     // возврат
+                else if (ph < .62f) { float u = (ph - .50f) / .12f; off = Mathf.Lerp(hit, hit - .1f, u); }                          // отдача на ударе
+                else { float u = (ph - .62f) / .38f; off = Mathf.Lerp(hit - .1f, rest, u * u * (3f - 2f * u)); }                     // возврат
                 ang = d.Angle() + sg * off;
             }
             else ang = d.Angle() + sg * (-1.0f + t * 2.0f);
