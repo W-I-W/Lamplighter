@@ -83,20 +83,21 @@ public partial class Game
         Pay(m.Cost); ModInv[id]++; GiveXp(10); Sfx.Play("upgrade"); Toast($"Создан модификатор: {m.Name}"); return true;
     }
 
-    public bool InstallMod(int id)
+    /// <summary>Вставка в оружие: wi — номер оружия в списке (по умолчанию то, что в руках). Окно снаряжения вставляет и в оружие, которое не в руках.</summary>
+    public bool InstallMod(int id, int wi = -1)
     {
-        var ow = CurOw; var d = CurDef;
+        var ow = wi >= 0 && wi < Owned.Count ? Owned[wi] : CurOw; var d = ow == null ? null : Db.Weapon(ow.Id);
         if (ow == null) { Fail("Сначала возьмите оружие в руки"); return false; }
         if (ModInv[id] <= 0) { Fail("Нет такого модификатора"); return false; }
         if (ow.Mods.Count >= d.Slots) { Fail("Все слоты заняты (уберите вставку)"); return false; }
-        ModInv[id]--; ow.Mods.Add(id); RecomputeEffects(); Sfx.Play("upgrade", -2, 1.3f);
+        ModInv[id]--; ow.Mods.Add(id); if (wi < 0 || wi == CurW) RecomputeEffects(); Sfx.Play("upgrade", -2, 1.3f);
         Toast($"{d.Name}: вставка «{Db.Mods[id].Name}»"); return true;
     }
 
-    public void RemoveMod(int slot)
+    public void RemoveMod(int slot, int wi = -1)
     {
-        var ow = CurOw; if (ow == null || slot < 0 || slot >= ow.Mods.Count) return;
-        ModInv[ow.Mods[slot]]++; ow.Mods.RemoveAt(slot); RecomputeEffects(); Sfx.Play("tick", 0, .8f);
+        var ow = wi >= 0 && wi < Owned.Count ? Owned[wi] : CurOw; if (ow == null || slot < 0 || slot >= ow.Mods.Count) return;
+        ModInv[ow.Mods[slot]]++; ow.Mods.RemoveAt(slot); if (wi < 0 || wi == CurW) RecomputeEffects(); Sfx.Play("tick", 0, .8f);
     }
 
     // ───────────────────────── атаки ─────────────────────────

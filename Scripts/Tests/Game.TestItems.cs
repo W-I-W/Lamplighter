@@ -63,7 +63,7 @@ public partial class Game
             StationOpened = false; Check(CraftGroups().Count == 1 && CraftGroups()[0] == "hand", "crafting: only the hand group without a station");
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
             var axe = RecipesOf("hand").Find(r => r.Id == "tool_axe");
-            Check(axe != null && StateOf(axe) == RecState.Owned, "crafting: owned tools are marked as owned");
+            Check(axe != null && axe.Done() && (StateOf(axe) == RecState.Owned || axe.IsUpgrade), "crafting: owned tools are marked as owned (or offer an upgrade)");
             // печь рядом
             var tile = ToTile(PPos + FreeAdj());
             SetObj(tile.X, tile.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tile.X, tile.Y) + new Vector2(0, 16);

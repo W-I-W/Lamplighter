@@ -98,8 +98,8 @@ public partial class Game
             int wl = WinLen(), cc = CraftCols;
             switch (k)
             {
-                case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;
-                case Key.Right: WinCur = Math.Min(Math.Max(0, wl - 1), WinCur + 1); return true;
+                case Key.Left: if (WinCur > 0) { WinCur--; return true; } break;                      // с краёв сетки стрелки переключают вкладки, как раньше
+                case Key.Right: if (WinCur < wl - 1) { WinCur++; return true; } break;
                 case Key.Up: WinCur = Math.Max(0, WinCur - cc); return true;
                 case Key.Down: WinCur = Math.Min(Math.Max(0, wl - 1), WinCur + cc); return true;
                 case Key.Tab: { var g = CraftGroups(); EqCraftMode(g[(g.IndexOf(CraftGroup()) + 1) % g.Count]); return true; }

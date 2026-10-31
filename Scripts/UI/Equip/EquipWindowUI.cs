@@ -237,7 +237,7 @@ public partial class EquipWindowUI : Control
                 var so = socketScene.Instantiate<EquipSocketUI>(); sh.AddChild(so); int si = s;
                 if (s < ow.Mods.Count) { var m = Db.Mods[ow.Mods[s]]; so.Bind(s, UiIcons.Item(Game.ModIcon(m.Id)), Game.ModTint(m.Id), G.EqSocket == s, $"{T(m.Name)}\n{T(m.Desc)}\n{T("ПКМ — снять")}"); }
                 else so.Bind(s, null, Colors.White, G.EqSocket == s, T("Пустая ячейка: нажмите, чтобы выбрать вставку"));
-                so.Picked += x => { G.EqSocket = x.Index; G.EqPick = -1; Sfx.Play("tick", -8, 1.5f); }; so.Removed += x => { if (x.Index < ow.Mods.Count && held) { x.Flash(Cyan); G.EqRemove(x.Index); } };
+                so.Picked += x => { G.EqSocket = x.Index; G.EqPick = -1; Sfx.Play("tick", -8, 1.5f); }; so.Removed += x => { if (x.Index < ow.Mods.Count) { x.Flash(Cyan); G.EqRemove(x.Index); } };
             }
         }
         if (!held) centerBox.AddChild(MainActionButtonUI.Make("Взять в руки", () => { G.EqEquipRow(row); Flash(centerBox); }, true));
@@ -246,7 +246,6 @@ public partial class EquipWindowUI : Control
         rightBox.AddChild(Lbl(w.Desc, Text, true));
         if (held) { var eff = G.EffectsText(); if (eff != "") { rightBox.AddChild(Lbl("Бонусы", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(eff, Cyan, true)); } }
         if (w.Slots <= 0) return;
-        if (!held) { rightBox.AddChild(Lbl("Чтобы менять вставки, возьмите оружие в руки.", Dim, true)); return; }
         BuildSocketPanel(ow, w);
     }
 
@@ -368,12 +367,14 @@ public partial class EquipWindowUI : Control
     {
         var v = new VBoxContainer { CustomMinimumSize = new Vector2(150, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill }; v.AddThemeConstantOverride("separation", 4); body.AddChild(v);
         var st = G.StateOf(r); var bad = new Color("#f06a5e");
-        string status = st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? (r.Extra != null && r.Extra() > 0 ? $"{T("в очереди")} {r.Extra()}" : "Можно создать") : "Не хватает ресурсов";
-        v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad, T(r.Desc ?? "")));
+        bool up = r.IsUpgrade;
+        string status = up ? "Уже есть" : st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? (r.Extra != null && r.Extra() > 0 ? $"{T("в очереди")} {r.Extra()}" : "Можно создать") : "Не хватает ресурсов";
+        v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), up ? Cyan : st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad, T(up ? r.UpDesc ?? r.Desc ?? "" : r.Desc ?? "")));
         var cost = r.CostNow;
         if (cost != null) foreach (var c in cost) { int have = G.Inv[c[0]]; v.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : bad)); }
         v.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
-        if (r.Multi)
+        if (up) v.AddChild(MainActionButtonUI.Make("Улучшить", () => { G.EqCraftRow(idx); Flash(centerBox); }, st == RecState.Ready, null));
+        else if (r.Multi)
         {
             int max = G.MaxCraft(r);
             var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 3); v.AddChild(h);

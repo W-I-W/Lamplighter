@@ -2106,5 +2106,14 @@
   "добыча дерева быстрее, удар сильнее": "faster wood mining, stronger hits",
   "Улучшить у печи": "Upgrade at a furnace",
   "Улучшение топора": "Axe upgrade",
-  "+10% урона за уровень. Улучшать можно только рядом с печью или кузницей": "+10% damage per level. Upgrades only next to a furnace or forge"
+  "+10% урона за уровень. Улучшать можно только рядом с печью или кузницей": "+10% damage per level. Upgrades only next to a furnace or forge",
+  "Все": "All",
+  "Доступные": "Available",
+  "Макс": "Max",
+  "Создать 1": "Craft 1",
+  "×5": "×5",
+  "Пока нет доступных рецептов": "No recipes available yet",
+  "Tab — режим · Enter — создать · двойной клик — создать": "Tab — mode · Enter — craft · double-click — craft",
+  "Рецепты печи и кузницы открываются у станции [E]": "Furnace and forge recipes open at the station [E]",
+  "в очереди": "queued"
 }

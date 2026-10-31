@@ -18,8 +18,9 @@ public partial class Game
     public void EqHotClear(int row) { var r = EquipRef(row); int s = r == null ? -1 : HotSlotOf(r); if (s >= 0) HotClear(s); }
     public bool EqIsHeld(int row) { var r = EquipRef(row); if (r == null) return false; return IsWeaponRef(r) ? CurW >= 0 && CurW < Owned.Count && RefWeapon(Owned[CurW].Id) == r : CurW < 0 && RefTool(CurTool) == r; }
     public void EqToggleRelic(string id) => ToggleRelic(id);
-    public bool EqInstall(int modId) { bool ok = InstallMod(modId); if (ok) { EqPick = -1; EqSocket = -1; } return ok; }
-    public void EqRemove(int slot) { RemoveMod(slot); EqSocket = -1; }
+    int EqWeaponIdx() => WinTab == 0 ? WinCur - ToolList().Count : -1;
+    public bool EqInstall(int modId) { bool ok = InstallMod(modId, EqWeaponIdx()); if (ok) { EqPick = -1; EqSocket = -1; } return ok; }
+    public void EqRemove(int slot) { RemoveMod(slot, EqWeaponIdx()); EqSocket = -1; }
     public void EqCraftRow(int row) { var rows = CraftRows(); if (row < 0 || row >= rows.Count) return; WinCur = row; CraftRecipe(rows[row].r); }
     public void EqCraftQty(int row, int qty) { var rows = CraftRows(); if (row < 0 || row >= rows.Count) return; WinCur = row; CraftRecipe(rows[row].r, qty); }
     public void EqCraftMode(string g) { if (g == CraftMode || !CraftGroups().Contains(g)) return; CraftMode = g; WinCur = 0; CraftResetSel(); Sfx.Play("tick", -6, 1.4f); }

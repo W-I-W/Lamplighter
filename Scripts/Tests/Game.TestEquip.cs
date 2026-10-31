@@ -112,12 +112,12 @@ public partial class Game
             Check(lastReady >= 0 && (firstBad < 0 || lastReady < firstBad), "equip: available recipes come first");
             Check(rows.Exists(x => StateOf(x.r) == RecState.Missing), "equip: learned recipes without materials stay visible");
             int si = rows.FindIndex(x => x.r.Id == "smelt_" + It.Copper); int ore0 = Inv[It.CopperOre], wood0 = Inv[It.Wood];
-            Log($"dbg0 win={Window}"); equipWindow.ClickRecipe(si, false); equipWindow.Force(); Log($"dbg1 win={Window}"); Check(WinCur == si && equipWindow.HasButton("Создать", true), "equip: one click selects a recipe and the Create button is active");
+            equipWindow.ClickRecipe(si, false); equipWindow.Force(); Check(WinCur == si && equipWindow.HasButton("Создать", true), "equip: one click selects a recipe and the Create button is active");
             Check(equipWindow.PressButton("×5") && Inv[It.CopperOre] == ore0 - 5 && Inv[It.Wood] == wood0 - 5, $"equip: x5 spends exactly five (ore {Inv[It.CopperOre]}, wood {Inv[It.Wood]})");
             equipWindow.Force(); si = CraftRows().FindIndex(x => x.r.Id == "smelt_" + It.Copper); Check(WinCur == si, "equip: the selection follows the recipe when the order changes");
-            Log($"dbg2 win={Window}"); ore0 = Inv[It.CopperOre]; equipWindow.ClickRecipe(si, true); Log($"dbg3 win={Window}"); Check(Inv[It.CopperOre] == ore0 - 1, "equip: a double click creates one");
-            ore0 = Inv[It.CopperOre]; Log($"dbg win={Window} tab={WinTab} cur={WinCur} sel={CraftRows()[WinCur].r.Id} st={StateOf(CraftRows()[WinCur].r)} station={ActiveStation()} wood={Inv[It.Wood]}"); WindowKey(Key.Enter, false); Check(Inv[It.CopperOre] == ore0 - 1, $"equip: Enter creates the selected recipe (ore {ore0}->{Inv[It.CopperOre]}, cur {WinCur}, rows {CraftRows().Count}, CraftQty {CraftQty})");
-            EqCraftFilter(true); Check(CraftRows().Count > 0 && CraftRows().TrueForAll(x => StateOf(x.r) == RecState.Ready), "equip: the Available filter keeps only ready recipes"); EqCraftFilter(false);
+            ore0 = Inv[It.CopperOre]; equipWindow.ClickRecipe(si, true); Check(Inv[It.CopperOre] == ore0 - 1, "equip: a double click creates one");
+            ore0 = Inv[It.CopperOre]; WindowKey(Key.Enter, false); Check(Inv[It.CopperOre] == ore0 - 1, $"equip: Enter creates the selected recipe (ore {ore0}->{Inv[It.CopperOre]}, cur {WinCur}, rows {CraftRows().Count}, CraftQty {CraftQty})");
+            Inv[It.CopperOre] = 3; Inv[It.Wood] = 5; EqCraftFilter(true); Check(CraftRows().Count > 0 && CraftRows().TrueForAll(x => StateOf(x.r) == RecState.Ready), "equip: the Available filter keeps only ready recipes"); EqCraftFilter(false);
             equipWindow.Force();
         });
         S(.3f, () => Shot("equip_craft_furnace"));
