@@ -200,20 +200,32 @@ public partial class Game
     }
 
     // ───────────────────────── музыка ─────────────────────────
-    float musicT, combatT, prevHp = -1, hurtT;
-    /// <summary>Музыка следует за игроком: меню → финал → босс → бой (рядом ≥2 врагов, элита или урон) → биом; при низком HP темп падает.</summary>
+    float musicT, musicAcc, combatT, prevHp = -1, hurtT, moodT; int mood, moodWant;     // mood: 0 — свет ламп/биом, 1 — темнота, 2 — у зажжённого маяка
+    /// <summary>Музыка следует за игроком: меню → финал → босс → бой → маяк → темнота → биом. Бой включается сразу и держится 4 с после боя;
+    /// у зажжённого маяка сразу играет спокойный трек; в темноту музыка уходит медленно (~5 с), чтобы не дёргаться на краю света. При низком HP темп падает.</summary>
     void UpdateMusic(float dt)
     {
         if (prevHp < 0) prevHp = Hp;
         if (Hp < prevHp - .5f) hurtT = 6f;
         prevHp = Hp; hurtT = Mathf.Max(0, hurtT - dt);
-        musicT -= dt; if (musicT > 0) return; musicT = .5f;
-        int near = 0; bool elite = false;
-        foreach (var e in Enemies) if (!e.Hidden && e.Hp > 0 && e.Kind != EK.Decoy && e.Kind != EK.Mirage && e.Pos.DistanceTo(PPos) < 150f) { near++; elite |= e.Elite; }
-        if (near >= 2 || elite || (near >= 1 && hurtT > 0)) combatT = 8f; else combatT = Mathf.Max(0, combatT - .5f);
+        musicAcc += dt; musicT -= dt; if (musicT > 0) return; float step = musicAcc; musicAcc = 0; musicT = .1f;
+        int near = 0, close = 0; bool elite = false;
+        foreach (var e in Enemies)
+        {
+            if (e.Hidden || e.Hp <= 0 || e.Kind == EK.Decoy || e.Kind == EK.Mirage) continue;
+            float d = e.Pos.DistanceTo(PPos); if (d < 150f) { near++; elite |= e.Elite; if (d < 100f) close++; }
+        }
+        bool atBeacon = false; foreach (var a in W.Ancients) if (a.Lit && PPos.DistanceTo(a.Pos) < AncientR(a) * .85f) { atBeacon = true; break; }
+        if (atBeacon) { combatT = 0; mood = 2; moodT = 0; }          // у маяка — сразу спокойный трек
+        else
+        {
+            if (near >= 2 || elite || close >= 1 || (near >= 1 && hurtT > 0)) combatT = 4f; else combatT = Mathf.Max(0, combatT - step);
+            moodWant = IsLit(PPos) ? 0 : 1;
+            if (moodWant == mood) moodT = 0; else { moodT += step; if (moodT >= (moodWant == 1 ? 5f : 2.5f)) { mood = moodWant; moodT = 0; } }
+        }
         Music.Health(MaxHp > 0 ? Hp / MaxHp : 1f);
         string zone = RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
-        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : combatT > 0 ? "battle_" + zone : zone;
+        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : combatT > 0 ? "battle_" + zone : mood == 2 ? "beacon" : mood == 1 ? "dark_" + zone : zone;
         Music.Play(t);
     }
 

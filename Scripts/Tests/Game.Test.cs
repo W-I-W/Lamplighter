@@ -75,6 +75,7 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "chat") { BuildChatScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "res") { BuildResScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "clicks") { BuildClicksScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "itemup") { BuildItemUpScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "sessions") { BuildSessionsScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "loc") { BuildLocScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "econ") { BuildEconScript(); return; }

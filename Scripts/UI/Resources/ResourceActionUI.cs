@@ -50,6 +50,7 @@ public partial class ResourceActionUI : Control
 
     void Build()
     {
+        G?.PokeHover();
         foreach (var c in box.GetChildren()) { box.RemoveChild(c); c.QueueFree(); }
         string name = Loc.T(It.Names[item]); int have = G.Inv[item];
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 5); box.AddChild(head);

@@ -16,7 +16,7 @@ public partial class Game
             Check(Art.IconTex != null && Art.IconTex.GetWidth() == 16 * Art.IconCount, "icon atlas built from PNG files");
             foreach (var s in SpriteLibrary.Sheets) Check(s.get() != null, $"sheet loaded from PNG: {s.id}");
             Check(VisualCatalog.Get() != null, "visual catalog resource loaded");
-            foreach (var n in new[] { "px", "line", "disc", "arrow", "diamond", "diamond_line", "crack_0", "crack_1", "crack_2", "crack_3" })
+            foreach (var n in new[] { "px", "line", "disc", "arrow", "diamond", "diamond_line" })
                 Check(GD.Load<Texture2D>($"res://Assets/Sprites/Vfx/{n}.png") != null, $"effect primitive {n}.png");
             GD.Print($"[check] SUMMARY failures={bad}");
         });

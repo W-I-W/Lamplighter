@@ -20,7 +20,10 @@ public partial class Game
     public void EqToggleRelic(string id) => ToggleRelic(id);
     public bool EqInstall(int modId) { bool ok = InstallMod(modId); if (ok) { EqPick = -1; EqSocket = -1; } return ok; }
     public void EqRemove(int slot) { RemoveMod(slot); EqSocket = -1; }
-    public void EqCraftRow(int row) { var rows = CraftRows(); if (row < 0 || row >= rows.Count) return; WinCur = row; var (grp, rec) = rows[row]; if (rec == null) { if (!CraftFold.Remove(grp)) CraftFold.Add(grp); Sfx.Play("tick", -6, 1.2f); } else CraftRecipe(rec); }
+    public void EqCraftRow(int row) { var rows = CraftRows(); if (row < 0 || row >= rows.Count) return; WinCur = row; CraftRecipe(rows[row].r); }
+    public void EqCraftQty(int row, int qty) { var rows = CraftRows(); if (row < 0 || row >= rows.Count) return; WinCur = row; CraftRecipe(rows[row].r, qty); }
+    public void EqCraftMode(string g) { if (g == CraftMode || !CraftGroups().Contains(g)) return; CraftMode = g; WinCur = 0; CraftResetSel(); Sfx.Play("tick", -6, 1.4f); }
+    public void EqCraftFilter(bool onlyReady) { if (onlyReady == CraftOnlyReady) return; CraftOnlyReady = onlyReady; WinCur = 0; CraftResetSel(); Sfx.Play("tick", -6, 1.4f); }
     public void EqCycleQty() { CraftQty = (CraftQty + 1) % QtySteps.Length; Sfx.Play("tick", -6, 1.3f); }
     public void EqUpgradeLamp() => UpgradeHeroLamp();
 

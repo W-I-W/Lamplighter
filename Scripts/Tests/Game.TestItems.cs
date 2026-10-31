@@ -60,14 +60,15 @@ public partial class Game
         {
             // крафт: ручные рецепты без станции, станции по месту
             Enemies.Clear(); Hot[0] = "tool:pickaxe";
-            Check(CraftGroups().Count == 1 && CraftGroups()[0] == "hand", "crafting: only the hand group without a station");
+            StationOpened = false; Check(CraftGroups().Count == 1 && CraftGroups()[0] == "hand", "crafting: only the hand group without a station");
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
             var axe = RecipesOf("hand").Find(r => r.Id == "tool_axe");
             Check(axe != null && StateOf(axe) == RecState.Owned, "crafting: owned tools are marked as owned");
             // печь рядом
             var tile = ToTile(PPos + FreeAdj());
             SetObj(tile.X, tile.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tile.X, tile.Y) + new Vector2(0, 16);
-            Check(ActiveStation() == "furnace" && CraftGroups().Contains("furnace"), "crafting: the Furnace group appears next to a furnace");
+            Check(ActiveStation() == null && CraftGroups().Count == 1, "crafting: a furnace nearby without interacting adds no recipes"); StationOpened = true;
+            Check(ActiveStation() == "furnace" && CraftGroups().Contains("furnace"), "crafting: the Furnace group appears when interacting with a furnace");
             var smelt = RecipesOf("furnace").Find(r => r.Id.StartsWith("smelt_"));
             Check(smelt != null && StateOf(smelt) == RecState.Missing, "crafting: a known recipe without materials stays visible as missing");
             Inv[It.CopperOre] = 7; Inv[It.Wood] = 7; var sm = RecipesOf("furnace").Find(r => r.Id == "smelt_" + It.Copper);

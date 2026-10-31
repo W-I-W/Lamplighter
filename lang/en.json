@@ -2094,5 +2094,17 @@
   "положить": "deposit",
   "взять": "take",
   "Введите число или нажмите кнопку": "Type a number or press a button",
-  "Половина": "Half"
+  "Половина": "Half",
+  "Улучшение": "Upgrade",
+  "Следующая кирка добывает быстрее и бьёт сильнее": "The next pickaxe mines faster and hits harder",
+  "+30% к добыче и +10% к урону за уровень": "+30% mining and +10% damage per level",
+  "+10% урона за уровень": "+10% damage per level",
+  "Оружие уже улучшено до максимума": "The weapon is already at max level",
+  "Топор уже улучшен до максимума": "The axe is already at max level",
+  "Улучшать оружие можно только рядом с печью или кузницей": "Weapons can only be upgraded next to a furnace or forge",
+  "Улучшать топор можно только рядом с печью или кузницей": "The axe can only be upgraded next to a furnace or forge",
+  "добыча дерева быстрее, удар сильнее": "faster wood mining, stronger hits",
+  "Улучшить у печи": "Upgrade at a furnace",
+  "Улучшение топора": "Axe upgrade",
+  "+10% урона за уровень. Улучшать можно только рядом с печью или кузницей": "+10% damage per level. Upgrades only next to a furnace or forge"
 }

@@ -30,24 +30,6 @@ for y in range(8):
     for x in range(8):
         if x <= 7 - abs(y - 3.5) * 2 + .5 and x >= 0: a[y][x] = W
 png('arrow.png', 8, 8, a)
-# crack_0..3: dark crack overlays for the block being mined (16x16, drawn over the tile; more cracks = more progress)
-CRACK = (12, 10, 14, 200)
-def crack(level):
-    g = blank(16, 16)
-    segs = [[(8, 8), (7, 6), (7, 4), (6, 2), (6, 0)],
-            [(8, 8), (10, 9), (12, 9), (13, 11), (15, 12)],
-            [(8, 8), (6, 10), (5, 12), (3, 13), (2, 15)],
-            [(8, 8), (5, 8), (3, 7), (1, 7), (0, 5)],
-            [(7, 4), (9, 3), (11, 3), (12, 1)],
-            [(12, 9), (12, 7), (14, 6), (15, 4)]]
-    for s in segs[:2 + level * 2 if level < 3 else len(segs)]:
-        for (x0, y0), (x1, y1) in zip(s, s[1:]):
-            steps = max(abs(x1 - x0), abs(y1 - y0)) or 1
-            for i in range(steps + 1):
-                x = round(x0 + (x1 - x0) * i / steps); y = round(y0 + (y1 - y0) * i / steps)
-                if 0 <= x < 16 and 0 <= y < 16: g[y][x] = CRACK
-    return g
-for i in range(4): png(f'crack_{i}.png', 16, 16, crack(i))
 # bar_back / bar_fill: 3x3 9-patch-like strips for progress bars in the world (back is tinted dark, fill by colour)
 png('bar_back.png', 4, 4, [[W] * 4 for _ in range(4)])
 # diamond / diamond_line: 9x9 filled and outlined diamonds (HUD markers, relic gems, map boss marks)

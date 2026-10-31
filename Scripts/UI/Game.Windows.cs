@@ -20,10 +20,11 @@ public partial class Game
     void OpenWin(Win w)
     {
         if (Window == w) { CloseWindows(); return; }
-        CloseWindows(); Placing = null; Window = w; WinTab = 0; WinCur = 0; Sfx.Play("tick");
+        CloseWindows(); Placing = null; Window = w; WinTab = 0; WinCur = 0; Sfx.Play("tick"); PokeHover();
     }
 
     // ───────────────────────── списки окон ─────────────────────────
+    public const int CraftCols = 5;
     public List<WeaponDef> CraftableWeapons() { var l = new List<WeaponDef>(); foreach (var w in Db.Weapons) if (w.Cost != null) l.Add(w); return l; }
     public List<Building> ProdList() => Buildings.FindAll(b => IsProducer(b.Type));
 
@@ -91,6 +92,19 @@ public partial class Game
     // ───────────────────────── ввод ─────────────────────────
     bool WindowKey(Key k, bool shift)
     {
+        if (Window == Win.Equip && WinTab == 2)
+        {
+            // сетка рецептов: стрелки двигают выбор, Tab переключает ручной крафт и станцию
+            int wl = WinLen(), cc = CraftCols;
+            switch (k)
+            {
+                case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;
+                case Key.Right: WinCur = Math.Min(Math.Max(0, wl - 1), WinCur + 1); return true;
+                case Key.Up: WinCur = Math.Max(0, WinCur - cc); return true;
+                case Key.Down: WinCur = Math.Min(Math.Max(0, wl - 1), WinCur + cc); return true;
+                case Key.Tab: { var g = CraftGroups(); EqCraftMode(g[(g.IndexOf(CraftGroup()) + 1) % g.Count]); return true; }
+            }
+        }
         if (Window == Win.Build || Window == Win.Inventory)
         {
             int cols = Window == Win.Build ? 5 : 7, wlen = WinLen();
@@ -197,9 +211,9 @@ public partial class Game
             case 1: if (enter && WinCur < OwnedRelics.Count) ToggleRelic(OwnedRelics[WinCur]); break;
             case 2:
                 {
-                    var rows = CraftRows(); if (WinCur >= rows.Count) break; var (grp, rec) = rows[WinCur];
+                    var rows = CraftRows(); if (WinCur >= rows.Count) break; var rec = rows[WinCur].r;
                     if (k == Key.Q) { CraftQty = (CraftQty + 1) % QtySteps.Length; Sfx.Play("tick", -6, 1.3f); }
-                    else if (enter) { if (rec == null) { if (!CraftFold.Remove(grp)) CraftFold.Add(grp); Sfx.Play("tick", -6, 1.2f); } else CraftRecipe(rec); }
+                    else if (enter) CraftRecipe(rec);
                     break;
                 }
             case 3: if (enter) UpgradeHeroLamp(); break;

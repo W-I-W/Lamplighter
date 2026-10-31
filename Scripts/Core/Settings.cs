@@ -20,6 +20,7 @@ public static class Settings
     public static string Lang = "ru";
     public static readonly Vector2I[] Resolutions = { new(1280, 720), new(1600, 900), new(1920, 1080), new(2560, 1440) };
     const string Path = "user://settings.cfg";
+    const float MusicMax = .5f;                                // множитель шины музыки: ползунок на максимуме = половина громкости
 
     public static void Load()
     {
@@ -54,7 +55,7 @@ public static class Settings
 
     public static void ApplyAudio()
     {
-        AudioServer.SetBusVolumeDb(Bus("Music"), Music <= .001f ? -80f : Mathf.LinearToDb(Music));
+        AudioServer.SetBusVolumeDb(Bus("Music"), Music <= .001f ? -80f : Mathf.LinearToDb(Music * MusicMax));     // на максимуме ползунка музыка играет вполовину громкости
         AudioServer.SetBusVolumeDb(Bus("SFX"), Sfx <= .001f ? -80f : Mathf.LinearToDb(Sfx));
     }
 

@@ -157,7 +157,7 @@ public partial class Game
             if (mining)
             {
                 // удар с возвратом: замах назад (быстро замедляется), резкий удар вниз, короткая задержка на ударе и плавный возврат в исходное положение
-                float ph = (Time * 3f) % 1f; if (mineLastPh < .5f && ph >= .5f) MineStrikeFx(); mineLastPh = ph;
+                float ph = (Time * MineHz) % 1f; if (mineLastPh < .5f && ph >= .5f) MineStrikeFx(); mineLastPh = ph;
                 float rest = .2f, back = -1.35f, hit = .72f, off;      // положительный угол — вниз, отрицательный — вверх: замах поднимает инструмент, удар опускает не ниже ног (≈ 41° под горизонталью)
                 if (ph < .30f) { float u = ph / .30f; off = Mathf.Lerp(rest, back, 1f - (1f - u) * (1f - u)); }                     // замах: сначала быстро, к концу замедляется
                 else if (ph < .50f) { float u = (ph - .30f) / .20f; off = Mathf.Lerp(back, hit, u * u * u); }                        // удар: разгон до самого конца
@@ -201,7 +201,6 @@ public partial class Game
         var p = TileCenter(MineTile.X, MineTile.Y); float k = Mathf.Clamp(MineProg / MineNeed, 0, 1);
         float j = Swing > 0 ? Mathf.Sin(Time * 60f) * .8f : 0;
         Gfx.Rect(c, new Rect2(p - new Vector2(8 - j, 8), new Vector2(16, 16)), new Color(1, 1, 1, .12f * k + hitFlash * .35f));
-        Gfx.CrackOverlay(c, p, k);
     }
 
     // ───────────────────────── облики ─────────────────────────

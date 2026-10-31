@@ -29,7 +29,7 @@ public partial class Music : Node
     void Switch(string name)
     {
         if (name == curName) return;
-        curName = name; fadeDur = name.StartsWith("battle") || name == "boss" ? 1f : 2.5f; Start(PickVariant(name));
+        curName = name; fadeDur = name.StartsWith("battle") ? .5f : name == "boss" ? 1f : name.StartsWith("dark_") ? 4f : 3f; Start(PickVariant(name));
     }
 
     string curKey = "";
@@ -73,14 +73,15 @@ public partial class Music : Node
         ["battle_ice_2"] = -5.5f, ["battle_mines"] = -2.1f, ["battle_mines_2"] = -0.3f, ["boss"] = -1.4f,
         ["boss_2"] = 1.4f, ["boss_3"] = 1.6f, ["finale"] = -1.0f, ["finale_2"] = -5.6f,
         ["finale_3"] = -1.0f, ["finale_4"] = 1.1f, ["finale_5"] = 3.4f, ["forest"] = 14.7f,
-        ["forest_2"] = -8.0f, ["forest_3"] = 10.3f, ["forest_4"] = 0.6f, ["forest_5"] = 0.5f,
+        ["forest_2"] = -8.0f, ["forest_3"] = -0.6f, ["forest_4"] = 1.1f, ["forest_5"] = 0.5f,
         ["forest_6"] = 0.5f, ["heart"] = 6.5f, ["heart_2"] = -1.0f, ["heart_3"] = -1.1f,
         ["heart_4"] = -1.0f, ["heart_5"] = 3.4f, ["ice"] = -0.1f, ["ice_2"] = 3.6f,
-        ["ice_3"] = -4.8f, ["ice_4"] = -4.0f, ["menu"] = -5.3f, ["menu_2"] = -4.3f,
+        ["ice_3"] = -4.8f, ["ice_4"] = 1.6f, ["menu"] = -5.3f, ["menu_2"] = -4.3f,
         ["menu_3"] = -3.4f, ["menu_4"] = -6.9f, ["menu_5"] = -2.6f, ["menu_6"] = -4.6f,
-        ["mines"] = 1.0f, ["mines_2"] = -5.1f, ["mines_3"] = -0.2f, ["mines_4"] = 0.4f
+        ["mines"] = 1.0f, ["mines_2"] = -5.1f, ["mines_3"] = -0.2f, ["mines_4"] = 0.4f,
+        ["beacon"] = 0.7f, ["beacon_2"] = -0.1f, ["beacon_3"] = -3.3f, ["beacon_4"] = -0.9f, ["dark_ash"] = 4.2f, ["dark_ash_2"] = -0.8f, ["dark_forest"] = -0.3f, ["dark_forest_2"] = -1.5f, ["dark_heart"] = 2.0f, ["dark_heart_2"] = -0.1f, ["dark_ice"] = 0.3f, ["dark_ice_2"] = 3.8f, ["dark_mines"] = -3.5f, ["dark_mines_2"] = 1.5f
     };
-    float GainOf(string key) => Gain.TryGetValue(key, out var g) ? g : 0f;
+    float GainOf(string key) => (Gain.TryGetValue(key, out var g) ? g : 0f) + (key.StartsWith("dark_") ? -3f : 0f);     // тёмные темы тише: фон, а не действие
 
     public override void _Process(double delta)
     {

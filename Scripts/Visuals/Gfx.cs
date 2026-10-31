@@ -2,17 +2,16 @@ using Godot;
 
 namespace Lamplighter;
 
-/// <summary>Эффекты мира собираются только из PNG в Assets/Sprites/Vfx (px, line, disc, arrow, crack_N): код лишь размещает и красит текстуры.
+/// <summary>Эффекты мира собираются только из PNG в Assets/Sprites/Vfx (px, line, disc, arrow): код лишь размещает и красит текстуры.
 /// Заменив PNG своим рисунком, вы меняете вид всех полосок, колец, лучей и частиц.</summary>
 public static class Gfx
 {
     const string Dir = "res://Assets/Sprites/Vfx/";
-    static Texture2D px, line, disc, arrow; static readonly Texture2D[] cracks = new Texture2D[4];
+    static Texture2D px, line, disc, arrow;
     static Texture2D Px => px ??= GD.Load<Texture2D>(Dir + "px.png");
     static Texture2D LineT => line ??= GD.Load<Texture2D>(Dir + "line.png");
     static Texture2D DiscT => disc ??= GD.Load<Texture2D>(Dir + "disc.png");
     static Texture2D ArrowT => arrow ??= GD.Load<Texture2D>(Dir + "arrow.png");
-    public static Texture2D Crack(int i) => cracks[i] ??= GD.Load<Texture2D>(Dir + $"crack_{i}.png");
 
     public static void Rect(CanvasItem c, Rect2 r, Color col) => c.DrawTextureRect(Px, r, false, col);
 
@@ -56,7 +55,4 @@ public static class Gfx
         Rect(c, new Rect2(pos, new Vector2(w * Mathf.Clamp(f, 0, 1), h)), fill);
     }
 
-    /// <summary>Трещины на блоке: кадр crack_N из PNG по прогрессу добычи (0..1).</summary>
-    public static void CrackOverlay(CanvasItem c, Vector2 center, float k)
-        => c.DrawTextureRect(Crack(Mathf.Clamp((int)(k * 4), 0, 3)), new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), false);
 }

@@ -14,7 +14,7 @@ All images are 16x16 pixel tiles (Nearest filter). Replace a PNG with your own p
 ## Effect primitives (`Vfx/`)
 
 Nothing in the world is drawn from shapes in code any more: bars, rings, beams, particles, markers and the block-crack overlay are built from these PNGs (white masks that the game tints):
-`px.png` (rectangles, particles, bar fills), `line.png` (beams, lines, arcs), `disc.png` (projectiles, shadows, areas), `arrow.png`, `diamond.png` / `diamond_line.png` (markers, relic gems), `crack_0..3.png` (16x16 crack frames shown on a block while mining; later frames = more progress).
+`px.png` (rectangles, particles, bar fills), `line.png` (beams, lines, arcs), `disc.png` (projectiles, shadows, areas), `arrow.png`, `diamond.png` / `diamond_line.png` (markers, relic gems).
 Replace any of them with your own art of the same size. Regenerate the defaults with `python tools/GraphicsGenerator/make_vfx_prims.py`.
 
 ## Terrain transitions (drawn by code)

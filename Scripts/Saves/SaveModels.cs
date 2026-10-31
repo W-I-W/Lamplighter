@@ -48,7 +48,7 @@ public sealed class CharacterSave
     public int Version = 1; public string Id = "", Name = "", Stamp = ""; public long Created; public Look Look = new();
     public float PlaySecs, Hp = 60, MaxHp = 60, Xp; public int Level = 1, Tier, Kills, HeroLamp;
     public long Ann; public int[] Inv, ModInv; public string[] SkK; public int[] SkV;
-    public string[] Hot, Tools, WId, Relics, Equipped, BpDone, FragK, BsK, Hints, Found; public int HotSel, CurW; public string CurTool; public int[][] WMods; public int[] FragV, BsV;
+    public string[] Hot, Tools, WId, Relics, Equipped, BpDone, FragK, BsK, Hints, Found; public int HotSel, CurW; public string CurTool; public int[][] WMods; public int[] WLv; public int AxeLv; public int[] FragV, BsV;
     public int LegendMask, CosmMask = 1, CosmSel;
     public Dictionary<string, PerWorld> Worlds = new();
 }

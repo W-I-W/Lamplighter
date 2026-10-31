@@ -95,21 +95,37 @@ public partial class Game
         S(.3f, () => Shot("equip_lantern"));
         S(.2f, () =>
         {
-            foreach (var it in new[] { It.Crystal, It.Silver, It.Iron, It.Copper, It.Wood, It.Stone, It.Coins }) Inv[it] = 99;
-            Open(2); Check(equipWindow.CardCount == CraftRows().Count, $"equip: craft cards ({equipWindow.CardCount}/{CraftRows().Count})");
-            int idx = CraftRows().FindIndex(x => x.Item2 != null && StateOf(x.Item2) == RecState.Ready);
-            if (idx >= 0) { equipWindow.ClickCard(idx); equipWindow.Force(); Check(equipWindow.HasButton("Создать", true), "equip: the Create button is enabled for a ready recipe"); }
-            foreach (var it in new[] { It.Crystal, It.Silver, It.Iron, It.Copper, It.Wood, It.Stone }) Inv[it] = 0;
-            equipWindow.Force();
-            int miss = CraftRows().FindIndex(x => x.Item2 != null && StateOf(x.Item2) == RecState.Missing);
-            if (miss >= 0) { equipWindow.ClickCard(miss); equipWindow.Force(); Check(equipWindow.HasButton("Создать", false), "equip: the Create button is disabled for a missing recipe"); }
+            Enemies.Clear(); StationOpened = false; foreach (var it in new[] { It.Crystal, It.Silver, It.Iron, It.Copper, It.Wood, It.Stone, It.Coins }) Inv[it] = 99;
+            Open(2);
+            Check(CraftGroups().Count == 1 && CraftRows().Count > 0 && CraftRows().TrueForAll(x => x.r != null && x.group == "hand"), "equip: without a station the craft tab lists only hand recipes (no tree headers)");
+            Check(equipWindow.RecipeCellCount == CraftRows().Count && equipWindow.CardCount == 0, $"equip: recipes are an icon grid ({equipWindow.RecipeCellCount} cells, {equipWindow.CardCount} list cards)");
+            Check(WinCur == 0 && CraftRows().TrueForAll(x => x.r.Known()), "equip: the first recipe is selected on open and only learned recipes are shown");
         });
-        S(.3f, () => Shot("equip_craft"));
+        S(.3f, () => Shot("equip_craft_hand"));
         S(.2f, () =>
         {
-            Open(2); WinCur = 0; int ok = 0, tot = 0; var g0 = CraftRows()[0].group;
-            for (int n = 0; n < 8; n++) { bool was = CraftFold.Contains(g0); WindowKey(Key.Enter, false); equipWindow.Force(); tot++; if (was != CraftFold.Contains(g0) && WinCur == 0) ok++; }
-            Check(ok == tot, $"equip: Enter folds and unfolds the craft group every time ({ok}/{tot})");
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Wood] = 10; Inv[It.CopperOre] = 7;
+            var tile = ToTile(PPos + FreeAdj()); SetObj(tile.X, tile.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tile.X, tile.Y) + new Vector2(0, 16);
+            OpenStation("furnace"); equipWindow.Force();
+            Check(CraftGroup() == "furnace" && CraftRows().Count > 0 && CraftRows().TrueForAll(x => x.group == "furnace"), "equip: interacting with the furnace shows the furnace recipes");
+            var rows = CraftRows(); int firstBad = rows.FindIndex(x => StateOf(x.r) != RecState.Ready), lastReady = rows.FindLastIndex(x => StateOf(x.r) == RecState.Ready);
+            Check(lastReady >= 0 && (firstBad < 0 || lastReady < firstBad), "equip: available recipes come first");
+            Check(rows.Exists(x => StateOf(x.r) == RecState.Missing), "equip: learned recipes without materials stay visible");
+            int si = rows.FindIndex(x => x.r.Id == "smelt_" + It.Copper); int ore0 = Inv[It.CopperOre], wood0 = Inv[It.Wood];
+            Log($"dbg0 win={Window}"); equipWindow.ClickRecipe(si, false); equipWindow.Force(); Log($"dbg1 win={Window}"); Check(WinCur == si && equipWindow.HasButton("Создать", true), "equip: one click selects a recipe and the Create button is active");
+            Check(equipWindow.PressButton("×5") && Inv[It.CopperOre] == ore0 - 5 && Inv[It.Wood] == wood0 - 5, $"equip: x5 spends exactly five (ore {Inv[It.CopperOre]}, wood {Inv[It.Wood]})");
+            equipWindow.Force(); si = CraftRows().FindIndex(x => x.r.Id == "smelt_" + It.Copper); Check(WinCur == si, "equip: the selection follows the recipe when the order changes");
+            Log($"dbg2 win={Window}"); ore0 = Inv[It.CopperOre]; equipWindow.ClickRecipe(si, true); Log($"dbg3 win={Window}"); Check(Inv[It.CopperOre] == ore0 - 1, "equip: a double click creates one");
+            ore0 = Inv[It.CopperOre]; Log($"dbg win={Window} tab={WinTab} cur={WinCur} sel={CraftRows()[WinCur].r.Id} st={StateOf(CraftRows()[WinCur].r)} station={ActiveStation()} wood={Inv[It.Wood]}"); WindowKey(Key.Enter, false); Check(Inv[It.CopperOre] == ore0 - 1, $"equip: Enter creates the selected recipe (ore {ore0}->{Inv[It.CopperOre]}, cur {WinCur}, rows {CraftRows().Count}, CraftQty {CraftQty})");
+            EqCraftFilter(true); Check(CraftRows().Count > 0 && CraftRows().TrueForAll(x => StateOf(x.r) == RecState.Ready), "equip: the Available filter keeps only ready recipes"); EqCraftFilter(false);
+            equipWindow.Force();
+        });
+        S(.3f, () => Shot("equip_craft_furnace"));
+        S(.2f, () =>
+        {
+            EqCraftMode("hand"); equipWindow.Force(); Check(CraftGroup() == "hand" && CraftRows().TrueForAll(x => x.group == "hand"), "equip: switching back shows hand recipes");
+            PPos += new Vector2(300, 0); equipWindow.Force(); Check(ActiveStation() == null && CraftGroups().Count == 1, "equip: leaving the furnace hides its recipes");
+            CloseWindows(); StationOpened = false;
         });
         S(.2f, () =>
         {

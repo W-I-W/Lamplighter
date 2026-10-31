@@ -42,6 +42,7 @@ public partial class FlowUI : Control
 
     public void Go(FlowScreen s)
     {
+        G?.PokeHover();
         cur?.QueueFree(); cur = s; s.Flow = this; box.AddChild(s); s.Size = new Vector2(BoxW, BoxH); Px.FadeIn(s, .2f, 6);
     }
 

@@ -30,9 +30,9 @@ public partial class Game
     }
 
     /// <summary>Событие: по тайлу ударили (дерево встряхивается и плавно успокаивается).</summary>
-    public void TileShake(int x, int y)
+    public void TileShake(int x, int y, float mul = 1f)
     {
-        var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = TileIsPlant(tt) ? 1f : .35f;
+        var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = (TileIsPlant(tt) ? 1f : .35f) * mul;
         if (TileIsPlant(tt)) y--;                                                       // у дерева качается крона — клетка над стволом
         for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == new Vector2I(x, y)) { tileShakes[i] = (tileShakes[i].tile, 0f, amt); return; }
         if (tileShakes.Count >= 8) tileShakes.RemoveAt(0);

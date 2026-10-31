@@ -91,7 +91,7 @@ Tools/GraphicsGenerator/              procedural art generators (fallback) + Gra
 
 ## No code-drawn graphics
 
-- World effects: `Scripts/Visuals/Gfx.cs` places and tints the PNGs from `Assets/Sprites/Vfx/` (px, line, disc, arrow, diamond, crack_0..3). No shapes are drawn from code.
+- World effects: `Scripts/Visuals/Gfx.cs` places and tints the PNGs from `Assets/Sprites/Vfx/` (px, line, disc, arrow, diamond). No shapes are drawn from code.
 - Windows and menus are real scenes: `Scenes/UI/Window.tscn` (frame, title, tabs, list, detail pane, key hints, map area), `Row.tscn`, `Tab.tscn`, `Chip.tscn`, `Menu.tscn` (main menu, pause, credits, finale). Layout is done by containers; `Scripts/UI/Hud*.cs` only fills them with data. Regenerate or edit them: `python tools/GraphicsGenerator/make_ui_windows.py`, or in the Godot editor.
 - Overlays that follow the world (markers, floating numbers, toasts, banners, tooltip, boss bar) are pooled Label/PanelContainer/ProgressBar/TextureRect nodes created by `HudNodes.cs` (still positioned from code because they track world positions).
 - The world map is a `TileMapLayer` whose colours come from `Assets/UI/Map/map_palette.png` (`tools/GraphicsGenerator/make_map_palette.py`); `Game.MapIdx` picks the palette index per tile.

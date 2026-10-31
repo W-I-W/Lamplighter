@@ -27,6 +27,16 @@ public static class Px
     }
 
     /// <summary>Значок в строке рядом с текстом: пиксельный шрифт сидит в строке высоко, поэтому значок, центрованный по строке, выглядит ниже текста. Нижний отступ в 2 px поднимает его на один пиксель интерфейса.</summary>
+    static readonly System.Collections.Generic.Dictionary<(Texture2D, int), Texture2D> raised = new();
+    /// <summary>Значок с прозрачными строками снизу: в кнопке (значок по центру содержимого) он поднимается на rows/2 пикселей к середине строки шрифта.</summary>
+    public static Texture2D Raised(Texture2D t, int rows)
+    {
+        if (t == null) return null; if (raised.TryGetValue((t, rows), out var r)) return r;
+        var src = t.GetImage(); if (src == null) return t; if (src.IsCompressed()) src.Decompress(); src.Convert(Image.Format.Rgba8);
+        var img = Image.CreateEmpty(src.GetWidth(), src.GetHeight() + rows, false, Image.Format.Rgba8); img.BlitRect(src, new Rect2I(0, 0, src.GetWidth(), src.GetHeight()), Vector2I.Zero);
+        return raised[(t, rows)] = ImageTexture.CreateFromImage(img);
+    }
+
     public static Control IconInline(Texture2D tex, float size, Color? mod = null)
     {
         var m = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter }; m.AddThemeConstantOverride("margin_bottom", 2);

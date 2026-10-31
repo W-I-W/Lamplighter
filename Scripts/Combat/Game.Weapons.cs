@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public sealed class OwnedWeapon { public string Id; public List<int> Mods = new(); }
+public sealed class OwnedWeapon { public string Id; public int Lv; public List<int> Mods = new(); }
 public sealed class PProj
 {
     public Vector2 Pos, Vel; public float Dmg, Life, Blast; public int Pierce, Kind; public Color C; public HashSet<Enemy> Hit = new();
@@ -30,7 +30,7 @@ public partial class Game
     public OwnedWeapon CurOw => CurDef == null ? null : Owned[CurW];
     public float E(Fxk k) => EffP[(int)k];
     public float N(string k) => Num.TryGetValue(k, out var v) ? v : 0f;
-    public float WeaponDmg(WeaponDef w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg"));
+    public float WeaponDmg(WeaponDef w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg")) * WeaponLvMul(w.Id);
     public bool HasWeapon(string id) { foreach (var o in Owned) if (o.Id == id) return true; return false; }
 
     public void GiveWeapon(string id, bool announce = true)

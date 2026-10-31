@@ -328,7 +328,7 @@ public partial class Game : Node2D
         UpdateProjectiles(dt);
         UpdateBeacons(dt);
         UpdateBossSpawn(dt); Upgrades?.Tick(dt); UpdateNet(dt);
-        UpdateSpawning(dt); UpdateDrops(dt);
+        UpdateSpawning(dt); UpdateDrops(dt); UpdateHoverPoke(dt);
         UpdateVillage(dt);
         UpdatePois(dt); UpdateRunes(dt); UpdateAncientKinds(dt); LampHints();
         UpdateSmelting(dt);
@@ -485,7 +485,7 @@ public partial class Game : Node2D
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Hurt(best, PlayerDamage * td.CombatDamage, dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
+            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Hurt(best, PlayerDamage * td.CombatDamage * ToolDmgMul(td.Id), dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
             return;
         }
         var tile = ToTile(Aim);
@@ -512,7 +512,7 @@ public partial class Game : Node2D
             }
             MineProg = 0; return;
         }
-        float eff = td.Efficiency(t) * td.MiningPower * (CurW >= 0 ? Tune.T.WeaponMineMul : 1f);        // оружием блоки ломаются очень медленно: для добычи нужен инструмент
+        float eff = td.Efficiency(t) * td.MiningPower * ToolMineMul(td.Id) * (CurW >= 0 ? Tune.T.WeaponMineMul : 1f);        // оружием блоки ломаются очень медленно: для добычи нужен инструмент
         if (eff <= 0f)
         {
             if (tierMsgCd <= 0) { tierMsgCd = 2; Fail($"{td.Name} не подходит для добычи: {TileTitle(t)}"); }
@@ -521,10 +521,14 @@ public partial class Game : Node2D
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
         MineNeed = t switch { Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         MineNeed *= Tune.T.MineTimeMul;                                    // начало игры: добыча медленнее, чтобы сырьё не набиралось слишком легко
-        float before = MineProg;
-        MineProg += dt * MineSpeed * eff; Swing = .2f; Diag.Add("mine_secs", dt);
-        if ((int)(before * 5) != (int)(MineProg * 5)) { Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; TileShake(tile.X, tile.Y); }
-        if (MineProg >= MineNeed) BreakTile(tile, t, true);
+        Swing = .2f; Diag.Add("mine_secs", dt);
+        if (MineStrike(dt))
+        {
+            MineProg += MineSpeed * eff / MineHz;
+            Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; TileShake(tile.X, tile.Y, TreeFell(t) && MineProg >= MineNeed * .66f ? 2f : 1f);
+            if (TreeFell(t)) TreeHitFx(tile, t, MineProg / MineNeed);
+            if (MineProg >= MineNeed) BreakTile(tile, t, true);
+        }
     }
 
     public static Color TileColor(Tl t) => t switch

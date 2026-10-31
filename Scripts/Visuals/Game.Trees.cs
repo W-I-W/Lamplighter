@@ -51,9 +51,12 @@ public partial class Game
         float eff = td.Efficiency(Tl.Tree) * td.MiningPower;
         if (eff <= 0f) { MineProg = 0; MineTile = new Vector2I(-1, -1); return; }
         if (tile != MineTile) { MineTile = tile; MineProg = 0; }
-        MineNeed = .45f; float before = MineProg; MineProg += dt * MineSpeed * eff; Swing = .2f;
-        if ((int)(before * 5) != (int)(MineProg * 5)) { Fx("mine_hit", TileCenter(tile.X, tile.Y), new Color("#3b8a3a"), .7f); hitFlash = 1f; }
-        if (MineProg >= MineNeed) CutBushAt(tile);
+        MineNeed = .45f; Swing = .2f;
+        if (MineStrike(dt))
+        {
+            MineProg += MineSpeed * eff / MineHz; Fx("mine_hit", TileCenter(tile.X, tile.Y), new Color("#3b8a3a"), .7f); hitFlash = 1f;
+            if (MineProg >= MineNeed) CutBushAt(tile);
+        }
     }
 
     void CutBushAt(Vector2I tile)
@@ -65,13 +68,40 @@ public partial class Game
     }
 
     /// <summary>Предмет в руках при замахе: значок выбранного слота хотбара (кирка, топор, меч, лук, посох), повёрнутый по направлению удара.</summary>
+    static bool TreeFell(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;
+
+    /// <summary>Эффекты рубки: с каждым ударом с кроны сыплются листья, ближе к концу — всё больше и крона качается сильнее; последний удар (k ≥ 1) роняет облако листьев и щепки.</summary>
+    void TreeHitFx(Vector2I tile, Tl t, float k)
+    {
+        var crown = TileCenter(tile.X, tile.Y) + new Vector2(0, -16); var trunk = TileCenter(tile.X, tile.Y) + new Vector2(0, 2);
+        bool last = k >= 1f; int n = last ? 14 : 2 + (int)(k * 5);
+        string[] greens = t == Tl.Pine ? new[] { "#2a5a3a", "#1f4a30", "#3a7048" } : t == Tl.DeadTree ? new[] { "#5a4a44", "#6e5a4e", "#473a36" } : new[] { "#3b8a3a", "#58a84a", "#2f6e2f" };
+        for (int i = 0; i < n; i++)
+            Parts.Add(new Particle { P = crown + new Vector2(rng.RandfRange(-10, 10), rng.RandfRange(-8, 6)), V = new Vector2(rng.RandfRange(-18, 18), rng.RandfRange(-4, 14)), Life = rng.RandfRange(.6f, 1.1f), Max = 1.1f, C = new Color(greens[rng.RandiRange(0, 2)]), Size = 1.5f });
+        if (k >= .66f)
+            for (int i = 0; i < (last ? 6 : 2); i++)
+                Parts.Add(new Particle { P = trunk + new Vector2(rng.RandfRange(-3, 3), rng.RandfRange(-3, 1)), V = new Vector2(rng.RandfRange(-30, 30), -rng.RandfRange(15, 40)), Life = .4f, Max = .4f, C = new Color("#a8743c"), Size = 1.2f });
+    }
+
+    public const float MineHz = 3f;
+    float mineAcc, mineLastT = -9f;
+    /// <summary>Удары кирки идут с частотой MineHz и совпадают с моментом удара в анимации (фаза 0.5): прогресс и звук приходят строго на ударе, а не плавно между ними.</summary>
+    bool MineStrike(float dt)
+    {
+        if (Time - mineLastT > .25f) mineAcc = Time * MineHz % 1f;
+        mineLastT = Time; float prev = mineAcc; mineAcc += dt * MineHz;
+        return Mathf.Floor(mineAcc - .5f) > Mathf.Floor(prev - .5f);
+    }
+
     void DrawHeldItem(CanvasItem c, Vector2 hand, float ang)
     {
         string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool);
         int icon = HotIcon(r); if (icon < 0) return;
         float baseAng = icon == UiIcons.Pickaxe ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;          // куда «смотрит» рисунок значка
-        var centre = hand + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 8f;
-        c.DrawSetTransform(centre, ang - baseAng, Vector2.One);
+        var centre = hand + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 10f;
+        // при прицеле вправо рисунок зеркалится вдоль своей оси, чтобы рабочая сторона инструмента смотрела вперёд
+        bool mirror = Mathf.Cos(ang) >= 0;
+        c.DrawSetTransformMatrix(new Transform2D(ang, centre) * (mirror ? Transform2D.FlipY : Transform2D.Identity) * new Transform2D(-baseAng, Vector2.Zero));
         c.DrawTextureRect(UiIcons.Item(icon), new Rect2(-8, -8, 16, 16), false);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
