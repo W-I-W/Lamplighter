@@ -14,7 +14,7 @@ public partial class GameHud : Control
     RichTextLabel goalTitle, goalNeeds, goalMore; Label level, lvCap, hpLabel, biome, lLabel, beacon, hintLabel, dTitle, dBody;
     ProgressBar hp, xp, goalBar, lBar;
     UiSlot weapon; readonly UiSlot[] hot = new UiSlot[Game.HotCount]; readonly UiSlot[] abil = new UiSlot[5];
-    readonly Control[] chips = new Control[5];
+    readonly Control[] chips = new Control[5]; readonly TextureRect[] chipIcons = new TextureRect[5];
     readonly int[] lastInv = new int[It.Count]; readonly float[] lastChange = new float[It.Count];
     float flashT, hintA; int flashSlot = -1; Control[] panels;
     public bool GoalsOpen;                                      // раскрытый список целей
@@ -41,6 +41,10 @@ public partial class GameHud : Control
         var slots = GetNode("Bottom/Row/Hotbar/Slots"); for (int i = 0; i < Game.HotCount; i++) hot[i] = slots.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) abil[i] = abilities.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) chips[i] = GetNode<Control>($"%Chip{i}");
+        for (int i = 0; i < 5; i++)            // значок ресурса на пиксель выше, чтобы стоять вровень с цифрами
+        {
+            var ic = chips[i].GetChild<TextureRect>(0); chips[i].RemoveChild(ic); var m = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore }; m.AddThemeConstantOverride("margin_bottom", 2); m.AddChild(ic); chips[i].AddChild(m); chips[i].MoveChild(m, 0); chipIcons[i] = ic;
+        }
         abilIcons = new[] { "dash", "spin", "flare", "pulse", "beam" }.Select(n => GD.Load<Texture2D>($"res://Assets/UI/ability_{n}.png")).ToArray();
         // клик мышью по блоку цели разворачивает и сворачивает подробности (то же, что клавиша G)
         goal.MouseFilter = MouseFilterEnum.Stop; goal.MouseDefaultCursorShape = CursorShape.PointingHand; foreach (var k in goal.FindChildren("*", "Control", true, false)) ((Control)k).MouseFilter = MouseFilterEnum.Ignore;
@@ -142,7 +146,7 @@ public partial class GameHud : Control
         for (int c = 0; c < chips.Length; c++)
         {
             var chip = chips[c]; bool has = c < order.Count && c < 3; chip.Visible = has; if (!has) continue;
-            int it = order[c]; ((TextureRect)chip.GetChild(0)).Texture = UiIcons.Item(it); ((Label)chip.GetChild(1)).Text = Short(G.Inv[it]);
+            int it = order[c]; chipIcons[c].Texture = UiIcons.Item(it); ((Label)chip.GetChild(1)).Text = Short(G.Inv[it]);
         }
         resRow.Visible = order.Count > 0;
     }

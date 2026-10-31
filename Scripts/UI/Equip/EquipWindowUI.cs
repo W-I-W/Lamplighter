@@ -71,7 +71,7 @@ public partial class EquipWindowUI : Control
     Control Stat(Texture2D ic, string name, string value, Color? valCol = null, string delta = null, bool better = true)
     {
         var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; h.AddThemeConstantOverride("separation", 4);
-        h.AddChild(Icon(ic, 12)); var n = Lbl(name, Dim); n.SizeFlagsHorizontal = SizeFlags.ExpandFill; h.AddChild(n);
+        h.AddChild(Px.IconInline(ic, 12)); var n = Lbl(name, Dim); n.SizeFlagsHorizontal = SizeFlags.ExpandFill; h.AddChild(n);
         h.AddChild(Lbl(value, valCol ?? Text, false, null, true));
         if (delta != null) h.AddChild(Lbl(delta, better ? Good : Bad, false, null, true));
         return h;
@@ -275,7 +275,7 @@ public partial class EquipWindowUI : Control
     PanelContainer ModRow(ModDef m, int? have, bool plain, bool selected = false)
     {
         var p = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, ThemeTypeVariation = selected ? "RowSelected" : "RowNormal" }; var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; h.AddThemeConstantOverride("separation", 4); p.AddChild(h);
-        bool dim = have.HasValue && have.Value <= 0; h.AddChild(Icon(UiIcons.Item(Game.ModIcon(m.Id)), 16, dim ? Game.ModTint(m.Id) * new Color(1, 1, 1, .45f) : Game.ModTint(m.Id)));
+        bool dim = have.HasValue && have.Value <= 0; h.AddChild(Px.IconInline(UiIcons.Item(Game.ModIcon(m.Id)), 16, dim ? Game.ModTint(m.Id) * new Color(1, 1, 1, .45f) : Game.ModTint(m.Id)));
         var n = Lbl(m.Name, dim ? Dim : Text); n.SizeFlagsHorizontal = SizeFlags.ExpandFill; h.AddChild(n);
         if (have.HasValue) h.AddChild(Lbl($"×{have.Value}", have.Value > 0 ? Gold : Dim));
         h.AddChild(Lbl(plain ? "" : "✓", Good)); return p;

@@ -10,7 +10,7 @@ namespace Lamplighter;
 /// не может подменить мир. Вошедший игрок получает полный список изменений. Здания, места интереса и фонари древних синхронизируются отдельно (Game.NetVillage, Game.NetWorld).</summary>
 public partial class Game
 {
-    byte[] shObj; readonly Dictionary<int, (int k, int l, int d)> shLamps = new(); float netStructT; float netGoalT;
+    byte[] shObj; readonly Dictionary<int, (int k, int l, int d)> shLamps = new(); float netStructT;
 
     static readonly HashSet<Tl> PlaceSet = new() { Tl.Furnace, Tl.Lantern, Tl.CombatLantern, Tl.CrystalLantern, Tl.AmpCrystal, Tl.BarrierPost, Tl.Statue, Tl.Fountain, Tl.Banner, Tl.Mirror1, Tl.Mirror2 };
     static readonly HashSet<Tl> MineSet = new() { Tl.Tree, Tl.Pine, Tl.DeadTree, Tl.Stone, Tl.Copper, Tl.Iron, Tl.Lumen, Tl.Aether, Tl.CrystalOre, Tl.SilverOre, Tl.Rubble, Tl.Ruin, Tl.Obsidian, Tl.Ember, Tl.MeteorOre, Tl.FrostOre, Tl.IceBlock,
@@ -109,22 +109,5 @@ public partial class Game
         }
         if ((boss & ~BossMask) != 0) { BossMask |= boss; Toast("Страж побеждён: прогресс общий"); }
         shBeacon = BeaconLevel; shBoss = BossMask; return true;
-    }
-
-    // ───────────────────────── общие цели ─────────────────────────
-    /// <summary>Хост: раз в 2 с рассылает текущие цели; клиент показывает их вместо собственных, чтобы у всех игроков был один список заданий.</summary>
-    void NetGoalTick(float dt)
-    {
-        if (!NetHost || Net == null) return; netGoalT -= dt; if (netGoalT > 0) return; netGoalT = 2f;
-        var a = new Godot.Collections.Array();
-        foreach (var g in Goals) a.Add(new Godot.Collections.Dictionary { ["t"] = g.Title ?? "", ["n"] = g.Needs ?? "", ["x"] = g.Target?.X ?? float.NaN, ["y"] = g.Target?.Y ?? float.NaN, ["d"] = g.Done });
-        Net.SendGoals(a);
-    }
-
-    public void NetApplyGoals(Godot.Collections.Array a)
-    {
-        if (!NetClient) return; var l = new List<Goal>();
-        foreach (var o in a) { var d = o.AsGodotDictionary(); float x = (float)d["x"], y = (float)d["y"]; l.Add(new Goal { Title = (string)d["t"], Needs = (string)d["n"], Target = float.IsNaN(x) ? null : new Vector2(x, y), Done = (bool)d["d"] }); }
-        Goals = l;
     }
 }

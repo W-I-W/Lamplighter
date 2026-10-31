@@ -212,7 +212,8 @@ public partial class Game
         foreach (var e in Enemies) if (!e.Hidden && e.Hp > 0 && e.Kind != EK.Decoy && e.Kind != EK.Mirage && e.Pos.DistanceTo(PPos) < 150f) { near++; elite |= e.Elite; }
         if (near >= 2 || elite || (near >= 1 && hurtT > 0)) combatT = 8f; else combatT = Mathf.Max(0, combatT - .5f);
         Music.Health(MaxHp > 0 ? Hp / MaxHp : 1f);
-        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : combatT > 0 ? "battle" : RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
+        string zone = RegionAt(PPos) switch { 1 => "mines", 2 => "ash", 3 => "ice", 4 => "heart", _ => "forest" };
+        string t = Menu == Mn.Main || Menu == Mn.Flow ? "menu" : FinStage == 1 || FinStage == 2 || FinStage == 3 ? "finale" : (Boss != null || RiftOn) ? "boss" : combatT > 0 ? "battle_" + zone : zone;
         Music.Play(t);
     }
 

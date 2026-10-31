@@ -401,7 +401,7 @@ public partial class Game
                 Announce("Доступно улучшение: " + Techs[i].Name, "Меню [T], вкладка «" + TechPages[Techs[i].Page] + "»", new Color("#8ff0ff"), "tech");
             }
         if (Has(Tech.Spark) && (Ann & TutExplored) == 0 && PPos.DistanceTo(W.Ancients[0].Pos) > AncientR(W.Ancients[0]) + 12f) Ann |= TutExplored;
-        if (!NetClient) Goals = BuildGoals();             // в кооперативе цели общие: клиент показывает список хоста
+        Goals = BuildGoals();                             // у каждого игрока свои задания: по его инвентарю, оружию и навыкам, а мир (постройки, фонари, стражи) общий
         TutorialChat();
     }
 }

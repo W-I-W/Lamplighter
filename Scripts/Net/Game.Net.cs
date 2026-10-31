@@ -37,7 +37,7 @@ public partial class Game
     /// <summary>Каждый кадр: гость, получивший мир от хоста, входит в игру. Сцена перезагружается, чтобы загрузить героя в мир хоста.</summary>
     void UpdateNet(float dt)
     {
-        NetWorldTick(dt); NetVillageTick(dt); NetCombatTick(dt); NetStructTick(dt); NetGoalTick(dt); NetEventTick(dt); NetProgressTick(dt);
+        NetWorldTick(dt); NetVillageTick(dt); NetCombatTick(dt); NetStructTick(dt); NetEventTick(dt); NetProgressTick(dt);
         NetJoinTick();
     }
 

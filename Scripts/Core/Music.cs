@@ -29,7 +29,7 @@ public partial class Music : Node
     void Switch(string name)
     {
         if (name == curName) return;
-        curName = name; fadeDur = name == "battle" || name == "boss" ? 1f : 2.5f; Start(PickVariant(name));
+        curName = name; fadeDur = name.StartsWith("battle") || name == "boss" ? 1f : 2.5f; Start(PickVariant(name));
     }
 
     string curKey = "";
@@ -58,11 +58,29 @@ public partial class Music : Node
     {
         var stream = Get(key);
         if (stream == null) return;
-        curKey = key; fade = 0;
+        oldKey = curKey; curKey = key; fade = 0;
         var next = cur == a ? b : a;
         next.Stream = stream; next.VolumeDb = -80; next.Play(); old = cur; cur = next;
     }
-    AudioStreamPlayer old;
+    AudioStreamPlayer old; string oldKey = "";
+
+    /// <summary>Поправка громкости на трек (дБ): выровнено по ~-13 LUFS с запасом по пику; новые файлы без записи играют как есть.</summary>
+    static readonly Dictionary<string, float> Gain = new()
+    {
+        ["ash"] = -5.3f, ["ash_2"] = -2.0f, ["ash_3"] = -6.4f, ["ash_4"] = 2.0f,
+        ["ash_5"] = -4.4f, ["battle_ash"] = -0.9f, ["battle_ash_2"] = -0.8f, ["battle_forest"] = -0.2f,
+        ["battle_forest_2"] = -2.4f, ["battle_heart"] = -1.0f, ["battle_heart_2"] = 0.0f, ["battle_ice"] = -6.8f,
+        ["battle_ice_2"] = -5.5f, ["battle_mines"] = -2.1f, ["battle_mines_2"] = -0.3f, ["boss"] = -1.4f,
+        ["boss_2"] = 1.4f, ["boss_3"] = 1.6f, ["finale"] = -1.0f, ["finale_2"] = -5.6f,
+        ["finale_3"] = -1.0f, ["finale_4"] = 1.1f, ["finale_5"] = 3.4f, ["forest"] = 14.7f,
+        ["forest_2"] = -8.0f, ["forest_3"] = 10.3f, ["forest_4"] = 0.6f, ["forest_5"] = 0.5f,
+        ["forest_6"] = 0.5f, ["heart"] = 6.5f, ["heart_2"] = -1.0f, ["heart_3"] = -1.1f,
+        ["heart_4"] = -1.0f, ["heart_5"] = 3.4f, ["ice"] = -0.1f, ["ice_2"] = 3.6f,
+        ["ice_3"] = -4.8f, ["ice_4"] = -4.0f, ["menu"] = -5.3f, ["menu_2"] = -4.3f,
+        ["menu_3"] = -3.4f, ["menu_4"] = -6.9f, ["menu_5"] = -2.6f, ["menu_6"] = -4.6f,
+        ["mines"] = 1.0f, ["mines_2"] = -5.1f, ["mines_3"] = -0.2f, ["mines_4"] = 0.4f
+    };
+    float GainOf(string key) => Gain.TryGetValue(key, out var g) ? g : 0f;
 
     public override void _Process(double delta)
     {
@@ -70,8 +88,8 @@ public partial class Music : Node
         if (!cur.Playing && fade >= 1f && curName != "") Start(PickVariant(curName));
         fade = Mathf.Min(1f, fade + (float)delta / fadeDur);
         low = Mathf.Lerp(low, lowTarget, Mathf.Min(1f, (float)delta * 1.5f)); a.PitchScale = b.PitchScale = 1f - .08f * low;
-        cur.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, fade)) - 4f;
-        if (old != null && old != cur) { old.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, 1f - fade)) - 4f; if (fade >= 1f) { old.Stop(); old = null; } }
+        cur.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, fade)) - 2f + GainOf(curKey);
+        if (old != null && old != cur) { old.VolumeDb = Mathf.LinearToDb(Mathf.Max(.0001f, 1f - fade)) - 2f + GainOf(oldKey); if (fade >= 1f) { old.Stop(); old = null; } }
     }
 
     AudioStream Get(string name)

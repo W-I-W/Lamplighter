@@ -13,6 +13,8 @@ public partial class ResourceActionUI : Control
     PanelContainer panel; VBoxContainer box; int item = -1, amount = 1, who; Act act; bool dialog;
     List<NetPlayer> peers = new();
     public bool Active => Visible;
+    bool AmountFocused => amtEdit != null && GodotObject.IsInstanceValid(amtEdit) && amtEdit.HasFocus();
+    public bool IsDialog => Visible && dialog;
     static readonly Color Gold = new("#ffd23f"), Dim = new("#8a96b0"), Good = new("#9be07a");
 
     public override void _Ready()
@@ -26,7 +28,7 @@ public partial class ResourceActionUI : Control
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseButton mb && mb.Pressed && !panel.GetGlobalRect().HasPoint(mb.GlobalPosition)) { Close(); AcceptEvent(); }       // клик мимо окна закрывает его
+        if (e is InputEventMouseButton mb && mb.Pressed && !new Rect2(panel.Position, panel.Size).HasPoint(mb.Position)) { Close(); AcceptEvent(); }       // клик мимо окна закрывает его
     }
 
     public void Close() { Visible = false; dialog = false; item = -1; }
@@ -51,7 +53,7 @@ public partial class ResourceActionUI : Control
         foreach (var c in box.GetChildren()) { box.RemoveChild(c); c.QueueFree(); }
         string name = Loc.T(It.Names[item]); int have = G.Inv[item];
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 5); box.AddChild(head);
-        head.AddChild(new TextureRect { Texture = UiIcons.Item(item), CustomMinimumSize = new Vector2(16, 16), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.Nearest });
+        head.AddChild(Px.IconInline(UiIcons.Item(item), 16));
         head.AddChild(Px.Label($"{name} ×{have}", Gold, false));
         bool wh = G.NearChestFor(G.PPos) && item != It.Coins;
         if (!dialog)
@@ -68,19 +70,31 @@ public partial class ResourceActionUI : Control
             r.AddChild(Px.Button("", "left", () => Cycle(-1), 20, 18)); r.AddChild(Px.Label(Loc.T("Получатель") + ": " + peers[who % peers.Count].Name, Dim, false)); r.AddChild(Px.Button("", "right", () => Cycle(1), 20, 18));
         }
         int max = Math.Max(1, Max()); amount = Math.Clamp(amount, 1, max);
+        string verb = act == Act.Send ? "передать" : act == Act.Drop ? "выбросить" : act == Act.Deposit ? "положить" : "взять";
+        box.AddChild(Px.Label(Loc.T("Сколько") + " " + Loc.T(verb) + "?", Dim, false, HorizontalAlignment.Center));
         var q = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; q.AddThemeConstantOverride("separation", 3); box.AddChild(q);
-        q.AddChild(Px.Button("1", null, () => Set(1), 26, 18)); q.AddChild(Px.Button("Половина", null, () => Set(Math.Max(1, max / 2)), 62, 18)); q.AddChild(Px.Button("Всё", null, () => Set(max), 36, 18));
+        q.AddChild(Px.Button("1", null, () => SetAmount(1), 26, 18)); q.AddChild(Px.Button("Половина", null, () => SetAmount(Math.Max(1, max / 2)), 62, 18)); q.AddChild(Px.Button("Всё", null, () => SetAmount(max), 36, 18));
         var s = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; s.AddThemeConstantOverride("separation", 4); box.AddChild(s);
-        s.AddChild(Px.Button("-", null, () => Set(amount - 1), 20, 18)); s.AddChild(Px.Label($"{amount} / {max}", Good, false)); s.AddChild(Px.Button("+", null, () => Set(amount + 1), 20, 18));
+        s.AddChild(Px.Button("-", null, () => SetAmount(amount - 1), 20, 18));
+        amtEdit = new LineEdit { Text = amount.ToString(), MaxLength = 4, CustomMinimumSize = new Vector2(46, 18), Alignment = HorizontalAlignment.Center, SelectAllOnFocus = true, TooltipText = Loc.T("Введите число или нажмите кнопку") }; Modal.Style(amtEdit); amtEdit.AddThemeFontSizeOverride("font_size", 9);
+        amtEdit.TextChanged += t => { var digits = new string(System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(t, char.IsDigit))); if (digits != t) { int c = amtEdit.CaretColumn; amtEdit.Text = digits; amtEdit.CaretColumn = Math.Min(c, digits.Length); } amount = digits == "" ? 1 : Math.Clamp(int.TryParse(digits, out var v) ? v : 1, 1, max); amtMaxL.Text = $"/ {max}"; };
+        amtEdit.TextSubmitted += _ => Confirm(); s.AddChild(amtEdit);
+        amtMaxL = Px.Label($"/ {max}", Good, false); s.AddChild(amtMaxL);
+        s.AddChild(Px.Button("+", null, () => SetAmount(amount + 1), 20, 18));
         string go = act == Act.Send ? "Передать" : act == Act.Drop ? "Выбросить" : act == Act.Deposit ? "Положить" : "Взять";
         var b = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; b.AddThemeConstantOverride("separation", 4); box.AddChild(b);
         b.AddChild(Px.Button(go, "check", Confirm, 104, 20)); b.AddChild(Px.Button("Отмена", null, Close, 60, 20));
     }
 
+    LineEdit amtEdit; Label amtMaxL;
+    /// <summary>Количество меняется на месте, без перестроения кнопок: курсор остаётся над той же кнопкой.</summary>
+    void SetAmount(int n) { int max = Math.Max(1, Max()); amount = Math.Clamp(n, 1, max); if (amtEdit != null) { amtEdit.Text = amount.ToString(); amtEdit.CaretColumn = amtEdit.Text.Length; } }
+
+    public void TypeForTest(string t) { if (amtEdit != null) { amtEdit.Text = t; amtEdit.EmitSignal(LineEdit.SignalName.TextChanged, t); } }
     public void DialogForTest(int a) => Start((Act)a);
     public int ForTestAmount => amount;
     void Start(Act a) { act = a; dialog = true; who = 0; amount = 1; Build(); }
-    void Set(int n) { amount = n; Build(); }
+    void Set(int n) => SetAmount(n);
     void Cycle(int d) { if (peers.Count > 0) { who = (who + d + peers.Count) % peers.Count; Build(); } }
 
     void Confirm()
@@ -103,12 +117,12 @@ public partial class ResourceActionUI : Control
         switch (k.Keycode)
         {
             case Key.Escape: Close(); break;
-            case Key.Enter: case Key.KpEnter: if (dialog) Confirm(); break;
-            case Key.Left: if (dialog && act == Act.Send) Cycle(-1); break;
-            case Key.Right: if (dialog && act == Act.Send) Cycle(1); break;
-            case Key.Key1: if (dialog) Set(1); break;
-            case Key.Key2: if (dialog) Set(Math.Max(1, Max() / 2)); break;
-            case Key.Key3: if (dialog) Set(Math.Max(1, Max())); break;
+            case Key.Enter: case Key.KpEnter: if (dialog && !AmountFocused) Confirm(); else used = false; break;
+            case Key.Left: if (dialog && act == Act.Send && !AmountFocused) Cycle(-1); else used = false; break;
+            case Key.Right: if (dialog && act == Act.Send && !AmountFocused) Cycle(1); else used = false; break;
+            case Key.Key1: if (dialog && !AmountFocused) Set(1); else used = false; break;
+            case Key.Key2: if (dialog && !AmountFocused) Set(Math.Max(1, Max() / 2)); else used = false; break;
+            case Key.Key3: if (dialog && !AmountFocused) Set(Math.Max(1, Max())); else used = false; break;
             default: used = false; break;
         }
         if (used) vp.SetInputAsHandled();

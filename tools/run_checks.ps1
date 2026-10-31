@@ -97,6 +97,7 @@ Run-Stage 'difficulty: tuning, biome and coop scaling, melee/ranged AI, attack c
 Run-Stage 'upgrades: categories open by discovery, window states, save and old saves' 'upgrades' @('UPGRADES DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'chat: one log for notifications and chat, Enter/Esc, input lock, history, merging' 'chat' @('CHAT DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'resources: Spark of Light start, tutorial goals, transfer, drops, shared chest (solo)' 'res' @('RES DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'clicks: real mouse clicks without cursor movement (resource menu, equipment, build)' 'clicks' @('CLICKS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'hud: density modes, collapsing hint, one event line, temporary resources, notifications' 'hud' @('HUD DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'equip: equipment window, cards, sockets, hotbar, relics, lantern, crafting, resolutions' 'equip' @('EQUIP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'skills: multi-level tree, costs, bonuses (+30% light), migration, icons, window' 'skills' @('SKILLS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')

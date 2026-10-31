@@ -146,6 +146,7 @@ public partial class Game : Node2D
         invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
         upgradeWindow = GD.Load<PackedScene>("res://Scenes/UI/UpgradeWindow.tscn").Instantiate<UpgradeWindowUI>(); upgradeWindow.G = this; uiRoot.AddChild(upgradeWindow);
         equipWindow = GD.Load<PackedScene>("res://Scenes/UI/EquipWindow.tscn").Instantiate<EquipWindowUI>(); equipWindow.G = this; uiRoot.AddChild(equipWindow);
+        uiRoot.MoveChild(ResUi, -1);                    // диалог ресурсов поверх всех окон и по порядку в дереве (так выбирается, кто получает щелчок), и по ZIndex
 
         if (CarryMsg != null) { pendingMsg ??= CarryMsg; CarryMsg = null; }
         if (pendingMsg != null) Toast(pendingMsg);

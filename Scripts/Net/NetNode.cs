@@ -273,7 +273,6 @@ public partial class NetNode : Node
     // ───────────────────────── общие постройки игроков и цели ─────────────────────────
     public void SendTile(int x, int y, int t, int placed) { if (Multiplayer.MultiplayerPeer == null) return; if (Multiplayer.IsServer()) Rpc(nameof(RpcTile), x, y, t, placed); else RpcId(1, nameof(RpcTile), x, y, t, placed); }
     public void SendLamp(int op, int x, int y, int kind, int level, int dir) { if (Multiplayer.MultiplayerPeer == null) return; if (Multiplayer.IsServer()) Rpc(nameof(RpcLamp), op, x, y, kind, level, dir); else RpcId(1, nameof(RpcLamp), op, x, y, kind, level, dir); }
-    public void SendGoals(Godot.Collections.Array a) { if (Multiplayer.IsServer()) Rpc(nameof(RpcGoals), a); }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     public void RpcTile(int x, int y, int t, int placed)
@@ -301,9 +300,6 @@ public partial class NetNode : Node
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     public void RpcStructs(int[] tiles, int[] lamps) { if (Multiplayer.GetRemoteSenderId() == 1) { NetService.PendingTiles = tiles; NetService.PendingLamps = lamps; } }
-
-    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    public void RpcGoals(Godot.Collections.Array a) { if (Multiplayer.GetRemoteSenderId() == 1) G.NetApplyGoals(a); }
 
     // ───────────────────────── бой ─────────────────────────
     public void SendEnemies(Godot.Collections.Array<float> d) { if (Multiplayer.IsServer() && d.Count > 0) Rpc(nameof(RpcEnemies), d); }

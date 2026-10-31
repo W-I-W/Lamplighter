@@ -26,6 +26,14 @@ public static class Px
         return b;
     }
 
+    /// <summary>Значок в строке рядом с текстом: пиксельный шрифт сидит в строке высоко, поэтому значок, центрованный по строке, выглядит ниже текста. Нижний отступ в 2 px поднимает его на один пиксель интерфейса.</summary>
+    public static Control IconInline(Texture2D tex, float size, Color? mod = null)
+    {
+        var m = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter }; m.AddThemeConstantOverride("margin_bottom", 2);
+        m.AddChild(new TextureRect { Texture = tex, Modulate = mod ?? Colors.White, CustomMinimumSize = new Vector2(size, size), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = CanvasItem.TextureFilterEnum.Nearest, MouseFilter = Control.MouseFilterEnum.Ignore });
+        return m;
+    }
+
     public static PanelContainer Panel(string variation = "PanelDark") => new() { ThemeTypeVariation = variation };
 
     public static string Time(float secs) { string h = Loc.T("ч"), m = Loc.T("м"); return secs < 3600 ? $"{(int)(secs / 60)}{m}" : $"{(int)(secs / 3600)}{h} {(int)(secs % 3600 / 60)}{m}"; }

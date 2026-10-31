@@ -2087,5 +2087,12 @@
   "свет наносит урон врагам": "light hurts enemies",
   "аура света вокруг героя": "aura of light around the hero",
   "Для следующей ступени": "For the next stage",
-  "ПКМ — снять": "Right click — remove"
+  "ПКМ — снять": "Right click — remove",
+  "Сколько": "How many to",
+  "передать": "give",
+  "выбросить": "drop",
+  "положить": "deposit",
+  "взять": "take",
+  "Введите число или нажмите кнопку": "Type a number or press a button",
+  "Половина": "Half"
 }
