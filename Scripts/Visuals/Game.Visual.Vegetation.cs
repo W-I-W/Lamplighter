@@ -8,7 +8,15 @@ namespace Lamplighter;
 public partial class Game
 {
     ShaderMaterial swayMat, waterMat; Node2D foliageRoot; readonly List<(Vector2I tile, float age, float amt)> tileShakes = new();
-    const int FoliageTuft = 130, FoliageBush = 131, FoliageFlowers = 132, FoliageTall = 133;
+    const int FoliageTuft = 130, FoliageBush = 131, FoliageFlowers = 132, FoliageTall = 133, FoliageStick = 178, FoliagePebble = 179;
+
+    /// <summary>Палки и камушки на стартовой поляне: растут как кусты (ломаются за несколько ударов, даже голой рукой) и дают первое дерево и камень без кирки. Чистая функция координат и зерна мира.</summary>
+    public static int StartForage(int wx, int wy, int seed, Vector2I spawn)
+    {
+        int dx = wx - spawn.X, dy = wy - spawn.Y, d2 = dx * dx + dy * dy; if (d2 < 9 || d2 > 14 * 14) return 0;
+        uint h = FoliageHash(wx, wy, seed + 4242); if ((h & 0xff) >= 22) return 0;
+        return ((h >> 8) & 1) == 0 ? FoliageStick : FoliagePebble;
+    }
 
     void InitVegetation()
     {
@@ -75,8 +83,9 @@ public partial class Game
             {
                 int wx = cx * CS + x, wy = cy * CS + y, k = wy * World.Wd + wx;
                 if (World.RegionOf(wx) != 0 || W.Ground[k] > 3 || W.Obj[k] != (byte)Tl.None) continue;
-                uint h = FoliageHash(wx, wy, W.Seed); float r = (h & 0xffff) / 65535f; if (r > dens) continue;
                 if (CutBush.Contains(k)) continue;
+                int fg = StartForage(wx, wy, W.Seed, W.Spawn); if (fg != 0) { f.SetCell(new Vector2I(x, y), srcId, new Vector2I(fg, 0)); continue; }
+                uint h = FoliageHash(wx, wy, W.Seed); float r = (h & 0xffff) / 65535f; if (r > dens) continue;
                 float q = r / dens; int id = q < .52f ? FoliageTuft : q < .74f ? FoliageTall : q < .90f ? FoliageFlowers : FoliageBush;
                 f.SetCell(new Vector2I(x, y), srcId, new Vector2I(id, 0));
             }

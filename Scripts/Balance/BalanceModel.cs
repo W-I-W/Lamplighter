@@ -13,7 +13,7 @@ public sealed class TuneM
 {
     public float EnemyDamage, EnemyHp, EnemySpeed, EnemyAttackRate, SpawnCapBonus, SpawnDelayMul, SpawnCapMul, MaxAttackers, ShadeWindup;
     public float[] BiomeDamage, BiomeHp, EliteChance, BossHp, BossDamage;
-    public float EliteMinLit, EliteMax, EliteHp, EliteDamage, BossTempo, HitInvuln, RegenRate, RegenDelay, DashCooldown, DashInvuln, ReaperHeal, FearLevel = 5, FearDamage, FearSpawn;
+    public float EliteMinLit, EliteMax, EliteHp, EliteDamage, BossTempo, HitInvuln, RegenRate, RegenDelay, DashCooldown, DashInvuln, ReaperHeal, FearLevel = 5, FearDamage, FearSpawn, EnemyMinHit, FistDamageMul = 1, EnemyAtkPause = 1;
     public float GatherMul, MineTimeMul, ScarcityMul, TechCostMul, WeaponMineMul, XpMul, XpBase, XpLinear, XpQuad;
     public float At(float[] a, int i) => a == null || a.Length == 0 ? 1f : a[Math.Clamp(i, 0, a.Length - 1)];
 }

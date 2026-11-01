@@ -37,7 +37,7 @@ public sealed class SimPlayer
     public int BossCount { get { int n = 0, m = BossMask; while (m != 0) { n += m & 1; m >>= 1; } return n; } }
     public int RelicSlots => 3 + Math.Min(3, BossCount);                                                    // Game.RelicSlots
     public float FearMul => Level >= T.FearLevel ? 1f : 1f + T.FearDamage * (T.FearLevel - Level);                  // Game.FearMul
-    public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg"));                    // Game.PlayerDamage
+    public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg")) * T.FistDamageMul;                    // Game.PlayerDamage
     public float WeaponDmg(WeaponM w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg"));                    // Game.WeaponDmg
     public float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));          // Game.MineSpeed
     public float LensBonus => Se(Tech.Lens) + Se(Tech.LensII);
@@ -49,6 +49,7 @@ public sealed class SimPlayer
     public float FlareDuration => 10f + Se(Tech.Flare);
     public float PulseCooldown => 12f * (1f - Se(Tech.Pulse));
     public float RegenPerSec => T.RegenRate + Se(Tech.Regen);
+    public bool RegenSkill => Se(Tech.Regen) > 0;                      // вне света здоровье восстанавливается только с навыком
     public float ReaperHeal => Se(Tech.Reaper) * T.ReaperHeal / 1.5f;
     public float HeatTaken => 1f - Se(Tech.HeatShield);
     public float ColdTaken => 1f - Se(Tech.FrostArmor);

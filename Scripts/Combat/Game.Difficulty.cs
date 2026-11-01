@@ -96,7 +96,7 @@ public partial class Game
     void EliteKilled(Enemy e)
     {
         if (!e.Elite || e.EMod == 0) return;
-        Give(It.Shard, 3, e.Pos + new Vector2(0, -6)); Inv[It.Coins] += 8 + 4 * RegionAt(e.Pos); GiveXp(30);
+        LootFor(e, It.Shard, 3, e.Pos + new Vector2(0, -6)); Inv[It.Coins] += 8 + 4 * RegionAt(e.Pos); GiveXp(30);
         if (rng.Randf() < .18f + .04f * RegionAt(e.Pos)) { ModInv[rng.RandiRange(0, ModInv.Length - 1)]++; Toast($"Элитный враг «{EliteName(e.EMod)}» оставил модификатор оружия"); }
         if (e.EMod == EVolatile) Explode(e);
         Burst(e.Pos, new Color("#ffd86b"), 16, 90);

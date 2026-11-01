@@ -149,7 +149,7 @@ public sealed partial class World
         int reg = def.Region, x0 = reg == 1 ? MX0 : reg == 2 ? AX0 : IX0, rad = def.Clear + 2; var reach = Reach(RegionStart(Spawn, reg));
         if (!reach[Key(RegionStart(Spawn, reg).X, RegionStart(Spawn, reg).Y)]) foreach (var a in Ancients) if (a.Region == reg && !a.Boss) { var st = a.Tile + new Vector2I(0, 2); if (Walkable(st.X, st.Y)) { reach = Reach(st); break; } }
         for (int n = 0; n < def.Count; n++)
-            for (int tries = 0; tries < 1500; tries++)
+            for (int tries = 0; tries < 4000; tries++)
             {
                 int x = r.Next(x0 + rad + 6, x0 + 127 - rad - 6), y = r.Next(rad + 6, Ht - rad - 7); var t = new Vector2I(x, y); if (!reach[Key(x, y)]) continue;
                 var acc = Access(def, t); if (!reach[Key(x, y)] || !reach[Key(acc.X, acc.Y)]) continue;

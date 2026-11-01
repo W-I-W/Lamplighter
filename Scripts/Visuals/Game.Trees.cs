@@ -19,6 +19,18 @@ public partial class Game
     static bool IsBuiltTile(Tl t) => IsProducer(t) || t == Tl.Furnace || t == Tl.Lantern || t == Tl.Warehouse || t == Tl.House || t == Tl.Tent || t == Tl.Stall || t == Tl.Hub
         || t == Tl.CrystalLantern || t == Tl.CombatLantern || t == Tl.AmpCrystal || t == Tl.BarrierPost;
 
+    public const int TreeVariants = 4;                         // 0 — исходный вид, 1..3 — оттенки
+    static readonly int[] TreeCols = { Art.Tree, Art.Pine, Art.DeadTree, Art.TreeTop, Art.PineTop, Art.DeadTop };
+    /// <summary>Номер разновидности дерева в клетке: стабильно по координатам, одинаков у ствола и кроны и у всех игроков.</summary>
+    public static int TreeAlt(int x, int y) { uint h = (uint)(x * 73856093) ^ (uint)(y * 19349663); h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15; return (int)(h % TreeVariants); }
+    static Color TreeTint(int col, int v)
+    {
+        bool pine = col == Art.Pine || col == Art.PineTop, dead = col == Art.DeadTree || col == Art.DeadTop;
+        if (dead) return v == 1 ? new Color(1.12f, 1.05f, .95f) : v == 2 ? new Color(.88f, .88f, .94f) : new Color(1f, .92f, .85f);
+        if (pine) return v == 1 ? new Color(.9f, 1.04f, 1.1f) : v == 2 ? new Color(1.08f, 1.08f, .95f) : new Color(.95f, .95f, 1.05f);
+        return v == 1 ? new Color(1.14f, 1.1f, .78f) : v == 2 ? new Color(.82f, 1.02f, .96f) : new Color(1.06f, .9f, .88f);          // жёлто-зелёное, сине-зелёное, осеннее
+    }
+
     /// <summary>Тайл кроны для клетки (x, y): крона рисуется над стволом, если снизу стоит дерево, а сама клетка не занята твёрдым объектом.</summary>
     int CrownId(int x, int y)
     {
@@ -35,36 +47,55 @@ public partial class Game
         var lc = new Vector2I(x % CS, y % CS); int id = CrownId(x, y); bool above = behindTrunks.Contains(new Vector2I(x, y + 1)) || behindTrunks.Contains(new Vector2I(x, y)) || IsBuiltTile(W.Get(x, y)) || IsRockTile(W.Get(x, y));      // свой ствол за игроком или в этой клетке копия чужого ствола — крона выше
         if (id < 0) { ch.B.EraseCell(lc); ch.T.EraseCell(lc); return; }
         var layer = above ? ch.T : ch.B; var other = above ? ch.B : ch.T;
-        layer.SetCell(lc, srcId, new Vector2I(id, 0)); other.EraseCell(lc);
+        layer.SetCell(lc, srcId, new Vector2I(id, 0), TreeAlt(x, y + 1)); other.EraseCell(lc);
     }
 
     /// <summary>Есть ли на клетке видимый куст (по слою растительности).</summary>
     bool IsBushAt(int x, int y)
     {
         var ch = ChunkAt(x, y); if (ch == null || W.Get(x, y) != Tl.None) return false;
-        var lc = new Vector2I(x % CS, y % CS); return ch.F.GetCellSourceId(lc) >= 0 && ch.F.GetCellAtlasCoords(lc).X == FoliageBush;
+        var lc = new Vector2I(x % CS, y % CS); return ch.F.GetCellSourceId(lc) >= 0 && ForageCode(ch.F.GetCellAtlasCoords(lc).X);
     }
+
+    static bool ForageCode(int id) => id == FoliageBush || id == FoliageStick || id == FoliagePebble;
+    int ForageIdAt(Vector2I t) { var ch = ChunkAt(t.X, t.Y); return ch == null ? FoliageBush : ch.F.GetCellAtlasCoords(new Vector2I(t.X % CS, t.Y % CS)).X; }
+
+    public const int BushCutCode = 255;                          // особый «тип клетки» в сетевом сообщении о клетке: куст срублен
+    readonly Dictionary<int, (float p, float t)> mineMemo = new();
+    /// <summary>Остановка добычи: прогресс по клетке запоминается, чтобы продолжить с того же места, а не с нуля.</summary>
+    const float MineMemoSecs = 30f;                            // брошенный блок через это время ломается заново, а запись о нём удаляется (память не растёт)
+    void MineStop() { MineMemoPrune(); if (MineTile.X >= 0 && MineProg > 0) mineMemo[World.Key(MineTile.X, MineTile.Y)] = (MineProg, Time); MineProg = 0; MineTile = new Vector2I(-1, -1); }
+    float MineRecall(Vector2I tile) => mineMemo.TryGetValue(World.Key(tile.X, tile.Y), out var m) && Time - m.t < MineMemoSecs ? m.p : 0f;
+    void MineMemoPrune()
+    {
+        if (mineMemo.Count == 0) return; List<int> old = null;
+        foreach (var kv in mineMemo) if (Time - kv.Value.t >= MineMemoSecs) (old ??= new List<int>()).Add(kv.Key);
+        if (old != null) foreach (var k in old) mineMemo.Remove(k);
+    }
+    public int MineMemoCount => mineMemo.Count;
 
     void ActBush(Vector2I tile, float dt, ToolDef td)
     {
-        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f) { MineProg = 0; MineTile = new Vector2I(-1, -1); return; }
+        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f) { MineStop(); return; }
         float eff = td.Efficiency(Tl.Tree) * td.MiningPower;
         if (eff <= 0f) { MineProg = 0; MineTile = new Vector2I(-1, -1); return; }
-        if (tile != MineTile) { MineTile = tile; MineProg = 0; }
-        MineNeed = .45f; Swing = .2f;
+        if (tile != MineTile) { MineStop(); MineTile = tile; MineProg = MineRecall(tile); }
+        int fid = ForageIdAt(tile); MineNeed = fid == FoliageBush ? .45f : 1.2f; Swing = .2f;
         if (MineStrike(dt))
         {
-            MineProg += MineSpeed * eff / MineHz; Fx("mine_hit", TileCenter(tile.X, tile.Y), new Color("#3b8a3a"), .7f); hitFlash = 1f;
+            MineProg += MineSpeed * eff / MineHz; Fx("mine_hit", TileCenter(tile.X, tile.Y), fid == FoliagePebble ? new Color("#a0a0ac") : fid == FoliageStick ? new Color("#8c6034") : new Color("#3b8a3a"), .7f); hitFlash = 1f;
             if (MineProg >= MineNeed) CutBushAt(tile);
         }
     }
 
     void CutBushAt(Vector2I tile)
     {
-        CutBush.Add(World.Key(tile.X, tile.Y));
+        int fid = ForageIdAt(tile); CutBush.Add(World.Key(tile.X, tile.Y));
         var ch = ChunkAt(tile.X, tile.Y); ch?.F.EraseCell(new Vector2I(tile.X % CS, tile.Y % CS));
-        MineProg = 0; MineTile = new Vector2I(-1, -1);
-        var c = TileCenter(tile.X, tile.Y); Fx("tile_break", c, new Color("#3b8a3a")); Give(It.Wood, 1, c); GiveXp(1);
+        MineProg = 0; MineTile = new Vector2I(-1, -1); mineMemo.Remove(World.Key(tile.X, tile.Y));
+        if (NetService.Active) Net?.SendTile(tile.X, tile.Y, BushCutCode, 0);          // срубленный куст виден всем
+        var c = TileCenter(tile.X, tile.Y); Fx("tile_break", c, fid == FoliagePebble ? new Color("#a0a0ac") : fid == FoliageStick ? new Color("#8c6034") : new Color("#3b8a3a"));
+        Give(fid == FoliagePebble ? It.Stone : It.Wood, fid == FoliageBush ? 1 : rng.RandiRange(1, 2), c); GiveXp(1);
     }
 
     /// <summary>Предмет в руках при замахе: значок выбранного слота хотбара (кирка, топор, меч, лук, посох), повёрнутый по направлению удара.</summary>
@@ -95,6 +126,7 @@ public partial class Game
 
     void DrawHeldItem(CanvasItem c, Vector2 hand, float ang)
     {
+        if (CurW < 0 && !OwnedTools.Contains(CurTool)) return;                       // руки пусты
         string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool);
         int icon = HotIcon(r); if (icon < 0) return;
         float baseAng = icon == UiIcons.Pickaxe ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;          // куда «смотрит» рисунок значка
@@ -133,8 +165,8 @@ public partial class Game
             {
                 var tt = W.Get(k.X, k.Y);
                 // пока копия ствола в K полупрозрачна, настоящий ствол слоя O скрыт — иначе низ дерева выглядит плотным, а крона прозрачной
-                if (behindTrunks.Contains(k) && IsPlantTile(tt)) { ch.K.SetCell(lc, srcId, new Vector2I(AtlasX(tt, 1), 0)); ch.O.EraseCell(lc); }
-                else { ch.K.EraseCell(lc); if (IsPlantTile(tt)) ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(tt, LevelAt(k.X, k.Y)), 0)); }
+                if (behindTrunks.Contains(k) && IsPlantTile(tt)) { ch.K.SetCell(lc, srcId, new Vector2I(AtlasX(tt, 1), 0), TreeAlt(k.X, k.Y)); ch.O.EraseCell(lc); }
+                else { ch.K.EraseCell(lc); if (IsPlantTile(tt)) ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(tt, LevelAt(k.X, k.Y)), 0), TreeAlt(k.X, k.Y)); }
             }
             RefreshCrown(k.X, k.Y - 1); RefreshCrown(k.X, k.Y);
         }

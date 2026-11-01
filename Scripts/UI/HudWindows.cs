@@ -137,10 +137,23 @@ float[] ws = { 96, 18, 64, 50, 60, 84, 0 };
     }
 
     // ───────────────────────── карта ─────────────────────────
+    float mapScale = 1f;
+
+    /// <summary>Щелчок по карте быстрого пути: выбрать ближайший фонарь, повторный щелчок по выбранному переносит.</summary>
+    public override void _Input(InputEvent e)
+    {
+        if (G == null || !G.MapOpen || !G.TravelMode || e is not InputEventMouseButton mb || !mb.Pressed || mb.ButtonIndex != MouseButton.Left) return;
+        var lp = wv.Map.GetLocalMousePosition(); int best = -1; float bd = 14f;
+        for (int i = 0; i < G.TravelTargets.Count; i++) { float d = lp.DistanceTo(G.TravelTargets[i].Pos / 16f * mapScale); if (d < bd) { bd = d; best = i; } }
+        if (best < 0) return;
+        if (best == G.TravelSel) G.TravelConfirm(); else { G.TravelSel = best; Sfx.Play("tick", -6, 1.4f); }
+        GetViewport().SetInputAsHandled();
+    }
+
     void DrawMap(Vector2 vs)
     {
         float s = Mathf.Min(1.4f, (vs.X - 60) / World.Wd); float mw = Mathf.Round(World.Wd * s), mh = Mathf.Round(World.Ht * s);
-        wv.Begin(vs, "Карта · M/Esc — закрыть", Cyan, "● вы  ◆ страж  золото — горит  ▮ печать", new Vector2(mw + 24, mh + 68), -1, .7f);
+        wv.Begin(vs, G.TravelMode ? "Быстрый путь · выберите фонарь" : "Карта · M/Esc — закрыть", Cyan, G.TravelMode ? "стрелки / щелчок — выбрать · Enter / двойной щелчок — перенестись · Esc — отмена" : "● вы  ◆ страж  золото — горит  ▮ печать", new Vector2(mw + 24, mh + 68), -1, .7f);
         wv.Map.CustomMinimumSize = new Vector2(mw, mh + 12);
         var o = Vector2.Zero;
         wv.MapBack(new Rect2(o, new Vector2(mw, mh)), new Color(.03f, .04f, .07f));
@@ -176,6 +189,15 @@ float[] ws = { 96, 18, 64, 50, 60, 84, 0 };
         foreach (var rp in G.RemoteMapPositions()) { var rr = (o + rp / 16f * s).Round(); wv.MapRect(new Rect2(rr - new Vector2(1, 1), new Vector2(3, 3)), new Color("#8ff0ff")); }
         foreach (var b in G.Buildings) wv.MapRect(new Rect2((o + b.Pos / 16f * s).Round() - new Vector2(1, 1), new Vector2(2, 2)), new Color("#d9b27c"));
         foreach (var ev in G.Events) { var ep = (o + ev.Pos / 16f * s).Round(); wv.MapRect(new Rect2(ep - new Vector2(1.5f, 1.5f), new Vector2(3, 3)), Game.EvColor(ev.Kind)); }
+        mapScale = s;
+        if (G.TravelMode)
+            for (int i = 0; i < G.TravelTargets.Count; i++)
+            {
+                var an = G.TravelTargets[i]; var tp = (o + an.Pos / 16f * s).Round(); bool sel = i == G.TravelSel; float pulse = 1f + (sel ? .25f * Mathf.Sin(G.Time * 8f) : 0f);
+                wv.MapDisc(tp, (sel ? 9f : 6f) * pulse, sel ? new Color(1f, .9f, .4f, .55f) : new Color(1f, .85f, .4f, .28f));
+                wv.MapRect(new Rect2(tp - new Vector2(2, 2), new Vector2(4, 4)), sel ? Colors.White : Gold);
+                if (sel) wv.MapLabel(Loc.T(Game.TravelName(an, G)), tp + new Vector2(-70, -17), Colors.White, 140, HorizontalAlignment.Center);
+            }
         var pp = (o + G.PPos / 16f * s).Round(); bool blink = Mathf.Sin(G.Time * 6f) > 0;
         wv.MapRect(new Rect2(pp - new Vector2(2, 2), new Vector2(4, 4)), new Color("#090c14")); wv.MapRect(new Rect2(pp - new Vector2(1, 1), new Vector2(2, 2)), blink ? new Color("#9be07a") : new Color("#5fbf4a"));
     }

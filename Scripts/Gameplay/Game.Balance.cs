@@ -30,18 +30,32 @@ public partial class Game
     {
         if (NetClient) return;                                          // восстановление и появление ресурсов ведёт хост, клетки приходят по сети
         regrowT -= dt; if (regrowT > 0 || W.GenObj == null) return; regrowT = 1.5f;
-        var pt = ToTile(PPos);
+        var pt = ToTile(PPos); int rg = RegionAt(PPos); var left = ResourceRoom(pt, rg);          // ресурс возвращается, только если рядом его осталось меньше 10, и не больше чем до 10
         for (int i = 0; i < 30; i++)
         {
             int x = pt.X + rng.RandiRange(-48, 48), y = pt.Y + rng.RandiRange(-32, 32);
             if (!World.In(x, y)) continue; int k = World.Key(x, y);
             if (W.Obj[k] != (byte)Tl.None) continue;
-            var gen = (Tl)W.GenObj[k]; float ch = RegrowChance(gen) * Tune.T.RegrowMul; if (ch <= 0 || rng.Randf() > ch) continue;
+            var gen = (Tl)W.GenObj[k]; var fam = gen == Tl.Pine || gen == Tl.DeadTree ? Tl.Tree : gen; float ch = RegrowChance(gen) * Tune.T.RegrowMul; if (ch <= 0 || rng.Randf() > ch) continue;
+            if (left.GetValueOrDefault(fam) <= 0) continue;
             var c = TileCenter(x, y); if (c.DistanceTo(PPos) < 14 * TS || W.Ground[k] == Art.WaterG || NearSettlement(c)) continue;
             bool occ = false; foreach (var e in Enemies) if (e.Pos.DistanceTo(c) < 10) { occ = true; break; }
             if (occ) continue;
-            SetObj(x, y, gen);
+            SetObj(x, y, gen); left[fam]--;
         }
+    }
+
+    public const int ResourceFloor = 10;
+    /// <summary>Сколько ещё можно вернуть на карту каждого ресурса: до ResourceFloor штук в окне вокруг клетки (100×72, в пределах области). Если ресурса осталось 10 и больше — 0.</summary>
+    Dictionary<Tl, int> ResourceRoom(Vector2I pt, int reg)
+    {
+        int lo = reg >= 0 && reg <= 3 ? Math.Max(RegionLo(reg), pt.X - 50) : Math.Max(0, pt.X - 50), hi = reg >= 0 && reg <= 3 ? Math.Min(RegionHi(reg), pt.X + 50) : Math.Min(World.Wd - 1, pt.X + 50);
+        int y0 = Math.Max(2, pt.Y - 36), y1 = Math.Min(World.Ht - 3, pt.Y + 36);
+        var count = new Dictionary<Tl, int>();
+        for (int y = y0; y <= y1; y++) for (int x = lo; x <= hi; x++) { var o = (Tl)W.Obj[World.Key(x, y)]; if (o == Tl.Pine || o == Tl.DeadTree) o = Tl.Tree; count[o] = count.GetValueOrDefault(o) + 1; }
+        var room = new Dictionary<Tl, int>(); foreach (var kv in count) room[kv.Key] = 0;
+        foreach (var t in new[] { Tl.Tree, Tl.Stone, Tl.Copper, Tl.Iron, Tl.SilverOre, Tl.CrystalOre, Tl.Lumen, Tl.Obsidian, Tl.Ember, Tl.FrostOre, Tl.Aether, Tl.Rubble }) room[t] = Math.Max(0, ResourceFloor - count.GetValueOrDefault(t));
+        return room;
     }
 
     // ───────────────────────── нехватка ресурсов ─────────────────────────
@@ -66,12 +80,11 @@ public partial class Game
         var targets = new List<Vector2> { PPos }; if (NetHost) foreach (var r in Remotes()) if (r.Hp > 0) targets.Add(r.Pos);
         var tp = targets[scarceIdx++ % targets.Count]; int reg = RegionAt(tp); if (reg < 0 || reg > 3) return;
         var pt = ToTile(tp); int lo = Math.Max(RegionLo(reg), pt.X - 50), hi = Math.Min(RegionHi(reg), pt.X + 50), y0 = Math.Max(2, pt.Y - 36), y1 = Math.Min(World.Ht - 3, pt.Y + 36);
-        var count = new Dictionary<Tl, int>();
-        for (int y = y0; y <= y1; y++) for (int x = lo; x <= hi; x++) { var o = (Tl)W.Obj[World.Key(x, y)]; if (o == Tl.Pine || o == Tl.DeadTree) o = Tl.Tree; count[o] = count.GetValueOrDefault(o) + 1; }
+        var room = ResourceRoom(pt, reg);
         foreach (var (t, min, gate) in ScarceTable[reg])
         {
             if (gate == 1 && LitCount < 1 || gate == 2 && LitCount < 2) continue;
-            int need = (int)(min * Tune.T.ScarcityMul) - count.GetValueOrDefault(t); if (need <= 0) continue;
+            int need = room.GetValueOrDefault(t); if (need <= 0) continue;                       // новые ресурсы появляются, только когда рядом осталось меньше 10 штук, и не больше 10
             for (int n = 0, made = 0; n < 60 && made < Math.Min(3, need); n++)
             {
                 int x = rng.RandiRange(lo, hi), y = rng.RandiRange(y0, y1); int k = World.Key(x, y);
@@ -83,7 +96,7 @@ public partial class Game
                 bool near = false; foreach (var p in W.Pois) if (Math.Abs(p.Tile.X - x) < 5 && Math.Abs(p.Tile.Y - y) < 5) { near = true; break; }
                 foreach (var a in W.Ancients) if (Math.Abs(a.Tile.X - x) < 8 && Math.Abs(a.Tile.Y - y) < 8) { near = true; break; }
                 if (near) continue;
-                SetObj(x, y, t); made++;
+                SetObj(x, y, t); made++; room[t]--;
             }
         }
     }

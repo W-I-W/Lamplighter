@@ -120,7 +120,7 @@ public partial class GameHud : Control
         bool open = !HudDensity.Minimal && (GoalsOpen || goalExpandT > 0);
         TextFx.Apply(goalTitle, g == null ? T("Все цели выполнены!") : T(g.Title), open ? new Color("#ffd23f") : new Color("#d9c27a"), 90f);
         bool lite = !HudDensity.Minimal;                          // нужные ресурсы и подсказка клавиши видны всегда; полоса и список целей — только в раскрытом виде
-        goalNeeds.Visible = lite && g != null; if (goalNeeds.Visible) TextFx.Apply(goalNeeds, T(g.Needs), new Color("#8a96b0"), 0);
+        goalNeeds.Visible = lite && g != null; if (goalNeeds.Visible) { TextFx.Apply(goalNeeds, T(g.Needs), new Color("#8a96b0"), 0); goalNeeds.MouseFilter = MouseFilterEnum.Pass; goalNeeds.TooltipText = It.NamesIn(g.Needs); }
         var m = g != null ? Frac.Match(g.Needs ?? "") : null;
         goalBar.Visible = open && m != null && m.Success && int.Parse(m.Groups[2].Value) > 0;
         if (goalBar.Visible) goalBar.Value = Mathf.Clamp(float.Parse(m.Groups[1].Value) / float.Parse(m.Groups[2].Value), 0, 1);
@@ -146,7 +146,7 @@ public partial class GameHud : Control
         for (int c = 0; c < chips.Length; c++)
         {
             var chip = chips[c]; bool has = c < order.Count && c < 3; chip.Visible = has; if (!has) continue;
-            int it = order[c]; chipIcons[c].Texture = UiIcons.Item(it); ((Label)chip.GetChild(1)).Text = Short(G.Inv[it]);
+            int it = order[c]; chip.MouseFilter = MouseFilterEnum.Pass; chip.TooltipText = Loc.T(It.Names[it]); chipIcons[c].Texture = UiIcons.Item(it); ((Label)chip.GetChild(1)).Text = Short(G.Inv[it]);
         }
         resRow.Visible = order.Count > 0;
     }

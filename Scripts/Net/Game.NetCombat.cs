@@ -14,7 +14,7 @@ public partial class Game
     readonly Dictionary<int, Enemy> proxies = new();
 
     // ───────────────────────── выбор цели (хост) ─────────────────────────
-    /// <summary>Враг выбирает игрока по расстоянию с гистерезисом: цель держится 2–3 секунды, ближайшие уже атакуемые игроки получают штраф, чтобы атаки распределялись.</summary>
+    /// <summary>Враг идёт к ближайшему игроку: цель пересматривается каждые полсекунды, небольшой запас (10 пикселей) не даёт метаться между равноудалёнными.</summary>
     void ChooseTarget(Enemy e, float dt, Vector2 local)
     {
         aiRemote = 0; e.RetargetT -= dt; if (!NetHost) return;
@@ -23,16 +23,24 @@ public partial class Game
         if (cands.Count == 1) { e.Target = 1; return; }
         if (e.RetargetT <= 0 || !cands.Exists(c => c.id == e.Target))
         {
-            e.RetargetT = 2f + rng.Randf(); long best = e.Target; float bs = float.MaxValue;
+            e.RetargetT = .4f + .3f * rng.Randf(); long best = e.Target; float bs = float.MaxValue;
             foreach (var c in cands)
             {
-                float d = e.Pos.DistanceTo(c.pos) - (c.id == e.Target ? 40 : 0) - (c.id == e.LastHitBy ? 30 : 0);
-                foreach (var o in Enemies) if (o != e && o.Target == c.id && !o.IsBoss) d += 12;
+                float d = e.Pos.DistanceTo(c.pos) - (c.id == e.Target ? 10 : 0);
+                foreach (var o in Enemies) if (o != e && o.Target == c.id && !o.IsBoss) d += 2;
                 if (d < bs) { bs = d; best = c.id; }
             }
             e.Target = best;
         }
         var tc = cands.Find(c => c.id == e.Target); if (e.Target != 1) { PPos = tc.pos; aiRemote = e.Target; }
+    }
+
+    /// <summary>Добыча с врага достаётся тому, кто нанёс последний удар: игроку-гостю она приходит от хоста с сообщением в чате, иначе осталась бы у хоста незамеченной.</summary>
+    void LootFor(Enemy e, int item, int n, Vector2 at)
+    {
+        if (Authority && NetService.Active && e.LastHitBy > 1 && e.LastHitBy != LocalPeer && PosOf(e.LastHitBy) != null)
+        { GiveTo(e.LastHitBy, item, n); NoteTo(e.LastHitBy, $"{Loc.T("Получено")}: {Loc.T(It.Names[item])} ×{n}", MsgTone.Good); return; }
+        Give(item, n, at);
     }
 
     /// <summary>Расстояние до ближайшего игрока (для удаления далёких врагов и ограничений обновления).</summary>

@@ -28,7 +28,7 @@ public partial class SkillDetailsUI : PanelContainer
     public void Show(Game g, int tech)
     {
         var sb = new StringBuilder(); sb.Append(tech).Append('|').Append(tech >= 0 ? g.SkillLv[tech] : 0).Append('|').Append(Loc.Lang);
-        if (tech >= 0) { sb.Append('|').Append((int)g.StateOfTech(tech)).Append('|').Append(g.MissingParents(tech)); var c = Game.LevelCost(tech, g.SkillLv[tech] + 1); foreach (var x in c) sb.Append('|').Append(g.Inv[x[0]] >= x[1]).Append(x[1]); if (Game.Techs[tech].Ok != null) sb.Append(Game.Techs[tech].Ok(g)); }
+        if (tech >= 0) { sb.Append('|').Append((int)g.StateOfTech(tech)).Append('|').Append(g.MissingParents(tech)); var c = Game.LevelCost(tech, g.SkillLv[tech] + 1); foreach (var x in c) sb.Append('|').Append(g.HaveAny(x[0]) >= x[1]).Append(x[1]); if (Game.Techs[tech].Ok != null) sb.Append(Game.Techs[tech].Ok(g)); }
         if (sb.ToString() == sig) return; sig = sb.ToString();
         foreach (var n in box.GetChildren()) { box.RemoveChild(n); n.QueueFree(); } foreach (var n in foot.GetChildren()) { foot.RemoveChild(n); n.QueueFree(); } LearnButton = null;
         if (tech < 0) { box.AddChild(L("Выберите навык в дереве", Grey)); return; }
@@ -53,7 +53,8 @@ public partial class SkillDetailsUI : PanelContainer
         else
         {
             var cost = Game.LevelCost(tech, lv + 1);
-            if (cost.Length > 0) { box.AddChild(L("Стоимость следующего уровня", Grey, true, "DimLabel")); var wrapRow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore }; wrapRow.AddThemeConstantOverride("h_separation", 6); box.AddChild(wrapRow); foreach (var c in cost) { bool ok = g.Inv[c[0]] >= c[1]; wrapRow.AddChild(Chip(c[0], $"{g.Inv[c[0]]}/{c[1]}", ok ? Green : Red)); } }
+            if (cost.Length > 0) { box.AddChild(L("Стоимость следующего уровня", Grey, true, "DimLabel")); var wrapRow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore }; wrapRow.AddThemeConstantOverride("h_separation", 6); box.AddChild(wrapRow); foreach (var c in cost) { bool ok = g.HaveAny(c[0]) >= c[1]; wrapRow.AddChild(Chip(c[0], $"{g.HaveAny(c[0])}/{c[1]}", ok ? Green : Red)); } }
+            if (st == TechState.Missing && cost.Length > 0) box.AddChild(L(Loc.T("Не хватает") + ": " + g.MissingPlain(cost), Red, true, null, true));
             string miss = g.MissingParents(tech);
             if (miss != "") { box.AddChild(L("Требуется", Grey, true, "DimLabel")); box.AddChild(L(miss, Red, true, null, true)); }
             if (lv == 0 && !string.IsNullOrEmpty(t.Req)) { bool ok = t.Ok != null && t.Ok(g); box.AddChild(L((ok ? "✓ " : "") + Loc.T(t.Req), ok ? Green : Grey, true, null, true)); }

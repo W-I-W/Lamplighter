@@ -9,7 +9,7 @@ public enum EK { Shade, Wraith, Spitter, Swarm, Bomber, Warden, Eel, Leech, Beet
 public sealed class Enemy
 {
     public EK Kind; public Vector2 Pos, Kb, DashDir, Face = new(1, 0); public Vector2? Home; public Poi Guard;
-    public float Hp, MaxHp, Atk, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
+    public float Hp, MaxHp, Atk, CdRec, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
     // визуальное состояние (только отрисовка): стадии атаки, попадание, след рывка
     public float VTele0, VAtk = 9f, VPrevAtk, VPrevTele, VPrevDash, VHit = 9f, VHitMul = 1f, VTrailT; public Vector2 VHitDir; public Vector2[] VTrail = new Vector2[3];
     public float LostT, Over, SpecT = 8f, SpecTim, SpecAng, SpecEmit; public int SpecPh, SpecN, SpecVol; public int NetId; public long Target = 1, LastHitBy; public float RetargetT, SeenT; public Vector2 NetPos; public int State, EMod; public bool Id2; public float WardT, RallyT; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
@@ -199,6 +199,9 @@ public partial class Game
         EK.WinterWarden => 420f, EK.Mirage => 7f, EK.Decoy => 1f, EK.Weaver => 10f, EK.Stalker => 12f, EK.Source => 560f, _ => 300f
     };
 
+    /// <summary>Рядом идёт бой с боссом: призванные им враги (и все остальные) на свету не горят.</summary>
+    bool BossFightNear(Vector2 p) { foreach (var b in Enemies) if (b.IsBoss && b.Hp > 0 && b.Pos.DistanceTo(p) < 420f) return true; return false; }
+
     public Enemy SpawnEnemy(Vector2 p, EK k, Poi guard = null, float scale = -1)
     {
         if (scale < 0) scale = DangerScale;
@@ -301,6 +304,22 @@ public partial class Game
         Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), S = ((int)Mathf.Round(dmg)).ToString(), Life = .6f, C = m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
     }
 
+    /// <summary>Свет жжёт врагов (освещённая земля, аура героя), поэтому пока игрок стоит в свете, обычные враги держатся от света дальше его удара: останавливаются у границы, а оказавшись близко (свет вырос) отходят. Когда игрок выходит в тьму, враг нападает, даже если зайдёт на свет.</summary>
+    Vector2 AvoidLight(Enemy e, Vector2 vel, Vector2 toPlayerDir, float auraR)
+    {
+        if (BossFightNear(e.Pos) || !IsLit(PPos)) return vel;              // игрок вышел из света — враг нападает, даже если зайдёт на свет
+        float Reach = Mathf.Max(48f, ShotRange() * .6f);                     // дальше досягаемости оружия в руках: ближний бой — 48, лук и посох — 60% дальности выстрела (дальше стрела слабеет)
+        bool Hurts(Vector2 p) => IsLit(p) || (AuraDps > 0 && p.DistanceTo(PPos) < auraR + 6f);
+        if (Hurts(e.Pos) || Hurts(e.Pos + toPlayerDir * (Reach * .6f)))
+        {
+            var away = -toPlayerDir; if (away == Vector2.Zero) away = Vector2.Right;
+            foreach (var d in new[] { away, away.Rotated(Mathf.Pi / 4), away.Rotated(-Mathf.Pi / 4), away.Rotated(Mathf.Pi / 2), away.Rotated(-Mathf.Pi / 2) }) if (!Hurts(e.Pos + d * 22f)) return d * 55f;
+            return away * 55f;
+        }
+        if (vel.LengthSquared() < 1f) return vel;
+        return Hurts(e.Pos + vel.Normalized() * Reach) ? Vector2.Zero : vel;
+    }
+
     public void HurtPlayer(float dmg, Vector2 kb, bool fire = false)
     {
         if (Window == Win.Trade) Window = Win.None;
@@ -309,7 +328,7 @@ public partial class Game
         if (fire && Has(Tech.Fireproof)) return;
         if (fire && Has(Tech.HeatShield)) dmg *= HeatTaken;
         if (fire) dmg *= 1f - N("HeatResist");
-        dmg *= ctxDmg * FearMul; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
+        dmg = Mathf.Max(dmg * ctxDmg, Tune.T.EnemyMinHit) * FearMul; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
         pVel += kb * 120f; Sfx.Play("hurt");
         Fx("player_hurt", PPos, fire ? new Color("#ff9a2e") : null);
         Texts.Add(new FText { P = PPos + new Vector2(0, -12), S = "-" + (int)Mathf.Round(dmg), Life = .8f, C = new Color("#ff6060") });
@@ -324,13 +343,14 @@ public partial class Game
         if (!NetService.Active) { Enemies.Clear(); Projs.Clear(); Boss = null; }        // в сети враги принадлежат хосту и смерть одного игрока их не стирает
         LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
-        int lost = Math.Min(25, Inv[It.Shard] / 4); Inv[It.Shard] -= lost;
+        int lost = BuryPlayer();                                                   // все ресурсы и инструменты остаются в могиле там, где игрок пал
         bool lvLoss = Diff == 1 && Level > 1;                                      // сложный режим: смерть стоит уровня
         bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта
         if (lvLoss) { Level--; MaxHp = Mathf.Max(60f, MaxHp - 10f); Xp = 0; }
         else if (xpLoss) Xp = 0;
         PPos = RespawnPos(); aiRespawn = PPos; Hp = MaxHp; Invuln = 2f; Save();
-        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? $"Тьма поглотила вас. Потеряно осколков: {lost}" : "Тьма поглотила вас. Прогресс сохранён");
+        if (lost > 0 && (lvLoss || xpLoss)) Toast("Ресурсы и инструменты остались в могиле: разбейте её");
+        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? "Тьма поглотила вас. Ресурсы и инструменты остались в могиле: разбейте её" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();
     }
 
@@ -349,12 +369,12 @@ public partial class Game
         if (E(Fxk.Blast) > 0 && !inBlast) BlastAt(e.Pos, CurDef != null ? WeaponDmg(CurDef) : PlayerDamage);
         if (N("KillHeal") > 0) Hp = Mathf.Min(MaxHp, Hp + N("KillHeal"));
         if (Has(Tech.Reaper)) { Hp = Mathf.Min(MaxHp, Hp + ReaperHeal); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+" + ReaperHeal.ToString("0.#"), Life = .7f, C = new Color("#7ad45a") }); }
-        if (rng.Randf() < chance) Give(It.Shard, e.Kind == EK.Golem ? 2 : 1, e.Pos);
-        if (e.Kind == EK.Beetle && rng.Randf() < .3f) Give(It.Crystal, 1, e.Pos + new Vector2(0, -8));
-        if ((e.Kind == EK.IceWolf || e.Kind == EK.Sentinel || e.Kind == EK.FrostPriest) && rng.Randf() < .3f) Give(It.Frost, 1, e.Pos + new Vector2(0, -8));
-        if (e.Kind == EK.Weaver || e.Kind == EK.Stalker) { if (rng.Randf() < .5f) Give(It.Shard, 1, e.Pos + new Vector2(0, -10)); }
-        if (e.Kind == EK.Eel && rng.Randf() < .25f) Give(It.SilverOre, 1, e.Pos + new Vector2(0, -8));
-        if ((e.Kind == EK.Imp || e.Kind == EK.Golem) && rng.Randf() < .3f) Give(It.Ember, 1, e.Pos + new Vector2(0, -8));
+        if (rng.Randf() < chance) LootFor(e, It.Shard, e.Kind == EK.Golem ? 2 : 1, e.Pos);
+        if (e.Kind == EK.Beetle && rng.Randf() < .3f) LootFor(e, It.Crystal, 1, e.Pos + new Vector2(0, -8));
+        if ((e.Kind == EK.IceWolf || e.Kind == EK.Sentinel || e.Kind == EK.FrostPriest) && rng.Randf() < .3f) LootFor(e, It.Frost, 1, e.Pos + new Vector2(0, -8));
+        if (e.Kind == EK.Weaver || e.Kind == EK.Stalker) { if (rng.Randf() < .5f) LootFor(e, It.Shard, 1, e.Pos + new Vector2(0, -10)); }
+        if (e.Kind == EK.Eel && rng.Randf() < .25f) LootFor(e, It.SilverOre, 1, e.Pos + new Vector2(0, -8));
+        if ((e.Kind == EK.Imp || e.Kind == EK.Golem) && rng.Randf() < .3f) LootFor(e, It.Ember, 1, e.Pos + new Vector2(0, -8));
     }
 
     // ───────────────────────── ИИ врагов ─────────────────────────
@@ -367,8 +387,9 @@ public partial class Game
             if (i >= Enemies.Count) continue;                                  // смерть врага (взрыв, цепочка) могла убрать нескольких сразу
             if (aiRespawn is Vector2 rp) { realP = rp; aiRespawn = null; }     // игрок погиб от удара этого же прохода — не возвращаем его на место смерти
             var e = Enemies[i]; PPos = realP; ChooseTarget(e, dt, realP);
+            if (!e.IsBoss && Tune.T.EnemyAtkPause > 1f) { float dec = e.CdRec - e.Cd; if (dec > 0 && dec <= dt * 2.5f) e.Cd += dec * (1f - 1f / Tune.T.EnemyAtkPause); e.CdRec = e.Cd; }       // паузы в EnemyAtkPause раз длиннее: возвращаем часть того, что отсчитали за прошлый такт
             EliteTick(e, dt); if (e.Over > 0) e.Over -= dt; e.Cd -= dt * EnemyCdMul(e); ctxDmg = BossDamageMul(e.Kind); int projN = Projs.Count;
-            e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt);
+            e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - (e.IsBoss ? dt : dt / Tune.T.EnemyAtkPause));
             e.Kb *= Mathf.Max(0, 1 - 9 * dt);
             e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
             if (e.Burn > 0) { e.Burn -= dt; e.Hp -= 3f * dt * (e.IsBoss ? .3f : 1f); if (rng.Randf() < dt * 12) Burst(e.Pos, new Color("#ff9a2e"), 1, 25); }
@@ -377,7 +398,7 @@ public partial class Game
             bool guard = e.Guard != null || e.IsBoss || (e.Ev != null && e.Ev.Kind != "riftx");
             if (!guard && NearestPlayerDist(e.Pos) > 380) { Enemies.RemoveAt(i); continue; }
 
-            bool lit = !e.IsBoss && IsLit(e.Pos);
+            bool lit = !e.IsBoss && e.Ev == null && IsLit(e.Pos) && !BossFightNear(e.Pos);        // враги испытаний и событий на свету не горят: факел игрока не заменяет бой
             if (lit)
             {
                 e.Hp -= 5f * dt; e.Flash = .05f;
@@ -536,6 +557,7 @@ public partial class Game
             if (!e.IsBoss) vel *= EnemySpeedMul(e);
             for (int pj = projN; pj < Projs.Count; pj++) Projs[pj].Dmg *= e.IsBoss ? ctxDmg : e.Kind == EK.Spitter ? 1f : Tune.T.EnemyDamage * CombatTuning.At(Tune.T.BiomeDamage, RegionAt(e.Pos));
             ctxDmg = 1f;
+            if (!e.IsBoss && e.Ev == null && !(e.Kind == EK.Leech && e.State == 1)) vel = AvoidLight(e, vel, dir, auraR);
             if (e.Kind == EK.Leech && e.State == 1) { }
             else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
                 if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }

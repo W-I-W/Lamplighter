@@ -6,10 +6,10 @@ namespace Lamplighter;
 
 /// <summary>Поиск, выбор и устойчивость выбора интерактивных объектов. Знает только IInteractable — всю логику действий хранят сами объекты.
 /// Правила: берётся только объект в радиусе Reach (до ближайшей точки его области), побеждает ближайший, равенство решают Priority и Key,
-/// активная цель меняется лишь когда новая ближе на Margin пикселей или прежняя недоступна; клик мышью закрепляет цель, пока она доступна.</summary>
+/// активная цель меняется, как только другой объект становится ближе (запас Margin — только против дрожания) или прежняя недоступна; клик мышью закрепляет цель, пока она доступна.</summary>
 public sealed class InteractionController
 {
-    public const float Reach = 36f, Margin = 6f, HoverPad = 2f;
+    public const float Reach = 36f, Margin = 1f, HoverPad = 2f;
     public IInteractable Selected { get; private set; }
     public IInteractable Hover { get; private set; }
     public bool Pinned { get; private set; }

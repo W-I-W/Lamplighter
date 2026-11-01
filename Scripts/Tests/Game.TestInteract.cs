@@ -29,7 +29,7 @@ public partial class Game
             Check("1b: selection independent of collection order", s1b == kA, $"sel={s1b}");
             // 2) устойчивость: небольшое смещение не переключает цель, заметное — переключает
             Interact.Reset(); At(cx, belowY); SelKey();
-            At(cx + 16, belowY); string s2 = SelKey(); Check("2a: small move keeps target (hysteresis)", s2 == kA, $"sel={s2}");
+            At(cx + 16, belowY); string s2 = SelKey(); Check("2a: focus follows the nearest object, it does not stick to the old one", s2 == kB, $"sel={s2}");
             At(cx + 24, belowY); string s2b = SelKey(); Check("2b: clearly closer object takes over", s2b == kB, $"sel={s2b}");
             // детерминированная ничья: игрок строго посередине над стыком зданий
             Interact.Reset(); At(ax * 16 + 16, belowY); string tie1 = SelKey(); Interact.Reset(); Buildings.Reverse(); string tie2 = SelKey(); Buildings.Reverse();

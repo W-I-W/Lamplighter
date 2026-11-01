@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Lamplighter;
 
@@ -53,15 +54,49 @@ public partial class ChatHud : Control
         CloseChat();
     }
 
-    /// <summary>Строка журнала: «[Имя] текст» для игрока, «[Система]»/«[Мир]» для служебных сообщений; цвет текста — по смыслу сообщения.</summary>
-    static string Line(GameMessage m, float a)
+    static Regex hiRx; static string hiLang; static readonly Dictionary<string, Color> hiItems = new();
+    /// <summary>Что подсвечивать в тексте: названия ресурсов (их цветом) и числа («+1», «12/30», «×3», «50%»).</summary>
+    static Regex Highlights()
+    {
+        if (hiRx != null && hiLang == Loc.Lang) return hiRx;
+        hiLang = Loc.Lang; hiItems.Clear(); var names = new List<string>();
+        for (int i = 0; i < It.Count && i < It.Names.Length; i++)
+            foreach (var nm in new[] { It.Names[i], Loc.T(It.Names[i]) }) if (nm != null && nm.Length >= 3 && !hiItems.ContainsKey(nm)) { hiItems[nm] = It.Col[i]; names.Add(Regex.Escape(nm)); }
+        names.Sort((x, y) => y.Length.CompareTo(x.Length));
+        hiRx = new Regex((names.Count > 0 ? "(?<it>" + string.Join("|", names) + ")|" : "") + @"(?<n>[+\-−×]?\d+(?:[.,]\d+)?(?:/\d+)?%?)", RegexOptions.Compiled);
+        return hiRx;
+    }
+
+    /// <summary>Текст сообщения с разметкой: часть до «:» тоном приглушена, после — ярче; числа золотые, ресурсы своим цветом; у свежего сообщения подсвеченное мягко пульсирует.</summary>
+    static string Body(GameMessage m, float a, bool fresh)
     {
         var tone = GameNotificationService.ToneColor(m.Tone);
+        if (m.Kind == MsgKind.Chat) return $"[color={Hex(tone, a)}]{Esc(m.Text)}[/color]";
+        int colon = m.Text.IndexOf(": ", StringComparison.Ordinal); int split = colon > 0 && colon < m.Text.Length - 2 ? colon + 2 : 0;
+        var head = tone.Lerp(new Color("#5a6a88"), .35f); var tail = tone.Lerp(Colors.White, .4f);
+        var sb = new StringBuilder(); int pos = 0;
+        void Plain(int to) { while (pos < to) { int cut = split > pos && split < to ? split : to; var c = pos < split ? head : tail; if (split == 0) c = tone; sb.Append($"[color={Hex(c, a)}]{Esc(m.Text.Substring(pos, cut - pos))}[/color]"); pos = cut; } }
+        foreach (Match mt in Highlights().Matches(m.Text))
+        {
+            Plain(mt.Index); Color c = mt.Groups["it"].Success ? hiItems[mt.Value] : new Color("#ffe27a");
+            string piece = $"[color={Hex(c, a)}]{Esc(mt.Value)}[/color]";
+            sb.Append(fresh ? $"[pulse freq=2.2 color={Hex(Colors.White, a)} ease=-2.0]{piece}[/pulse]" : piece); pos = mt.Index + mt.Length;
+        }
+        Plain(m.Text.Length);
+        return sb.ToString();
+    }
+
+    /// <summary>Строка журнала: «[Имя] текст» для игрока, «[Система]»/«[Мир]» для служебных сообщений; цвет текста — по смыслу сообщения.</summary>
+    static string Line(GameMessage m, float a, bool fresh = false)
+    {
         string tag = m.Kind == MsgKind.Chat ? m.Sender : m.Kind == MsgKind.World ? Loc.T("Мир") : Loc.T("Система");
         var tagCol = m.Kind == MsgKind.Chat ? GameNotificationService.NameColor(m.Sender) : m.Kind == MsgKind.World ? new Color("#6fb8c8") : new Color("#7d88a3");
-        string rep = m.Repeat > 1 ? $" ×{m.Repeat}" : "";
-        return $"[color={Hex(tagCol, a)}][lb]{Esc(tag)}][/color] [color={Hex(tone, a)}]{Esc(m.Text)}{rep}[/color]";
+        string rep = m.Repeat > 1 ? $" [color={Hex(new Color("#ffe27a"), a)}]×{m.Repeat}[/color]" : "";
+        return $"[color={Hex(tagCol, a)}][lb]{Esc(tag)}][/color] {Body(m, a, fresh)}{rep}";
     }
+
+    /// <summary>Сколько видимых символов в строке журнала (для печати по буквам у нового сообщения).</summary>
+    static int PlainLen(GameMessage m) => 1 + (m.Kind == MsgKind.Chat ? m.Sender : m.Kind == MsgKind.World ? Loc.T("Мир") : Loc.T("Система")).Length + 2 + m.Text.Length + (m.Repeat > 1 ? 2 + m.Repeat.ToString().Length : 0);
 
     static bool Shown(GameMessage m) => m.Kind == MsgKind.Chat ? Settings.ShowChat : Settings.ShowNotes;
 
@@ -104,9 +139,12 @@ public partial class ChatHud : Control
         {
             float age = now - shown[i].Time, a = Mathf.Clamp(age / .3f, 0, 1) * Mathf.Clamp((life - age) / 2f, 0, 1); a = Mathf.Round(a * 10f) / 10f; maxA = Mathf.Max(maxA, a);
             if (i > 0) s2.Append('\n');
-            s2.Append(Line(shown[i], a));
+            s2.Append(Line(shown[i], a, i == shown.Count - 1 && age < 2f));
         }
         string txt = s2.ToString(); if (txt != miniText) { miniText = txt; mini.Text = txt; }
+        // новое сообщение печатается по буквам, остальные уже на месте
+        var newest = shown[^1]; float nAge = now - newest.Time; int nLen = PlainLen(newest);
+        mini.VisibleCharacters = nAge < .5f && newest.Repeat == 1 ? Math.Max(0, mini.GetTotalCharacterCount() - nLen) + Mathf.CeilToInt(nLen * Mathf.Clamp(nAge / .4f, 0, 1)) : -1;
         mini.Visible = true; mini.CustomMinimumSize = new Vector2(w, 0); mini.Size = new Vector2(w, 0);
         float h = mini.GetContentHeight(); mini.Size = new Vector2(w, h); mini.Position = new Vector2(6, vs.Y - 6 - h).Round();
         back.Visible = Settings.ChatBack > .01f; back.Position = mini.Position - new Vector2(3, 2); back.Size = new Vector2(w + 6, h + 4); back.Color = new Color(.02f, .04f, .1f, Settings.ChatBack * Mathf.Min(1f, maxA * 1.4f));

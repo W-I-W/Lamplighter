@@ -33,7 +33,7 @@ public partial class Game
             Check(equipWindow.Visible, "equip: the window is visible after opening");
             Check(equipWindow.CardCount == ToolList().Count + Owned.Count, $"equip: a card for every tool and weapon ({equipWindow.CardCount})");
             Check(equipWindow.IconsCrisp, "equip: icons use nearest filtering");
-            for (int t = 1; t <= 3; t++) { equipWindow.ClickTab(t); Check(WinTab == t, $"equip: a click on tab {t} opens it"); equipWindow.Force(); }
+            for (int t = 1; t <= 3; t++) { if (t == 2) continue; equipWindow.ClickTab(t); Check(WinTab == t, $"equip: a click on tab {t} opens it"); equipWindow.Force(); }
             equipWindow.ClickTab(0); equipWindow.Force();
             int nt = ToolList().Count; int swRow = nt + 1; equipWindow.ClickCard(swRow); equipWindow.Force(); Check(WinCur == swRow, "equip: a click selects a card");
             Check(!EqIsHeld(swRow), "equip: selecting does not equip");
@@ -96,8 +96,10 @@ public partial class Game
         S(.2f, () =>
         {
             Enemies.Clear(); StationOpened = false; foreach (var it in new[] { It.Crystal, It.Silver, It.Iron, It.Copper, It.Wood, It.Stone, It.Coins }) Inv[it] = 99;
-            Open(2);
-            Check(CraftGroups().Count == 1 && CraftRows().Count > 0 && CraftRows().TrueForAll(x => x.r != null && x.group == "hand"), "equip: without a station the craft tab lists only hand recipes (no tree headers)");
+            Open(0); Check(!CraftTabAvail, "equip: away from a station the craft tab is hidden"); EqTab(2); Check(WinTab == 0, "equip: the hidden craft tab cannot be opened");
+            var ft = ToTile(PPos + FreeAdj()); SetObj(ft.X, ft.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(ft.X, ft.Y) + new Vector2(0, 16); StationOpened = false;
+            Check(CraftTabAvail, "equip: next to a furnace the craft tab appears"); Open(2);
+            Check(CraftGroups().Count == 1 && CraftRows().Count > 0 && CraftRows().TrueForAll(x => x.r != null && x.group == "furnace"), "equip: next to a furnace the craft tab lists only its recipes (no tree headers, no hand craft)");
             Check(equipWindow.RecipeCellCount == CraftRows().Count && equipWindow.CardCount == 0, $"equip: recipes are an icon grid ({equipWindow.RecipeCellCount} cells, {equipWindow.CardCount} list cards)");
             Check(WinCur == 0 && CraftRows().TrueForAll(x => x.r.Known()), "equip: the first recipe is selected on open and only learned recipes are shown");
         });
@@ -123,8 +125,8 @@ public partial class Game
         S(.3f, () => Shot("equip_craft_furnace"));
         S(.2f, () =>
         {
-            EqCraftMode("hand"); equipWindow.Force(); Check(CraftGroup() == "hand" && CraftRows().TrueForAll(x => x.group == "hand"), "equip: switching back shows hand recipes");
-            PPos += new Vector2(300, 0); equipWindow.Force(); Check(ActiveStation() == null && CraftGroups().Count == 1, "equip: leaving the furnace hides its recipes");
+            Check(CraftRows().Exists(x => x.r.Id == "tool_axe"), "equip: the axe is a furnace recipe");
+            PPos += new Vector2(300, 0); equipWindow.Force(); Check(ActiveStation() == null && CraftGroups().Count == 0 && !CraftTabAvail, "equip: leaving the furnace hides its recipes");
             CloseWindows(); StationOpened = false;
         });
         S(.2f, () =>

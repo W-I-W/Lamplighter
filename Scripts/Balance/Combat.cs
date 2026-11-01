@@ -130,7 +130,7 @@ public sealed class CombatSim
     {
         if (invuln > 0) return;
         if (fire) { if (P.Has(Tech.Fireproof)) return; if (P.Has(Tech.HeatShield)) dmg *= P.HeatTaken; dmg *= 1f - P.N("HeatResist"); }
-        dmg *= P.FearMul; P.Hp -= dmg; S.DamageTaken += dmg; S.Hits++; invuln = T.HitInvuln; noDmgT = 0;
+        dmg = Math.Max(dmg, T.EnemyMinHit); dmg *= P.FearMul; P.Hp -= dmg; S.DamageTaken += dmg; S.Hits++; invuln = T.HitInvuln; noDmgT = 0;
         if (cold) chillT = Math.Max(chillT, 2.2f * (P.Has(Tech.FrostArmor) ? P.ColdTaken : 1f));
         if (P.Hp <= 0 && !S.Died) { S.Died = true; S.KilledBy = src?.Kind ?? "env"; }
     }
@@ -151,7 +151,7 @@ public sealed class CombatSim
     public void Idle(float s)
     {
         float before = noDmgT; noDmgT += s; chillT -= s; P.DashCd = Math.Max(0, P.DashCd - s); P.SpinCd = Math.Max(0, P.SpinCd - s); P.FlareCd = Math.Max(0, P.FlareCd - s); P.PulseCd = Math.Max(0, P.PulseCd - s);
-        if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? 4f * s : Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec));
+        if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? 2f * s : P.RegenSkill ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec : 0f));
     }
 
     // ───────────────────────── шаг боя ─────────────────────────
@@ -161,7 +161,7 @@ public sealed class CombatSim
         invuln -= dt; noDmgT += dt; chillT -= dt; atkCd -= dt; reactT -= dt;
         P.DashCd = Math.Max(0, P.DashCd - dt); P.SpinCd = Math.Max(0, P.SpinCd - dt); P.FlareCd = Math.Max(0, P.FlareCd - dt); P.PulseCd = Math.Max(0, P.PulseCd - dt);
         // восстановление: в свете 4/с, в темноте 0,35/с после 5 с без урона (Game.Update)
-        if (P.Hp < P.MaxHp) { if (Lit) P.Hp = Math.Min(P.MaxHp, P.Hp + 4f * dt); else if (noDmgT > T.RegenDelay) P.Hp = Math.Min(P.MaxHp, P.Hp + P.RegenPerSec * dt); }
+        if (P.Hp < P.MaxHp) { if (Lit) P.Hp = Math.Min(P.MaxHp, P.Hp + 2f * dt); else if (noDmgT > T.RegenDelay && P.RegenSkill) P.Hp = Math.Min(P.MaxHp, P.Hp + P.RegenPerSec * dt); }
         int contact = 0, busy = 0; Foe target = null;
         foreach (var f in Foes)
         {
@@ -264,7 +264,7 @@ public sealed class CombatSim
     void EnemyAct(Foe f, float dt, ref int busy)
     {
         if (f.Freeze > 0) return;
-        var d = f.Def; float rate = T.EnemyAttackRate * (f.EMod == 2 ? 1.3f : 1f) * (f.EMod == 4 ? 1.05f : 1f);
+        var d = f.Def; float rate = T.EnemyAttackRate / T.EnemyAtkPause * (f.EMod == 2 ? 1.3f : 1f) * (f.EMod == 4 ? 1.05f : 1f);
         if (d.Kind == "Bomber") { f.AtkT -= dt; if (f.AtkT <= 0 && f.WindT <= 0) f.WindT = d.Windup; }
         if (f.WindT > 0)
         {

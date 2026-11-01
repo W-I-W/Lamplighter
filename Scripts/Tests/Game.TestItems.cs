@@ -60,15 +60,14 @@ public partial class Game
         {
             // крафт: ручные рецепты без станции, станции по месту
             Enemies.Clear(); Hot[0] = "tool:pickaxe";
-            StationOpened = false; Check(CraftGroups().Count == 1 && CraftGroups()[0] == "hand", "crafting: only the hand group without a station");
+            StationOpened = false; Check(CraftGroups().Count == 0 && CraftRows().Count == 0, "crafting: no recipes at all without a station");
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
-            var axe = RecipesOf("hand").Find(r => r.Id == "tool_axe");
+            var axe = RecipesOf("furnace").Find(r => r.Id == "tool_axe");
             Check(axe != null && axe.Done() && (StateOf(axe) == RecState.Owned || axe.IsUpgrade), "crafting: owned tools are marked as owned (or offer an upgrade)");
             // печь рядом
             var tile = ToTile(PPos + FreeAdj());
             SetObj(tile.X, tile.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(tile.X, tile.Y) + new Vector2(0, 16);
-            Check(ActiveStation() == null && CraftGroups().Count == 1, "crafting: a furnace nearby without interacting adds no recipes"); StationOpened = true;
-            Check(ActiveStation() == "furnace" && CraftGroups().Contains("furnace"), "crafting: the Furnace group appears when interacting with a furnace");
+                        Check(ActiveStation() == "furnace" && CraftGroups().Contains("furnace"), "crafting: the Furnace group appears next to a furnace");
             var smelt = RecipesOf("furnace").Find(r => r.Id.StartsWith("smelt_"));
             Check(smelt != null && StateOf(smelt) == RecState.Missing, "crafting: a known recipe without materials stays visible as missing");
             Inv[It.CopperOre] = 7; Inv[It.Wood] = 7; var sm = RecipesOf("furnace").Find(r => r.Id == "smelt_" + It.Copper);
@@ -77,7 +76,7 @@ public partial class Game
             CraftQty = 0; SmeltQ.Clear();
             // уйти от станции: группа пропадает и рецепты недоступны
             PPos += new Vector2(300, 0);
-            Check(ActiveStation() == null && CraftGroups().Count == 1, "crafting: leaving the station removes its group");
+            Check(ActiveStation() == null && CraftGroups().Count == 0, "crafting: leaving the station removes its group");
             int q0 = SmeltQ.Count; CraftRecipe(sm); Check(SmeltQ.Count == q0, "crafting: station recipes cannot be used after leaving the station");
             // кузница заменяет печь
             SetObj(tile.X, tile.Y, Tl.None); PPos = FreeAdj() - new Vector2(0, 0);

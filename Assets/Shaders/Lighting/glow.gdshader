@@ -12,7 +12,7 @@ void fragment(){
     if (L.z < 1.0 || L.w < 0.0) continue;
     float d = distance(w, L.xy);
     float t = clamp(1.0 - d / L.z, 0.0, 1.0);
-    acc += vec3(1.0, 0.68, 0.30) * t * t * 0.20;
+    acc += vec3(1.0, 0.68, 0.30) * t * t * t * 0.26;
     float ring = exp(-pow((d - L.z) / 6.0, 2.0)) * L.w;
     acc += vec3(1.0, 0.86, 0.45) * ring * 0.9;
   }

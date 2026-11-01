@@ -28,7 +28,8 @@ public partial class Game
         if (early && !IsLit(PPos) && a1 != null) Hint("dark", "Вне света — тени. Бейте их ради осколков света");
         if (a1 != null && !a1.Lit && Inv[It.Shard] >= a1.Cost && a1.Cost > 0) Hint("shards", $"Осколков хватает ({a1.Cost})! К древнему фонарю, [E]");
         if (LitCount >= 1) Hint("lit1", "Территория освобождена: строить можно [B]");
-        if (HasFurnace && Tier < 1 && Inv[It.Copper] >= 5) Hint("pick", "Меди хватает: улучшите кирку у печи");
+        if (!OwnedTools.Contains("pickaxe")) Hint("nopick", HasFurnace ? "Нет кирки: сделайте её у печи [E]" : "Руками берутся дерево и камень: соберите 10 камня и 5 дерева на печь, там же сделайте кирку");
+        if (HasFurnace && Tier < 1 && OwnedTools.Contains("pickaxe") && Inv[It.Copper] >= 5) Hint("pick", "Меди хватает: улучшите кирку у печи");
         if (!HasFurnace && Inv[It.Stone] >= 10 && Inv[It.Wood] >= 5) Hint("furnace", "Хватает на печь: создайте её в меню [B]");
         if (Inv[It.Core] > 0 && BeaconLevel < 6) Hint("core", It.Ic(It.Core) + "Ядро света! Отнесите к маяку, [E]");
         if (Buildings.Count >= 3 && HasBuilding(Tl.Warehouse)) Hint("auto", "Производство идёт само. Управление — [P]");
@@ -51,10 +52,39 @@ public partial class Game
     void FastTravelIx(Ancient from, Ix ix)
     {
         var l = TravelList(); if (!l.Contains(from) || l.Count < 2) return;
-        int i = l.IndexOf(from); var to = l[(i + 1) % l.Count];
-        string nm = to == W.Ancients[0] ? "Центральный маяк" : to.Boss ? "фонарь стража" : $"{RegionNames[to.Region]}, фонарь";
-        ix.Lines.Add($"[U] Быстрый путь: {nm} ({l.Count} доступно)");
-        ix.U = () => FastTravel(to);
+        ix.Lines.Add($"[U] Быстрый путь: выбрать фонарь на карте ({l.Count - 1} доступно)");
+        ix.U = () => OpenTravelMap(from);
+    }
+
+    // ───────────────────────── карта быстрого пути ─────────────────────────
+    public bool TravelMode; public List<Ancient> TravelTargets = new(); public int TravelSel;
+
+    public static string TravelName(Ancient to, Game g) => to == g.W.Ancients[0] ? "Центральный маяк" : to.Boss ? $"{RegionNames[to.Region]}: фонарь стража" : $"{RegionNames[to.Region]}: фонарь";
+
+    /// <summary>[U] у зажжённого фонаря открывает карту с доступными для переноса фонарями: стрелки или щелчок выбирают, Enter или повторный щелчок переносят.</summary>
+    void OpenTravelMap(Ancient from)
+    {
+        var l = TravelList(); l.Remove(from); if (l.Count == 0) return;
+        CloseWindows(); MapOpen = true; TravelMode = true; TravelTargets = l; TravelSel = 0; Sfx.Play("tick");
+        float bd = float.MaxValue; for (int i = 0; i < l.Count; i++) { float d = l[i].Pos.DistanceTo(PPos); if (d < bd) { bd = d; TravelSel = i; } }
+    }
+
+    public void TravelConfirm()
+    {
+        if (!TravelMode || TravelSel < 0 || TravelSel >= TravelTargets.Count) return;
+        var to = TravelTargets[TravelSel]; CloseWindows(); FastTravel(to);
+    }
+
+    bool TravelKey(Key k)
+    {
+        int n = TravelTargets.Count; if (n == 0) return false;
+        switch (k)
+        {
+            case Key.Left: case Key.Up: case Key.A: case Key.W: TravelSel = (TravelSel + n - 1) % n; Sfx.Play("tick", -6, 1.4f); return true;
+            case Key.Right: case Key.Down: case Key.D: case Key.S: case Key.Tab: TravelSel = (TravelSel + 1) % n; Sfx.Play("tick", -6, 1.4f); return true;
+            case Key.Enter: case Key.KpEnter: case Key.E: case Key.U: TravelConfirm(); return true;
+        }
+        return false;
     }
 
     void FastTravel(Ancient to)

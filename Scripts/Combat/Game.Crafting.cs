@@ -9,7 +9,8 @@ namespace Lamplighter;
 public sealed class Recipe
 {
     public string Id, Group, Name, Desc; public Func<string> NameFn; public string Title => NameFn?.Invoke() ?? Name; public int Icon = -1; public int[][] Cost; public Func<int[][]> CostFn; public bool Multi;
-    public Func<int[][]> UpCost; public Func<bool> Upgrade; public string UpDesc;      // предмет уже есть, и его можно улучшить: цена следующего уровня, действие и описание
+    public Func<int[][]> UpCost; public Func<bool> Upgrade; public string UpDesc; public bool Improves;      // Improves — рецепт сам улучшает то, что уже есть (кирка): кнопка «Улучшить»
+          // предмет уже есть, и его можно улучшить: цена следующего уровня, действие и описание
     public bool IsUpgrade => Done != null && UpCost != null && Done() && UpCost() != null;
     public int[][] CostNow => IsUpgrade ? UpCost() : CostFn != null ? CostFn() : Cost;
     public Func<bool> Known, Done; public Action<int> Craft; public Func<int> Extra;      // Extra — число уже стоящих в очереди
@@ -25,11 +26,11 @@ public partial class Game
     public int CraftQty;                                 // 0..3 → ×1, ×5, ×10, максимум
     public bool StationOpened;                           // окно открыто через [E] у станции: только тогда её рецепты видны и доступны
     public bool CraftOnlyReady;                          // фильтр «Доступные»
-    public string CraftMode = "hand";                    // показанная группа: ручной крафт или рецепты открытой станции
+    public string CraftMode = "furnace";                 // показанная группа: рецепты станции рядом
     public float StationFlashT; string lastStation;
     public static readonly int[] QtySteps = { 1, 5, 10, int.MaxValue };
 
-    public static string GroupName(string g) => g == "hand" ? "Ручной крафт" : g == "furnace" ? "Печь" : "Кузница";
+    public static string GroupName(string g) => g == "furnace" ? "Печь" : "Кузница";
 
     /// <summary>Ближайшая станция в радиусе взаимодействия.</summary>
     public string StationNear()
@@ -39,8 +40,11 @@ public partial class Game
         return f ? "furnace" : forge ? "forge" : null;
     }
 
+    /// <summary>Вкладка «Создание» в снаряжении видна только рядом с печью или кузницей.</summary>
+    public bool CraftTabAvail => StationNear() != null;
+
     /// <summary>Станция, рецептами которой можно пользоваться сейчас (вышли из радиуса — группа пропадает).</summary>
-    public string ActiveStation() { var s = StationOpened ? StationNear() : null; if (s != CraftStation) CraftStation = s; if (s != lastStation) { lastStation = s; if (s != null) StationFlashT = 1.6f; } return s; }
+    public string ActiveStation() { var s = StationNear(); if (s != CraftStation) CraftStation = s; if (s != lastStation) { lastStation = s; if (s != null) StationFlashT = 1.6f; } return s; }
 
     public void OpenStation(string station)
     {
@@ -52,13 +56,16 @@ public partial class Game
     {
         recipes = new();
         int[][] C(params int[] a) { var l = new int[a.Length / 2][]; for (int i = 0; i < l.Length; i++) l[i] = new[] { a[i * 2], a[i * 2 + 1] }; return l; }
-        // ручной крафт: инструменты
-        foreach (var (id, cost) in new[] { ("axe", C(It.Wood, 5, It.Stone, 3)) })
+        // печь: кирка (герой начинает без неё и после смерти теряет её) и топор
+        foreach (var (id, cost) in new[] { ("pickaxe", C(It.Wood, 3, It.Stone, 4)), ("axe", C(It.Wood, 5, It.Stone, 3)) })
         {
             var td = ToolDef.Get(id); string tid = id; var tc = cost;
-            recipes.Add(new Recipe { Id = "tool_" + id, Group = "hand", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
+            recipes.Add(new Recipe { Id = "tool_" + id, Group = "furnace", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
                 NameFn = tid == "axe" ? () => td.Name + (AxeLv > 0 ? $" +{AxeLv}" : "") : null, UpCost = tid == "axe" ? () => NextAxeUpCost : null, Upgrade = tid == "axe" ? UpgradeAxe : null, UpDesc = "+30% к добыче и +10% к урону за уровень" });
         }
+        // печь и кузница: сила руки (до кирки дерево и камень ломают голыми руками)
+        foreach (var g in new[] { "furnace", "forge" })
+            recipes.Add(new Recipe { Id = "hand_" + g, Group = g, Name = "Улучшение руки", Desc = "Голой рукой дерево и камень ломаются быстрее, а удар сильнее", Icon = UiIcons.Pickaxe, Improves = true, Known = () => HandLv < HandMaxLv, Done = () => false, CostFn = () => NextHandUpCost, Craft = n => UpgradeHand() });
         // печь: плавка слитков (очередь общая и работает после закрытия окна)
         foreach (var ore in new[] { It.CopperOre, It.IronOre, It.SilverOre })
         {
@@ -70,7 +77,7 @@ public partial class Game
         foreach (var g in new[] { "furnace", "forge" })
         {
             string grp = g;
-            recipes.Add(new Recipe { Id = "pick_" + g, Group = g, Name = "Улучшение кирки", Desc = "Новая кирка добывает быстрее и бьёт сильнее", Icon = UiIcons.Pickaxe, Known = () => Tier < 4, Done = () => false,
+            recipes.Add(new Recipe { Id = "pick_" + g, Group = g, Name = "Улучшение кирки", Desc = "Новая кирка добывает быстрее и бьёт сильнее", Icon = UiIcons.Pickaxe, Improves = true, Known = () => Tier < 4 && OwnedTools.Contains("pickaxe"), Done = () => false,
                 CostFn = () => Tier < 4 ? CostPick[Tier] : null, Craft = n => UpgradePick() });
             foreach (var w in CraftableWeapons())
             {
@@ -92,15 +99,15 @@ public partial class Game
         var l = new List<Recipe>(); foreach (var r in recipes) if (r.Group == group && r.Known()) l.Add(r); return l;
     }
 
-    public List<string> CraftGroups() { var l = new List<string> { "hand" }; var s = ActiveStation(); if (s != null) l.Add(s); return l; }
+    public List<string> CraftGroups() { var l = new List<string>(); var s = ActiveStation(); if (s != null) l.Add(s); return l; }
 
-    /// <summary>Группа, рецепты которой показаны сейчас: выбранный режим, если он ещё доступен (станция открыта и рядом), иначе ручной крафт.</summary>
-    public string CraftGroup() { var g = CraftGroups(); if (!g.Contains(CraftMode)) CraftMode = "hand"; return CraftMode; }
+    /// <summary>Группа, рецепты которой показаны сейчас: выбранный режим, если он ещё доступен (станция рядом), иначе первая доступная станция.</summary>
+    public string CraftGroup() { var g = CraftGroups(); if (g.Count > 0 && !g.Contains(CraftMode)) CraftMode = g[0]; return CraftMode; }
 
     /// <summary>Рецепты показанной группы: изученные, доступные первыми, затем нехватка, затем уже имеющиеся; фильтр «Доступные» оставляет только Ready.</summary>
     public List<(string group, Recipe r)> CraftRows()
     {
-        string g = CraftGroup(); var rows = new List<(string, Recipe)>();
+        string g = CraftGroup(); var rows = new List<(string, Recipe)>(); if (CraftGroups().Count == 0) return rows;
         foreach (var r in RecipesOf(g).OrderBy(x => StateOf(x) == RecState.Ready ? 0 : StateOf(x) == RecState.Missing ? 1 : 2)) if (!CraftOnlyReady || StateOf(r) == RecState.Ready) rows.Add((g, r));
         return rows;
     }
@@ -129,7 +136,7 @@ public partial class Game
     /// <summary>Выполняет рецепт: ручной — сразу, станции — только пока игрок рядом с ней.</summary>
     public void CraftRecipe(Recipe r)
     {
-        if (r.Group != "hand" && ActiveStation() != r.Group) { Fail("Рецепты станции — пока вы рядом"); return; }
+        if (ActiveStation() != r.Group) { Fail("Рецепты станции — пока вы рядом"); return; }
         if (StateOf(r) == RecState.Owned) { Toast("Это уже есть"); return; }
         CraftRecipe(r, r.Multi ? Math.Min(QtySteps[CraftQty], Math.Max(1, MaxCraft(r))) : 1);
     }
@@ -137,7 +144,7 @@ public partial class Game
     /// <summary>Создать qty штук (для рецептов с количеством); расход и очередь решает сам рецепт.</summary>
     public void CraftRecipe(Recipe r, int qty)
     {
-        if (r.Group != "hand" && ActiveStation() != r.Group) { Fail("Рецепты станции — пока вы рядом"); return; }
+        if (ActiveStation() != r.Group) { Fail("Рецепты станции — пока вы рядом"); return; }
         if (r.IsUpgrade) { var uc = r.CostNow; if (!Can(uc)) { Fail("Не хватает: " + NeedStr(uc)); return; } r.Upgrade(); return; }
         if (StateOf(r) == RecState.Owned) { Toast("Это уже есть"); return; }
         qty = r.Multi ? Math.Clamp(qty, 1, Math.Max(1, MaxCraft(r))) : 1;

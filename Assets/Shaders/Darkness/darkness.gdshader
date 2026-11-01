@@ -13,12 +13,12 @@ void fragment(){
     vec4 L = lights[i];
     if (L.z < 1.0) continue;
     float d = distance(w, L.xy) + (n * 0.28 + n2 * 0.1) * L.z;
-    float a = 1.0 - smoothstep(L.z * 0.42, L.z, d);
+    float a = 1.0 - smoothstep(L.z * 0.08, L.z, d);       // плавный спад от самого центра: без яркого диска с резким краем
     if (L.w < 0.0) { mark = max(mark, (1.0 - smoothstep(0.0, L.z, d)) * (-L.w)); continue; }
-    lit = max(lit, a);
+    lit = 1.0 - (1.0 - lit) * (1.0 - a);                  // свет соседних источников складывается мягко, без швов от max
   }
   // The tile grid shows through partial darkness as hard-edged squares; ease the fringe so ground fades out sooner and edges stay hidden.
-  float vis = max(lit * lit * (3.0 - 2.0 * lit), mark);
+  float vis = max(lit * (0.35 + 0.65 * lit * (3.0 - 2.0 * lit)), mark);
   float dark = 1.0 - vis;
   vec3 col = mix(tint, tint * 1.8 + vec3(0.01), n + 0.5);
   float haze = 0.0;

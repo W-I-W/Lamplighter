@@ -23,6 +23,7 @@ public partial class Game
         chunkSet = new TileSet { TileSize = new Vector2I(TS, TS) };
         var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS), UseTexturePadding = false };   // без внутренних полей: шейдеры растительности читают атлас по колонкам 16 px
         for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
+        foreach (int c in TreeCols) for (int v = 1; v < TreeVariants; v++) { src.CreateAlternativeTile(new Vector2I(c, 0), v); src.GetTileData(new Vector2I(c, 0), v).Modulate = TreeTint(c, v); }      // разновидности деревьев: оттенок листвы и коры
         srcId = chunkSet.AddSource(src);
         groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); trunkRoot = new Node2D(); topRoot = new Node2D();
         blendRoot = new Node2D(); decorRoot = new Node2D(); InitBlend();
@@ -58,8 +59,8 @@ public partial class Game
                 int wx = cx * CS + x, wy = cy * CS + y, k = wy * World.Wd + wx;
                 c.G.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[k], 0));
                 var t = (Tl)W.Obj[k];
-                if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0));
-                int crown = CrownId(wx, wy); if (crown >= 0) c.B.SetCell(new Vector2I(x, y), srcId, new Vector2I(crown, 0));
+                if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0), IsPlantTile(t) ? TreeAlt(wx, wy) : 0);
+                int crown = CrownId(wx, wy); if (crown >= 0) c.B.SetCell(new Vector2I(x, y), srcId, new Vector2I(crown, 0), TreeAlt(wx, wy + 1));
             }
         groundRoot.AddChild(c.G); blendRoot.AddChild(c.X1); blendRoot.AddChild(c.X2); decorRoot.AddChild(c.D); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); crownRoot.AddChild(c.B); topRoot.AddChild(c.T); trunkRoot.AddChild(c.K); chunks[ci] = c; LoadedChunks++;
         LastChunkMs = (float)sw.Elapsed.TotalMilliseconds;

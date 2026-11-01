@@ -168,6 +168,11 @@ public partial class Game
             else ang = d.Angle() + sg * (-1.0f + t * 2.0f);
             DrawHeldItem(c, PPos + new Vector2(0, -3), ang);
         }
+        else
+        {
+            var d = Aim - PPos; d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0); float sg = d.X < 0 ? -1 : 1;       // в покое предмет виден в руке, опущенный вдоль тела
+            DrawHeldItem(c, PPos + new Vector2(0, -3), d.Angle() + sg * 1.25f);
+        }
         if (SpinT > 0)
         {
             float k = 1 - SpinT / .25f;

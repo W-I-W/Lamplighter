@@ -237,11 +237,15 @@ public partial class Game
         Add("Изучить «Искру света»", spark, "Первый свет: [T] → Искра света");
         Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1 || HasFurnace, "Выйдите за границу света маяка");
         Add("Построить печь [B]", HasFurnace, NeedShort(CostFurnace));
+        bool pickOwned = OwnedTools.Contains("pickaxe");
+        Add("Улучшить удар с руки [C]", HandLv >= 1 || pickOwned, "У печи: вкладка «Создание» → «Улучшение руки». Рука быстрее ломает дерево и камень: " + NeedShort(HandUpCost(1)));
+        Add("Ещё раз улучшить руку [C]", HandLv >= 2 || pickOwned, "Ломайте дерево и камень ещё быстрее: " + NeedShort(HandUpCost(2)));
         Add("Создать оружие [C]", Owned.Count > 0, "Меч, лук и посох — вкладка «Создание» у печи");
         Add("Медная кирка у печи [E]", Tier >= 1, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
-        Add("Найти забытую технологию", BpDone.Contains("bp_hub"), "Постамент даёт чертёж «Логистика»", NearestPoi(PK.TechCache, true)?.Pos);
+        var techP = NearestPoi(PK.TechCache, true);
+        Add("Найти забытую технологию", BpDone.Contains("bp_hub") || !W.Pois.Exists(q => q.Kind == PK.TechCache && q.State < 3), "Светящийся постамент на открытой местности: подойдите и нажмите [E], он даёт чертёж «Логистика»", techP?.Pos);
         var cap = NearestPoi(PK.Captive, true);
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
         Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedShort(BCost(8, 1)));
@@ -260,7 +264,7 @@ public partial class Game
         if (BeaconLevel >= 2)
         {
             var nm = NearestUnlit(1);
-            Add("Зажечь фонари шахт", LitIn(1) >= 3, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
+            Add("Зажечь фонари шахт", LitIn(1) >= 3 || nm == null, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
             Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник");
             Add("Кристальная кирка у печи [E]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
             Add("Изучить «Кристальную оптику» [T]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
@@ -270,7 +274,7 @@ public partial class Game
         if (BeaconLevel >= 3)
         {
             var na = NearestUnlit(2);
-            Add("Зажечь фонари пустошей", LitIn(2) >= 3, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
+            Add("Зажечь фонари пустошей", LitIn(2) >= 3 || na == null, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
             Add("Теплозащита или огненное лезвие [T]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
             Add("Обсидиановая кирка у печи [E]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
             Add("Построить коллектор пепла [B]", HasBuilding(Tl.Collector), Has(Tech.Collector) ? "Ставьте на освещённой земле пустошей" : "Изучите «Пепельный коллектор» [T]");
@@ -280,7 +284,7 @@ public partial class Game
         if (BeaconLevel >= 4)
         {
             var ni = NearestUnlit(3);
-            Add("Зажечь фонари монастыря", LitIn(3) >= 3, $"Зажжено {LitIn(3)}/3 — осколки света {Inv[It.Shard]}", ni?.Pos);
+            Add("Зажечь фонари монастыря", LitIn(3) >= 3 || ni == null, $"Зажжено {LitIn(3)}/3 — осколки света {Inv[It.Shard]}", ni?.Pos);
             Add("Ледяные шипы или тёплые меха [T]", Has(Tech.SpikeBoots) || Has(Tech.FrostArmor), "Вкладка «Лёд»: нужны ледяные кристаллы");
             Add("Построить криоэкстрактор [B]", HasBuilding(Tl.Cryo), BpDone.Contains("bp_cryo") ? "Ставьте в Ледяном монастыре на освещённой земле" : "Нужен чертёж «Криоэкстрактор» [J]");
             Add("Победить Хранителя Зимы", BossDown(4), "На озере монастыря. Награда: кристаллы, 4-е ядро", BossLantern(4)?.Pos);

@@ -18,7 +18,7 @@ public partial class Game
         {
             for (int i = 0; i < Inv.Length; i++) Inv[i] = 80; Inv[It.Coins] = 1000; Inv[It.Core] = 0;
             Tp(spawn + new Vector2(0, 40)); HasFurnace = true;
-            int[] cnt = new int[16]; foreach (var p in W.Pois) cnt[(int)p.Kind]++;
+            int[] cnt = new int[64]; foreach (var p in W.Pois) cnt[(int)p.Kind]++;
             Log($"pois={W.Pois.Count} techCache={cnt[(int)PK.TechCache]} spire={cnt[(int)PK.Spire]} altar={cnt[(int)PK.Altar]} secret={cnt[(int)PK.Secret]} relics={Db.Relics.Count} synergies={Db.Synergies.Count}");
             var starts = new[] { W.Spawn, new Vector2I(World.MX0 + 8, 64), new Vector2I(World.AX0 + 8, 64) }; int bad = 0, tot = 0;
             for (int reg = 0; reg < 3; reg++)

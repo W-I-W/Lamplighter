@@ -37,14 +37,14 @@ public static class Validate
         ("Combat/Game.Weapons.cs", "AtkCd = w.Cd * (1f - E(Tech.QuickDraw))", "перезарядка лука"), ("Combat/Game.Weapons.cs", "e.Burn = Mathf.Max(e.Burn, 2f + b)", "длительность ожога"),
         ("Combat/Game.Weapons.cs", ".45f + .2f * b", "шанс ожога"), ("Combat/Game.Weapons.cs", "dmg * .45f", "урон цепи 45%"),
         ("Combat/Game.Difficulty.cs", "t.EnemyHp * CombatTuning.At(t.BiomeHp, reg)", "множитель здоровья врагов"), ("Combat/Game.Difficulty.cs", "Give(It.Shard, 3, e.Pos", "награда за элитного"),
-        ("Core/Game.cs", "MaxHp += 10", "здоровье за уровень"), ("Core/Game.cs", "PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1))", "урон без оружия"),
+        ("Core/Game.cs", "MaxHp += 10", "здоровье за уровень"), ("Core/Game.cs", "PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N(\"Dmg\")) * Tune.T.FistDamageMul", "урон без оружия"),
         ("Core/Game.cs", "MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1))", "скорость добычи"), ("Core/Game.cs", "XpBase + Tune.T.XpLinear * Level + Tune.T.XpQuad * Level * Level", "опыт на уровень"),
         ("Core/Game.cs", "SmeltTime = 0.9f", "время плавки"), ("Core/Game.cs", "Tl.Tree => 2.2f", "время добычи дерева"), ("Core/Game.cs", "Tl.Iron => 1, Tl.MeteorOre => 1, Tl.FrostOre => 3", "требования тира"),
-        ("Core/Game.cs", "regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + RegenPerSec * dt)", "восстановление здоровья"), ("Core/Game.cs", "Hp + 4f * dt", "восстановление в свете 4/с"),
+        ("Core/Game.cs", "regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + RegenPerSec * dt)", "восстановление здоровья"), ("Core/Game.cs", "Hp + 2f * dt", "восстановление в свете 2/с"),
         ("Combat/Game.Combat.cs", "DangerScale => 1f + .18f * LitCount + .12f * LitIn(1)", "масштаб опасности"),
     };
 
-    static readonly string[] NumKeysUsed = { "Dmg", "MineSpd", "HeroRadius", "KillHeal", "HeatResist", "MineChain" };
+    static readonly string[] NumKeysUsed = { "Dmg", "MineSpd", "HeroRadius", "KillHeal", "HeatResist", "MineChain", "MaxHp", "MaxHpPct" };
 
     public static int Run(int n, int threads)
     {

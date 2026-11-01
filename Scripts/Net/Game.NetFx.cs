@@ -41,7 +41,7 @@ public partial class Game
     }
 
     /// <summary>Что игрок держит в руках (значок для показа другим).</summary>
-    public int HeldIcon() { string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool); return HotIcon(r); }
+    public int HeldIcon() { if (CurW < 0 && !OwnedTools.Contains(CurTool)) return -1; string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool); return HotIcon(r); }
 
     /// <summary>Рисует предмет в руке удалённого игрока во время его замаха — тот же значок и поворот, что у своего персонажа.</summary>
     void DrawHeldIcon(CanvasItem c, int icon, Vector2 hand, float ang)

@@ -168,7 +168,7 @@ public partial class Game
     {
         RiftOffer.Clear(); var pool = new List<string>(TempIds); pool.RemoveAll(id => TempRelics.Contains(id));
         while (RiftOffer.Count < 3 && pool.Count > 0) { int i = rng.RandiRange(0, pool.Count - 1); RiftOffer.Add(pool[i]); pool.RemoveAt(i); }
-        if (RiftOffer.Count == 0) { riftWaveT = 3f; return; }
+        if (RiftOffer.Count == 0) { riftWaveT = .4f; return; }
         RiftState = 1; CloseWindows(); Window = Win.Rift; WinCur = 0; Sfx.Play("tech");
     }
 
@@ -176,7 +176,7 @@ public partial class Game
     {
         if (RiftState != 1 || i < 0 || i >= RiftOffer.Count) return;
         GrantTemp(RiftOffer[i]); Toast($"Временная реликвия: «{Db.Relic(RiftOffer[i]).Title}»");
-        RiftState = 0; Window = Win.None; riftWaveT = 3f; Hp = Mathf.Min(MaxHp, Hp + MaxHp * .25f);
+        RiftState = 0; Window = Win.None; riftWaveT = .4f; Hp = Mathf.Min(MaxHp, Hp + MaxHp * .25f);
     }
 
     void RiftWin()

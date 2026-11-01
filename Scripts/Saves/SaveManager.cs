@@ -68,7 +68,7 @@ public static class SaveManager
             if (c.SkV != null) foreach (var v in c.SkV) ci.SkillPts += v;
             if (c.SkK != null && c.SkV != null) for (int i = 0; i < c.SkK.Length && i < c.SkV.Length; i++) if (c.SkK[i] == "Spark" && c.SkV[i] > 0) ci.HasLamp = true;
             ci.Weapons = c.WId?.Length ?? 0; ci.Relics = c.Relics?.Length ?? 0;
-            ci.Weapon = c.WId != null && c.WId.Length > 0 ? c.WId[Math.Clamp(c.CurW, 0, c.WId.Length - 1)] : ""; ci.Tool = c.CurTool ?? "pickaxe";
+            ci.Weapon = c.WId != null && c.WId.Length > 0 ? c.WId[Math.Clamp(c.CurW, 0, c.WId.Length - 1)] : ""; ci.Tool = c.CurTool ?? "";
             res.Add(ci);
         }
         return res.OrderByDescending(x => LastWrite(CharPath(x.Id))).ToList();

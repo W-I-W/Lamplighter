@@ -54,10 +54,10 @@ public partial class Game
     CharacterSave BuildCharacter()
     {
         var c = charSave; var sk = SaveSkills();
-        c.Look = PlayerLook; c.PlaySecs = PlaySecs; c.Hp = Hp; c.MaxHp = MaxHp; c.Xp = Xp; c.Level = Level; c.Tier = Tier; c.Kills = Kills; c.HeroLamp = HeroLampLv; c.Ann = Ann;
+        c.Look = PlayerLook; c.PlaySecs = PlaySecs; c.Hp = Hp; c.MaxHp = MaxHp - relicHp; c.Xp = Xp; c.Level = Level; c.Tier = Tier; c.Kills = Kills; c.HeroLamp = HeroLampLv; c.Ann = Ann;
         c.Inv = (int[])Inv.Clone(); c.ModInv = (int[])ModInv.Clone(); c.SkK = sk.k; c.SkV = sk.v;
         c.Hot = (string[])Hot.Clone(); c.HotSel = HotSel; c.Tools = OwnedTools.ToArray(); c.CurTool = CurTool;
-        c.WId = Owned.ConvertAll(o => o.Id).ToArray(); c.WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(); c.CurW = CurW; c.WLv = Owned.ConvertAll(o => o.Lv).ToArray(); c.AxeLv = AxeLv;
+        c.Graves = Graves.ToArray(); c.WId = Owned.ConvertAll(o => o.Id).ToArray(); c.WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(); c.CurW = CurW; c.WLv = Owned.ConvertAll(o => o.Lv).ToArray(); c.AxeLv = AxeLv; c.HandLv = HandLv;
         c.Relics = OwnedRelics.ToArray(); c.Equipped = EquippedRelics.ToArray(); c.BpDone = BpDone.ToArray();
         c.FragK = Frag.Keys.ToArray(); c.FragV = Frag.Values.ToArray(); c.BsK = BuildStock.Keys.ToArray(); c.BsV = BuildStock.Values.ToArray();
         c.Hints = HintsShown.ToArray(); c.Found = Found.ToArray(); c.LegendMask = LegendMask; c.CosmMask = CosmMask; c.CosmSel = CosmSel;
@@ -161,14 +161,16 @@ public partial class Game
     void ApplyCharacter(CharacterSave c, string worldId)
     {
         if (worldId != null && c.Worlds != null && c.Worlds.TryGetValue(worldId, out var pw) && pw.Has) PPos = new Vector2(pw.X, pw.Y);
-        PlaySecs = c.PlaySecs; Hp = c.Hp; MaxHp = c.MaxHp; Xp = c.Xp; Level = c.Level; Tier = c.Tier; Kills = c.Kills; HeroLampLv = c.HeroLamp; Ann = c.Ann;
+        PlaySecs = c.PlaySecs; relicHp = 0; Hp = c.Hp; MaxHp = c.MaxHp; Xp = c.Xp; Level = c.Level; Tier = c.Tier; Kills = c.Kills; HeroLampLv = c.HeroLamp; Ann = c.Ann;
         LoadSkills(c.SkK, c.SkV, 0);
         if (c.Inv != null) for (int i = 0; i < Inv.Length && i < c.Inv.Length; i++) Inv[i] = Math.Max(0, c.Inv[i]);
         if (c.ModInv != null) for (int i = 0; i < ModInv.Length && i < c.ModInv.Length; i++) ModInv[i] = Math.Max(0, c.ModInv[i]);
         if (c.WId != null) for (int i = 0; i < c.WId.Length; i++) { var o = new OwnedWeapon { Id = c.WId[i] }; if (c.WMods != null && i < c.WMods.Length && c.WMods[i] != null) o.Mods.AddRange(c.WMods[i]); if (c.WLv != null && i < c.WLv.Length) o.Lv = Math.Clamp(c.WLv[i], 0, WeaponMaxLv); if (Db.Weapon(o.Id) != null) Owned.Add(o); }
-        AxeLv = Math.Clamp(c.AxeLv, 0, AxeMaxLv); CurW = Owned.Count == 0 ? -1 : Math.Clamp(c.CurW, 0, Owned.Count - 1);
+        AxeLv = Math.Clamp(c.AxeLv, 0, AxeMaxLv); HandLv = Math.Clamp(c.HandLv, 0, HandMaxLv); CurW = Owned.Count == 0 ? -1 : Math.Clamp(c.CurW, 0, Owned.Count - 1);
+        Graves.Clear(); if (c.Graves != null) Graves.AddRange(c.Graves);
         if (c.Tools != null) { OwnedTools.Clear(); foreach (var t in c.Tools) if (Array.IndexOf(ToolDef.Ids, t) >= 0) OwnedTools.Add(t); }
-        OwnedTools.Add("pickaxe"); CurTool = c.CurTool != null && OwnedTools.Contains(c.CurTool) ? c.CurTool : "pickaxe";
+        else if (!testing || OS.GetEnvironment("LAMP_NOPICK") != "") OwnedTools.Clear();                 // новый герой начинает без кирки: её делают у печи
+        CurTool = c.CurTool != null && OwnedTools.Contains(c.CurTool) ? c.CurTool : OwnedTools.Contains("pickaxe") ? "pickaxe" : OwnedTools.FirstOrDefault() ?? "";
         if (c.BsK != null && c.BsV != null) for (int i = 0; i < c.BsK.Length && i < c.BsV.Length; i++) if (c.BsV[i] > 0) BuildStock[c.BsK[i]] = c.BsV[i];
         if (c.Hot != null) for (int i = 0; i < HotCount && i < c.Hot.Length; i++) Hot[i] = c.Hot[i];
         HotSel = Math.Clamp(c.HotSel, 0, HotCount - 1);

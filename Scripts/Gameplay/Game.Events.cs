@@ -323,13 +323,14 @@ public partial class Game
         if (ev.State == 0) return;
         int reg = World.RegionOf((int)(ev.Pos.X / TS));
         trialT -= dt; ev.WaveT -= dt;
-        if (ev.Wave < 3 && ev.WaveT <= 0)
+        bool clear = !Enemies.Exists(e => e.Ev == ev);
+        if (ev.Wave < 3 && (ev.WaveT <= 0 || (ev.Wave > 0 && clear)))                  // волна убита целиком — следующая приходит сразу, ждать таймер не нужно
         {
             ev.Wave++; ev.WaveT = 24f;
             for (int i = 0; i < 3 + ev.Wave; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * rng.RandfRange(50, 90), PoolKind(reg), 1.1f);
             Sfx.Play("boss", -6, 1.2f); Toast($"Испытание: волна {ev.Wave}/3");
         }
-        bool clear = !Enemies.Exists(e => e.Ev == ev);
+        clear = !Enemies.Exists(e => e.Ev == ev);
         if (ev.Wave >= 3 && clear)
         {
             var r = new Random(ev.Seed); Inv[It.Coins] += 60 + r.Next(40); GrantTag(RollTag(r, 3, .5f), ev.Pos); Give(It.AncCrystal, 1, ev.Pos + new Vector2(0, -10));

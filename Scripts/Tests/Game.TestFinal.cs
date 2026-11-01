@@ -48,8 +48,12 @@ public partial class Game
         {
             Check("production continues while chunks unloaded", Stock[It.Wood] > stockBefore || Buildings.Exists(b => b.Type == Tl.Sawmill && b.Status != 3), $"wood {stockBefore}->{Stock[It.Wood]}");
             Log($"sawmill later: status={sw0.Status} prog={sw0.Prog:F1} stock={Stock[It.Wood]}"); Tp(TileCenter(regrowTile.X, regrowTile.Y + 20));
+            var rp = ToTile(PPos); Func<int> treesNear = () => { int n = 0; for (int y = Math.Max(2, rp.Y - 36); y <= Math.Min(World.Ht - 3, rp.Y + 36); y++) for (int x = Math.Max(0, rp.X - 50); x <= Math.Min(World.MX0 - 1, rp.X + 50); x++) { var o = W.Get(x, y); if (o == Tl.Tree || o == Tl.Pine || o == Tl.DeadTree) n++; } return n; };
+            int dense = treesNear(); for (int i = 0; i < 400; i++) { regrowT = 0; UpdateRegrow(.1f); }
+            Check("resource regrowth: nothing comes back while the forest around is thick", treesNear() <= dense, $"trees {dense}->{treesNear()}");
+            for (int y = Math.Max(2, rp.Y - 36); y <= Math.Min(World.Ht - 3, rp.Y + 36); y++) for (int x = Math.Max(0, rp.X - 50); x <= Math.Min(World.MX0 - 1, rp.X + 50); x++) { var o = W.Get(x, y); if (o == Tl.Tree || o == Tl.Pine || o == Tl.DeadTree) SetObj(x, y, Tl.None); }
             for (int i = 0; i < 3000; i++) { regrowT = 0; UpdateRegrow(.1f); }
-            Check("resource regrowth", W.Get(regrowTile.X, regrowTile.Y) == Tl.Tree || W.Get(regrowTile.X, regrowTile.Y) == W.GenObj[regrowTile.Y * World.Wd + regrowTile.X].ToTl(), $"tile={regrowTile} now={W.Get(regrowTile.X, regrowTile.Y)}");
+            int back = treesNear(); Check("resource regrowth: trees return once fewer than 10 are left, but no more than 10", back >= 1 && back <= ResourceFloor, $"trees back={back}");
             Tp(TileCenter(borderTile.X, borderTile.Y + 3)); UpdateChunks(0, true);
             Check("border building survives unload/reload", W.Get(borderTile.X, borderTile.Y) == Tl.Warehouse && ChunkAt(borderTile.X, borderTile.Y)?.O.GetCellSourceId(new Vector2I(borderTile.X % CS, borderTile.Y % CS)) >= 0);
         });
@@ -117,7 +121,7 @@ public partial class Game
     /// <summary>Длительный прогон (LAMP_STAGE=soak): ~100 с перелётов по всем биомам, врагов, событий; контроль роста объектов, памяти и чанков.</summary>
     void BuildSoakScript()
     {
-        double obj0 = 0, mem0 = 0; double maxProc = 0; int maxEnemies = 0, maxParts = 0, maxZones = 0, maxChunks = 0; var fpsList = new List<float>();
+        double obj0 = 0, mem0 = 0, objWarm = 0; double maxProc = 0; int maxEnemies = 0, maxParts = 0, maxZones = 0, maxChunks = 0; var fpsList = new List<float>();
         S(.5f, () =>
         {
             BossMask |= 15; BeaconLevel = 5; EventsEnabled = true; Hp = MaxHp = 5000; noHeal = false;
@@ -136,7 +140,7 @@ public partial class Game
                 Tp(TileCenter(tile.X, tile.Y)); UpdateChunks(0, true);
                 for (int k = 0; k < 14; k++) { var e = SpawnEnemy(PPos + new Vector2(rng.RandfRange(-130, 130), rng.RandfRange(-90, 90)), ii % 2 == 0 ? EK.Shade : EK.Wraith); e.Age = 1; }
                 if (ii % 5 == 0) for (int z = 0; z < 8; z++) AddZone(PPos + new Vector2(rng.RandfRange(-60, 60), rng.RandfRange(-60, 60)), 20, .5f, 3f, 0f);
-                maxProc = Math.Max(maxProc, Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000); fpsList.Add((float)Engine.GetFramesPerSecond());
+                if (ii == 6) objWarm = Performance.GetMonitor(Performance.Monitor.ObjectCount); maxProc = Math.Max(maxProc, Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000); fpsList.Add((float)Engine.GetFramesPerSecond());
                 maxEnemies = Math.Max(maxEnemies, Enemies.Count); maxParts = Math.Max(maxParts, Parts.Count); maxZones = Math.Max(maxZones, Zones.Count); maxChunks = Math.Max(maxChunks, LoadedChunks);
             });
         }
@@ -146,7 +150,7 @@ public partial class Game
             double obj1 = Performance.GetMonitor(Performance.Monitor.ObjectCount), mem1 = Performance.GetMonitor(Performance.Monitor.MemoryStatic) / 1048576.0;
             fpsList.Sort(); float p5 = fpsList.Count > 0 ? fpsList[(int)(fpsList.Count * .05f)] : 0;
             Log($"soak end: objects={obj0}->{obj1} mem={mem0:F0}->{mem1:F0}MB maxProcessMs={maxProc:F1} fps p5={p5:F0} maxEnemies={maxEnemies} maxParts={maxParts} maxZones={maxZones} maxChunks={maxChunks} nodes={Performance.GetMonitor(Performance.Monitor.ObjectNodeCount)}");
-            Check("soak: objects growth < 25%", obj1 < obj0 * 1.25 + 200, $"{obj0}->{obj1}");
+            Check("soak: objects growth < 25% (after the chunks around have loaded)", obj1 < objWarm * 1.25 + 200, $"{obj0}->{objWarm}->{obj1}");
             Check("soak: memory growth < 60 MB", mem1 - mem0 < 60, $"{mem0:F0}->{mem1:F0}");
             Check("soak: chunks bounded", maxChunks <= 30, $"{maxChunks}");
             Check("soak: particles/zones capped", maxParts <= 900 && maxZones <= 75, $"parts={maxParts} zones={maxZones}");

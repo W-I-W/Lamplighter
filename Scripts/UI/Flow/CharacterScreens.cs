@@ -55,6 +55,7 @@ public partial class CharacterSelectionUI : FlowScreen
     static string WeaponLine(CharInfo ci)
     {
         if (ci.Weapon != "") return Db.Weapon(ci.Weapon)?.Name is string n ? Loc.T(n) : ci.Weapon;
+        if (string.IsNullOrEmpty(ci.Tool)) return Loc.T("Пусто");
         return Loc.T(ToolDef.Get(ci.Tool)?.Name ?? "Кирка");
     }
 
@@ -89,7 +90,7 @@ public partial class CharacterSelectionUI : FlowScreen
         Stat(v, "world", string.Format(Loc.T("Миров посещено: {0}"), c0.Worlds?.Count ?? 0));
         v.AddChild(new HSeparator());
         v.AddChild(Px.Label("Экипировка", Px.Cyan));
-        var tool = ToolDef.Get(c0.CurTool ?? "pickaxe"); v.AddChild(Px.Label("• " + Loc.T(tool?.Name ?? "Кирка"), Px.Text));
+        if (!string.IsNullOrEmpty(c0.CurTool)) { var tool = ToolDef.Get(c0.CurTool); v.AddChild(Px.Label("• " + Loc.T(tool?.Name ?? "Кирка"), Px.Text)); }
         if (c0.WId != null && c0.WId.Length > 0) { var cw = Db.Weapon(c0.WId[Math.Clamp(c0.CurW, 0, c0.WId.Length - 1)]); if (cw != null) v.AddChild(Px.Label("• " + Loc.T(cw.Name) + (c0.WId.Length > 1 ? $" (+{c0.WId.Length - 1})" : ""), Px.Good)); }
         else v.AddChild(Px.Label("• оружия пока нет", Px.Dim));
         int shown = 0; if (c0.Equipped != null) foreach (var rid in c0.Equipped) { if (shown++ >= 3) break; v.AddChild(Px.Label("◆ " + (Db.Relic(rid)?.Title ?? rid), Px.Cyan)); }

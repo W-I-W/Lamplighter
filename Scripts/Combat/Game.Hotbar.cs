@@ -13,7 +13,7 @@ public partial class Game
     public readonly string[] Hot = new string[HotCount];
     public int HotSel;
     public readonly HashSet<string> OwnedTools = new() { "pickaxe" };
-    public string CurTool = "pickaxe";
+    public string CurTool = "pickaxe";                        // "" — нет инструмента (герой без кирки)
     public ToolDef CurToolDef => ToolDef.Get(CurTool);
 
     public static string RefTool(string id) => "tool:" + id;
@@ -135,7 +135,14 @@ public partial class Game
         for (int i = 0; i < HotCount; i++) if (IsWeaponRef(Hot[i]) && i != keep) Hot[i] = null;
         if (HotWeaponSlot() < 0 && Owned.Count > 0) AutoAssign(cur ?? RefWeapon(Owned[0].Id));
         if (CurW >= 0 && CurW < Owned.Count && HotSlotOf(RefWeapon(Owned[CurW].Id)) < 0) CurW = -1;      // оружие, которого нет в хотбаре, в руках не держим
-        HotFollow();
+        HotFollow(); HandFallback();
+    }
+
+    /// <summary>Руки пусты (инструмента нет), а оружие есть: берём его в руки, чтобы меч не оставался в рюкзаке.</summary>
+    public void HandFallback()
+    {
+        if (CurW >= 0 || OwnedTools.Contains(CurTool)) return;
+        int ws = HotWeaponSlot(); if (ws >= 0) { HotSel = ws; ApplyHot(); }
     }
 
     // ───────────────────────── строки окна экипировки (вкладка «Оружие»): инструменты, затем оружие ─────────────────────────

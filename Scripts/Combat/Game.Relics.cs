@@ -41,6 +41,16 @@ public partial class Game
     }
     static string ClassKey(WClass c) => c == WClass.Sword ? "sword" : c == WClass.Bow ? "bow" : c == WClass.Staff ? "staff" : "pick";
 
+    float relicHp;                                                          // сколько максимума здоровья сейчас дают реликвии (в MaxHp уже включено, в сохранение не идёт)
+    public float RelicHpBonus => relicHp;
+    /// <summary>Реликвии с «+N здоровья» и «+N% здоровья»: бонус считается от базового максимума (без самих реликвий) и пересчитывается при смене реликвий или уровня.</summary>
+    void ApplyRelicHp()
+    {
+        float baseHp = MaxHp - relicHp, want = N("MaxHp") + N("MaxHpPct") * baseHp;
+        if (Mathf.Abs(want - relicHp) < .01f) return;
+        float delta = want - relicHp; MaxHp = baseHp + want; relicHp = want; Hp = Mathf.Clamp(Hp + Mathf.Max(0, delta), 1, MaxHp);
+    }
+
     public void RecomputeEffects()
     {
         Array.Clear(EffP); Num.Clear(); Flags.Clear(); ActiveSyn.Clear(); TagCount.Clear();
@@ -61,6 +71,7 @@ public partial class Game
             if (!ok) continue;
             ActiveSyn.Add(s.Id); foreach (var g in s.Grants) AddEffect(g);
         }
+        ApplyRelicHp();
     }
 
     void ApplyRelic(string id, Action<string> tag)

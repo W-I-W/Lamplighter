@@ -14,7 +14,7 @@ public partial class Game
 
     static readonly HashSet<Tl> PlaceSet = new() { Tl.Furnace, Tl.Lantern, Tl.CombatLantern, Tl.CrystalLantern, Tl.AmpCrystal, Tl.BarrierPost, Tl.Statue, Tl.Fountain, Tl.Banner, Tl.Mirror1, Tl.Mirror2 };
     static readonly HashSet<Tl> MineSet = new() { Tl.Tree, Tl.Pine, Tl.DeadTree, Tl.Stone, Tl.Copper, Tl.Iron, Tl.Lumen, Tl.Aether, Tl.CrystalOre, Tl.SilverOre, Tl.Rubble, Tl.Ruin, Tl.Obsidian, Tl.Ember, Tl.MeteorOre, Tl.FrostOre, Tl.IceBlock,
-        Tl.Furnace, Tl.Lantern, Tl.CombatLantern, Tl.CrystalLantern, Tl.AmpCrystal, Tl.BarrierPost, Tl.Statue, Tl.Fountain, Tl.Banner, Tl.Mirror1, Tl.Mirror2, Tl.ShadowPillar };
+        Tl.Furnace, Tl.Lantern, Tl.CombatLantern, Tl.CrystalLantern, Tl.AmpCrystal, Tl.BarrierPost, Tl.Statue, Tl.Fountain, Tl.Banner, Tl.Mirror1, Tl.Mirror2, Tl.ShadowPillar, Tl.Grave };
 
     /// <summary>Разрешённые для синхронизации переходы клетки: поставить объект на пустое место (или повернуть зеркало) и убрать добываемый или поставленный объект.</summary>
     static bool SyncTile(Tl o, Tl n) => (n == Tl.MeteorOre || n == Tl.ShadowPillar) ? o == Tl.None : (n != Tl.None && MineSet.Contains(n) && !PlaceSet.Contains(n)) ? o == Tl.None : PlaceSet.Contains(n) ? (o == Tl.None || PlaceSet.Contains(o)) : n == Tl.None && MineSet.Contains(o);
@@ -50,6 +50,11 @@ public partial class Game
     /// <summary>Хост/участник: изменение клетки от другого игрока. false — переход не разрешён.</summary>
     public bool NetApplyTile(int x, int y, int t, int flag)
     {
+        if (t == BushCutCode && World.In(x, y))
+        {
+            int bkey = World.Key(x, y); if (CutBush.Contains(bkey)) return true; CutBush.Add(bkey);
+            ChunkAt(x, y)?.F.EraseCell(new Vector2I(x % CS, y % CS)); Burst(TileCenter(x, y), new Color("#3b8a3a"), 5, 40); return true;
+        }
         if (!World.In(x, y) || !Enum.IsDefined(typeof(Tl), (byte)t)) return false; int key = World.Key(x, y);
         if (BuildingByKey(key) != null) return false; var cur = W.Get(x, y); if (!SyncTile(cur, (Tl)t)) return false;
         SetObj(x, y, (Tl)t); if (flag != 0) Placed.Add(key); else Placed.Remove(key);
@@ -73,6 +78,7 @@ public partial class Game
     {
         var l = new List<int>(); if (W.GenObj == null) return l.ToArray(); var bk = BuildingKeys();
         for (int i = 0; i < W.Obj.Length && l.Count < 90000; i++) if (W.Obj[i] != W.GenObj[i] && !bk.Contains(i) && SyncTile((Tl)W.GenObj[i], (Tl)W.Obj[i])) { l.Add(i); l.Add(W.Obj[i]); l.Add(Placed.Contains(i) ? 1 : 0); }
+        foreach (var cb in CutBush) { if (l.Count >= 90000) break; l.Add(cb); l.Add(BushCutCode); l.Add(0); }          // срубленные кусты
         return l.ToArray();
     }
 
@@ -106,6 +112,11 @@ public partial class Game
             if (beacon >= 2) foreach (var t in W.Seal1) SetObj(t.X, t.Y, Tl.None); if (beacon >= 3) foreach (var t in W.Seal2) SetObj(t.X, t.Y, Tl.None);
             if (beacon >= 4) foreach (var t in W.Seal3) SetObj(t.X, t.Y, Tl.None); if (beacon >= 5) foreach (var t in W.Seal4) SetObj(t.X, t.Y, Tl.None);
             Announce($"Центральный маяк: уровень {BeaconLevel}", "Напарник улучшил маяк — путь открыт", new Color("#d58cff"), "ancient");
+            if (beacon >= 6 && !Finished)
+            {
+                if (shBeacon < 0) { Finished = true; Dawn = 1; foreach (var a in W.Ancients) a.Lit = true; }       // вход в уже пройденный мир: свет возвращается без повтора финала
+                else StartFinale();                                                                              // маяк зажгли при нас: волна света и финал у всех, а не только у хоста
+            }
         }
         if ((boss & ~BossMask) != 0) { BossMask |= boss; Toast("Страж побеждён: прогресс общий"); }
         shBeacon = BeaconLevel; shBoss = BossMask; return true;

@@ -127,7 +127,7 @@ public partial class Hud : Control
     void DrawBossBar(Vector2 vs)
     {
         var b = FightBoss; if (b == null) return;      // полоса босса только пока он рядом (в сети она оставалась после смерти игрока)
-        float w = 200, x = topCx - w * .5f;
+        float w = 200, x = Mathf.Round(vs.X * .5f - w * .5f);      // по центру экрана
         Panel(new Rect2(x - 6, 4, w + 12, 24), "PanelGold");
         Txt(Game.EnemyName(b.Kind), new Vector2(x, 14), 9, new Color("#f0c8ff"), HorizontalAlignment.Center, w);
         Bar(new Rect2(x, 17, w, 7), b.Hp / b.MaxHp, "HpBar");

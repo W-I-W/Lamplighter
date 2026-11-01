@@ -102,7 +102,7 @@ public partial class Game
         Tl.Chest => "Сундук", Tl.Shrine => "Святилище света", Tl.Obelisk => "Обелиск", Tl.Cage => "Клетка с пленником", Tl.Machine or Tl.MachineOn => "Механизм древних",
         Tl.Mirror1 or Tl.Mirror2 => "Кристальное зеркало", Tl.BridgeBroken => "Разрушенный мост", Tl.Seal => "Печать", Tl.Receiver or Tl.ReceiverOn => "Приёмник света",
         Tl.TechCache => "Постамент", Tl.Spire => "Шпиль света", Tl.Altar or Tl.AltarOn => "Алтарь лучей", Tl.Tablet => "Записка", Tl.FalseLantern => "Огонёк",
-        Tl.Pylon or Tl.PylonOn => "Древнее светило", Tl.RiftGate => "Врата разломов", _ => "Объект"
+        Tl.Pylon or Tl.PylonOn => "Древнее светило", Tl.RiftGate => "Врата разломов", Tl.Grave => "Могила", _ => "Объект"
     };
 
     /// <summary>Один проход системы: сбор объектов, выбор, подготовка Cur для клавиш E/U и панели.</summary>
@@ -130,6 +130,13 @@ public partial class Game
     string MissingStr(int[][] cost)
     {
         var l = new List<string>(); foreach (var c in cost) { int have = HaveAny(c[0]); if (have < c[1]) l.Add($"{It.Ic(c[0])}{It.Names[c[0]]} {have}/{c[1]}"); }
+        return string.Join(" · ", l);
+    }
+
+    /// <summary>То же без значков: «Кристалл 2/4 · Серебро 0/3» (для подписей в окнах).</summary>
+    public string MissingPlain(int[][] cost)
+    {
+        var l = new List<string>(); foreach (var c in cost) { int have = HaveAny(c[0]); if (have < c[1]) l.Add($"{Loc.T(It.Names[c[0]])} {have}/{c[1]}"); }
         return string.Join(" · ", l);
     }
 

@@ -32,6 +32,10 @@ public partial class Game
         foreach (var rp in Remotes()) if (rp.Hp > 0 && n < LightLimit - 20) arr[n++] = new Vector4(rp.Shown.X, rp.Shown.Y, rp.Light * fl, 0);      // свет других игроков: каждый видит свет остальных
         foreach (var a in W.Ancients) if (a.Lit && n < LightLimit) arr[n++] = new Vector4(a.Pos.X, a.Pos.Y, AncientR(a), Mathf.Max(a.Anim < 1 ? 1 - a.Anim : 0, a.Pulse));
         foreach (var l in Lamps) if (n < LightLimit) arr[n++] = new Vector4(l.Pos.X, l.Pos.Y, LampRad(l) * (1f + .02f * Mathf.Sin(Time * 9f + l.Pos.X) + .012f * Mathf.Sin(Time * 23f + l.Pos.Y * 1.3f)), 0);
+        // печь горит: небольшой тёплый свет вокруг неё (ищем только в видимой области)
+        { var ct = ToTile(CamCenter); int rx = (int)(vs.X / Zoom / TS / 2) + 3, ry = (int)(vs.Y / Zoom / TS / 2) + 3;
+          for (int y = ct.Y - ry; y <= ct.Y + ry && n < LightLimit - 30; y++) for (int x = ct.X - rx; x <= ct.X + rx && n < LightLimit - 30; x++)
+              if (World.In(x, y) && W.Get(x, y) == Tl.Furnace) { var fp = TileCenter(x, y); arr[n++] = new Vector4(fp.X, fp.Y, 40f * (1f + .05f * Mathf.Sin(Time * 8f + x) + .03f * Mathf.Sin(Time * 19f + y)), 0); } }
         foreach (var b in Beacons) if (n < LightLimit) arr[n++] = new Vector4(b.Pos.X, b.Pos.Y, BeaconR(b), b.Ring * (1 - b.T / b.Dur));
         foreach (var p in BeamLights) if (n < LightLimit - 26) arr[n++] = new Vector4(p.X, p.Y, 34, 0);
         foreach (var z in ZoneLights()) if (n < LightLimit - 12) arr[n++] = z;

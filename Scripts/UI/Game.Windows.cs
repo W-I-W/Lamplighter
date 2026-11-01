@@ -15,7 +15,7 @@ public partial class Game
     public bool TradeOpen => Window == Win.Trade;
     public static readonly string[] EquipTabs = { "Оружие", "Реликвии", "Создание", "Фонарь" };
 
-    public void CloseWindows() { Window = Win.None; TechOpen = false; MapOpen = false; }
+    public void CloseWindows() { Window = Win.None; TechOpen = false; MapOpen = false; TravelMode = false; }
 
     void OpenWin(Win w)
     {
@@ -54,9 +54,12 @@ public partial class Game
 
     /// <summary>Постройки выбранной категории (BuildCat: 0 — базовое, 1 — производство, 2 — декор).</summary>
     /// <summary>Доступное — первым, закрытое — после него и приглушённое; закрытых показываем не больше трёх (ближайшие к открытию), чтобы в начале игры не было десятков вариантов.</summary>
+    /// <summary>Здание деревни существует в одном экземпляре: когда оно уже стоит (и нет лишнего в запасе), из списка строительства оно пропадает.</summary>
+    bool BuiltOnce(BuildEntry e) => e.Key.StartsWith("bld") && int.TryParse(e.Key.Substring(3), out var k) && k >= 0 && k < BCount && HasBuilding(BTypes[k]) && StockOf(e.Key) == 0;
+
     public List<BuildEntry> BuildEntriesFiltered()
     {
-        var all = BuildEntries().FindAll(e => e.Cat == BuildCat + 1);
+        var all = BuildEntries().FindAll(e => e.Cat == BuildCat + 1 && !BuiltOnce(e));
         var open = all.FindAll(e => e.Unlocked); var shut = all.FindAll(e => !e.Unlocked); if (shut.Count > 3) shut = shut.GetRange(0, 3);
         open.AddRange(shut); return open;
     }
@@ -196,8 +199,8 @@ public partial class Game
 
     void EquipKey(Key k, bool shift = false)
     {
-        if (k == Key.Left) { WinTab = (WinTab + 3) % 4; WinCur = 0; return; }
-        if (k == Key.Right) { WinTab = (WinTab + 1) % 4; WinCur = 0; return; }
+        if (k == Key.Left) { WinTab = (WinTab + 3) % 4; if (WinTab == 2 && !CraftTabAvail) WinTab = 1; WinCur = 0; return; }
+        if (k == Key.Right) { WinTab = (WinTab + 1) % 4; if (WinTab == 2 && !CraftTabAvail) WinTab = 3; WinCur = 0; return; }
         bool enter = k == Key.Enter || k == Key.KpEnter;
         switch (WinTab)
         {

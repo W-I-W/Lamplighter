@@ -82,7 +82,7 @@ public partial class Game
             if (prev == Tl.None) { SetObj(tree.X, yb, Tl.Tree); Check(CrownAt(tree.X, yb - 1) == Art.TreeTop, "trees: the crown of a tree on a chunk border is drawn in the neighbouring chunk"); SetObj(tree.X, yb, Tl.None); Check(CrownAt(tree.X, yb - 1) == -1, "trees: and removed with it"); }
             // кусты: ломаются с одного удара и дают 1 дерево
             for (int r = 2; r < 40 && bush.X < 0; r++) for (int dy = -r; dy <= r && bush.X < 0; dy++) for (int dx = -r; dx <= r && bush.X < 0; dx++)
-                { if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue; int x = tree.X + dx, y = tree.Y + dy; if (World.In(x, y) && ChunkAt(x, y) != null && IsBushAt(x, y)) bush = new Vector2I(x, y); }
+                { if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue; int x = tree.X + dx, y = tree.Y + dy; if (World.In(x, y) && ChunkAt(x, y) != null && IsBushAt(x, y) && ForageIdAt(new Vector2I(x, y)) == FoliageBush) bush = new Vector2I(x, y); }
             Check(bush.X >= 0, "trees: bushes exist in the forest");
         });
         S(.3f, () =>

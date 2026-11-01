@@ -7,7 +7,7 @@ namespace Lamplighter;
 public sealed class OwnedWeapon { public string Id; public int Lv; public List<int> Mods = new(); }
 public sealed class PProj
 {
-    public Vector2 Pos, Vel; public float Dmg, Life, Blast; public int Pierce, Kind; public Color C; public HashSet<Enemy> Hit = new();
+    public Vector2 Pos, Vel; public float Dmg, Life, Life0, Blast; public int Pierce, Kind; public Color C; public HashSet<Enemy> Hit = new();
 }
 public sealed class BoltFx { public Vector2 A, B; public float T = .18f; public Color C = new("#d0b0ff"); }
 
@@ -204,7 +204,8 @@ public partial class Game
     void FireProj(int kind, Vector2 dir, float dmg, float speed, int pierce, float life, float blast = 0)
     {
         var col = kind == 2 ? (E(Fxk.Burn) > 0 ? new Color("#ff8a2a") : new Color("#fff2b0")) : ElemColor();
-        PProjs.Add(new PProj { Pos = PPos + dir * 8, Vel = dir * speed, Dmg = dmg, Life = kind == 2 ? .35f : life, Pierce = pierce, Kind = kind, C = col, Blast = blast });
+        float lf0 = kind == 2 ? .35f : life;
+        PProjs.Add(new PProj { Pos = PPos + dir * 8, Vel = dir * speed, Dmg = dmg, Life = lf0, Life0 = lf0, Pierce = pierce, Kind = kind, C = col, Blast = blast });
         OnWeaponFired(kind, PPos + dir * 8, dir, col);
     }
 
@@ -245,7 +246,7 @@ public partial class Game
                 if (e.Hidden || p.Hit.Contains(e) || e.Pos.DistanceTo(p.Pos) > e.Radius + 3) continue;
                 p.Hit.Add(e);
                 if (p.Kind == 2 && e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { ReflectLight(e); p.Pierce = -1; dead = true; break; }
-                HitEnemy(e, p.Dmg, dir, false, 0, p.Kind == 2);
+                HitEnemy(e, p.Dmg * RangeFalloff(p), dir, false, 0, p.Kind == 2);
                 if (p.Kind == 1) OrbBurst(p, e);
                 if (p.Pierce-- <= 0) { dead = true; break; }
             }
@@ -254,10 +255,24 @@ public partial class Game
         }
     }
 
+    /// <summary>Стрелы и шары слабеют с дальностью: первые 30% полёта — полный урон, к концу полёта — 40%. Так из света, где враги держатся на расстоянии, стрелять выгодно хуже, чем вблизи.</summary>
+    public static float RangeFalloff(PProj p)
+    {
+        if (p.Kind == 2 || p.Life0 <= 0f) return 1f;
+        float t = 1f - Mathf.Clamp(p.Life / p.Life0, 0f, 1f); return t <= .3f ? 1f : Mathf.Lerp(1f, .4f, Mathf.Clamp((t - .3f) / .7f, 0f, 1f));
+    }
+
+    /// <summary>Дальность выстрела выбранного оружия в пикселях (0 — ближний бой).</summary>
+    public float ShotRange()
+    {
+        if (CurW < 0 || CurW >= Owned.Count) return 0f; var w = Db.Weapon(Owned[CurW].Id); if (w == null || (w.Cls != WClass.Bow && w.Cls != WClass.Staff)) return 0f;
+        float oc = 1f + E(Tech.Overcharge); return w.Speed * oc * (w.Cls == WClass.Bow ? .75f : .9f) * oc;
+    }
+
     void OrbBurst(PProj p, Enemy skip)
     {
         float r = p.Blast > 0 ? p.Blast : 22f;
-        foreach (var o in new List<Enemy>(Enemies)) if (o != skip && !o.Hidden && o.Pos.DistanceTo(p.Pos) < r + o.Radius) HitEnemy(o, p.Dmg * .6f, (o.Pos - p.Pos).Normalized(), false, 1);
+        foreach (var o in new List<Enemy>(Enemies)) if (o != skip && !o.Hidden && o.Pos.DistanceTo(p.Pos) < r + o.Radius) HitEnemy(o, p.Dmg * RangeFalloff(p) * .6f, (o.Pos - p.Pos).Normalized(), false, 1);
         Burst(p.Pos, p.C, 10, 70); Sfx.Play("tick", -3, .7f);
     }
 

@@ -17,9 +17,12 @@ public partial class CombatTuning : Resource
     [Export] public float EnemyHp = 1.5f;
     [Export] public float EnemySpeed = 1.15f;
     [Export] public float EnemyAttackRate = 1.15f;             // как быстро восстанавливаются паузы между атаками
+    [Export] public float EnemyAtkPause = 1.7f;                // во сколько раз длиннее паузы между атаками обычных врагов (боссов не касается): бьют реже
+    [Export] public float EnemyMinHit = 60f;                   // минимальный урон любого удара по герою (после защиты от огня, до страха тени)
+    [Export] public float FistDamageMul = 3f;                  // множитель урона PlayerDamage (удар рукой и инструментом без оружия)
     [Export] public float[] BiomeDamage = { 1f, 1.15f, 1.3f, 1.5f, 1.7f };
     [Export] public float[] BiomeHp = { 1f, 1.2f, 1.4f, 1.6f, 1.8f };
-    [Export] public float SpawnDelayMul = 1.8f, SpawnCapMul = .6f;     // реже появляются (×1,8 к паузе) и меньше одновременно (×0,6 к лимиту): лес можно спокойно обживать
+    [Export] public float SpawnDelayMul = 3.2f, SpawnCapMul = .4f;     // реже появляются (×3,2 к паузе) и меньше одновременно (×0,4 к лимиту): удары теперь тяжёлые, а врагов мало
     [Export] public int SpawnCapBonus = 2;                     // дополнительные враги на территории
     [Export] public int MaxAttackers = 3;                      // одновременно готовящихся ближних атак
     [Export] public float ShadeWindup = .38f;                  // подготовка рывка тени
@@ -33,7 +36,7 @@ public partial class CombatTuning : Resource
     [Export] public float[] BossDamage = { 1.25f, 1.3f, 1.35f, 1.4f, 1.5f };
     [Export] public float BossLeashTiles = 36f;                // пока игрок ближе этого расстояния (в клетках) от места босса, бой идёт; бросив бой дальше, игрок теряет босса
     [Export] public float BossRegenDelay = 8f, BossRegenRate = .03f;   // босс начинает восстанавливаться только после стольких секунд без игрока и медленно (доля здоровья в секунду)
-    [Export] public float BossTempo = 1f;                      // пауза между атаками босса (меньше — чаще)
+    [Export] public float BossTempo = .7f;                     // пауза между атаками босса (меньше — чаще): бои с боссами напряжённее, увернуться «на автомате» нельзя
     // игрок
     [Export] public float HitInvuln = .5f;
     [Export] public float RegenRate = .35f, RegenDelay = 5f;

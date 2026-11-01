@@ -101,12 +101,13 @@ public partial class EquipWindowUI : Control
     {
         if (G == null || G.W == null) return;
         bool show = G.Window == Win.Equip && G.Menu == Mn.None; Visible = show;
-        if (!show) { wasOpen = false; G.StationOpened = false; G.CraftMode = "hand"; return; }
+        if (!show) { wasOpen = false; G.StationOpened = false; G.CraftMode = "furnace"; return; }
         if (!wasOpen)
         {
             wasOpen = true; sig = ""; lastTab = -1; G.CraftResetSel(); panel.PivotOffset = panel.Size / 2; panel.Modulate = new Color(1, 1, 1, 0); panel.Scale = new Vector2(.96f, .96f);
             openTw?.Kill(); openTw = CreateTween().SetParallel(); openTw.TweenProperty(panel, "modulate", Colors.White, .12f); openTw.TweenProperty(panel, "scale", Vector2.One, .12f);   // короткое открытие
         }
+        if (G.WinTab == 2 && !G.CraftTabAvail) { if (G.StationOpened) { G.CloseWindows(); return; } G.WinTab = 0; G.WinCur = 0; }      // отошли от станции — вкладка пропала
         rebuildT -= (float)delta;
         string s = Signature(); if (s == sig || Input.IsMouseButtonPressed(MouseButton.Left)) return; sig = s; rebuildT = .25f; Refresh();      // перестраиваем только при изменении данных (иначе кнопки мигают под курсором) и не при зажатой мыши: иначе нажатие теряется
     }
@@ -115,7 +116,7 @@ public partial class EquipWindowUI : Control
     {
         var sb = new StringBuilder(); sb.Append(G.WinTab).Append('|').Append(G.WinCur).Append('|').Append(G.EqSocket).Append('|').Append(G.EqPick).Append('|').Append(G.EqShowAll).Append('|').Append(G.CurW).Append('|').Append(G.CurTool).Append('|').Append(G.HotSel).Append('|').Append(Loc.Lang);
         foreach (var h in G.Hot) sb.Append(h).Append(','); foreach (var m in G.ModInv) sb.Append(m).Append(',');
-        sb.Append(G.AxeLv).Append('|').Append(G.NearUpgrade()).Append('|').Append(G.OwnedRelics.Count).Append('|').Append(G.EquippedRelics.Count).Append('|').Append(G.CraftQty).Append('|').Append(G.CraftMode).Append(G.CraftOnlyReady).Append(G.StationOpened).Append('|').Append(G.HeroLampLv).Append('|').Append(G.Tier).Append('|').Append(G.Owned.Count);
+        sb.Append(G.AxeLv).Append('|').Append(G.NearUpgrade()).Append('|').Append(G.OwnedRelics.Count).Append('|').Append(G.EquippedRelics.Count).Append('|').Append(G.CraftQty).Append('|').Append(G.CraftMode).Append(G.CraftOnlyReady).Append(G.StationOpened).Append(G.CraftTabAvail).Append('|').Append(G.HeroLampLv).Append('|').Append(G.Tier).Append('|').Append(G.Owned.Count);
         foreach (var o in G.Owned) sb.Append(o.Mods.Count).Append('.').Append(o.Lv).Append(';');
         for (int i = 0; i < It.Count; i++) if (i == It.Wood || i == It.Stone || i == It.Copper || i == It.Iron || i == It.Silver || i == It.Crystal) sb.Append(G.Inv[i]).Append(',');
         if (G.WinTab >= 2) for (int i = 0; i < It.Count; i++) sb.Append(G.Inv[i]).Append(',');
@@ -164,7 +165,7 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < 4; i++)
         {
             var b = tabs[i]; b.Text = T(TabNames[i]); b.Icon = Px.Raised(icons[i], 2); bool act = i == G.WinTab;
-            b.ThemeTypeVariation = act ? "TabSelected" : "Tab"; b.AddThemeColorOverride("font_color", act ? Gold : Dim); b.AddThemeColorOverride("font_hover_color", act ? Gold : Text);
+            b.Visible = i != 2 || G.CraftTabAvail; b.ThemeTypeVariation = act ? "TabSelected" : "Tab"; b.AddThemeColorOverride("font_color", act ? Gold : Dim); b.AddThemeColorOverride("font_hover_color", act ? Gold : Text);
         }
     }
 
@@ -334,7 +335,7 @@ public partial class EquipWindowUI : Control
     {
         foreach (var cd in cards) cd.Visible = false; cells.Clear();
         var rows = G.CraftRows(); int sel = G.CraftSync(rows);
-        Texture2D GroupIcon(string g) => g == "hand" ? UiIcons.Item(UiIcons.Pickaxe) : g == "furnace" ? UiIcons.Tile(Art.Furnace) : UiIcons.Tile(Art.Forge);
+        Texture2D GroupIcon(string g) => g == "furnace" ? UiIcons.Tile(Art.Furnace) : UiIcons.Tile(Art.Forge);
         // режим и фильтр
         var top = new HBoxContainer(); top.AddThemeConstantOverride("separation", 2); centerBox.AddChild(top);
         var groups = G.CraftGroups(); string cg = G.CraftGroup();
@@ -342,7 +343,7 @@ public partial class EquipWindowUI : Control
         else top.AddChild(Lbl(Game.GroupName(cg), Gold, false, "GoldLabel"));
         top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         top.AddChild(Chip("Все", null, !G.CraftOnlyReady, () => G.EqCraftFilter(false))); top.AddChild(Chip("Доступные", null, G.CraftOnlyReady, () => G.EqCraftFilter(true)));
-        foot.Text = groups.Count > 1 ? T("Tab — режим · Enter — создать · двойной клик — создать") : T("Рецепты печи и кузницы открываются у станции [E]");
+        foot.Text = groups.Count > 1 ? T("Tab — режим · Enter — создать · двойной клик — создать") : T("Enter — создать · двойной клик — создать");
         if (rows.Count == 0)
         {
             centerBox.AddChild(new Control { CustomMinimumSize = new Vector2(0, 40) });
@@ -368,10 +369,10 @@ public partial class EquipWindowUI : Control
         var v = new VBoxContainer { CustomMinimumSize = new Vector2(150, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill }; v.AddThemeConstantOverride("separation", 4); body.AddChild(v);
         var st = G.StateOf(r); var bad = new Color("#f06a5e");
         bool up = r.IsUpgrade;
-        string status = up ? "Уже есть" : st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? (r.Extra != null && r.Extra() > 0 ? $"{T("в очереди")} {r.Extra()}" : "Можно создать") : "Не хватает ресурсов";
+        string status = up ? "Уже есть" : st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? (r.Extra != null && r.Extra() > 0 ? $"{T("в очереди")} {r.Extra()}" : r.Improves ? "Можно улучшить" : "Можно создать") : "Не хватает ресурсов";
         v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), up ? Cyan : st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad, T(up ? r.UpDesc ?? r.Desc ?? "" : r.Desc ?? "")));
         var cost = r.CostNow;
-        if (cost != null) foreach (var c in cost) { int have = G.Inv[c[0]]; v.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : bad)); }
+        if (cost != null) foreach (var c in cost) { int have = G.HaveAny(c[0]); v.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : bad)); }
         v.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
         if (up) v.AddChild(MainActionButtonUI.Make("Улучшить", () => { G.EqCraftRow(idx); Flash(centerBox); }, st == RecState.Ready, null));
         else if (r.Multi)
@@ -382,7 +383,7 @@ public partial class EquipWindowUI : Control
             var b5 = Btn("×5", null, () => { G.EqCraftQty(idx, 5); Flash(centerBox); }, max >= 5); b5.SizeFlagsHorizontal = SizeFlags.Fill; b5.CustomMinimumSize = new Vector2(28, 0); h.AddChild(b5);
             var bm = Btn(max >= 2 ? $"{T("Макс")} ×{max}" : "Макс", null, () => { G.EqCraftQty(idx, max); Flash(centerBox); }, max >= 2); bm.SizeFlagsHorizontal = SizeFlags.Fill; bm.CustomMinimumSize = new Vector2(50, 0); h.AddChild(bm);
         }
-        else v.AddChild(MainActionButtonUI.Make("Создать", () => { G.EqCraftRow(idx); Flash(centerBox); }, st == RecState.Ready, st == RecState.Owned ? T("Это уже у вас есть.") : null));
+        else v.AddChild(MainActionButtonUI.Make(r.Improves ? "Улучшить" : "Создать", () => { G.EqCraftRow(idx); Flash(centerBox); }, st == RecState.Ready, st == RecState.Owned ? T("Это уже у вас есть.") : null));
     }
 
     // ───────────────────────── вкладка «Фонарь» ─────────────────────────

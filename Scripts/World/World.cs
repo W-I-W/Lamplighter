@@ -13,7 +13,7 @@ public enum Tl : byte
     CrystalLantern, CombatLantern, Rubble, BridgeBroken, Bridge, Deep, Seal, SecretDoor, Drill, Collector,
     DeadTree, Obsidian, Ember, AshRuin, Vent,
     TechCache, Spire, Altar, AltarOn, SecretCache, Stall, Hub, Refinery, AmpCrystal, BarrierPost, MeteorOre,
-    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge
+    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge, Grave
 }
 
 public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret, Lore, Tower, Vault, Glade, SparkAltar, RuneObelisk, GiantTree, Survivor }
@@ -92,8 +92,8 @@ public sealed partial class World
                 int d = Math.Min(Math.Min(x, y), Math.Min(N - 1 - x, N - 1 - y));
                 if (d < 2 + (int)((edge.GetNoise2D(x, y) + 1f) * 1.2f)) { w.Obj[i] = (byte)Tl.Cliff; continue; }
                 double q = rng.NextDouble();
-                if (forest.GetNoise2D(x, y) > .22f && q < .5) w.Obj[i] = (byte)Tl.Tree;
-                else if (q < .012) w.Obj[i] = (byte)Tl.Tree;
+                if (forest.GetNoise2D(x, y) > .22f && q < .3) w.Obj[i] = (byte)Tl.Tree;
+                else if (q < .008) w.Obj[i] = (byte)Tl.Tree;
                 else if (q < .022) w.Obj[i] = (byte)Tl.Stone;
             }
 
@@ -163,9 +163,27 @@ public sealed partial class World
         w.EnsureStoryReachable();
         w.ClearBlockedCrowns();
         w.EnsureStartResources(seed);
+        w.CloseSealGaps();
         w.GenObj = (byte[])w.Obj.Clone();
         w.ScaleLampCosts();
         return w;
+    }
+
+    /// <summary>Печати стоят в проходе, но у краёв (над верхней и под нижней клеткой печати) могла остаться свободная клетка: через неё можно было обойти печать. Колонка печати продлевается, пока не упрётся в препятствие.</summary>
+    void CloseSealGaps()
+    {
+        foreach (var seal in new[] { Seal1, Seal2, Seal3, Seal4 })
+        {
+            if (seal.Count == 0) continue; var xs = new HashSet<int>(); int y0 = int.MaxValue, y1 = int.MinValue;
+            foreach (var t in seal) { xs.Add(t.X); y0 = Math.Min(y0, t.Y); y1 = Math.Max(y1, t.Y); }
+            var extra = new List<Vector2I>();
+            foreach (var x in xs)
+            {
+                for (int y = y0 - 1; y > y0 - 40 && In(x, y) && !Blocks(Get(x, y)); y--) { extra.Add(new Vector2I(x, y)); }
+                for (int y = y1 + 1; y < y1 + 40 && In(x, y) && !Blocks(Get(x, y)); y++) { extra.Add(new Vector2I(x, y)); }
+            }
+            foreach (var e in extra) { Set(e.X, e.Y, Tl.Seal); seal.Add(e); }
+        }
     }
 
     public const float LampCostBase = 1.8f, LampCostPerTile = 1f / 80f;      // цена зажигания = базовая цена фонаря × (1,8 + расстояние от Центрального маяка в клетках / 80)

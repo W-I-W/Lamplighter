@@ -108,7 +108,7 @@ public sealed class Campaign
         if (dark > 0) Exposure(dark, reg, hunt, ref bucket);
     }
 
-    void Regen(float s, bool lit) { if (p.Hp < p.MaxHp) p.Hp = Math.Min(p.MaxHp, p.Hp + (lit ? 4f : p.RegenPerSec) * s); }
+    void Regen(float s, bool lit) { if (p.Hp < p.MaxHp) p.Hp = Math.Min(p.MaxHp, p.Hp + (lit ? 2f : p.RegenSkill ? p.RegenPerSec : 0f) * s); }
 
     EnemyM Pick(int reg, bool guardMode = false)
     {

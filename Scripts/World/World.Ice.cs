@@ -42,10 +42,10 @@ public sealed partial class World
         }
         int gy = IceGateY;
         for (int y = gy - 3; y <= gy + 3; y++) for (int x = 358; x <= AX1; x++) { Set(x, y, Tl.None); Ground[Key(x, y)] = (byte)Art.AshFloor; }
-        for (int y = gy - 3; y <= gy + 3; y++) { Set(366, y, Tl.Seal); Set(367, y, Tl.Seal); Seal3.Add(new Vector2I(366, y)); Seal3.Add(new Vector2I(367, y)); }
+        for (int y = gy - 3; y <= gy + 3; y++) { Set(382, y, Tl.Seal); Set(383, y, Tl.Seal); Seal3.Add(new Vector2I(382, y)); Seal3.Add(new Vector2I(383, y)); }
         for (int y = gy - 4; y <= gy + 4; y++) for (int x = IX0; x <= IX0 + 18; x++) { Set(x, y, Tl.None); Ground[Key(x, y)] = (byte)Art.Snow; }
         for (int y = 61; y <= 67; y++) for (int x = 484; x <= IX1; x++) { Set(x, y, Tl.None); Ground[Key(x, y)] = (byte)Art.Snow; }
-        for (int y = 61; y <= 67; y++) { Set(494, y, Tl.Seal); Set(495, y, Tl.Seal); Seal4.Add(new Vector2I(494, y)); Seal4.Add(new Vector2I(495, y)); }
+        for (int y = 61; y <= 67; y++) { Set(511, y, Tl.Seal); Set(512, y, Tl.Seal); Seal4.Add(new Vector2I(511, y)); Seal4.Add(new Vector2I(512, y)); }
         var ent = new Vector2I(IX0 + 8, gy);
         var kit = new RegionKit(this, r, IX0, IX1, ent);
         kit.Taken.Add((ent, 14)); kit.Taken.Add((new Vector2I(490, 64), 10));

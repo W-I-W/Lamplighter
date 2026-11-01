@@ -21,7 +21,7 @@ public partial class Game
                 Log($"weapon {w.Id,-10} class={w.Cls,-5} tier={w.Tier} dmg={WeaponDmg(w):F1} cd={w.Cd:F2} dps1={one:F1} dps5~{group:F1}");
             }
             // 2) эффекты: каждый ключ должен быть известен коду
-            var known = new HashSet<string>(Enum.GetNames(typeof(Fxk))) { "Flag", "Luck", "LampRadius", "HeroRadius", "Speed", "MineChain", "KillHeal", "Trade", "HeatResist", "Dmg", "MineSpd", "Prod", "Reveal" };
+            var known = new HashSet<string>(Enum.GetNames(typeof(Fxk))) { "Flag", "Luck", "LampRadius", "HeroRadius", "Speed", "MineChain", "KillHeal", "Trade", "HeatResist", "Dmg", "MaxHp", "MaxHpPct", "MineSpd", "Prod", "Reveal" };
             foreach (var r in Db.Relics)
             {
                 if (r.Effects.Length == 0) { Log($"DEAD relic (no effects): {r.Id}"); fails++; }

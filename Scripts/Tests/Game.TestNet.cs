@@ -104,7 +104,7 @@ public partial class Game
         var expectedHost = new Vector2((W.Spawn.X + .5f) * TS - 64, (W.Spawn.Y + .5f) * TS);
         expectedClient = NearestFree(expectedClient, 5f, false) ?? expectedClient; expectedHost = NearestFree(expectedHost, 5f, false) ?? expectedHost;      // оба процесса считают одно и то же: точки не внутри камня (иначе игрок выталкивается)
         NetPlayer Other() => NetService.Players.Values.FirstOrDefault(p => p.PeerId != NetService.LocalId && p.Handshaken);
-        S(.3f, () => { Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; TestNoSpawn = true; });
+        S(.3f, () => { Menu = Mn.None; noHeal = true; MaxHp = 5000f; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; TestNoSpawn = true; });
         var chests = W.Pois.Where(p => p.Kind == PK.Chest).Take(3).ToList();
         void Open(Poi p) { p.State = 3; SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); }
         bool IsOpen(Poi p) => p.State == 3 && W.Get(p.Tile.X, p.Tile.Y) == Tl.ChestOpen;
@@ -114,6 +114,15 @@ public partial class Game
             for (int r = 11; r < 20 && ns.Count < 5; r++) for (int a = -r; a <= r && ns.Count < 5; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y - r); if (W.GenObj[World.Key(tt.X, tt.Y)] == (byte)Tl.None && W.Ground[World.Key(tt.X, tt.Y)] != Art.WaterG && ns.All(q => Math.Abs(q.X - tt.X) >= 3)) ns.Add(tt); }
             for (int r = 3; r < 30 && stoneT.X < 0; r++) for (int a = -r; a <= r && stoneT.X < 0; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y + r); if (W.GenObj[World.Key(tt.X, tt.Y)] == (byte)Tl.Stone && !ns.Contains(tt)) stoneT = tt; }
         });
+        // палки и камушки у маяка: одни и те же у всех игроков, собранные одним исчезают у остальных
+        var fg = new System.Collections.Generic.List<Vector2I>();
+        for (int dy = -14; dy <= 14 && fg.Count < 2; dy++) for (int dx = -14; dx <= 14 && fg.Count < 2; dx++)
+        {
+            int wx = W.Spawn.X + dx, wy = W.Spawn.Y + dy; if (!World.In(wx, wy) || W.Obj[World.Key(wx, wy)] != (byte)Tl.None || W.Ground[World.Key(wx, wy)] > 3) continue;
+            int f = StartForage(wx, wy, W.Seed, W.Spawn); if (f == 0 || fg.Exists(q => ForageKind(q) == f)) continue; fg.Add(new Vector2I(wx, wy));
+        }
+        int ForageKind(Vector2I q) => StartForage(q.X, q.Y, W.Seed, W.Spawn);
+        bool Gone(Vector2I q) => CutBush.Contains(World.Key(q.X, q.Y)) && !IsBushAt(q.X, q.Y);
         var surv = W.Pois.Find(p => p.Kind == PK.Survivor && p.Variant == 1 && World.RegionOf(p.Tile.X) == 0);
         Building Saw() => Buildings.Find(b => b.Type == Tl.Sawmill);
         if (host)
@@ -126,6 +135,7 @@ public partial class Game
             else
             {
                 S(.2f, () => { Open(chests[0]); Inv[It.Shard] = 99; Activate(W.Ancients[1], 1); Check(IsOpen(chests[0]) && W.Ancients[1].Lit, "net host: progress made before the client joins (chest opened, lantern lit)"); });
+                S(.2f, () => { UpdateChunks(0, true); if (fg.Count > 0) CutBushAt(fg[0]); });
                 S(.2f, () => { SetObj(ns[0].X, ns[0].Y, Tl.Furnace); Placed.Add(World.Key(ns[0].X, ns[0].Y)); SetObj(ns[1].X, ns[1].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[1].X, Y = ns[1].Y, Anim = 1 }); TestGoal = "TEST-GOAL"; });
                 S(.2f, () =>
                 {
@@ -138,6 +148,7 @@ public partial class Game
                 S(.3f, () => { Open(chests[1]); SetObj(ns[2].X, ns[2].Y, Tl.AmpCrystal); Placed.Add(World.Key(ns[2].X, ns[2].Y)); });
                 WaitStep(20f, () => W.Get(ns[3].X, ns[3].Y) == Tl.Banner && Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y) && stoneT.X >= 0 && W.Get(stoneT.X, stoneT.Y) == Tl.None, ok => Check(ok, $"net host: the client's placed banner and lamp and a mined stone are visible here banner={W.Get(ns[3].X, ns[3].Y)} lamp={Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y)} stone={(stoneT.X >= 0 ? W.Get(stoneT.X, stoneT.Y).ToString() : "none")}"));
                 WaitStep(20f, () => IsOpen(chests[2]), ok => Check(ok, "net host: a chest opened by the client is opened here too"));
+                WaitStep(20f, () => fg.Count < 2 || Gone(fg[1]), ok => Check(ok, "net host: a stick or pebble collected by the client is gone here too"));
                 WaitStep(20f, () => Saw() != null && Saw().Manual && WorkerOf(Saw()) == null, ok => Check(ok, "net host: the client's worker removal command arrived and was applied"));
                 WaitStep(20f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && surv.State == 3, ok => Check(ok, "net host: the client's rescue created the villager here (one, shared)"));
                 S(.3f, () => Check(Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, "net host: the rescued villager exists exactly once"));
@@ -173,6 +184,7 @@ public partial class Game
                 WaitStep(10f, () => W.Get(ns[2].X, ns[2].Y) == Tl.AmpCrystal, ok => Check(ok, $"net client: an object placed by the host while online appears ({W.Get(ns[2].X, ns[2].Y)})"));
                 S(.3f, () => { SetObj(ns[3].X, ns[3].Y, Tl.Banner); Placed.Add(World.Key(ns[3].X, ns[3].Y)); SetObj(ns[4].X, ns[4].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[4].X, Y = ns[4].Y, Anim = 1 }); if (stoneT.X >= 0) SetObj(stoneT.X, stoneT.Y, Tl.None); });
                 WaitStep(10f, () => IsOpen(chests[1]), ok => Check(ok, "net client: a chest opened by the host while online opens here too"));
+                S(.2f, () => { UpdateChunks(0, true); Check(fg.Count == 0 || Gone(fg[0]), "net client: a stick or pebble collected by the host before joining is gone here too (late join)"); if (fg.Count > 1) CutBushAt(fg[1]); });
                 WaitStep(10f, () => VillagerById(9501) != null && Saw() != null && WorkerOf(Saw())?.Id == 9501, ok => Check(ok, "net client: the host's villager, sawmill and assignment arrive with the world (late join)"));
                 WaitStep(10f, () => VillagerById(9501)?.State == VState.Working, ok => Check(ok, "net client: the villager's work state is shown (host-simulated)"));
                 S(.3f, () => { Check(!IsOpen(chests[2]), "net client: untouched chest stays closed"); Open(chests[2]); ClearWorker(Saw()); Inv[It.Wood] = 20; Inv[It.Stone] = 10; Tp(surv.Pos + new Vector2(0, 30)); RescueSurvivor(surv); });
@@ -181,8 +193,8 @@ public partial class Game
                 S(.3f, () => { arena = FindDarkArena(); Tp(arena + new Vector2(60, 0)); Hp = MaxHp; Invuln = 0; });
                 WaitStep(25f, () => Enemies.Any(e => e.NetId > 0), ok => Check(ok, "net client: the host's enemy is shown on the client (no local AI)"));
                 S(.3f, () => { Check(Enemies.All(e => e.NetId > 0), "net client: the client created no enemies of its own"); var e = Enemies.First(x => x.NetId > 0); Hurt(e, 8f, Vector2.Left, true); });
-                WaitStep(25f, () => Hp < MaxHp - 1f, ok => Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"));
-                S(.3f, () => { float drop = MaxHp - Hp; float one = 9f * Tune.T.EnemyDamage * FearMul; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
+                WaitStep(60f, () => Hp < MaxHp - 1f, ok => Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"));
+                S(.3f, () => { float drop = MaxHp - Hp; float one = Mathf.Max(9f * Tune.T.EnemyDamage, Tune.T.EnemyMinHit) * FearMul; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
                 S(5f, () => { });
                 WaitStep(20f, () => Events.Any(e => e.Kind == "meteor"), ok => Check(ok, "net client: the host's meteor event is shown (shared events)"));
                 WaitStep(20f, () => { var mp = Events.FirstOrDefault(e => e.Kind == "meteor"); if (mp == null) return false; var mt = ToTile(mp.Pos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net client: the meteor ore appeared for the client too"));

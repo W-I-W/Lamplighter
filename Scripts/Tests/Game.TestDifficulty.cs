@@ -32,7 +32,7 @@ public partial class Game
 
         S(.3f, () =>
         {
-            Menu = Mn.None; noHeal = true; Hp = MaxHp; Enemies.Clear(); Projs.Clear(); EventsEnabled = false; TestPlayers = 0;
+            Menu = Mn.None; noHeal = true; MaxHp = 5000f; Hp = MaxHp; Enemies.Clear(); Projs.Clear(); EventsEnabled = false; TestPlayers = 0;      // удар врага не меньше EnemyMinHit: герою на 60 здоровья хватило бы одного удара, а проверки смотрят на серию
             spot = FindDarkArena();
             Check(spot != default, "setup: a dark free arena exists"); Tp(spot);
             var t = Tune.T; Check(t.BiomeDamage.Length == 5 && t.CoopEnemyHp.Length == 4 && t.BossHp.Length == 5 && t.EnemyDamage > 1f, "tuning: all numbers come from Resources/Combat/tuning.tres");
@@ -47,7 +47,7 @@ public partial class Game
             TestPlayers = 0; Enemies.Clear();
             // ориентиры для ручной настройки (не проверка баланса)
             var shade = EnemyMuls(EK.Shade, p[0]); float hit = 9f * DangerScale * shade.dmg; float shp = 7f * DangerScale * shade.hp;
-            Check(Mathf.Ceil(shp / 5f) is >= 2 and <= 4 && Mathf.Ceil(60f / hit) is >= 4 and <= 7, $"start: a Shade has {shp:0.0} hp ({Mathf.Ceil(shp / 5f)} sword hits) and hits for {hit:0.0} of 60 ({Mathf.Ceil(60f / hit)} hits to die)");
+            Check(Mathf.Ceil(shp / 5f) is >= 2 and <= 4 && hit < Tune.T.EnemyMinHit * 2f, $"start: a Shade has {shp:0.0} hp ({Mathf.Ceil(shp / 5f)} sword hits) and its hit {hit:0.0} is raised to the minimum {Tune.T.EnemyMinHit:0}");
         });
 
         // ── ближний враг: подготовка → рывок → пауза
@@ -119,7 +119,7 @@ public partial class Game
             Enemies.Clear(); Projs.Clear(); PPos = spot; Hp = MaxHp; TestPlayers = 0;
             var w = SpawnEnemy(spot + new Vector2(60, 0), EK.Warden, null, 1f); Check(Mathf.Abs(w.MaxHp - 170f * Tune.T.BossHp[0]) < .01f, $"boss: the first guardian has {w.MaxHp:0} health (base 170 × {Tune.T.BossHp[0]})");
             w.Pos = spot + new Vector2(10, 0); w.Home = w.Pos; w.State = 0; w.Atk = 0; w.T1 = 5f; Invuln = 0; float h = Hp; UpdateEnemies(.033f);
-            Check(Mathf.Abs((h - Hp) - 12f * Tune.T.BossDamage[0] * FearMul) < .05f, $"boss: contact damage is scaled by the Resource ({h - Hp:0.0} = 12 × {Tune.T.BossDamage[0]})");
+            Check(Mathf.Abs((h - Hp) - Mathf.Max(12f * Tune.T.BossDamage[0], Tune.T.EnemyMinHit) * FearMul) < .05f, $"boss: contact damage is scaled by the Resource ({h - Hp:0.0} = 12 × {Tune.T.BossDamage[0]})");
             Enemies.Clear(); TestPlayers = 4; var w4 = SpawnEnemy(spot + new Vector2(60, 0), EK.Warden, null, 1f); Check(w4.MaxHp > w.MaxHp * 1.5f && BossTempoMul() < 1f, $"boss: four players — more health ({w4.MaxHp:0}) and a faster tempo (×{BossTempoMul():0.00})");
             TestPlayers = 0; Enemies.Clear();
         });
@@ -168,16 +168,16 @@ public partial class Game
                 var beforeObj = (byte[])W.Obj.Clone(); for (int i = 0; i < 50; i++) { scarceT = 0; UpdateScarcity(1f); }
                 int trees = 0, near = 0, litN = 0, total = 0;
                 for (int i = 0; i < W.Obj.Length; i++) if (W.Obj[i] != beforeObj[i] && beforeObj[i] == (byte)Tl.None) { total++; var c2 = TileCenter(i % World.Wd, i / World.Wd); if (W.Obj[i] == (byte)Tl.Tree) trees++; if (c2.DistanceTo(spot) < 12 * TS) near++; if (IsLit(c2)) litN++; }
-                Check(removed > 50 && trees >= 40 && near == 0 && litN == 0, $"resources: after the area was stripped ({removed} blocks) {total} new blocks appeared ({trees} trees), none within 12 tiles of the player or in the light");
+                Check(removed > 50 && trees >= 5 && trees <= ResourceFloor && near == 0 && litN == 0, $"resources: after the area was stripped ({removed} blocks) {total} new blocks appeared ({trees} trees, at most {ResourceFloor} of each kind), none within 12 tiles of the player or in the light");
             }
             Check(Tune.T.MineTimeMul > 1f && Tune.T.RegrowMul < 1f && Tune.T.XpMul < 1f, "economy: mining time, regrowth and experience are tuned from the Resource");
             float m0 = Settings.Music, s0 = Settings.Sfx; SetVolume(0, .3f); SetVolume(1, .7f); Check(Mathf.IsEqualApprox(Settings.Music, .3f) && Mathf.IsEqualApprox(Settings.Sfx, .7f), "ui: volume is set by clicking the bar (values snap to 10%)");
             Settings.Music = m0; Settings.Sfx = s0; Settings.ApplyAudio(); Settings.Save();
-            // враг в освещённой зоне (замедлен вдвое) не должен бесконечно кружить рядом и не наносить урона
+            // пока игрок стоит в свете, обычный враг держится за его границей и не наносит урона
             {
                 var lit = TileCenter(W.Spawn.X, W.Spawn.Y); Tp(lit); Enemies.Clear(); Projs.Clear(); Hp = MaxHp; Invuln = 0; noHeal = true; bool wasLit = IsLit(PPos);
                 spot = lit; var sh = Mk(EK.Shade, new Vector2(38, 0)); float hp0 = Hp; Sim(6f);
-                Check(wasLit && Hp < hp0, $"melee: a shade next to the player in the light still reaches and hurts them ({hp0 - Hp:0.#} damage, lit={wasLit})");
+                Check(wasLit && Hp >= hp0 && sh.Hp > 0, $"melee: a shade does not enter the light to hurt a player standing in it ({hp0 - Hp:0.#} damage, lit={wasLit})");
                 Enemies.Clear(); Hp = MaxHp;
             }
             // застревание: существо внутри камня выталкивается; смерть — на базе, на сложном режиме теряется уровень

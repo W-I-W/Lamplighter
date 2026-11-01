@@ -33,7 +33,8 @@ public partial class Game
             Check(Notify.History.Count == GameNotificationService.MaxHistory, "chat: only the last 100 messages are kept");
             Notify.Chat("Damir", "Нашёл босса! [b]жирный[/b] [color=red]x[/color]");
         });
-        S(.6f, () => Shot("chat1_corner"));
+        S(.6f, () => { Notify.System("Добыто: Дерево +5, Медная руда 3/12", MsgTone.Good); Notify.World("Найдено: Сундук путника", MsgTone.Cyan); Notify.System("Доступно улучшение: Искра света", MsgTone.Gold); });
+        S(.9f, () => Shot("chat1_corner"));
         S(.1f, () => { p0 = PPos; Press(Key.Enter, true); Press(Key.Enter, false); });
         S(.4f, () =>
         {

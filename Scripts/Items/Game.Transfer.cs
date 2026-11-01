@@ -85,6 +85,13 @@ public partial class Game
         return true;
     }
 
+    /// <summary>Удаление ресурса из инвентаря насовсем (без выпадения на землю).</summary>
+    public bool TryDelete(int item, int n)
+    {
+        n = Math.Min(n, MaxMove); if (!Movable(item) || n < 1 || Inv[item] < n) return false;
+        Inv[item] -= n; Toast($"Удалено: {Loc.T(It.Names[item])} ×{n}"); Sfx.Play("tick", -4, .7f); return true;
+    }
+
     /// <summary>Хост: новая стопка рядом с игроком или добавление к существующей такой же в пределах двух клеток.</summary>
     public void HostDrop(long owner, int item, int n)
     {

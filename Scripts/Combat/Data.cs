@@ -117,6 +117,12 @@ public static class Db
         R("r_glaciersoul", "Душа ледника", "Холод в крови: заморозка чаще", Rar.Rare, new[] { "ice" }, new[] { "Freeze:0.8" }, "#9fd8ff"),
         R("r_prismcore", "Ядро призмы", "Реликвия Хранителя Зимы: свет фонарей усиливается", Rar.Epic, new[] { "light" }, new[] { "LampRadius:0.08", "Arc:1" }, "#e8faff"),
         R("r_voidlens", "Линза пустоты", "Видит иллюзии: фонарь шире, метит настоящий свет", Rar.Rare, new[] { "light" }, new[] { "HeroRadius:0.1", "Reveal:1" }, "#d8b8ff"),
+        R("r_lifeseed", "Семя жизни", "+5% к максимуму здоровья", Rar.Uncommon, new string[0], new[] { "MaxHpPct:0.05" }, "#7ad45a"),
+        R("r_ironheart", "Железное сердце", "+20 к максимуму здоровья", Rar.Uncommon, new string[0], new[] { "MaxHp:20" }, "#e06a6a"),
+        R("r_keenedge", "Острый осколок", "+6% к урону оружия и инструментов", Rar.Uncommon, new string[0], new[] { "Dmg:0.06" }, "#ffb0a0"),
+        R("r_stonehand", "Каменная хватка", "Добыча быстрее на 12%", Rar.Common, new string[0], new[] { "MineSpd:0.12" }, "#c8c0b0"),
+        R("r_windstep", "Ветер в ногах", "Шаг быстрее на 5%", Rar.Common, new string[0], new[] { "Speed:0.05" }, "#b8f0e0"),
+        R("r_titanheart", "Сердце титана", "+40 к здоровью и +5% к урону", Rar.Rare, new string[0], new[] { "MaxHp:40", "Dmg:0.05" }, "#ff8a6a"),
         // временные: только для испытаний Тьмы
         R("t_flame", "Пламя испытания", "Временно: огонь на всех ударах", Rar.Rare, new[] { "fire" }, new[] { "Burn:1.5" }, "#ff7a2a", false),
         R("t_frost", "Иней испытания", "Временно: заморозка на всех ударах", Rar.Rare, new[] { "ice" }, new[] { "Slow:1", "Freeze:0.6" }, "#7ad0ff", false),
