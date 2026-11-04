@@ -164,7 +164,15 @@ def shaded(grid, ch_set, tone_fn):
             c = grid[y][x]
             if c in ch_set:
                 below = grid[y + 1][x] if y + 1 < H else None
+                above = grid[y - 1][x] if y > 0 else None
                 v = BASE.get(c, 1.0) * (SHADE if (below not in ch_set) else 1.0)
+                if c == 'h':                                             # волосы: блик на верхней кромке, тёмный низ, как у референса
+                    v = 0.62 if below not in ch_set else (1.0 if above not in ch_set else 0.84)
+                    if above not in ch_set and (x + y) % 3 == 0: v = 0.9
+                elif c in ('a', 'b') and above not in ch_set:
+                    v = max(v, 1.0)                                       # светлая кромка плеч и воротника
+                elif c == 's' and above == 'h':
+                    v = 0.82                                              # тень от чёлки на лбу
                 if x > 0 and grid[y][x - 1] not in ch_set and c in ('a', 'b'):
                     v = min(v, 0.86)
                 g = int(255 * v)
