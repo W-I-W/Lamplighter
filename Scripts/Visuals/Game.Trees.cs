@@ -83,7 +83,7 @@ public partial class Game
         int fid = ForageIdAt(tile); MineNeed = fid == FoliageBush ? .45f : 1.2f; Swing = .2f;
         if (MineStrike(dt))
         {
-            MineProg += MineSpeed * eff / MineHz; Fx("mine_hit", TileCenter(tile.X, tile.Y), fid == FoliagePebble ? new Color("#a0a0ac") : fid == FoliageStick ? new Color("#8c6034") : new Color("#3b8a3a"), .7f); hitFlash = 1f;
+            MineProg += MineSpeed * eff / MineHz; Fx("mine_hit", TileCenter(tile.X, tile.Y), fid == FoliagePebble ? new Color("#a0a0ac") : fid == FoliageStick ? new Color("#8c6034") : new Color("#3b8a3a"), fid == FoliagePebble ? 1f : fid == FoliageStick ? 1f : .7f, fid == FoliagePebble ? "mine_stone" : fid == FoliageStick ? "mine_wood" : null); hitFlash = 1f;
             if (MineProg >= MineNeed) CutBushAt(tile);
         }
     }
@@ -126,7 +126,7 @@ public partial class Game
 
     void DrawHeldItem(CanvasItem c, Vector2 hand, float ang)
     {
-        if (CurW < 0 && !OwnedTools.Contains(CurTool)) return;                       // руки пусты
+        if (CurW < 0 && !OwnedTools.Contains(CurTool)) return;                                                                  // руки пусты: ничего не рисуется
         string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool);
         int icon = HotIcon(r); if (icon < 0) return;
         float baseAng = icon == UiIcons.Pickaxe ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;          // куда «смотрит» рисунок значка

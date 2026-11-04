@@ -118,8 +118,8 @@ public partial class Game
         {
             Enemies.Clear(); Projs.Clear(); PPos = spot; Hp = MaxHp; TestPlayers = 0;
             var w = SpawnEnemy(spot + new Vector2(60, 0), EK.Warden, null, 1f); Check(Mathf.Abs(w.MaxHp - 170f * Tune.T.BossHp[0]) < .01f, $"boss: the first guardian has {w.MaxHp:0} health (base 170 × {Tune.T.BossHp[0]})");
-            w.Pos = spot + new Vector2(10, 0); w.Home = w.Pos; w.State = 0; w.Atk = 0; w.T1 = 5f; Invuln = 0; float h = Hp; UpdateEnemies(.033f);
-            Check(Mathf.Abs((h - Hp) - Mathf.Max(12f * Tune.T.BossDamage[0], Tune.T.EnemyMinHit) * FearMul) < .05f, $"boss: contact damage is scaled by the Resource ({h - Hp:0.0} = 12 × {Tune.T.BossDamage[0]})");
+            Enemies.Clear(); var dw = SpawnEnemy(spot + new Vector2(10, 0), EK.DepthWarden, null, 1f); dw.Home = dw.Pos; dw.State = 0; dw.Atk = 0; dw.T1 = 5f; Invuln = 0; float h = Hp; UpdateEnemies(.033f);          // первый страж (Пожиратель Рощи) неподвижен и не бьёт касанием — касание проверяем на втором
+            Check(Mathf.Abs((h - Hp) - Mathf.Max(10f * Tune.T.BossDamage[1], Tune.T.EnemyMinHit) * FearMul) < .05f, $"boss: contact damage is scaled by the Resource ({h - Hp:0.0} = 10 × {Tune.T.BossDamage[1]})");
             Enemies.Clear(); TestPlayers = 4; var w4 = SpawnEnemy(spot + new Vector2(60, 0), EK.Warden, null, 1f); Check(w4.MaxHp > w.MaxHp * 1.5f && BossTempoMul() < 1f, $"boss: four players — more health ({w4.MaxHp:0}) and a faster tempo (×{BossTempoMul():0.00})");
             TestPlayers = 0; Enemies.Clear();
         });
@@ -127,10 +127,10 @@ public partial class Game
         // ── уникальные способности боссов
         S(.2f, () =>
         {
-            foreach (var k in new[] { EK.Warden, EK.DepthWarden, EK.AshWarden, EK.WinterWarden, EK.Source })
+            foreach (var k in new[] { EK.DepthWarden, EK.AshWarden, EK.WinterWarden, EK.Source })          // у Пожирателя Рощи свой набор атак по фазам (стадия grove)
             {
                 Enemies.Clear(); Projs.Clear(); Zones.Clear(); PPos = spot; pVel = Vector2.Zero; Invuln = 99f; Hp = MaxHp; TestPlayers = 0; trail.Clear(); for (int i = 0; i < 4; i++) trail.Add(spot + new Vector2(-10 * i, 8 * i));
-                var e = SpawnEnemy(spot + new Vector2(70, 0), k, null, 1f); e.Home = e.Pos; e.Hp = e.MaxHp * .3f; Sim(.1f);
+                var e = SpawnEnemy(spot + new Vector2(70, 0), k, null, 1f); e.Home = e.Pos; e.Hp = e.MaxHp * .3f; while (PhaseOf(e).Update(.3f)) { } Sim(.1f);      // фазы идут по одной за такт: сразу ставим босса в фазу его здоровья
                 e.Shield = false; e.State = 0; e.T1 = 0; e.SpecT = 0; e.Over = 0; float tStart = -1, tActive = -1, tEnd = -1; bool over = false, effect = false; int cold = 0;
                 Sim(9f, t =>
                 {
@@ -141,16 +141,16 @@ public partial class Game
                 string nm = k.ToString();
                 Check(tStart >= 0 && tActive - tStart >= .6f, $"boss {nm}: the special has a visible telegraph of {tActive - tStart:0.00} s before it starts");
                 Check(effect && tEnd > tActive, $"boss {nm}: the special does something and ends on its own ({tEnd - tActive:0.0} s)");
-                if (k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden) Check(over, $"boss {nm}: after the special the boss is open to attack");
+                if (k == EK.DepthWarden || k == EK.AshWarden) Check(over, $"boss {nm}: after the special the boss is open to attack");
                 if (k == EK.WinterWarden) Check(cold > 0, "boss WinterWarden: the blizzard volleys are cold projectiles");
             }
             Enemies.Clear(); Projs.Clear(); Zones.Clear();
             var ash = SpawnEnemy(spot + new Vector2(70, 0), EK.AshWarden, null, 1f); ash.Over = 0; float a0 = ash.Hp; Hurt(ash, 10f, Vector2.Right); float norm = a0 - ash.Hp; ash.Over = 1f; a0 = ash.Hp; Hurt(ash, 10f, Vector2.Right);
             Check(Mathf.Abs((a0 - ash.Hp) / norm - 1.4f) < .01f, "boss: damage taken while the boss is open is +40%");
-            TestPlayers = 1; var b1 = SpawnEnemy(spot + new Vector2(70, 0), EK.Warden, null, 1f); b1.Home = b1.Pos; b1.Hp = b1.MaxHp * .3f; b1.State = 0; b1.T1 = 0; b1.SpecT = 0; PPos = spot; UpdateEnemies(.033f); float s1 = b1.SpecT; Enemies.Clear();
-            TestPlayers = 4; var b4 = SpawnEnemy(spot + new Vector2(70, 0), EK.Warden, null, 1f); b4.Home = b4.Pos; b4.Hp = b4.MaxHp * .3f; b4.State = 0; b4.T1 = 0; b4.SpecT = 0; UpdateEnemies(.033f); float s4 = b4.SpecT; TestPlayers = 0; Enemies.Clear();
+            TestPlayers = 1; var b1 = SpawnEnemy(spot + new Vector2(70, 0), EK.DepthWarden, null, 1f); b1.Home = b1.Pos; b1.Hp = b1.MaxHp * .3f; b1.State = 0; b1.T1 = 0; b1.SpecT = 0; PPos = spot; UpdateEnemies(.033f); float s1 = b1.SpecT; Enemies.Clear();
+            TestPlayers = 4; var b4 = SpawnEnemy(spot + new Vector2(70, 0), EK.DepthWarden, null, 1f); b4.Home = b4.Pos; b4.Hp = b4.MaxHp * .3f; b4.State = 0; b4.T1 = 0; b4.SpecT = 0; UpdateEnemies(.033f); float s4 = b4.SpecT; TestPlayers = 0; Enemies.Clear();
             Check(s4 < s1 && s1 > 0, $"boss: four players shorten the pause between specials ({s1:0.0} s → {s4:0.0} s)");
-            int wired = 0; foreach (var f in new[] { "Combat", "Ash", "Ice", "Heart" }) { var txt = System.IO.File.ReadAllText(ProjectSettings.GlobalizePath($"res://Scripts/Combat/Game.{f}.cs")); wired += System.Text.RegularExpressions.Regex.Matches(txt, @"mul = .*BossTempoMul\(\)").Count; }
+            int wired = 0; foreach (var f in new[] { "Combat", "Ash", "Ice", "Heart", "Grove" }) { var txt = System.IO.File.ReadAllText(ProjectSettings.GlobalizePath($"res://Scripts/Combat/Game.{f}.cs")); wired += System.Text.RegularExpressions.Regex.Matches(txt, @"(mul|tempo) = .*BossTempoMul\(\)").Count; }
             Check(wired >= 5, $"boss: the tempo setting is connected to all five bosses ({wired} places)");
             Menu = Mn.None; Toast("Проверка: уведомление под курсором"); Announce("Проверка", "Клик сквозь уведомление должен попасть в мир", Colors.White, "discover");
         });

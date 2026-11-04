@@ -128,7 +128,7 @@ public partial class Game
 
     Vector2 UpdateWinter(Enemy e, float dt, Vector2 dir, float dist)
     {
-        float hpf = e.Hp / e.MaxHp; int ph = hpf > .66f ? 1 : hpf > .33f ? 2 : 3; float mul = (ph == 3 ? .65f : 1f) * BossTempoMul();
+        float hpf = e.Hp / e.MaxHp; int ph = PhaseNum(e); float mul = (ph == 3 ? .65f : 1f) * BossTempoMul();          // фазы — данные BossPhaseBook
         if ((int)e.Mark.X != ph)
         {
             e.Mark = new Vector2(ph, 0);

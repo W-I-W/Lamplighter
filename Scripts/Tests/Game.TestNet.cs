@@ -191,9 +191,23 @@ public partial class Game
                 WaitStep(10f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, ok => Check(ok, "net client: the rescued villager appears once for the client too"));
                 Vector2 arena = default; float hit = 0;
                 S(.3f, () => { arena = FindDarkArena(); Tp(arena + new Vector2(60, 0)); Hp = MaxHp; Invuln = 0; });
-                WaitStep(25f, () => Enemies.Any(e => e.NetId > 0), ok => Check(ok, "net client: the host's enemy is shown on the client (no local AI)"));
-                S(.3f, () => { Check(Enemies.All(e => e.NetId > 0), "net client: the client created no enemies of its own"); var e = Enemies.First(x => x.NetId > 0); Hurt(e, 8f, Vector2.Left, true); });
+                WaitStep(40f, () => Enemies.Any(e => e.NetId > 0 && e.MaxHp >= 399f), ok => Check(ok, "net client: the host's enemy is shown on the client (no local AI)"));     // ждём именно тестового врага хоста (400 HP), а не случайного раньше времени
+                S(.3f, () => { Check(Enemies.All(e => e.NetId > 0), "net client: the client created no enemies of its own"); foreach (var e in Enemies.Where(x => x.NetId > 0 && x.MaxHp >= 399f).ToList()) Hurt(e, 8f, Vector2.Left, true); });
                 WaitStep(60f, () => Hp < MaxHp - 1f, ok => Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"));
+                // награда за убийство у гостя: каждый вид врага (кроме стражей и двойника-миража) должен что-то давать при убийстве, засчитанном гостю
+                S(.3f, () =>
+                {
+                    var silent = new System.Collections.Generic.List<string>();
+                    foreach (EK k in Enum.GetValues(typeof(EK)))
+                    {
+                        if (k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden || k == EK.WinterWarden || k == EK.Source || k == EK.Decoy) continue;
+                        long before = 0; foreach (var n in Inv) before += n;
+                        for (int i = 0; i < 400; i++) NetKillCredit((int)k, 0, "", 0, false, PPos.X + 30, PPos.Y);
+                        long after = 0; foreach (var n in Inv) after += n;
+                        if (!(after > before)) silent.Add($"{k}(items {after - before})");
+                    }
+                    Check(silent.Count == 0, "net client: every kind of enemy killed by the client gives some resources (" + string.Join(", ", silent) + ")");
+                });
                 S(.3f, () => { float drop = MaxHp - Hp; float one = Mathf.Max(9f * Tune.T.EnemyDamage, Tune.T.EnemyMinHit) * FearMul; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
                 S(5f, () => { });
                 WaitStep(20f, () => Events.Any(e => e.Kind == "meteor"), ok => Check(ok, "net client: the host's meteor event is shown (shared events)"));

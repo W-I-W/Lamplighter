@@ -6,7 +6,7 @@
 script = ExtResource("1_25e0t")
 Id = "r_dawnprism"
 Title = "Призма рассвета"
-Desc = "Реликвия Хранителя леса"
+Desc = "Реликвия Пожирателя Рощи"
 Tags = PackedStringArray("light")
 Rarity = 3
 Effects = PackedStringArray("LampRadius:0.08")

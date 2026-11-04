@@ -13,7 +13,7 @@ public enum Tl : byte
     CrystalLantern, CombatLantern, Rubble, BridgeBroken, Bridge, Deep, Seal, SecretDoor, Drill, Collector,
     DeadTree, Obsidian, Ember, AshRuin, Vent,
     TechCache, Spire, Altar, AltarOn, SecretCache, Stall, Hub, Refinery, AmpCrystal, BarrierPost, MeteorOre,
-    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge, Grave
+    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge, Grave, BossTotem, BossGate
 }
 
 public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret, Lore, Tower, Vault, Glade, SparkAltar, RuneObelisk, GiantTree, Survivor }
@@ -143,7 +143,9 @@ public sealed partial class World
         // Хранитель: особый древний фонарь на краю карты
         {
             double a = a0 + 5 * 2.4;
-            int x = Math.Clamp(c + (int)(Math.Cos(a) * 54), 10, N - 11), y = Math.Clamp(c + (int)(Math.Sin(a) * 54), 10, N - 11);
+            int lo = genV >= 5 ? 18 : 10;
+            int x = Math.Clamp(c + (int)(Math.Cos(a) * 54), lo, N - 1 - lo), y = Math.Clamp(c + (int)(Math.Sin(a) * 54), lo, N - 1 - lo);
+            if (genV >= 5) { var ac = w.ArenaCenter(new Vector2I(x, y), 18, N - 19); x = ac.X; y = ac.Y; }       // стена арены не должна отрезать другие фонари
             for (int yy = y - 5; yy <= y + 5; yy++)
                 for (int xx = x - 5; xx <= x + 5; xx++)
                     if ((xx - x) * (xx - x) + (yy - y) * (yy - y) <= 25) w.Set(xx, yy, Tl.None);
@@ -160,6 +162,7 @@ public sealed partial class World
         w.GenFinds(seed, 3, 4);
         w.GenLore(seed);
         if (genV >= 1) w.GenExplore(seed);
+        if (genV >= 5) w.GenArenas(seed);
         w.EnsureStoryReachable();
         w.ClearBlockedCrowns();
         w.EnsureStartResources(seed);

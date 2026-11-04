@@ -58,7 +58,8 @@ public partial class Game
             Interact.Reset(); At(cx + 24, belowY); FindIx(); Check("8a: B selected", Interact.Selected?.Key == kB);
             Buildings.Remove(B); SetObj(B.X, B.Y, Tl.None); FindIx(); Check("8b: removed building is no longer selected", Interact.Selected?.Key != kB, $"sel={Interact.Selected?.Key}");
             // выгрузка чанка/телепорт вдаль: ссылки сбрасываются без ошибок
-            Tp(TileCenter(World.IX0 + 40, 64)); UpdateChunks(0, true); FindIx(); Check("8c: far teleport clears selection", Interact.Selected == null && Interact.Hover == null);
+            for (int dx = 40; dx < 100; dx += 6) { Tp(TileCenter(World.IX0 + dx, 64)); UpdateChunks(0, true); FindIx(); if (Interact.Selected == null && Interact.Hover == null) break; }       // вдали от любых объектов (расположение мест зависит от мира)
+            Check("8c: far teleport clears selection", Interact.Selected == null && Interact.Hover == null);
             GD.Print($"[check] SUMMARY failures={checkFails}");
         });
         S(.2f, () =>

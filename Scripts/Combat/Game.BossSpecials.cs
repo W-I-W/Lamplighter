@@ -28,7 +28,7 @@ public partial class Game
     bool TryBossSpecial(Enemy e, float dt, float hpf, float dist, Vector2 dir)
     {
         e.SpecT -= dt; if (e.SpecT > 0 || e.T1 > 0) return false;
-        bool ok = e.Kind switch { EK.Warden => hpf < .5f, EK.DepthWarden => hpf < .6f, EK.AshWarden => hpf < .5f, EK.WinterWarden => hpf < .66f, EK.Source => hpf < .66f, _ => false };
+        bool ok = e.Kind switch { EK.Warden => false, EK.DepthWarden => hpf < .6f, EK.AshWarden => hpf < .5f, EK.WinterWarden => hpf < .66f, EK.Source => hpf < .66f, _ => false };
         if (!ok) return false;
         e.State = 20; e.SpecPh = 0; e.T2 = e.Kind == EK.Source ? 1f : e.Kind == EK.WinterWarden ? .75f : .9f; e.Tele = e.T2; e.DashDir = dir; e.SpecAng = rng.Randf() * Mathf.Tau; e.SpecN++;
         e.SpecT = (e.Kind switch { EK.Warden => 9f, EK.DepthWarden => 10f, EK.AshWarden => 11f, EK.WinterWarden => 9f, _ => 12f }) * BossTempoMul();

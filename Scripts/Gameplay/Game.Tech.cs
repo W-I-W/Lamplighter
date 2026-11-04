@@ -56,7 +56,7 @@ public partial class Game
         new() { Name = "Жгучий свет", Desc = "Враги в вашем свете горят; уровни усиливают ожог", Req = "Зажгите 2 древних фонаря", Cost = C(It.Aether, 2, It.Shard, 4), Ok = g => g.LitCount >= 2 },
         new() { Name = "Сигнальная ракета [Q]", Desc = "Бросок: свет и ожоги. Уровни увеличивают длительность", Req = "Исследуйте 2 места", Cost = C(It.Shard, 3, It.Relic, 1), Ok = g => g.PoisDone >= 2 },
         new() { Name = "Эфирное зрение", Desc = "Места интереса видны сквозь тьму; уровни увеличивают радиус", Req = "Исследуйте 5 мест", Cost = C(It.Aether, 3, It.Relic, 1), Ok = g => g.PoisDone >= 5 },
-        new() { Name = "Световой импульс [F]", Desc = "Награда за победу над Хранителем леса. Уровни сокращают перезарядку", Req = "Победите Хранителя Тёмного леса", Cost = C(It.Aether, 3, It.Shard, 3), Ok = g => g.BossDown(1), Reward = true },
+        new() { Name = "Световой импульс [F]", Desc = "Награда за победу над Пожирателем Рощи. Уровни сокращают перезарядку", Req = "Победите Пожирателя Рощи", Cost = C(It.Aether, 3, It.Shard, 3), Ok = g => g.BossDown(1), Reward = true },
 
         new() { Name = "Серебряное лезвие", Desc = "Урон по теням больше на 10% за уровень; пробивает броню жуков", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 4, It.Iron, 3), Ok = g => g.LitIn(1) >= 1, Page = 1 },
         new() { Name = "Кристальная оптика", Desc = "Открывает кристальный фонарь и зеркала [B]", Req = "Добудьте кристалл", Cost = C(It.Crystal, 4, It.Silver, 3), Ok = g => g.Inv[It.Crystal] >= 1 || g.Tier >= 3, Page = 1 },

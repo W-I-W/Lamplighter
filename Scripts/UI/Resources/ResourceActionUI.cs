@@ -59,8 +59,7 @@ public partial class ResourceActionUI : Control
         bool wh = G.NearChestFor(G.PPos) && item != It.Coins;
         if (!dialog)
         {
-            if (have > 0 && peers.Count > 0) Row("Передать игроку", () => Start(Act.Send));
-            if (have > 0) Row("Удалить", () => Start(Act.Drop));
+            if (have > 0) Row("Выбросить", () => Start(Act.Drop));
             if (have > 0 && wh) Row("Положить на склад", () => Start(Act.Deposit));
             if (wh && G.Stock[item] > 0) Row("Взять со склада", () => Start(Act.Withdraw));
             return;
@@ -71,7 +70,7 @@ public partial class ResourceActionUI : Control
             r.AddChild(Px.Button("", "left", () => Cycle(-1), 20, 18)); r.AddChild(Px.Label(Loc.T("Получатель") + ": " + peers[who % peers.Count].Name, Dim, false)); r.AddChild(Px.Button("", "right", () => Cycle(1), 20, 18));
         }
         int max = Math.Max(1, Max()); amount = Math.Clamp(amount, 1, max);
-        string verb = act == Act.Send ? "передать" : act == Act.Drop ? "удалить" : act == Act.Deposit ? "положить" : "взять";
+        string verb = act == Act.Send ? "передать" : act == Act.Drop ? "выбросить" : act == Act.Deposit ? "положить" : "взять";
         box.AddChild(Px.Label(Loc.T("Сколько") + " " + Loc.T(verb) + "?", Dim, false, HorizontalAlignment.Center));
         var q = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; q.AddThemeConstantOverride("separation", 3); box.AddChild(q);
         q.AddChild(Px.Button("1", null, () => SetAmount(1), 26, 18)); q.AddChild(Px.Button("Половина", null, () => SetAmount(Math.Max(1, max / 2)), 62, 18)); q.AddChild(Px.Button("Всё", null, () => SetAmount(max), 36, 18));
@@ -82,7 +81,7 @@ public partial class ResourceActionUI : Control
         amtEdit.TextSubmitted += _ => Confirm(); s.AddChild(amtEdit);
         amtMaxL = Px.Label($"/ {max}", Good, false); s.AddChild(amtMaxL);
         s.AddChild(Px.Button("+", null, () => SetAmount(amount + 1), 20, 18));
-        string go = act == Act.Send ? "Передать" : act == Act.Drop ? "Удалить" : act == Act.Deposit ? "Положить" : "Взять";
+        string go = act == Act.Send ? "Передать" : act == Act.Drop ? "Выбросить" : act == Act.Deposit ? "Положить" : "Взять";
         var b = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; b.AddThemeConstantOverride("separation", 4); box.AddChild(b);
         b.AddChild(Px.Button(go, "check", Confirm, 104, 20)); b.AddChild(Px.Button("Отмена", null, Close, 60, 20));
     }
@@ -104,7 +103,7 @@ public partial class ResourceActionUI : Control
         switch (act)
         {
             case Act.Send: if (peers.Count > 0) G.TrySend(peers[who % peers.Count].PeerId, item, n); break;
-            case Act.Drop: G.TryDelete(item, n); break;
+            case Act.Drop: G.TryDrop(item, n); break;
             case Act.Deposit: G.TryChest(true, item, n); break;
             case Act.Withdraw: G.TryChest(false, item, n); break;
         }

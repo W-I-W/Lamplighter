@@ -8,7 +8,7 @@ namespace Lamplighter;
 /// а у других игроков рисуется то, что они держат в руках. Декоративные частицы не пересылаются: каждый рисует их у себя.</summary>
 public partial class Game
 {
-    static readonly string[] NetSfxNames = { "mine", "break", "hit", "hurt", "dash", "spin", "shoot", "flare", "pulse", "boom", "build", "boss", "chest", "ancient" };
+    static readonly string[] NetSfxNames = { "mine", "break", "hit", "hurt", "dash", "spin", "shoot", "flare", "pulse", "boom", "build", "boss", "chest", "ancient", "mine_stone", "mine_wood" };
     readonly Dictionary<string, (float t, int n)> sfxRate = new();
 
     void InitNetFx() { Sfx.Hook = NetSfxOut; }
@@ -29,12 +29,13 @@ public partial class Game
         Sfx.PlayRemote(NetSfxNames[idx], Mathf.Clamp(db, -30, 6) - d / 60f - 2f, Mathf.Clamp(pitch, .4f, 2.5f));
     }
 
-    static string BossDownTitle(int id) => id switch { 1 => "Хранитель Тёмного леса повержен!", 2 => "Хранитель глубин повержен!", 3 => "Пепельный страж повержен!", 4 => "Хранитель Зимы повержен!", _ => "Источник Тьмы повержен!" };
+    static string BossDownTitle(int id) => id switch { 1 => "Пожиратель Рощи повержен!", 2 => "Хранитель глубин повержен!", 3 => "Пепельный страж повержен!", 4 => "Хранитель Зимы повержен!", _ => "Источник Тьмы повержен!" };
 
     /// <summary>Победа над стражем: вспышка, тряска, волна света и объявление у всех игроков (награды получает тот, кто победил, прогресс общий).</summary>
     public void NetBossDown(int id, Vector2 pos)
     {
         if (id < 1 || id > 5) return;
+        if (id == 1) GroveDie(pos);
         Flash = Mathf.Max(Flash, .8f); Shake = Mathf.Max(Shake, 8f); Sfx.PlayRemote("ancient", 0, 1f); Sfx.PlayRemote("boom", -4, .8f);
         VictoryFx(pos, id == 4 ? new Color("#bfe9ff") : id == 3 ? new Color("#ff9a5a") : id == 2 ? new Color("#7ac8ff") : new Color("#d58cff")); Burst(pos, new Color("#d58cff"), 50, 180);
         Announce(BossDownTitle(id), "Победа общая: прогресс записан всем", new Color("#ffe9a0"), "ancient");

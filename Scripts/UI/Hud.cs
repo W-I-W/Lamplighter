@@ -117,20 +117,44 @@ public partial class Hud : Control
         float y = 4, sl = 0, sr = vs.X;
         if (G.GameHudNode != null) (sl, sr) = G.GameHudNode.FreeSpan(0, 90, vs.X, G.UiScaleVp);
         topCx = (sl + sr) * .5f; topMaxW = Mathf.Max(80, sr - sl - 12);
-        if (BossShown) y += 28;
+        if (BossShown) y += PhaseCaptionShown ? 40 : 30;
         if (G.RiftOn) { topRiftY = y; y += 28; }
         if (G.TrialActive) { topTrialY = y; y += 18; }
         if (G.SurgeOn) { topSurgeY = y; y += 24; }
         topBannerY = y;
     }
 
+    /// <summary>Подпись смены фазы под шкалой видна столько секунд.</summary>
+    public const float PhaseCaption = 2.6f;
+    bool PhaseCaptionShown { get { var b = FightBoss; var pc = Game.PhaseOf(b); return pc != null && pc.Index > 0 && G.Time - pc.ChangedAt < PhaseCaption; } }
+
+    /// <summary>Общая шкала босса: название, «Фаза N / M», разделители на реальных порогах фаз (данные босса, BossPhaseBook), вспышка и подпись «Фаза II — Поглощение» при смене фазы.</summary>
     void DrawBossBar(Vector2 vs)
     {
         var b = FightBoss; if (b == null) return;      // полоса босса только пока он рядом (в сети она оставалась после смерти игрока)
-        float w = 200, x = Mathf.Round(vs.X * .5f - w * .5f);      // по центру экрана
-        Panel(new Rect2(x - 6, 4, w + 12, 24), "PanelGold");
-        Txt(Game.EnemyName(b.Kind), new Vector2(x, 14), 9, new Color("#f0c8ff"), HorizontalAlignment.Center, w);
-        Bar(new Rect2(x, 17, w, 7), b.Hp / b.MaxHp, "HpBar");
+        var pc = Game.PhaseOf(b); float w = 200, x = Mathf.Round(vs.X * .5f - w * .5f);      // по центру экрана
+        float since = G.Time - pc.ChangedAt; float flash = pc.Index > 0 && since < .6f ? 1f - since / .6f : 0f;
+        Panel(new Rect2(x - 6, 4, w + 12, 26), "PanelGold");
+        Txt(Game.EnemyName(b.Kind), new Vector2(x, 14), 9, new Color("#f0c8ff"), HorizontalAlignment.Left, w);
+        if (pc.Count > 1) Txt($"Фаза {pc.Number} / {pc.Count}", new Vector2(x, 14), 9, pc.Current.Tint.Lerp(Colors.White, .35f + .65f * flash), HorizontalAlignment.Right, w);
+        var br = new Rect2(x, 18, w, 7);
+        Bar(br, b.Hp / b.MaxHp, "HpBar");
+        for (int i = 1; i < pc.Count; i++)                                                  // разделители на настоящих порогах, а не на равных частях
+        {
+            float px = Mathf.Round(x + w * pc.Phases[i].Threshold); bool passed = i <= pc.Index;
+            Rect(new Rect2(px, br.Position.Y - 1, 1, br.Size.Y + 2), passed ? new Color(1f, 1f, 1f, .4f) : new Color(1f, .95f, .8f, .95f));
+            Rect(new Rect2(px + 1, br.Position.Y - 1, 1, br.Size.Y + 2), new Color(0, 0, 0, .5f));
+        }
+        if (b.Shield) Rect(new Rect2(x, br.Position.Y, w, 2), new Color(.75f, .8f, 1f, .5f + .2f * Mathf.Sin(G.Time * 5f)));      // защита: урон по боссу слабый
+        if (b.Over > 0) Rect(new Rect2(x, br.Position.Y + br.Size.Y - 2, w, 2), new Color(1f, .9f, .4f, .6f + .3f * Mathf.Sin(G.Time * 12f)));   // ядро/босс открыт
+        if (flash > 0) { Rect(new Rect2(x - 6, 4, w + 12, 26), new Color(pc.Current.Tint.R, pc.Current.Tint.G, pc.Current.Tint.B, .45f * flash)); Rect(br, new Color(1, 1, 1, .8f * flash)); }
+        if (PhaseCaptionShown)
+        {
+            float a = Mathf.Clamp((PhaseCaption - since) * 2f, 0, 1) * Mathf.Clamp(since * 6f, 0, 1);
+            string cap = $"Фаза {BossPhaseBook.Roman(pc.Number)} — {pc.Current.Name}";
+            var c = pc.Current.Tint.Lerp(Colors.White, .3f); c.A = a;
+            Txt(cap, new Vector2(x, 40), 9, c, HorizontalAlignment.Center, w);
+        }
     }
 
     /// <summary>Реликвии, лучезарность, испытание и события — в виде компактной полосы под шкалой босса/уведомлениями.</summary>

@@ -76,6 +76,10 @@ public partial class Game
             Check(!IsBushAt(fgs[0].X, fgs[0].Y) && !IsBushAt(fgs[1].X, fgs[1].Y), "forage: collected sticks and pebbles do not come back after the chunk is reloaded and the resources regrow");
         });
         S(.4f, () => Shot("held_idle"));
+        S(.1f, () => { PlayerLook.Species = 1; PlayerLook.Skin = 0; Check(Look.FromInts(PlayerLook.ToInts()).Species == 1, "look: the species survives the network form"); });
+        S(.4f, () => Shot("look_cat"));
+        S(.1f, () => { PlayerLook.Species = 2; PlayerLook.Skin = 4; });
+        S(.4f, () => { Shot("look_dog"); PlayerLook.Species = 0; PlayerLook.Skin = 0; });
         S(.0f, () => { Swing = .2f; AtkCd = .3f; Invuln = 0; Aim = PPos + new Vector2(40, 10); });
         S(.03f, () => Shot("held_swing"));
         S(.2f, () => { Hp = 10; regenDelay = 0; Tp(W.Ancients[0].Pos + new Vector2(0, 400 * 1)); });

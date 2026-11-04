@@ -26,6 +26,7 @@ public partial class Game
     // ───────────────────────── рисование врагов ─────────────────────────
     void DrawEnemy(EntityLayer c, Enemy e)
     {
+        if (e.Kind == EK.Warden) { DrawGrove(c, e); return; }           // Пожиратель Рощи — свой лист 128×128
         var vd = EnemyDef(e.Kind); float sc = (e.Elite ? 1.25f : 1f) * vd.Scale;
         if (e.Hidden)
         {

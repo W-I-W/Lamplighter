@@ -105,7 +105,7 @@ public static class Db
         R("r_frostshard", "Ледяной осколок", "Враги слабее держат темп", Rar.Common, new[] { "ice" }, new[] { "Slow:0.5" }, "#8fd8ff"),
         R("r_winterheart", "Сердце зимы", "Реликвия Хранителя глубин", Rar.Epic, new[] { "ice" }, new[] { "Freeze:0.5" }, "#5ac0ff"),
         R("r_rimemirror", "Зеркало инея", "Шаг лёгкий, как лёд", Rar.Rare, new[] { "ice" }, new[] { "Speed:0.06" }, "#bfe9ff"),
-        R("r_dawnprism", "Призма рассвета", "Реликвия Хранителя леса", Rar.Epic, new[] { "light" }, new[] { "LampRadius:0.08" }, "#ffe27a"),
+        R("r_dawnprism", "Призма рассвета", "Реликвия Пожирателя Рощи", Rar.Epic, new[] { "light" }, new[] { "LampRadius:0.08" }, "#ffe27a"),
         R("r_beaconwick", "Фитиль маяка", "Удары копят свет", Rar.Uncommon, new[] { "light" }, new[] { "Siphon:1" }, "#ffd04a"),
         R("r_firstlight", "Первый луч", "Свет героя шире", Rar.Rare, new[] { "light" }, new[] { "HeroRadius:0.1" }, "#fff2b0"),
         R("r_stormclaw", "Громовой коготь", "Удары бьют молнией", Rar.Rare, new[] { "storm" }, new[] { "Chain:1" }, "#d0b0ff"),

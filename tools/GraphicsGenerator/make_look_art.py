@@ -14,75 +14,86 @@ os.makedirs(FLOW, exist_ok=True)
 
 W = H = 16
 
-# ───────────── карты (кадр 0): символы s кожа, e глаз, a/b одежда 1/2, h волосы, m ноги, f ручка фонаря, l корпус, i свет
-HEAD = [
-    '................',
-    '................',
-    '.....ssssss.....',
-    '....ssssssss....',
-    '....ssssssss....',
-    '....sssssess....',
-    '....ssssssss....',
-    '.....ssssss.....',
-]
-LANTERN = {  # x 12..14, y 7..13
-    8: {12: 'f', 13: 'f', 14: 'f'},
-    9: {12: 'l', 13: 'l', 14: 'l'},
-    10: {12: 'l', 13: 'i', 14: 'l'},
-    11: {12: 'l', 13: 'l', 14: 'l'},
-    12: {12: 'l', 13: 'l', 14: 'l'},
+# ───────────── карты (кадр 0), чиби-пропорции: большая голова (строки 1–8), короткое тело (9–13), ноги (14–15). Герой смотрит вправо.
+# символы: s кожа/шерсть, k тёмная шерсть (уши собаки), e глаз, a/b одежда 1/2, h волосы, m ноги, f ручка фонаря, l корпус, i свет
+HEAD = {  # верхняя строка 2: над ней остаётся ряд 0-1 для причёски/ушей и контура (иначе верхний пиксель обрезается рамкой кадра)
+    2: '.....ssssss.....',
+    3: '....ssssssss....',
+    4: '...ssssssssss...',
+    5: '...ssssssssss...',
+    6: '...ssssssssss...',
+    7: '...ssssssssss...',
+    8: '....ssssssss....',
+    9: '......ssss......',
 }
-LANTERN_COMPACT = {  # фасон «Разведчик»: маленькая лампа на плечевом ремне, x 12..13, y 9..11
-    9: {12: 'f', 13: 'f'},
-    10: {12: 'l', 13: 'i'},
+EYES = [(7, 6), (7, 7), (10, 6), (10, 7)]
+HANDS = [(4, 11), (11, 11)]
+# виды: 0 человек, 1 кот (острые уши, хвост), 2 собака (висячие уши, хвост)
+SPECIES_EXTRA = {
+    0: {},
+    1: {(4, 1): 's', (11, 1): 's', (4, 2): 's', (11, 2): 's', (4, 13): 's', (3, 13): 's', (2, 12): 's', (2, 11): 's', (2, 10): 's', (3, 9): 's'},
+    2: {(2, 3): 'k', (3, 3): 'k', (2, 4): 'k', (2, 5): 'k', (2, 6): 'k', (2, 7): 'k', (12, 3): 'k', (13, 3): 'k', (13, 4): 'k', (13, 5): 'k', (13, 6): 'k', (13, 7): 'k',
+        (4, 12): 's', (3, 11): 's', (2, 10): 's', (2, 9): 's'},
+}
+# мордочки (не тонируются): нос, усы, мордочка, язык, розовое в ушах
+FACE = {
+    1: {(4, 2): (255, 160, 180), (11, 2): (255, 160, 180), (9, 8): (255, 140, 165), (13, 7): (235, 235, 245), (13, 8): (235, 235, 245), (12, 8): (235, 235, 245)},
+    2: {(9, 8): (245, 232, 205), (10, 8): (245, 232, 205), (11, 8): (245, 232, 205), (11, 7): (245, 232, 205), (12, 7): (30, 24, 28), (9, 9): (240, 110, 130)},
+}
+LANTERN = {  # в передней руке: ручка и лампа справа от тела
+    10: {12: 'f', 13: 'f'},
     11: {12: 'l', 13: 'l'},
+    12: {12: 'i', 13: 'l'},
+    13: {12: 'l', 13: 'l'},
+}
+LANTERN_COMPACT = {  # фасон «Разведчик»: маленькая лампа на ремне
+    11: {12: 'f'},
+    12: {12: 'i', 13: 'l'},
 }
 VARIANTS = {
     0: [  # куртка: рукава и пояс — второй цвет
-        '....bbaaaabb....',
-        '....bbaaaabb....',
         '....baaaaaab....',
-        '....bbbbbbbb....',
         '....baaaaaab....',
         '.....aaaaaa.....',
+        '.....bbbbbb.....',
+        '.....aaaaaa.....',
     ],
-    1: [  # плащ: второй цвет — широкая накидка за спиной
-        '...bbbaaaabb....',
-        '...bbbaaaabb....',
+    1: [  # плащ: второй цвет — накидка за спиной
         '...bbaaaaaab....',
         '...bbaaaaaab....',
-        '...bbaaaaaab....',
-        '...bbbaaaab.....',
+        '...bbaaaaaa.....',
+        '...bbaaaaaa.....',
+        '...bbbaaaaa.....',
     ],
-    2: [  # туника: подол и воротник — второй цвет
+    2: [  # туника: воротник и подол — второй цвет
         '....aabbbbaa....',
         '....aaaaaaaa....',
-        '....baaaaaab....',
-        '....aaaaaaaa....',
-        '....aaaaaaaa....',
+        '.....aaaaaa.....',
+        '.....aaaaaa.....',
         '.....bbbbbb.....',
     ],
-    3: [  # разведчик: жилет с шарфом и широким ремнём, лампа маленькая на плече
+    3: [  # разведчик: шарф и ремень
         '....bbbbbbbb....',
         '....baaaaaab....',
-        '....baaaaaab....',
-        '....bbbbbbbb....',
-        '....aaaaaaaa....',
+        '.....aaaaaa.....',
+        '.....bbbbbb.....',
         '.....aaaaaa.....',
     ],
 }
-CAPE_EXTRA = {14: {3: 'b', 4: 'b'}}  # плащ свисает на втором ряду ног
+CAPE_EXTRA = {14: {3: 'b', 4: 'b'}}  # плащ свисает до ног
 
 HAIR = {
-    0: ['.....hhhhhh.....', '....hhhhhhhh....', '....hh..........', '....hh..........'],                       # короткая
-    1: ['......h..h.h....', '.....hhhhhhh....', '....hhhhhhhh....', '....hh..........'],                       # ёжик
-    2: ['.....hhhhhh.....', '....hhhhhhhh....', '...hhh..........', '...hhh..........', '...hhh..........', '...hhh..........', '...hh...........', '...hh...........', '...h............'],   # длинная
-    3: ['.....hhhhhh.....', '....hhhhhhhh....', '....hh..........', '...hh...........', '..hh............', '..h.............'],   # хвост
-    4: ['.....hhhhhh.....', '....hhhhhhhh....', '....hhhhhhhh....', '....hhh....h....', '....hhh....h....', '....hh..........'],  # капюшон
-    5: ['.....hhhhhh.....', '....hhhhhhhhhh..', '....h...........'],                                                    # шапка с козырьком
-    6: [],                                                                                                          # лысый
+    0: ['.....hhhhhh.....', '...hhhhhhhhhh...', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hhhh.hh.h.hh..', '..hh............', '..hh............'],   # короткая
+    1: ['..h.h.h.h.h.h...', '..hhhhhhhhhhhh..', '.hhhhhhhhhhhhhh.', '..hhhhhhhhhhhh..', '..hhh.h..h..hh..', '..hh............'],                         # ёжик
+    2: ['.....hhhhhh.....', '...hhhhhhhhhh...', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hhhh.hh.h.hh..', '..hhh.......hh..', '..hhh.......hh..', '..hhh.......hh..',
+        '..hhh...........', '..hh............', '..hh............'],                                                                                       # длинная
+    3: ['.....hhhhhh.....', '...hhhhhhhhhh...', '..hhhhhhhhhhhh..', '.hhhhhhhhhhhhh..', 'hhhhhh.hh.h.hh..', 'hh.hh...........', 'h...............', 'h...............'],  # хвост
+    4: ['....hhhhhhh.....', '..hhhhhhhhhhh...', '.hhhhhhhhhhhhh..', '.hhhhhhhhhhhhhh.', '.hhhh.......hhh.', '.hhh.........hh.', '.hhh.........hh.', '..hhh.......hh..',
+        '....hhh..hhh....'],                                                                                                                                 # капюшон
+    5: ['................', '....hhhhhhh.....', '...hhhhhhhhh....', '..hhhhhhhhhhhhh.', '..hh............'],                                               # кепка с козырьком
+    6: [],                                                                                                                                                   # лысый
 }
-HAIR_Y0 = {0: 2, 1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 0}
+HAIR_Y0 = {h: 1 for h in HAIR}
 
 SHADE = 0.72  # доля яркости для теней в тонируемых слоях
 
@@ -98,52 +109,67 @@ def put_rows(grid, rows, y0):
                 grid[y0 + dy][x] = ch
 
 
-def frame_grid(variant, hair, frame):
+def put_head(g, species=0):
+    for y, r in HEAD.items():
+        for x, ch in enumerate(r):
+            if ch != '.':
+                g[y][x] = ch
+    for (x, y), ch in SPECIES_EXTRA[species].items():
+        g[y][x] = ch
+    for x, y in HANDS:
+        g[y][x] = 's'
+
+
+part_legs = False
+
+
+def frame_grid(variant, hair, frame, species=0):
     g = blank()
-    put_rows(g, HEAD, 0)
-    put_rows(g, VARIANTS[variant], 8)
+    put_head(g, species)
+    put_rows(g, VARIANTS[variant], 9)
+    for x, y in HANDS:
+        g[y][x] = 's'
+    for x, y in EYES:
+        g[y][x] = 'e'
     for y, row in (LANTERN_COMPACT if variant == 3 else LANTERN).items():
         for x, ch in row.items():
             g[y][x] = ch
     if variant == 1:
         for x, ch in CAPE_EXTRA[14].items():
             g[14][x] = ch
-    # ноги и сапоги: кадр 1 — шаг (задняя нога отведена назад, передняя вперёд)
-    for x in (5, 6, 9, 10):
+    # ноги: кадр 1 — шаг
+    for x in (5, 6, 9, 10):                       # ноги растут из-под одежды: строка 13 закрыта телом, слой ног рисуется позади
         g[14][x] = 'm'
+        if g[13][x] is None or g[13][x] in ('a', 'b'):
+            g[13][x] = 'm' if part_legs else g[13][x]
     if frame == 0:
         for x in (5, 6, 9, 10):
             g[15][x] = 'm'
     else:
-        for x in (4, 5):
-            g[15][x] = 'm'
-        for x in (10, 11):
+        for x in (4, 5, 10, 11):
             g[15][x] = 'm'
     if hair in HAIR and HAIR[hair]:
         put_rows(g, HAIR[hair], HAIR_Y0[hair])
     return g
 
 
+BASE = {'k': 0.62}
+
+
 def shaded(grid, ch_set, tone_fn):
-    """Возвращает изображение слоя: пиксели из ch_set в оттенках серого (нижний край — тень)."""
+    """Изображение слоя: пиксели из ch_set в оттенках серого (нижний край — тень, k — тёмная шерсть)."""
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     for y in range(H):
         for x in range(W):
             c = grid[y][x]
             if c in ch_set:
                 below = grid[y + 1][x] if y + 1 < H else None
-                v = SHADE if (below not in ch_set) else 1.0
+                v = BASE.get(c, 1.0) * (SHADE if (below not in ch_set) else 1.0)
                 if x > 0 and grid[y][x - 1] not in ch_set and c in ('a', 'b'):
                     v = min(v, 0.86)
                 g = int(255 * v)
                 im.putpixel((x, y), (g, g, g, 255))
     return im
-
-
-def layer_for(variant, hair, frame, chars):
-    g = frame_grid(variant, hair, frame)
-    # слой одежды/кожи не должен включать пиксели, закрытые волосами
-    return shaded(g, chars, None)
 
 
 def make_sheet(fn):
@@ -153,15 +179,25 @@ def make_sheet(fn):
     return sheet
 
 
-def skin_layer(f):
-    g = blank(); put_rows(g, HEAD, 0)
-    # руки не видны: кожа только на лице
-    return shaded(g, {'s'}, None)
+def skin_layer(species):
+    def fn(f):
+        g = blank(); put_head(g, species)
+        return shaded(g, {'s', 'k'}, None)
+    return fn
+
+
+def face_layer(species):
+    def fn(f):
+        im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        for (x, y), col in FACE[species].items():
+            im.putpixel((x, y), col + (255,))
+        return im
+    return fn
 
 
 def cloth_layer(variant, chars):
     def fn(f):
-        g = blank(); put_rows(g, VARIANTS[variant], 8)
+        g = blank(); put_rows(g, VARIANTS[variant], 9)
         if variant == 1:
             for x, ch in CAPE_EXTRA[14].items():
                 g[14][x] = ch
@@ -179,16 +215,18 @@ def hair_layer(hair):
 
 
 def detail_layer(variant, part='base'):
-    """part: base — глаза, ноги, ручка лампы; lamp — горящая лампа (жёлтая); lampoff — потухшая (серо-синяя, без свечения)."""
+    """part: base — глаза (с бликом), ноги; lamp — горящая лампа; lampoff — потухшая."""
     return lambda f: _detail(variant, f, part)
 
 
 def _detail(variant, f, part):
+    global part_legs
     im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    g = frame_grid(variant, 6, f)
+    part_legs = part == 'legs'; g = frame_grid(variant, 6, f); part_legs = False
     pals = {
-        'base': {'e': (22, 26, 44), 'm': (42, 47, 69)},                                   # глаза и ноги — поверх тела
-        'lamp': {'f': (58, 63, 77), 'l': (255, 216, 107), 'i': (255, 251, 224)},          # ручка и лампа — позади героя
+        'base': {'e': (22, 26, 44)},                                              # глаза — поверх тела
+        'legs': {'m': (42, 47, 69)},                                              # ноги — позади тела: верх прячется под одеждой
+        'lamp': {'f': (58, 63, 77), 'l': (255, 216, 107), 'i': (255, 251, 224)},
         'lampoff': {'f': (58, 63, 77), 'l': (72, 78, 104), 'i': (112, 120, 150)},
     }
     pal = pals[part]
@@ -200,6 +238,8 @@ def _detail(variant, f, part):
                 col = pal[c]
                 if c == 'l' and below != 'l':
                     col = (232, 176, 72) if part == 'lamp' else (52, 57, 78)
+                if c == 'e' and g[y - 1][x] != 'e':
+                    col = (236, 240, 255)          # блик сверху: большие живые глаза
                 im.putpixel((x, y), col + (255,))
     return im
 
@@ -223,9 +263,13 @@ def save(name, img):
     idle.save(os.path.join(IDLE, name))
 
 
-save('skin.png', make_sheet(skin_layer))
+save('skin.png', make_sheet(skin_layer(0)))
+for sp in (1, 2):
+    save(f'skin_s{sp}.png', make_sheet(skin_layer(sp)))
+    save(f'face_s{sp}.png', make_sheet(face_layer(sp)))
 for v in VARIANTS:
     save(f'detail_v{v}.png', make_sheet(detail_layer(v)))
+    save(f'legs_v{v}.png', make_sheet(detail_layer(v, 'legs')))
     save(f'lamp_v{v}.png', make_sheet(detail_layer(v, 'lamp')))
     save(f'lampoff_v{v}.png', make_sheet(detail_layer(v, 'lampoff')))
     save(f'cloth1_v{v}.png', make_sheet(cloth_layer(v, {'a'})))

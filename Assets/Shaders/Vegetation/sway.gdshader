@@ -64,7 +64,24 @@ void fragment() {
 		COLOR = texture(TEXTURE, uv) * vcol;
 		}
 	} else {
-		COLOR = texture(TEXTURE, UV) * vcol;
+		// камни, руда и прочие блоки не качаются на ветру, но при ударе раскачиваются: основание на месте, верхушка ходит
+		float rock = 0.0;
+		vec2 cell = floor(wpos / 16.0);
+		for (int i = 0; i < 8; i++) {
+			vec4 s = shakes[i];
+			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) rock += s.z * sin(TIME * 48.0 + s.w);
+		}
+		vec2 uv2 = UV;
+		if (rock != 0.0) {
+			float ly = fract(UV.y * atlas.y / 16.0);
+			float tr = td.g / 16.0;
+			float yy = clamp((ly - tr) / max(1.0 - tr, 0.1), 0.0, 1.0);
+			uv2.x = UV.x - rock * (1.0 - yy) / atlas.x;
+			float lo = col * 16.0 / atlas.x + 0.5 / atlas.x;
+			float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
+			uv2.x = clamp(uv2.x, lo, hi);
+		}
+		COLOR = texture(TEXTURE, uv2) * vcol;
 	}
 	float g = td.b;
 	if (g > 0.0) {

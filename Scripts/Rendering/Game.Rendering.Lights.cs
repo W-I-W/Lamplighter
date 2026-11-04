@@ -41,6 +41,7 @@ public partial class Game
         foreach (var z in ZoneLights()) if (n < LightLimit - 12) arr[n++] = z;
         foreach (var z in EventLights()) if (n < LightLimit - 6) arr[n++] = z;
         foreach (var z in HeartLights()) if (n < LightLimit - 6) arr[n++] = z;
+        foreach (var z in GroveLights()) if (n < LightLimit - 6) arr[n++] = z;
         if (FinStage == 1 && n < LightLimit) arr[n++] = new Vector4(W.Ancients[0].Pos.X, W.Ancients[0].Pos.Y, Mathf.Max(1f, FinT * 900f), FinT < 10 ? 1f : 0f);
         // силуэты: слабая подсветка интересных объектов сквозь тьму
         foreach (var m in Marks()) if (n < LightLimit) arr[n++] = m;

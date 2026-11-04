@@ -24,9 +24,9 @@ public static class LookArt
     /// новые причёски и фасоны не требуют отдельных листов контура.</summary>
     static Texture2D Outline(Look l, bool walk)
     {
-        string key = $"outline_{(walk ? "w" : "i")}_v{l.Variant}_h{l.Hair}";
+        string key = $"outline_{(walk ? "w" : "i")}_v{l.Variant}_h{l.Hair}_s{l.Species}";
         if (cache.TryGetValue(key, out var cached)) return cached;
-        var layers = new[] { "skin", $"cloth1_v{l.Variant}", $"cloth2_v{l.Variant}", $"detail_v{l.Variant}", $"lamp_v{l.Variant}", $"hair_{l.Hair}" };
+        var layers = new[] { SkinLayer(l), $"cloth1_v{l.Variant}", $"cloth2_v{l.Variant}", $"detail_v{l.Variant}", $"legs_v{l.Variant}", $"lamp_v{l.Variant}", l.Species == 0 ? $"hair_{l.Hair}" : $"face_s{l.Species}" };
         Image sil = null;
         foreach (var n in layers)
         {
@@ -54,6 +54,8 @@ public static class LookArt
         var tex = ImageTexture.CreateFromImage(res); cache[key] = tex; return tex;
     }
 
+    static string SkinLayer(Look l) => l.Species == 0 ? "skin" : $"skin_s{l.Species}";          // кот и собака: своя голова с ушами и хвост
+
     /// <summary>Рисует кадр героя (frame 0/1) в клетке 16×16 с левым верхним углом pos; height &lt; 16 обрезает низ (стоит в воде). scale — для крупного предпросмотра в интерфейсе.</summary>
     public static void Draw(CanvasItem c, Look l, int frame, Vector2 pos, Color mod, float height = 16, float scale = 1, bool lamp = true, bool walking = false)
     {
@@ -62,10 +64,12 @@ public static class LookArt
         void L(string n, Color col) { var t = T(n, walking); if (t != null) c.DrawTextureRectRegion(t, dst, src, col * mod); }
         var ol = Outline(l, walking); if (ol != null) c.DrawTextureRectRegion(ol, dst, src, Colors.White * mod);
         L(lamp ? $"lamp_v{l.Variant}" : $"lampoff_v{l.Variant}", Colors.White);      // лампа и её ручка — позади героя: горит (есть у героя) или потухла и не светится
-        L("skin", Look.SkinCols[l.Skin]);
+        L($"legs_v{l.Variant}", Colors.White);                                        // ноги позади тела: при шаге верх ноги уходит под одежду
+        L(SkinLayer(l), l.BodyCol);
         L($"cloth1_v{l.Variant}", Look.ClothCols[l.Cloth1]);
         L($"cloth2_v{l.Variant}", Look.ClothCols[l.Cloth2]);
         L($"detail_v{l.Variant}", Colors.White);                                      // глаза и ноги — поверх тела
-        L($"hair_{l.Hair}", Look.HairCols[l.HairCol]);
+        if (l.Species == 0) L($"hair_{l.Hair}", Look.HairCols[l.HairCol]);
+        else L($"face_s{l.Species}", Colors.White);                                    // нос, усы, мордочка
     }
 }

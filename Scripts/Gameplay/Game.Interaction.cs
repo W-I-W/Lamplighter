@@ -102,7 +102,7 @@ public partial class Game
         Tl.Chest => "Сундук", Tl.Shrine => "Святилище света", Tl.Obelisk => "Обелиск", Tl.Cage => "Клетка с пленником", Tl.Machine or Tl.MachineOn => "Механизм древних",
         Tl.Mirror1 or Tl.Mirror2 => "Кристальное зеркало", Tl.BridgeBroken => "Разрушенный мост", Tl.Seal => "Печать", Tl.Receiver or Tl.ReceiverOn => "Приёмник света",
         Tl.TechCache => "Постамент", Tl.Spire => "Шпиль света", Tl.Altar or Tl.AltarOn => "Алтарь лучей", Tl.Tablet => "Записка", Tl.FalseLantern => "Огонёк",
-        Tl.Pylon or Tl.PylonOn => "Древнее светило", Tl.RiftGate => "Врата разломов", Tl.Grave => "Могила", _ => "Объект"
+        Tl.Pylon or Tl.PylonOn => "Древнее светило", Tl.RiftGate => "Врата разломов", Tl.Grave => "Могила", Tl.BossTotem => "Тотем стража", Tl.BossGate => "Врата арены", _ => "Объект"
     };
 
     /// <summary>Один проход системы: сбор объектов, выбор, подготовка Cur для клавиш E/U и панели.</summary>

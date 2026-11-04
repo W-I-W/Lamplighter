@@ -17,7 +17,7 @@ public static class Ach
         new() { Id = "ten_lanterns", Name = "Десять территорий", Desc = "Зажгите десять древних фонарей", Check = g => g.TotalLit >= 10 },
         new() { Id = "forge", Name = "Кузнец света", Desc = "Постройте кузницу в деревне", Check = g => g.HasBuilding(Tl.Forge) },
         new() { Id = "auto_mine", Name = "Работа без рук", Desc = "Запустите автоматическую добычу", Check = g => g.HasBuilding(Tl.Mine) || g.HasBuilding(Tl.Drill) },
-        new() { Id = "guardian1", Name = "Страж леса", Desc = "Победите Хранителя Тёмного леса", Check = g => g.BossDown(1) },
+        new() { Id = "guardian1", Name = "Страж леса", Desc = "Победите Пожирателя Рощи", Check = g => g.BossDown(1) },
         new() { Id = "guardian2", Name = "Страж глубин", Desc = "Победите Хранителя глубин", Check = g => g.BossDown(2) },
         new() { Id = "guardian3", Name = "Страж пепла", Desc = "Победите Пепельного стража", Check = g => g.BossDown(3) },
         new() { Id = "guardian4", Name = "Страж зимы", Desc = "Победите Хранителя Зимы", Check = g => g.BossDown(4) },

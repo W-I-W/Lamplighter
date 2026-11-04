@@ -143,7 +143,7 @@ public partial class EquipWindowUI : Control
     void Refresh()
     {
         G.PokeHover();
-        title.Text = T("Снаряжение"); closeHint.Text = T("Esc — закрыть"); foot.Text = T(TabQuestions[Mathf.Clamp(G.WinTab, 0, 3)]);
+        title.Text = T(G.StationOpened ? "Создание" : "Снаряжение"); closeHint.Text = T("Esc — закрыть"); foot.Text = T(TabQuestions[Mathf.Clamp(G.WinTab, 0, 3)]);
         RefreshTabs();
         Clear(centerBox); Clear(rightBox);
         switch (G.WinTab) { case 0: BuildWeapons(); break; case 1: BuildRelics(); break; case 2: BuildCraft(); break; default: BuildLantern(); break; }
@@ -165,7 +165,7 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < 4; i++)
         {
             var b = tabs[i]; b.Text = T(TabNames[i]); b.Icon = Px.Raised(icons[i], 2); bool act = i == G.WinTab;
-            b.Visible = i != 2 || G.CraftTabAvail; b.ThemeTypeVariation = act ? "TabSelected" : "Tab"; b.AddThemeColorOverride("font_color", act ? Gold : Dim); b.AddThemeColorOverride("font_hover_color", act ? Gold : Text);
+            b.Visible = G.StationOpened ? i == 2 : (i != 2 || G.CraftTabAvail);       // у станции — только вкладка создания b.ThemeTypeVariation = act ? "TabSelected" : "Tab"; b.AddThemeColorOverride("font_color", act ? Gold : Dim); b.AddThemeColorOverride("font_hover_color", act ? Gold : Text);
         }
     }
 
@@ -310,6 +310,7 @@ public partial class EquipWindowUI : Control
         centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(It.Relic), rel.Tint, T(rel.Title), Db.RarCol[rel.Rarity], eq ? T("Сейчас экипировано") : T(Db.RarName[rel.Rarity]), eq ? Good : Dim));
         bool full = !eq && G.EquippedRelics.Count >= G.RelicSlots;
         centerBox.AddChild(MainActionButtonUI.Make(eq ? "Снять" : "Надеть", () => { G.EqToggleRelic(G.OwnedRelics[cur]); Flash(centerBox); }, eq || !full, full ? T("Все слоты заняты: сначала снимите другую реликвию.") : null));
+        centerBox.AddChild(MainActionButtonUI.Make("Выбросить", () => { G.TryDropRelic(G.OwnedRelics[cur]); Flash(centerBox); }, true, T("Реликвия ляжет на землю: другой игрок сможет её подобрать.")));
         rightBox.AddChild(Lbl("Что даёт", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(rel.Desc, Text, true));
     }
 

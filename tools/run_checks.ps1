@@ -100,6 +100,8 @@ Run-Stage 'resources: Spark of Light start, tutorial goals, transfer, drops, sha
 Run-Stage 'itemup: upgrading tools and weapons in the gear window' 'itemup' @('ITEMUP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'fixes: mining memory, death drops, regeneration, health relics, shared bushes, goals' 'fixes' @('SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'seals: the seals between regions cannot be bypassed' 'seals' @('SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'arena: boss arenas, totem, gates, defeat reset, victory' 'arena' @('SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'grove: Grove Devourer (immobile, phases 70/35 once, absorb cap, hunger safe sectors, anti-cheese, reward once) and the shared boss phase bar (screenshots)' 'grove' @('GROVE DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
 Run-Stage 'clicks: real mouse clicks without cursor movement (resource menu, equipment, build)' 'clicks' @('CLICKS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'hud: density modes, collapsing hint, one event line, temporary resources, notifications' 'hud' @('HUD DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'equip: equipment window, cards, sockets, hotbar, relics, lantern, crafting, resolutions' 'equip' @('EQUIP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')

@@ -40,8 +40,8 @@ public partial class Game
         return f ? "furnace" : forge ? "forge" : null;
     }
 
-    /// <summary>Вкладка «Создание» в снаряжении видна только рядом с печью или кузницей.</summary>
-    public bool CraftTabAvail => StationNear() != null;
+    /// <summary>Вкладка «Создание» есть только в окне, открытом через [E] у печи или кузницы (там она единственная); в обычном снаряжении [C] её нет.</summary>
+    public bool CraftTabAvail => StationOpened && StationNear() != null;
 
     /// <summary>Станция, рецептами которой можно пользоваться сейчас (вышли из радиуса — группа пропадает).</summary>
     public string ActiveStation() { var s = StationNear(); if (s != CraftStation) CraftStation = s; if (s != lastStation) { lastStation = s; if (s != null) StationFlashT = 1.6f; } return s; }
@@ -51,21 +51,19 @@ public partial class Game
         CraftStation = station; StationOpened = true; if (Window != Win.Equip) OpenWin(Win.Equip); WinTab = 2; WinCur = 0; StationFlashT = 1.6f; lastStation = station; CraftMode = station;
     }
 
+    public static readonly int[][] CostPickaxe = { new[] { It.Wood, 3 }, new[] { It.Stone, 4 } };      // первая кирка: герой начинает без неё
     List<Recipe> recipes;
     void BuildRecipes()
     {
         recipes = new();
         int[][] C(params int[] a) { var l = new int[a.Length / 2][]; for (int i = 0; i < l.Length; i++) l[i] = new[] { a[i * 2], a[i * 2 + 1] }; return l; }
         // печь: кирка (герой начинает без неё и после смерти теряет её) и топор
-        foreach (var (id, cost) in new[] { ("pickaxe", C(It.Wood, 3, It.Stone, 4)), ("axe", C(It.Wood, 5, It.Stone, 3)) })
+        foreach (var (id, cost) in new[] { ("pickaxe", CostPickaxe), ("axe", C(It.Wood, 5, It.Stone, 3)) })
         {
             var td = ToolDef.Get(id); string tid = id; var tc = cost;
             recipes.Add(new Recipe { Id = "tool_" + id, Group = "furnace", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
                 NameFn = tid == "axe" ? () => td.Name + (AxeLv > 0 ? $" +{AxeLv}" : "") : null, UpCost = tid == "axe" ? () => NextAxeUpCost : null, Upgrade = tid == "axe" ? UpgradeAxe : null, UpDesc = "+30% к добыче и +10% к урону за уровень" });
         }
-        // печь и кузница: сила руки (до кирки дерево и камень ломают голыми руками)
-        foreach (var g in new[] { "furnace", "forge" })
-            recipes.Add(new Recipe { Id = "hand_" + g, Group = g, Name = "Улучшение руки", Desc = "Голой рукой дерево и камень ломаются быстрее, а удар сильнее", Icon = UiIcons.Pickaxe, Improves = true, Known = () => HandLv < HandMaxLv, Done = () => false, CostFn = () => NextHandUpCost, Craft = n => UpgradeHand() });
         // печь: плавка слитков (очередь общая и работает после закрытия окна)
         foreach (var ore in new[] { It.CopperOre, It.IronOre, It.SilverOre })
         {

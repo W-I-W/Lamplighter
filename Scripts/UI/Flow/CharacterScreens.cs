@@ -138,9 +138,13 @@ public partial class CharacterSelectionUI : FlowScreen
 public partial class CharacterCreationUI : FlowScreen
 {
     public bool First;
-    static readonly string[] Names = { "Алекс", "Марк", "Лена", "Ника", "Тимур", "Эльза", "Рэй", "Мира", "Кай", "Фрея", "Орион", "Вера" };
-    readonly Look look = Game.DefaultLook(); LineEdit name; LookView view; Label hairName, varName; Control stage;
-    readonly List<Swatch> skin = new(), hairC = new(), cl1 = new(), cl2 = new(); bool walking, flip;
+    static readonly string[][] Names = { new[] { "Лис", "Волк", "Сова", "Ёж", "Барсук", "Филин", "Рысь", "Ворон", "Бобр", "Олень", "Медведь", "Сокол", "Тигр", "Псина" },
+        new[] { "Барсик", "Мурка", "Пушок", "Рыжик", "Снежок", "Васька", "Багира", "Тигруля", "Уголёк", "Мурзик", "Симба", "Персик" },
+        new[] { "Шарик", "Рекс", "Бобик", "Тузик", "Дружок", "Жучка", "Лайка", "Барон", "Граф", "Бублик", "Найда", "Пират" } };      // по виду героя: лесные звери, кошачьи и собачьи клички
+    static string RandomName(int species) { var l = Names[Math.Clamp(species, 0, Names.Length - 1)]; return Loc.T(l[Rng.RandiRange(0, l.Length - 1)]); }
+    string autoName = "";                                                     // имя выбрано случайно: при смене вида меняется на кличку нового вида
+    readonly Look look = Game.DefaultLook(); LineEdit name; LookView view; Label hairName, varName, specName; Control stage;
+    readonly List<Swatch> skin = new(), hairC = new(), cl1 = new(), cl2 = new(); readonly List<Control> hairRows = new(); bool walking, flip;
     static readonly RandomNumberGenerator Rng = new();
 
     public override void _Ready()
@@ -157,12 +161,13 @@ public partial class CharacterCreationUI : FlowScreen
 
         var rp = Px.Panel(); rp.Position = new Vector2(260, 38); rp.Size = new Vector2(360, 246); AddChild(rp);
         var v = new VBoxContainer { Position = new Vector2(8, 8), Size = new Vector2(344, 230) }; v.AddThemeConstantOverride("separation", 5); rp.AddChild(new Control()); rp.GetChild<Control>(0).AddChild(v);
-        name = new LineEdit { Text = Loc.T(Names[Rng.RandiRange(0, Names.Length - 1)]), MaxLength = 16, CustomMinimumSize = new Vector2(180, 20), PlaceholderText = Loc.T("Имя героя") }; Modal.Style(name);
-        name.TextChanged += _ => { }; var nr = LabeledRow("Имя"); nr.AddChild(name); nr.AddChild(Px.Button("", "dice", () => { name.Text = Loc.T(Names[Rng.RandiRange(0, Names.Length - 1)]); Px.Pop(name, .04f); }, 24, 20));
+        name = new LineEdit { Text = autoName = RandomName(look.Species), MaxLength = 16, CustomMinimumSize = new Vector2(180, 20), PlaceholderText = Loc.T("Имя героя") }; Modal.Style(name);
+        name.TextChanged += _ => { }; var nr = LabeledRow("Имя"); nr.AddChild(name); nr.AddChild(Px.Button("", "dice", () => { name.Text = autoName = RandomName(look.Species); Px.Pop(name, .04f); }, 24, 20));
         v.AddChild(nr.GetParent());
+        specName = Px.Label("", Px.Gold, false, HorizontalAlignment.Center); AddCycler(v, "Вид", specName, d => { look.Species = (look.Species + d + Look.SpeciesN) % Look.SpeciesN; if (name.Text == autoName) name.Text = autoName = RandomName(look.Species); });
         AddSwatches(v, "Кожа", Look.SkinCols, skin, i => look.Skin = i, () => look.Skin);
-        hairName = Px.Label("", Px.Gold, false, HorizontalAlignment.Center); AddCycler(v, "Причёска", hairName, d => { look.Hair = (look.Hair + d + Look.HairN) % Look.HairN; });
-        AddSwatches(v, "Цвет волос", Look.HairCols, hairC, i => look.HairCol = i, () => look.HairCol);
+        hairName = Px.Label("", Px.Gold, false, HorizontalAlignment.Center); AddCycler(v, "Причёска", hairName, d => { look.Hair = (look.Hair + d + Look.HairN) % Look.HairN; }); hairRows.Add((Control)v.GetChild(v.GetChildCount() - 1));
+        AddSwatches(v, "Цвет волос", Look.HairCols, hairC, i => look.HairCol = i, () => look.HairCol); hairRows.Add((Control)v.GetChild(v.GetChildCount() - 1));
         AddSwatches(v, "Одежда", Look.ClothCols, cl1, i => look.Cloth1 = i, () => look.Cloth1);
         AddSwatches(v, "Доп. цвет", Look.ClothCols, cl2, i => look.Cloth2 = i, () => look.Cloth2);
         varName = Px.Label("", Px.Gold, false, HorizontalAlignment.Center); AddCycler(v, "Фасон", varName, d => { look.Variant = (look.Variant + d + Look.VariantN) % Look.VariantN; });
@@ -203,7 +208,9 @@ public partial class CharacterCreationUI : FlowScreen
         look.Clamp(); view.Look = look;
         for (int i = 0; i < skin.Count; i++) skin[i].Selected = i == look.Skin; for (int i = 0; i < hairC.Count; i++) hairC[i].Selected = i == look.HairCol;
         for (int i = 0; i < cl1.Count; i++) cl1[i].Selected = i == look.Cloth1; for (int i = 0; i < cl2.Count; i++) cl2[i].Selected = i == look.Cloth2;
-        hairName.Text = Loc.T(Look.HairNames[look.Hair]); varName.Text = Loc.T(Look.VariantNames[look.Variant]);
+        hairName.Text = Loc.T(Look.HairNames[look.Hair]); varName.Text = Loc.T(Look.VariantNames[look.Variant]); specName.Text = Loc.T(Look.SpeciesNames[look.Species]);
+        for (int i = 0; i < skin.Count; i++) skin[i].Col = look.Species == 0 ? Look.SkinCols[i] : Look.FurCols[i];          // у кота и собаки вместо кожи — шерсть
+        foreach (var c in hairRows) c.Visible = look.Species == 0;
         foreach (var s in skin) s.QueueRedraw(); foreach (var s in hairC) s.QueueRedraw(); foreach (var s in cl1) s.QueueRedraw(); foreach (var s in cl2) s.QueueRedraw();
     }
 

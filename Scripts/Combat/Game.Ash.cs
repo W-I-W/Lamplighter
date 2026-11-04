@@ -161,7 +161,7 @@ public partial class Game
 
     Vector2 UpdateAshWarden(Enemy e, float dt, Vector2 dir, float dist)
     {
-        float hpf = e.Hp / e.MaxHp; bool rage = hpf < .33f; float mul = (rage ? .6f : 1f) * BossTempoMul();
+        float hpf = e.Hp / e.MaxHp; int ph = PhaseNum(e); bool rage = ph >= 3; float mul = (rage ? .6f : 1f) * BossTempoMul();          // фазы — данные BossPhaseBook
         if (rage && e.Mark.X == 0)
         {
             e.Mark = new Vector2(1, 0);
@@ -178,7 +178,7 @@ public partial class Game
                 if (e.T1 <= 0)
                 {
                     float r = rng.Randf();
-                    if (!rage && hpf > .66f) { e.State = r < .5f ? 1 : 2; e.T2 = r < .5f ? .8f : .9f; }
+                    if (ph == 1) { e.State = r < .5f ? 1 : 2; e.T2 = r < .5f ? .8f : .9f; }
                     else if (!rage) { if (r < .25f) { e.State = 1; e.T2 = .8f; } else if (r < .6f) { e.State = 3; e.T2 = .7f; } else if (r < .8f) { e.State = 2; e.T2 = .9f; } else { e.State = 4; e.T2 = .8f; } }
                     else { if (r < .3f) { e.State = 5; e.T2 = .5f; e.DashDir = dir; } else if (r < .6f) { e.State = 3; e.T2 = .6f; } else if (r < .8f) { e.State = 1; e.T2 = .6f; } else { e.State = 2; e.T2 = .7f; } }
                 }

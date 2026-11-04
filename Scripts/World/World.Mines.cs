@@ -211,6 +211,7 @@ public sealed partial class World
         {
             var t = Pick(.93f, 1f, 4, 16);
             if (t.X < 0) t = Pick(.7f, 1f, 3, 10);
+            if (GenV >= 5) t = ArenaCenter(t, MX0 + 18, 236);       // вокруг арены стена: круг не должен выходить за область шахт
             for (int yy = t.Y - 8; yy <= t.Y + 8; yy++)
                 for (int xx = t.X - 8; xx <= t.X + 8; xx++)
                 {

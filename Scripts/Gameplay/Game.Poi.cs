@@ -230,18 +230,16 @@ public partial class Game
         int rescued = Villagers.Count;
         var a1 = W.Ancients[1]; var boss1 = BossLantern(1);
         bool Lv2() { foreach (var b in Buildings) if (b.Level >= 2) return true; return false; }
-        // начало игры: короткая цепочка «ресурсы → навыки → Искра света → Тьма»; показывается по одной цели, опытному герою не повторяется
+        // начало игры: ресурсы на печь → печь → кирка → навык света; показывается по одной цели, опытному герою не повторяется
         var sparkCost = LevelCost((int)Tech.Spark, 1); bool spark = Has(Tech.Spark);
-        Add("Собрать первые ресурсы", spark || Can(sparkCost), NeedShort(sparkCost));
-        Add("Открыть навыки [T]", spark || (Ann & TutTechOpened) != 0, "Дерево улучшений: клавиша T");
-        Add("Изучить «Искру света»", spark, "Первый свет: [T] → Искра света");
-        Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1 || HasFurnace, "Выйдите за границу света маяка");
+        bool pickOwned = OwnedTools.Contains("pickaxe") || Tier >= 1 || Graves.Count > 0;          // после смерти кирка ждёт в могиле
+        Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
         Add("Построить печь [B]", HasFurnace, NeedShort(CostFurnace));
-        bool pickOwned = OwnedTools.Contains("pickaxe");
-        Add("Улучшить удар с руки [C]", HandLv >= 1 || pickOwned, "У печи: вкладка «Создание» → «Улучшение руки». Рука быстрее ломает дерево и камень: " + NeedShort(HandUpCost(1)));
-        Add("Ещё раз улучшить руку [C]", HandLv >= 2 || pickOwned, "Ломайте дерево и камень ещё быстрее: " + NeedShort(HandUpCost(2)));
+        Add("Создать кирку у печи [E]", pickOwned, NeedShort(CostPickaxe));
+        Add("Изучить навык света [T]", spark, "Первый свет: [T] → Искра света. " + NeedShort(sparkCost));
+        Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
         Add("Создать оружие [C]", Owned.Count > 0, "Меч, лук и посох — вкладка «Создание» у печи");
-        Add("Медная кирка у печи [E]", Tier >= 1, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
+        Add("Медная кирка у печи [E]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
         var techP = NearestPoi(PK.TechCache, true);
@@ -256,9 +254,9 @@ public partial class Game
         Add("Подключить производство узлами [B]", HasBuilding(Tl.Hub) || !HasBuilding(Tl.Mine), BpDone.Contains("bp_hub") ? NeedShort(BCost(7, 1)) : "Нужен чертёж «Логистика» [J]");
         Add("Построить цех переработки [B]", HasBuilding(Tl.Refinery), BpDone.Contains("bp_refinery") ? NeedShort(BCost(6, 1)) : "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)");
-        Add("Улучшить здание до ур.2 [U]", Lv2(), "Подойдите к зданию и нажмите U");
+        Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
         Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
-        Add("Победить Хранителя Тёмного леса", BossDown(1), "Ждёт у фонаря на краю леса. Награда: первое ядро", boss1?.Pos);
+        Add("Победить Пожирателя Рощи", BossDown(1), "Заражённое дерево в роще на краю леса. Награда: первое ядро", boss1?.Pos);
         Add("Экипировать реликвию [C]", EquippedRelics.Count > 0, "Реликвии усиливают оружие и свет");
         Add("Улучшить Центральный маяк", BeaconLevel >= 2, $"{It.Ic(It.Core)}Ядро света {Math.Min(Inv[It.Core], 1)}/1: к маяку, [E]", W.Ancients[0].Pos);
         if (BeaconLevel >= 2)

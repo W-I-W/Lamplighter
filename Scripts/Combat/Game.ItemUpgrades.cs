@@ -10,12 +10,6 @@ public partial class Game
     public const int WeaponMaxLv = 5, AxeMaxLv = 4;
     public const float WeaponLvStep = .10f, AxeMineStep = .30f, AxeDmgStep = .10f;
     public int AxeLv;
-    public const int HandMaxLv = 3; public const float HandMineStep = 1f, HandDmgStep = .25f;
-    public int HandLv;                                          // сила руки: голыми руками дерево и камень ломаются быстрее, удар сильнее
-    public float HandMineMul => 1f + HandMineStep * HandLv;
-    public float HandDmgMul => 1f + HandDmgStep * HandLv;
-    public static int[][] HandUpCost(int next) => next <= 1 ? C(It.Wood, 6, It.Stone, 4) : next == 2 ? C(It.Wood, 12, It.Stone, 10) : C(It.Wood, 18, It.Stone, 16);
-    public int[][] NextHandUpCost => HandLv < HandMaxLv ? HandUpCost(HandLv + 1) : null;
 
     public int WeaponLv(string id) { foreach (var o in Owned) if (o.Id == id) return o.Lv; return 0; }
     float WeaponLvMul(string id) => 1f + WeaponLvStep * WeaponLv(id);
@@ -61,14 +55,6 @@ public partial class Game
         if (!NearForge("топор")) return false;
         var cost = AxeUpCost(AxeLv + 1); if (!Can(cost)) { Fail($"Для улучшения нужно: {NeedStr(cost)}"); return false; }
         Pay(cost); AxeLv++; UpgradeDone($"Топор +{AxeLv}", "добыча дерева быстрее, удар сильнее"); return true;
-    }
-
-    public bool UpgradeHand()
-    {
-        if (HandLv >= HandMaxLv) { Fail("Рука уже улучшена до максимума"); return false; }
-        if (!NearForge("руку")) return false;
-        var cost = HandUpCost(HandLv + 1); if (!Can(cost)) { Fail($"Для улучшения нужно: {NeedStr(cost)}"); return false; }
-        Pay(cost); HandLv++; UpgradeDone($"Сильная рука +{HandLv}", "дерево и камень без кирки ломаются быстрее, удар рукой сильнее"); return true;
     }
 
     public bool UpgradePickaxe() { int t = Tier; UpgradePick(); return Tier > t; }

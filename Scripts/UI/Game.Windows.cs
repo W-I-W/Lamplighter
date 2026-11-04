@@ -199,6 +199,7 @@ public partial class Game
 
     void EquipKey(Key k, bool shift = false)
     {
+        if (StationOpened && (k == Key.Left || k == Key.Right)) return;
         if (k == Key.Left) { WinTab = (WinTab + 3) % 4; if (WinTab == 2 && !CraftTabAvail) WinTab = 1; WinCur = 0; return; }
         if (k == Key.Right) { WinTab = (WinTab + 1) % 4; if (WinTab == 2 && !CraftTabAvail) WinTab = 3; WinCur = 0; return; }
         bool enter = k == Key.Enter || k == Key.KpEnter;

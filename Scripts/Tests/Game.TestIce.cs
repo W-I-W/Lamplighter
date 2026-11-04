@@ -40,6 +40,7 @@ public partial class Game
         {
             var bl = BossLantern(4); if (bl == null) { Log("NO BOSS LANTERN"); return; }
             aimOverride = null; Tp(bl.Pos + new Vector2(-90, 50)); Log($"ice boss lantern {bl.Tile}");
+            MaxHp = Hp = 99999f; var ar = W.ArenaOf(4); BreakTile(ar.Totem, Tl.BossTotem, false);       // бой начинается со сломанного тотема
         });
         S(2.5f, () => { Log($"boss alive={Boss != null} kind={Boss?.Kind} hp={Boss?.Hp}"); Shot("i4_boss"); if (Boss != null) { Boss.State = 1; Boss.T2 = .05f; } });
         S(1.6f, () => { Log($"pending blocks={PendingBlocks.Count} temp={TempBlocks.Count}"); Shot("i5_blocks"); if (Boss != null) { Boss.State = 2; Boss.T2 = .05f; } });

@@ -64,6 +64,7 @@ public sealed partial class World
         // арена Хранителя Зимы: ледяное озеро с четырьмя призмами
         {
             var t = kit.Pick(.9f, 1f, 4, 16); if (t.X < 0) t = kit.Pick(.6f, 1f, 3, 10);
+            if (GenV >= 5) t = ArenaCenter(t, IX0 + 18, IX1 - 18);       // вокруг арены стена: круг не должен выходить за область монастыря
             kit.Floor(t.X, t.Y, 10, Art.IceFloor, 6);
             Set(t.X, t.Y, Tl.BossOff);
             foreach (var o in new[] { new Vector2I(-6, 0), new Vector2I(6, 0), new Vector2I(0, -6), new Vector2I(0, 6) }) { var p = t + o; Set(p.X, p.Y, Tl.Receiver); ArenaPrisms.Add(p); }

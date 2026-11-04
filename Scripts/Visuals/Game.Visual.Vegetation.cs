@@ -40,14 +40,14 @@ public partial class Game
     /// <summary>Событие: по тайлу ударили (дерево встряхивается и плавно успокаивается).</summary>
     public void TileShake(int x, int y, float mul = 1f)
     {
-        var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = (TileIsPlant(tt) ? 1f : .35f) * mul;
+        var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = (TileIsPlant(tt) ? 1f : .8f) * mul;
         if (TileIsPlant(tt)) y--;                                                       // у дерева качается крона — клетка над стволом
         for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == new Vector2I(x, y)) { tileShakes[i] = (tileShakes[i].tile, 0f, amt); return; }
         if (tileShakes.Count >= 8) tileShakes.RemoveAt(0);
         tileShakes.Add((new Vector2I(x, y), 0f, amt));
     }
 
-    bool TileSways(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.CrystalOre || t == Tl.SilverOre;
+    bool TileSways(Tl t) => t != Tl.None;                                           // качаются от удара любые блоки: деревья кроной, остальные целиком
     bool TileIsPlant(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;
 
     void UpdateVegetation(float dt)

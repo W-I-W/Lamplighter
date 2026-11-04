@@ -199,12 +199,14 @@ public sealed class BalanceModel
     // отдельных состояний Ash/Winter/Source (состояния 3–7) сведено к ближайшим по смыслу действиям с урона/предупреждения из кода — это приближение, отмечено в отчёте.
     static BossM[] BossTable(Func<EK, float> hp) => new[]
     {
-        new BossM { Id = 1, Kind = "Warden", Hp = hp(EK.Warden), Region = 0, MeleeDmg = 12, MeleePeriod = 1f, RageMul = .65f, Src = "Game.Combat.cs:558 + Game.BossSpecials.cs", Moves = new[] {
-            new BossMoveM { Name = "slam", Dmg = 22, Windup = .9f, Gap = 2.2f, W0 = .66f, W1 = .33f, W2 = .33f },
-            new BossMoveM { Name = "dash", Dmg = 18, Windup = 1.1f, Post = .8f, Gap = 1.8f, W0 = .34f, W1 = .34f, W2 = .34f },
-            new BossMoveM { Name = "summon", Windup = .8f, Gap = 3f, W1 = .33f, W2 = .33f, Summon = new[] { "Swarm", "Swarm", "Swarm" } },
-            new BossMoveM { Name = "ring", Dmg = 12, Windup = .3f, Cooldown = 4f, Ranged = true, PhaseBelowHp = .33f },
-            new BossMoveM { Name = "vortex", Dmg = 16, Windup = 1f, Cooldown = 10.5f, Open = 1.8f, PhaseBelowHp = .5f } } },
+        // Пожиратель Рощи (EK.Warden): неподвижен, касанием не бьёт — «ближний удар» модели заменён шипами у ствола (кольцо корней раз в 4.5 с); фазы игры 70%/35% сведены к фазам модели 66%/33%
+        new BossM { Id = 1, Kind = "Warden", Hp = hp(EK.Warden), Region = 0, MeleeDmg = 12, MeleePeriod = 4.5f, RageMul = .62f, Src = "Game.Grove.cs (BossPhaseBook: root, branch, thorns / spores, absorb / rootseries, hunger)", Moves = new[] {
+            new BossMoveM { Name = "root", Dmg = 14, Windup = .9f, Gap = 1.5f, W0 = .5f, W1 = .3f, W2 = 0f },
+            new BossMoveM { Name = "rootseries", Dmg = 12, Windup = .6f, Gap = 1.0f, W2 = .4f },
+            new BossMoveM { Name = "branch", Dmg = 16, Windup = .9f, Gap = 1.5f, W0 = .5f, W1 = .35f, W2 = .3f },
+            new BossMoveM { Name = "spores", Dmg = 12, Windup = 1f, Gap = 1.5f, Ranged = true, W1 = .35f, W2 = .3f },
+            new BossMoveM { Name = "absorb", Windup = .5f, Cooldown = 14f, Open = 2.2f, PhaseBelowHp = .70f },
+            new BossMoveM { Name = "hunger", Dmg = 30, Windup = 1.9f, Cooldown = 13f, Open = 4.5f, PhaseBelowHp = .35f } } },
         new BossM { Id = 2, Kind = "DepthWarden", Hp = hp(EK.DepthWarden), Region = 1, MeleeDmg = 10, MeleePeriod = 1f, RageMul = .6f, Src = "Game.Combat.cs:624 + Game.BossSpecials.cs", Moves = new[] {
             new BossMoveM { Name = "dive", Dmg = 18, Windup = .35f, Hide = 2.2f, Post = 1.1f, Gap = 1.6f, W0 = .75f, W1 = .25f, W2 = .25f },
             new BossMoveM { Name = "tide", Dmg = 20, Windup = 1f, Gap = 2f, Ring = 10f, W0 = .25f, W1 = .25f, W2 = .25f },

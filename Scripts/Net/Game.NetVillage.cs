@@ -101,10 +101,17 @@ public partial class Game
                     CreateBuilding(a, new Vector2I(b, c)); return null;
                 }
         }
+        if (op == 2)
+        {
+            // улучшение: клиент заплатил за переход с уровня b. Если здание уже снесли, его успел улучшить другой игрок или уровень предельный — стоимость возвращается
+            var ub = BuildingByKey(a);
+            if (ub != null && BIndex(ub.Type) == c && ub.Level == b && ub.Level < MaxLv(c)) { ub.Level++; SetObj(ub.X, ub.Y, ub.Type); Fx("building_upgrade", ub.Pos); TradeEpoch++; netT = 0; return null; }
+            if (c < 0 || c >= BCount || b < 1 || b >= BCosts[c].Length) return null;
+            var back = new int[It.Count]; foreach (var cc in BCost(c, b + 1)) back[cc[0]] += cc[1]; return back;
+        }
         var bd = BuildingByKey(a); if (bd == null) return null; int bk = BIndex(bd.Type);
         switch (op)
         {
-            case 2: if (bd.Level < MaxLv(bk)) { bd.Level++; SetObj(bd.X, bd.Y, bd.Type); Fx("building_upgrade", bd.Pos); TradeEpoch++; netT = 0; } break;
             case 3: Buildings.Remove(bd); SetObj(bd.X, bd.Y, Tl.None); netT = 0; break;
             case 4: { var modes = BModes[bk]; if (modes != null) { bd.Mode = Math.Clamp(b, 0, modes.Length - 1); bd.Prog = 0; } break; }
             case 5: bd.Prio = Math.Clamp(b, 0, 2); netT = 0; break;

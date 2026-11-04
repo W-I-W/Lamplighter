@@ -311,15 +311,59 @@ public partial class NetNode : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
     public void RpcProjs(Godot.Collections.Array<float> d) { if (Multiplayer.GetRemoteSenderId() == 1) G.NetApplyProjs(d); }
 
-    public void SendEnemyHit(int id, float dmg, Vector2 dir, bool melee) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcEnemyHit), id, dmg, dir.X, dir.Y, melee); }
+    public void SendEnemyHit(int id, float dmg, Vector2 dir, bool melee, bool light) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcEnemyHit), id, dmg, dir.X, dir.Y, melee, light); }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    public void RpcEnemyHit(int id, float dmg, float dx, float dy, bool melee)
+    public void RpcEnemyHit(int id, float dmg, float dx, float dy, bool melee, bool light)
     {
         if (!Multiplayer.IsServer()) return; long s = Multiplayer.GetRemoteSenderId();
         if (!NetService.Players.TryGetValue(s, out var p) || !p.Handshaken || !WorldRateOk(s)) return;
-        G.NetEnemyHit(s, id, dmg, new Vector2(dx, dy), melee);
+        G.NetEnemyHit(s, id, dmg, new Vector2(dx, dy), melee, light);
     }
+
+    public void SendEnemyFx(int id, float burn, float slow, float freeze) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcEnemyFx), id, burn, slow, freeze); }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcEnemyFx(int id, float burn, float slow, float freeze)
+    {
+        if (!Multiplayer.IsServer()) return; long s = Multiplayer.GetRemoteSenderId();
+        if (!NetService.Players.TryGetValue(s, out var p) || !p.Handshaken || !WorldRateOk(s)) return;
+        G.NetEnemyFx(s, id, burn, slow, freeze);
+    }
+
+    /// <summary>Хост → убийца-гость: за этого врага награда ваша (вид, элитность, событие); считается у гостя.</summary>
+    public void SendKillCredit(long peer, Enemy e)
+    {
+        if (!Multiplayer.IsServer() || peer == 1) return;
+        RpcId(peer, nameof(RpcKillCredit), (int)e.Kind, e.Elite ? e.EMod : 0, e.Ev?.Kind ?? "", e.Ev?.Seed ?? 0, e.Carrier, e.Pos.X, e.Pos.Y);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcKillCredit(int kind, int emod, string evKind, int evSeed, bool carrier, float x, float y)
+    { if (Multiplayer.GetRemoteSenderId() == 1) G.NetKillCredit(kind, emod, evKind, evSeed, carrier, x, y); }
+
+    // ───────────────────────── арены боссов ─────────────────────────
+    /// <summary>Хост → гости: событие атаки Пожирателя Рощи (корень, ветвь, споры, поглощение, «Голод»). Частицы не пересылаются.</summary>
+    public void SendGrove(int ev, float[] a) { if (Multiplayer.MultiplayerPeer != null && Multiplayer.IsServer()) Rpc(nameof(RpcGrove), ev, a); }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcGrove(int ev, float[] a) { if (Multiplayer.GetRemoteSenderId() == 1) G.NetGrove(ev, a); }
+
+    public void SendArena(int id, int state) { if (Multiplayer.IsServer()) Rpc(nameof(RpcArena), id, state); }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcArena(int id, int state) { if (Multiplayer.GetRemoteSenderId() == 1) G.NetArena(id, state); }
+
+    /// <summary>Хост переносит гостя в арену; его следующие позиции принимаются без проверки скорости.</summary>
+    public void SendTeleport(long peer, Vector2 pos)
+    {
+        if (!Multiplayer.IsServer() || peer == 1) return;
+        if (NetService.Players.TryGetValue(peer, out var p)) p.SpeedFreeUntil = now + 2.0;
+        RpcId(peer, nameof(RpcTeleport), pos.X, pos.Y);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcTeleport(float x, float y) { if (Multiplayer.GetRemoteSenderId() == 1) G.NetTeleport(x, y); }
 
     public void SendHurt(long peer, float dmg, Vector2 kb, bool fire) { if (Multiplayer.IsServer() && peer != 1) RpcId(peer, nameof(RpcHurtMe), dmg, kb.X, kb.Y, fire); }
 
@@ -362,7 +406,7 @@ public partial class NetNode : Node
         if (!float.IsFinite(x) || !float.IsFinite(y)) return;
         float maxX = World.Wd * 16f, maxY = World.Ht * 16f; x = Mathf.Clamp(x, 0, maxX); y = Mathf.Clamp(y, 0, maxY);
         double dt = Math.Max(.02, now - p.LastRecv); var np = new Vector2(x, y);
-        if (p.LastRecv > 0 && p.Pos.DistanceTo(np) / dt > 1200f) { return; }             // слишком быстрое перемещение — состояние отвергается (позиция остаётся прежней)
+        if (p.LastRecv > 0 && now >= p.SpeedFreeUntil && p.Pos.DistanceTo(np) / dt > 1200f) { return; }             // слишком быстрое перемещение — состояние отвергается (позиция остаётся прежней)
         p.Pos = np; p.Face = face < 0 ? -1 : 1; p.MaxHp = Mathf.Clamp(float.IsFinite(maxHp) ? maxHp : 100, 1, 1000); p.Hp = Mathf.Clamp(float.IsFinite(hp) ? hp : p.MaxHp, 0, p.MaxHp); p.Flags = (byte)(flags & 3); p.Light = float.IsFinite(light) ? Mathf.Clamp(light, 20f, 400f) : 72f; p.Held = held; p.AimAng = float.IsFinite(aim) ? aim : 0f; p.LastRecv = now;
     }
 

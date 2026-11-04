@@ -64,7 +64,7 @@ public partial class Game
     /// <summary>Событие логики: враг убит. Запускает анимацию смерти (враг уже убран из списка).</summary>
     public void OnEnemyDeath(Enemy e)
     {
-        if (e.Kind == EK.Decoy) return;
+        if (e.Kind == EK.Decoy || e.Kind == EK.Warden) return;          // у Пожирателя Рощи своя гибель (GroveDie)
         var vd = EnemyDef(e.Kind); if (vd.Sheet == null) return;
         float sc = (e.Elite ? 1.25f : 1f) * vd.Scale; var col = CasterColor(e.Kind);
         deaths.Add(new DeathAnim { Kind = e.Kind, Pos = e.Pos, Face = PPos.X < e.Pos.X ? -1 : 1, Frame = (int)(Time * vd.Fps + e.Phase) % vd.Frames, Scale = sc, Def = vd, C = SoulKind(e.Kind) ? new Color("#a060ff") : col, Boss = e.IsBoss });
@@ -187,7 +187,7 @@ public partial class Game
     bool EnemyDraw(Enemy e, out EntityVisualDef vd, out Vector2 at, out Vector2 scale, out int frame, out float fy)
     {
         vd = EnemyDef(e.Kind); at = Vector2.Zero; scale = Vector2.One; frame = 0; fy = 0;
-        if (e.Hidden || vd.Sheet == null) return false;
+        if (e.Hidden || vd.Sheet == null || e.Kind == EK.Warden) return false;          // Пожиратель Рощи рисуется своим листом (DrawGrove)
         float sc = (e.Elite ? 1.25f : 1f) * vd.Scale; frame = (int)(Time * vd.Fps + e.Phase) % vd.Frames;
         float bob = Mathf.Sin(Time * 4 + e.Phase) * vd.Bob - vd.Lift; int face = e.Kind == EK.Beetle ? (e.Face.X < 0 ? -1 : 1) : (PPos.X < e.Pos.X ? -1 : 1);
         var pose = EnemyPose(e); fy = vd.Offset.Y + vd.FrameSize;                          // низ спрайта: растяжение и сжатие идут от «ног»

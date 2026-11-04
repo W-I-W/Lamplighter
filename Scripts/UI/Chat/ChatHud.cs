@@ -55,7 +55,7 @@ public partial class ChatHud : Control
     }
 
     static Regex hiRx; static string hiLang; static readonly Dictionary<string, Color> hiItems = new();
-    /// <summary>Что подсвечивать в тексте: названия ресурсов (их цветом) и числа («+1», «12/30», «×3», «50%»).</summary>
+    /// <summary>Что подсвечивать в тексте: названия ресурсов целыми словами (их цветом; «Кристаллы» не равно «Кристалл», иначе слово красится чужим цветом) и числа («+1», «12/30», «×3», «50%»).</summary>
     static Regex Highlights()
     {
         if (hiRx != null && hiLang == Loc.Lang) return hiRx;
@@ -63,7 +63,7 @@ public partial class ChatHud : Control
         for (int i = 0; i < It.Count && i < It.Names.Length; i++)
             foreach (var nm in new[] { It.Names[i], Loc.T(It.Names[i]) }) if (nm != null && nm.Length >= 3 && !hiItems.ContainsKey(nm)) { hiItems[nm] = It.Col[i]; names.Add(Regex.Escape(nm)); }
         names.Sort((x, y) => y.Length.CompareTo(x.Length));
-        hiRx = new Regex((names.Count > 0 ? "(?<it>" + string.Join("|", names) + ")|" : "") + @"(?<n>[+\-−×]?\d+(?:[.,]\d+)?(?:/\d+)?%?)", RegexOptions.Compiled);
+        hiRx = new Regex((names.Count > 0 ? @"(?<![\p{L}\d])(?<it>" + string.Join("|", names) + @")(?![\p{L}\d])|" : "") + @"(?<![\p{L}\d])(?<n>[+\-−×]?\d+(?:[.,]\d+)?(?:/\d+)?%?)", RegexOptions.Compiled);
         return hiRx;
     }
 

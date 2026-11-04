@@ -13,10 +13,11 @@ public sealed class Enemy
     // визуальное состояние (только отрисовка): стадии атаки, попадание, след рывка
     public float VTele0, VAtk = 9f, VPrevAtk, VPrevTele, VPrevDash, VHit = 9f, VHitMul = 1f, VTrailT; public Vector2 VHitDir; public Vector2[] VTrail = new Vector2[3];
     public float LostT, Over, SpecT = 8f, SpecTim, SpecAng, SpecEmit; public int SpecPh, SpecN, SpecVol; public int NetId; public long Target = 1, LastHitBy; public float RetargetT, SeenT; public Vector2 NetPos; public int State, EMod; public bool Id2; public float WardT, RallyT; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
+    public BossPhaseController PhaseCtl;                  // фазы босса (данные BossPhaseBook); у гостя — по фазе, присланной хостом
     public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden || Kind == EK.WinterWarden || Kind == EK.Source;
     public float Radius => Kind switch
     {
-        EK.Warden => 14, EK.DepthWarden => 15, EK.AshWarden => 15, EK.WinterWarden => 15, EK.Source => 16, EK.Sentinel => 8, EK.Weaver => 6, EK.Swarm => 3, EK.Bomber => 6, EK.Shade => 6, EK.Beetle => 7, EK.Golem => 9, EK.Leech => 4, _ => 5
+        EK.Warden => 20, EK.DepthWarden => 15, EK.AshWarden => 15, EK.WinterWarden => 15, EK.Source => 16, EK.Sentinel => 8, EK.Weaver => 6, EK.Swarm => 3, EK.Bomber => 6, EK.Shade => 6, EK.Beetle => 7, EK.Golem => 9, EK.Leech => 4, _ => 5
     };
 }
 
@@ -34,7 +35,7 @@ public partial class Game
 
     public static string EnemyName(EK k) => k switch
     {
-        EK.Shade => "Тень", EK.Wraith => "Призрак", EK.Spitter => "Плевун", EK.Swarm => "Мрак-рой", EK.Bomber => "Подрывник", EK.Warden => "Хранитель Тёмного леса",
+        EK.Shade => "Тень", EK.Wraith => "Призрак", EK.Spitter => "Плевун", EK.Swarm => "Мрак-рой", EK.Bomber => "Подрывник", EK.Warden => "Пожиратель Рощи",
         EK.Eel => "Глубинный угорь", EK.Leech => "Светоед", EK.Beetle => "Кристальный жук", EK.DepthWarden => "Хранитель глубин",
         EK.Imp => "Огненный бес", EK.Golem => "Пепельный голем", EK.Spirit => "Дух пепла", EK.IceWolf => "Ледяной волк", EK.FrostPriest => "Ледяной жрец", EK.Sentinel => "Зеркальный страж",
         EK.WinterWarden => "Хранитель Зимы", EK.Mirage => "Иллюзорник", EK.Decoy => "Мираж", EK.Weaver => "Ткач Тьмы", EK.Stalker => "Пустотный охотник", EK.Source => "Источник Тьмы", _ => "Пепельный страж"
@@ -122,6 +123,7 @@ public partial class Game
         var targets = new List<Vector2> { PPos }; if (NetHost) foreach (var r in Remotes()) if (r.Hp > 0) targets.Add(r.Pos);
         spawnT -= dt; if (spawnT > 0) return;
         spawnIdx = (spawnIdx + 1) % targets.Count; var tp = targets[spawnIdx];
+        if (ArenaHolding(tp) != null) { spawnT = 1f; return; }                    // в арене врагов добавляет только сам страж
         if (IsLit(tp)) { spawnT = .5f / targets.Count; return; }
         int reg = RegionAt(tp);
         if (Finished && reg < 4) { spawnT = 1f; return; }
@@ -138,7 +140,7 @@ public partial class Game
             float a2 = rng.Randf() * Mathf.Tau, d = rng.RandfRange(130, 200);
             var p = tp + new Vector2(Mathf.Cos(a2), Mathf.Sin(a2)) * d;
             var t = ToTile(p);
-            if (!W.Walkable(t.X, t.Y) || IsLit(p) || RegionAt(p) != reg) continue;
+            if (!W.Walkable(t.X, t.Y) || IsLit(p) || RegionAt(p) != reg || ArenaHolding(p) != null) continue;
             if (reg != 0 && !LineClear(tp, p)) continue;
             bool nearOther = false; foreach (var o in targets) if (o != tp && o.DistanceTo(p) < 120f) { nearOther = true; break; }         // не прямо перед другим игроком
             if (nearOther) continue;
@@ -217,31 +219,11 @@ public partial class Game
 
     // ───────────────────────── боссы ─────────────────────────
     float bossT;
-    void UpdateBossSpawn(float dt)
-    {
-        if (Boss != null && !Enemies.Contains(Boss)) Boss = null;
-        if (NetClient) return;
-        bossT -= dt; if (bossT > 0) return; bossT = .3f;
-        foreach (var a in W.Ancients)
-        {
-            if (!a.Boss || a.Lit || BossDown(a.BossId)) continue;
-            EK k = a.BossId == 1 ? EK.Warden : a.BossId == 2 ? EK.DepthWarden : a.BossId == 3 ? EK.AshWarden : a.BossId == 4 ? EK.WinterWarden : EK.Source;
-            bool exists = false; foreach (var e in Enemies) if (e.Kind == k) { exists = true; break; }
-            if (exists) continue;
-            if (PPos.DistanceTo(a.Pos) < 13 * TS)
-            {
-                Boss = SpawnEnemy(a.Pos + new Vector2(0, -36), k, null, DangerScale);
-                Announce(EnemyName(k) + " пробудился!", a.BossId == 2 ? "Вода и тьма — его стихия. Береги свет!" : a.BossId == 3 ? "Огонь и дым — его оружие" : a.BossId == 4 ? "Зеркальный щит, лёд и метель. Свет призм сломит его защиту" : a.BossId == 5 ? "Он поглощает свет. Ставьте фонари" : "Хранитель древнего фонаря. Победа даст силу света", new Color("#d58cff"), "boss");
-                Shake = 4;
-            }
-        }
-        if (Boss == null) foreach (var e in Enemies) if (e.IsBoss) { Boss = e; break; }
-    }
-
     void BossKilled(Enemy e)
     {
         int id = e.Kind == EK.Warden ? 1 : e.Kind == EK.DepthWarden ? 2 : e.Kind == EK.AshWarden ? 3 : e.Kind == EK.WinterWarden ? 4 : 5;
         BossMask |= 1 << (id - 1); if (Boss == e) Boss = null;
+        if (id == 1 && !NetClient) GroveDie(e.Pos);      // у гостя гибель рощи показывает RpcBossDown
         if (NetHost) Net?.SendBossDown(id, e.Pos);                      // эффекты победы видят все
         GiveWeapon(id == 1 ? "sword_u" : id == 2 ? "bow_u" : id == 3 ? "staff_u" : id == 4 ? "staff_w" : "");
         GiveRelic(id == 1 ? "r_dawnprism" : id == 2 ? "r_winterheart" : id == 3 ? "r_emberheart" : id == 4 ? "r_prismcore" : null);
@@ -252,7 +234,7 @@ public partial class Game
         if (id == 1)
         {
             TechMask |= 1 << (int)Tech.Pulse; Give(It.Aether, 3, e.Pos + new Vector2(0, -16));
-            title = "Хранитель Тёмного леса повержен!"; sub = "Первое ядро света! Улучшите маяк [E]";
+            title = "Пожиратель Рощи повержен!"; sub = "Роща свободна. Первое ядро света! Улучшите маяк [E]";
         }
         else if (id == 2)
         {
@@ -261,7 +243,7 @@ public partial class Game
         }
         else if (id == 4)
         {
-            TechMask |= 1 << (int)Tech.Prism; Give(It.Frost, 6, e.Pos + new Vector2(0, -16)); Give(It.Crystal, 6, e.Pos + new Vector2(0, -24)); ClearIceBlocks();
+            TechMask |= 1 << (int)Tech.Prism; Give(It.Frost, 6, e.Pos + new Vector2(0, -16)); Give(It.Crystal, 6, e.Pos + new Vector2(0, -24)); if (!NetClient) ClearIceBlocks();
             title = "Хранитель Зимы повержен!"; sub = "Четвёртое ядро. Улучшите маяк — откроется Сердце Тьмы";
         }
         else
@@ -281,25 +263,30 @@ public partial class Game
     public void Hurt(Enemy e, float dmg, Vector2 dir, bool melee = false, bool light = false)
     {
         if (e.Hidden) return;
-        if (NetClient && e.NetId > 0) { Net?.SendEnemyHit(e.NetId, dmg, dir, melee); e.Flash = .15f; e.VHit = 0; Fx("enemy_hit", e.Pos); return; }       // хост считает урон
+        if (NetClient && e.NetId > 0) { Net?.SendEnemyHit(e.NetId, dmg, dir, melee, light); e.Flash = .15f; e.VHit = 0; Fx("enemy_hit", e.Pos); return; }       // хост считает урон
+        e.LastHitBy = hitSrc != 0 ? hitSrc : LocalPeer;                                 // последний удар определяет, кому достанется награда
+        bool remote = hitSrc != 0; var from = remote ? PosOf(hitSrc) ?? PPos : PPos;      // удар гостя: умения и позиция хоста в расчёте не участвуют
         if (e.Kind == EK.Decoy) { e.Hp = 0; Burst(e.Pos, new Color("#c080ff"), 8, 60); return; }
         float m = 1f;
         if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { m *= .06f; if (rng.Randf() < .5f) Burst(e.Pos + (PPos - e.Pos).Normalized() * 14, new Color("#ffffff"), 3, 70); }
         if (e.Kind == EK.Sentinel && !light) { m *= .3f; Burst(e.Pos, new Color("#e8faff"), 3, 60); }
         if (e.Over > 0) { m *= 1.4f; if (rng.Randf() < .5f) Burst(e.Pos, new Color("#ffe27a"), 2, 45); }          // босс открыт после мощной способности
+        if (e.Kind == EK.Warden) m *= GroveDamageMul(e, from);
         if (e.EMod == EWarded && e.WardT > 0) { m *= .35f; if (rng.Randf() < .5f) Burst(e.Pos, new Color("#9fe8ff"), 2, 50); }
-        if (melee && Has(Tech.SilverEdge) && SoulKind(e.Kind)) m *= 1f + E(Tech.SilverEdge);
+        if (melee && !remote && Has(Tech.SilverEdge) && SoulKind(e.Kind)) m *= 1f + E(Tech.SilverEdge);
         if (melee && e.Kind == EK.Beetle)
         {
-            float cosA = e.Face.Normalized().Dot((PPos - e.Pos).Normalized());
-            if (cosA > .35f) { m *= .2f + .08f * Lv(Tech.SilverEdge); Burst(e.Pos + e.Face * 6, new Color("#e4f4ff"), 4, 60); Sfx.Play("tick", -2, .6f); }
+            float cosA = e.Face.Normalized().Dot((from - e.Pos).Normalized());
+            if (cosA > .35f) { m *= .2f + .08f * (remote ? 0 : Lv(Tech.SilverEdge)); Burst(e.Pos + e.Face * 6, new Color("#e4f4ff"), 4, 60); Sfx.Play("tick", -2, .6f); }
         }
-        dmg *= m;
-        e.Hp -= dmg; e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f);
+        dmg *= m; float hp0 = e.Hp;
+        e.Hp -= dmg;
+        if (e.IsBoss) { float floor = e.MaxHp * PhaseOf(e).FloorFrac; if (hp0 > floor && e.Hp < floor) e.Hp = floor; }      // фаза не проскакивает: лишний урон до перехода теряется
+        if (e.Kind == EK.Warden) GroveAfterHurt(e, hp0 - e.Hp); e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f);
         if (e.Kind == EK.Golem && rng.Randf() < .6f) AddZone(e.Pos, 40, 0, 3.5f, 0f, true);
-        if (melee && Has(Tech.FlameEdge)) e.Burn = Mathf.Max(e.Burn, E(Tech.FlameEdge));
-        if (melee && Has(Tech.FrostEdge)) { e.Slow = Mathf.Max(e.Slow, E(Tech.FrostEdge)); if (!e.IsBoss && Lv(Tech.FrostEdge) >= 3 && rng.Randf() < .05f * (Lv(Tech.FrostEdge) - 2)) e.Freeze = Mathf.Max(e.Freeze, 1f); }
-        if (melee && Tier >= 4) e.Burn = Mathf.Max(e.Burn, 2f);
+        if (melee && !remote && Has(Tech.FlameEdge)) e.Burn = Mathf.Max(e.Burn, E(Tech.FlameEdge));
+        if (melee && !remote && Has(Tech.FrostEdge)) { e.Slow = Mathf.Max(e.Slow, E(Tech.FrostEdge)); if (!e.IsBoss && Lv(Tech.FrostEdge) >= 3 && rng.Randf() < .05f * (Lv(Tech.FrostEdge) - 2)) e.Freeze = Mathf.Max(e.Freeze, 1f); }
+        if (melee && !remote && Tier >= 4) e.Burn = Mathf.Max(e.Burn, 2f);
         Fx("enemy_hit", e.Pos); OnEnemyHit(e, dmg, dir);
         Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), S = ((int)Mathf.Round(dmg)).ToString(), Life = .6f, C = m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
     }
@@ -354,9 +341,39 @@ public partial class Game
         cam.ResetSmoothing();
     }
 
+    /// <summary>Враг убит (на хосте или в одиночной игре). Награду получает тот, кто нанёс последний удар: если это гость, хост оставляет себе только мир (прогресс, события), а личное — опыт, счётчик, лечение,
+    /// добыча, награды элиты, события и стража — гостю присылает признак убитого (RpcKillCredit), и всё считается по его собственным умениям.</summary>
     void KillEnemy(Enemy e)
     {
         OnEnemyDeath(e);
+        if (e.IsBoss && NetHost)                                                       // босс: награда каждому игроку в мире, не только нанёсшему последний удар
+        {
+            KillRewards(e);
+            foreach (var r in Remotes()) Net?.SendKillCredit(r.PeerId, e);
+            return;
+        }
+        long killer = NetHost ? KillerOf(e) : LocalPeer;
+        if (killer != LocalPeer) { KillWorldOnly(e); Net?.SendKillCredit(killer, e); return; }
+        KillRewards(e);
+    }
+
+    /// <summary>Часть убийства, которая принадлежит миру, а не убийце: завершение события, взрыв нестабильного, прогресс стража. Выполняет хост, когда добычу получает гость.</summary>
+    void KillWorldOnly(Enemy e)
+    {
+        if (e.Ev != null && (e.Ev.Kind == "elite" || e.Ev.Kind == "caravan" && e.Carrier)) e.Ev.Done = true;
+        if (e.IsBoss)
+        {
+            int id = e.Kind == EK.Warden ? 1 : e.Kind == EK.DepthWarden ? 2 : e.Kind == EK.AshWarden ? 3 : e.Kind == EK.WinterWarden ? 4 : 5;
+            BossMask |= 1 << (id - 1); if (Boss == e) Boss = null; Net?.SendBossDown(id, e.Pos); if (id == 1) GroveDie(e.Pos);
+            if (id == 4) ClearIceBlocks(); if (id == 5) ClearHeartTemps();
+            Save();
+        }
+        else if (e.Elite && e.EMod == EVolatile) Explode(e);
+    }
+
+    /// <summary>Личная награда за убитого врага (у того, кто его убил).</summary>
+    void KillRewards(Enemy e)
+    {
         Kills++;
         if (e.Ev != null) EvEnemyKilled(e);
         if (e.IsBoss) { BossKilled(e); return; }
@@ -393,6 +410,7 @@ public partial class Game
             e.Kb *= Mathf.Max(0, 1 - 9 * dt);
             e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
             if (e.Burn > 0) { e.Burn -= dt; e.Hp -= 3f * dt * (e.IsBoss ? .3f : 1f); if (rng.Randf() < dt * 12) Burst(e.Pos, new Color("#ff9a2e"), 1, 25); }
+            if (e.IsBoss) BossPhaseTick(e);
             var to = PPos - e.Pos; float dist = to.Length(); var dir = dist > .01f ? to / dist : Vector2.Zero;
             var perp = new Vector2(-dir.Y, dir.X);
             bool guard = e.Guard != null || e.IsBoss || (e.Ev != null && e.Ev.Kind != "riftx");
@@ -496,7 +514,7 @@ public partial class Game
                         if (e.T1 <= 0) { Explode(e); Enemies.RemoveAt(i); continue; }
                     }
                     break;
-                case EK.Warden: vel = UpdateWarden(e, dt, dir, dist); break;
+                case EK.Warden: vel = UpdateGrove(e, dt, dir, dist); break;
                 case EK.DepthWarden: vel = UpdateDepthWarden(e, dt, dir, dist, water); break;
                 case EK.Eel:
                     e.Cd -= dt;
@@ -561,6 +579,7 @@ public partial class Game
             if (e.Kind == EK.Leech && e.State == 1) { }
             else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
                 if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }
+            if (e.Kind == EK.Warden && e.Home is Vector2 gh) { e.Pos = gh; e.Kb = Vector2.Zero; }      // Пожиратель Рощи врос в землю
 
             // враг не заходит внутрь игрока: иначе мелкий враг шёл «в игроке» с его скоростью, и по нему нельзя было попасть
             if (!e.IsBoss && e.Kind != EK.Leech && e.Kind != EK.Swarm)
@@ -575,6 +594,7 @@ public partial class Game
         }
         if (aiRespawn is Vector2 rp2) { realP = rp2; aiRespawn = null; }
         PPos = realP; aiRemote = 0;
+        GroveTick(dt);
         if (attached == 0) LeechT = Mathf.Max(0, LeechT - dt);
     }
 
@@ -585,63 +605,10 @@ public partial class Game
         if (PPos.DistanceTo(e.Pos) < 38) HurtPlayer(18f * e.Scale, (PPos - e.Pos).Normalized() * 2f, e.Kind != EK.Bomber || RegionAt(e.Pos) == 2);
     }
 
-    Vector2 UpdateWarden(Enemy e, float dt, Vector2 dir, float dist)
-    {
-        float hpf = e.Hp / e.MaxHp, mul = (hpf < .33f ? .65f : 1f) * BossTempoMul();
-        if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
-        Vector2 vel = Vector2.Zero;
-        switch (e.State)
-        {
-            case 0:
-                vel = dir * (hpf < .33f ? 48f : 40f); e.T1 -= dt; if (stillT > 1.8f) e.T1 -= dt * 1.5f; if (TryBossSpecial(e, dt, hpf, dist, dir)) break;      // стоять на месте опасно: страж атакует чаще
-                if (dist < 22 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(12f, -dir); }
-                if (hpf < .33f) { e.T3 -= dt; if (e.T3 <= 0) { e.T3 = 4f; RingShot(e.Pos, 8, new Color("#d58cff")); } }
-                if (e.T1 <= 0)
-                {
-                    float r = rng.Randf();
-                    if (hpf < .66f && r < .33f) { e.State = 5; e.T2 = .8f; }
-                    else if (r < .66f) { e.State = 1; e.T2 = .9f; }
-                    else { e.State = 2; e.T2 = .6f; e.DashDir = dir; }
-                }
-                break;
-            case 1:
-                e.T2 -= dt;
-                if (e.T2 <= 0)
-                {
-                    Shake = 6; Sfx.Play("boom");
-                    for (int i = 0; i < 28; i++) { float a = i * Mathf.Tau / 28; Parts.Add(new Particle { P = e.Pos, V = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 120, Life = .5f, Max = .5f, C = new Color("#d58cff"), Size = 2 }); }
-                    if (dist < 64) HurtPlayer(22f, -dir);
-                    e.State = 0; e.T1 = 2.2f * mul;
-                }
-                break;
-            case 2:
-                e.T2 -= dt; e.DashDir = dir;
-                if (e.T2 <= 0) { e.State = 3; e.T2 = .5f; Sfx.Play("dash", 2, .7f); }
-                break;
-            case 3:
-                vel = e.DashDir * 200f; e.T2 -= dt;
-                if (dist < 20 && e.Atk <= 0) { e.Atk = 1f; HurtPlayer(18f, -dir); }
-                if (e.T2 <= 0) { e.State = 4; e.T2 = .8f; if (e.SpecN > 0 && hpf < .33f) e.Over = Mathf.Max(e.Over, 1.4f); }       // после комбинации «вихрь → рывок» страж открыт
-                break;
-            case 4:
-                e.T2 -= dt; if (e.T2 <= 0) { e.State = 0; e.T1 = 1.8f * mul; }
-                break;
-            case 5:
-                e.T2 -= dt;
-                if (e.T2 <= 0)
-                {
-                    for (int i = 0; i < 3; i++) SpawnEnemy(e.Pos + new Vector2(rng.RandfRange(-20, 20), rng.RandfRange(-20, 20)), EK.Swarm, null, 1.2f);
-                    Burst(e.Pos, new Color("#a060ff"), 16, 90); e.State = 0; e.T1 = 3f * mul;
-                }
-                break;
-        }
-        return vel;
-    }
-
     /// <summary>Хранитель глубин: ныряет, бьёт приливом, призывает существ и гасит свет.</summary>
     Vector2 UpdateDepthWarden(Enemy e, float dt, Vector2 dir, float dist, bool water)
     {
-        float hpf = e.Hp / e.MaxHp, mul = (hpf < .33f ? .6f : 1f) * BossTempoMul();
+        float hpf = e.Hp / e.MaxHp; int ph = PhaseNum(e); float mul = (ph >= 3 ? .6f : 1f) * BossTempoMul();          // фазы — данные BossPhaseBook (66% / 33%)
         if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero; float wm = water ? 1.4f : .6f;
         switch (e.State)
@@ -652,8 +619,8 @@ public partial class Game
                 if (e.T1 <= 0)
                 {
                     float r = rng.Randf();
-                    if (hpf < .66f && r < .22f) { e.State = 5; e.T2 = 1f; }
-                    else if (hpf < .66f && r < .5f) { e.State = 6; e.T2 = 1.2f; }
+                    if (ph >= 2 && r < .22f) { e.State = 5; e.T2 = 1f; }
+                    else if (ph >= 2 && r < .5f) { e.State = 6; e.T2 = 1.2f; }
                     else if (r < .75f) { e.State = 1; e.T2 = 2.2f * mul; }
                     else { e.State = 4; e.T2 = 1f; e.Mark = PPos; }
                 }

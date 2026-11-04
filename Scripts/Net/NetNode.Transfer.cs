@@ -25,6 +25,7 @@ public partial class NetNode
 
     public void SendTransfer(long to, int item, int n) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcTransfer), to, item, n); }
     public void SendDrop(int item, int n) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcDrop), item, n); }
+    public void SendDropRelic(int idx) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcDropRelic), idx); }
     public void SendChest(bool deposit, int item, int n) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcChest), deposit, item, n); }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -39,6 +40,21 @@ public partial class NetNode
     {
         if (!MoveSender(out var s)) { if (Multiplayer.IsServer()) RefundRejected(Multiplayer.GetRemoteSenderId(), item, n); return; }
         G.HostDrop(s, item, n);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcDropRelic(int idx)
+    {
+        if (!MoveSender(out var s)) return;
+        if (idx < 0 || idx >= Db.Relics.Count) return;
+        G.HostDrop(s, Game.RelicBase + idx, 1);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcGrantRelic(int idx)
+    {
+        if (Multiplayer.GetRemoteSenderId() != 1 || idx < 0 || idx >= Db.Relics.Count) return;
+        G.GiveRelic(Db.Relics[idx].Id);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

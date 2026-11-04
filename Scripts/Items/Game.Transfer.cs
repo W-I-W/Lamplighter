@@ -21,6 +21,9 @@ public partial class Game
     bool Authority => !NetClient;                                                    // одиночная игра или хост
     public long LocalPeer => NetService.Active ? NetService.LocalId : 1;
     public static bool Movable(int item) => item >= 0 && item < It.Count;
+    public const int RelicBase = 1000;                                              // реликвия на земле: Item = RelicBase + номер в Db.Relics, Count = 1
+    public static bool IsRelicDrop(int item) => item >= RelicBase && item < RelicBase + 400;
+    public static RelicDef RelicOfDrop(int item) => IsRelicDrop(item) && item - RelicBase < Db.Relics.Count ? Db.Relics[item - RelicBase] : null;
 
     /// <summary>Позиция игрока по номеру соединения (хост знает всех).</summary>
     Vector2? PosOf(long peer)
@@ -85,6 +88,15 @@ public partial class Game
         return true;
     }
 
+    /// <summary>Выбросить реликвию на землю: её может подобрать другой игрок. Надетая снимается.</summary>
+    public bool TryDropRelic(string id)
+    {
+        int idx = Db.Relics.FindIndex(r => r.Id == id); if (idx < 0 || !OwnedRelics.Contains(id)) return false;
+        OwnedRelics.Remove(id); EquippedRelics.Remove(id); RecomputeEffects(); WinCur = Math.Clamp(WinCur, 0, Math.Max(0, OwnedRelics.Count - 1));
+        if (Authority) HostDrop(LocalPeer, RelicBase + idx, 1); else Net?.SendDropRelic(idx);
+        Sfx.Play("tick", -4, .9f); Toast($"Выброшено: {Db.Relics[idx].Title}"); return true;
+    }
+
     /// <summary>Удаление ресурса из инвентаря насовсем (без выпадения на землю).</summary>
     public bool TryDelete(int item, int n)
     {
@@ -95,9 +107,10 @@ public partial class Game
     /// <summary>Хост: новая стопка рядом с игроком или добавление к существующей такой же в пределах двух клеток.</summary>
     public void HostDrop(long owner, int item, int n)
     {
-        if (!Movable(item) || n < 1 || n > MaxMove || PosOf(owner) is not Vector2 pp) return;
+        bool relic = IsRelicDrop(item) && RelicOfDrop(item) != null; if (relic) n = 1;
+        if ((!Movable(item) && !relic) || n < 1 || n > MaxMove || PosOf(owner) is not Vector2 pp) return;
         var pos = pp + new Vector2(owner == LocalPeer ? Facing * 10f : 12f, 4f);
-        foreach (var d in Drops) if (d.Item == item && d.Pos.DistanceTo(pos) < 20f && d.Count + n <= MaxStack) { d.Count += n; d.Owner = owner; d.Born = (float)dropClock; dropsDirty = true; return; }
+        if (!relic) foreach (var d in Drops) if (d.Item == item && d.Pos.DistanceTo(pos) < 20f && d.Count + n <= MaxStack) { d.Count += n; d.Owner = owner; d.Born = (float)dropClock; dropsDirty = true; return; }
         Drops.Add(new WorldDrop { Id = nextDropId++, Item = item, Count = n, Pos = pos, Owner = owner, Born = (float)dropClock }); dropsDirty = true;
     }
 
@@ -115,6 +128,14 @@ public partial class Game
                 {
                     if (peer == d.Owner && dropClock - d.Born < DropProtect) continue;        // выбросивший не подбирает свою стопку сразу
                     if (PosOf(peer) is not Vector2 pp || pp.DistanceTo(d.Pos) > PickupRange) continue;
+                    if (IsRelicDrop(d.Item))
+                    {
+                        var rd = RelicOfDrop(d.Item); if (rd == null) { Drops.RemoveAt(i); dropsDirty = true; break; }
+                        if (peer == LocalPeer && OwnedRelics.Contains(rd.Id)) continue;     // такая реликвия уже есть: остаётся лежать для другого игрока
+                        Drops.RemoveAt(i); dropsDirty = true;
+                        if (peer == LocalPeer) GiveRelic(rd.Id); else Net?.RpcId(peer, nameof(NetNode.RpcGrantRelic), d.Item - RelicBase);
+                        Sfx.Play("pickup", -4); break;
+                    }
                     Drops.RemoveAt(i); dropsDirty = true;                                    // стопка убрана до выдачи: второй раз её не подобрать
                     GiveTo(peer, d.Item, d.Count); NoteTo(peer, string.Format(Loc.T("Подобрано: {0} ×{1}"), Loc.T(It.Names[d.Item]), d.Count), MsgTone.Good); Sfx.Play("pickup", -4);
                     break;
@@ -135,7 +156,7 @@ public partial class Game
         if (ids == null || items == null || counts == null || xs == null || ys == null) return;
         int n = Math.Min(Math.Min(ids.Length, items.Length), Math.Min(counts.Length, Math.Min(xs.Length, ys.Length))); n = Math.Min(n, 200);
         Drops.Clear();
-        for (int i = 0; i < n; i++) if (Movable(items[i]) && counts[i] > 0 && counts[i] <= MaxStack && float.IsFinite(xs[i]) && float.IsFinite(ys[i])) Drops.Add(new WorldDrop { Id = ids[i], Item = items[i], Count = counts[i], Pos = new Vector2(xs[i], ys[i]), Owner = -1 });
+        for (int i = 0; i < n; i++) if ((Movable(items[i]) || RelicOfDrop(items[i]) != null) && counts[i] > 0 && counts[i] <= MaxStack && float.IsFinite(xs[i]) && float.IsFinite(ys[i])) Drops.Add(new WorldDrop { Id = ids[i], Item = items[i], Count = counts[i], Pos = new Vector2(xs[i], ys[i]), Owner = -1 });
     }
 
     // ───────────────────────── общий склад ─────────────────────────

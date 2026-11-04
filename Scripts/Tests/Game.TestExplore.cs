@@ -70,8 +70,10 @@ public partial class Game
                 if (g1.Ancients.Any(a => a.Kind == LampKind.Mystery) || g1.Pois.Any(p => p.Kind == PK.SparkAltar || (p.Kind == PK.Secret && p.Variant == 10)) || g1.Pois.Count < old.Pois.Count + 3) { bad++; GD.Print($"[explore] seed {seed}: generation 1 changed"); }
                 // детерминизм и совместимость: одинаковый сид — тот же мир; прежняя генерация не получает ничего нового и не меняет порядок старых мест
                 if (!same) { bad++; GD.Print($"[explore] seed {seed}: generation is not deterministic"); }
-                if (old.Pois.Count + news.Count != w.Pois.Count || old.Ancients.Any(a => a.Kind != LampKind.Normal)) { bad++; GD.Print($"[explore] seed {seed}: old generation changed (old {old.Pois.Count} new {w.Pois.Count} +{news.Count})"); }
-                for (int j = 0; j < old.Pois.Count && j < w.Pois.Count; j++) if (old.Pois[j].Tile != w.Pois[j].Tile || old.Pois[j].Kind != w.Pois[j].Kind) { bad++; GD.Print($"[explore] seed {seed}: old poi order changed at {j}"); break; }
+                // версия 5 перестраивает арены боссов (сдвигает и убирает места рядом с ними), поэтому «прежнюю генерацию» сверяем с последней версией до арен
+                var g4 = World.Generate(seed, 4); var news4 = g4.Pois.Where(p => p.Kind == PK.Tower || p.Kind == PK.Vault || p.Kind == PK.Glade || (p.Kind == PK.Camp && p.Variant == 8) || p.Kind == PK.SparkAltar || p.Kind == PK.RuneObelisk || p.Kind == PK.GiantTree || p.Kind == PK.Survivor || (p.Kind == PK.Secret && p.Variant == 10)).ToList();
+                if (old.Pois.Count + news4.Count != g4.Pois.Count || old.Ancients.Any(a => a.Kind != LampKind.Normal)) { bad++; GD.Print($"[explore] seed {seed}: old generation changed (old {old.Pois.Count} new {g4.Pois.Count} +{news4.Count})"); }
+                for (int j = 0; j < old.Pois.Count && j < g4.Pois.Count; j++) if (old.Pois[j].Tile != g4.Pois[j].Tile || old.Pois[j].Kind != g4.Pois[j].Kind) { bad++; GD.Print($"[explore] seed {seed}: old poi order changed at {j}"); break; }
             }
             Check(bad == 0, $"explore: {seeds} seeds — new places reachable, spaced, lanterns varied, deterministic, old generation intact (problems={bad})");
             Check(counts[1] > 0 && counts[2] > 0 && counts[3] > 0, $"explore: all lamp kinds occur (guarded {counts[1]}, damaged {counts[2]}, infected {counts[3]})");

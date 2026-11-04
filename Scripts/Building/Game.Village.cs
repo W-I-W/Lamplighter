@@ -146,14 +146,16 @@ public partial class Game
         Save(); return b;
     }
 
+    public bool MyBuildingUp;                            // личное: этот герой улучшал здание (для задания; в общем мире здание могли улучшить и другие)
+
     void UpgradeBuilding(Building b)
     {
         int bk = BIndex(b.Type);
         if (b.Level >= MaxLv(bk)) { Fail("Здание уже улучшено до максимума"); return; }
         var cost = BCost(bk, b.Level + 1);
         if (!Can(cost)) { Fail($"Улучшение: нужно {CostStr(cost)}"); return; }
-        Pay(cost);
-        if (NetClient) { Net?.SendBuildCmd(2, BKey(b), 0, 0); Sfx.Play("build"); Toast("Улучшение отправлено хосту"); return; }
+        Pay(cost); MyBuildingUp = true;
+        if (NetClient) { Net?.SendBuildCmd(2, BKey(b), b.Level, bk); Sfx.Play("build"); Toast("Улучшение отправлено хосту"); return; }
         b.Level++; SetObj(b.X, b.Y, b.Type); netT = 0;
         Fx("building_upgrade", b.Pos); GiveXp(40);
         if (b.Type == Tl.Stall) TradeEpoch++;
@@ -372,16 +374,7 @@ public partial class Game
     float unlockT;
     public List<Goal> Goals = new();
     public const long TutTechOpened = 1L << 60, TutExplored = 1L << 61;       // признаки героя: открывал дерево навыков, выходил в Тьму со светом
-    static readonly string[] TutorialTitles = { "Собрать первые ресурсы", "Открыть навыки [T]", "Изучить «Искру света»", "Исследовать Тьму" };
-    string lastTutorial = "";
-
-    /// <summary>Начальная цель одной короткой строкой в чат: только когда сменилась цель обучения.</summary>
-    void TutorialChat()
-    {
-        string t = Goals.Count > 0 && Array.IndexOf(TutorialTitles, Goals[0].Title) >= 0 ? Goals[0].Title : "";
-        if (t != "" && t != lastTutorial) Notify.Post(MsgKind.System, MsgTone.Cyan, Loc.T("Цель") + ": " + Loc.T(t));
-        lastTutorial = t;
-    }
+    static readonly string[] TutorialTitles = { "Собрать ресурсы на печь", "Построить печь [B]", "Создать кирку у печи [E]", "Изучить навык света [T]", "Исследовать Тьму" };
 
     void UpdateUnlocks(float dt)
     {
@@ -402,6 +395,5 @@ public partial class Game
             }
         if (Has(Tech.Spark) && (Ann & TutExplored) == 0 && PPos.DistanceTo(W.Ancients[0].Pos) > AncientR(W.Ancients[0]) + 12f) Ann |= TutExplored;
         Goals = BuildGoals();                             // у каждого игрока свои задания: по его инвентарю, оружию и навыкам, а мир (постройки, фонари, стражи) общий
-        TutorialChat();
     }
 }

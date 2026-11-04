@@ -98,7 +98,7 @@ public partial class Game
             Enemies.Clear(); StationOpened = false; foreach (var it in new[] { It.Crystal, It.Silver, It.Iron, It.Copper, It.Wood, It.Stone, It.Coins }) Inv[it] = 99;
             Open(0); Check(!CraftTabAvail, "equip: away from a station the craft tab is hidden"); EqTab(2); Check(WinTab == 0, "equip: the hidden craft tab cannot be opened");
             var ft = ToTile(PPos + FreeAdj()); SetObj(ft.X, ft.Y, Tl.Furnace); HasFurnace = true; PPos = TileCenter(ft.X, ft.Y) + new Vector2(0, 16); StationOpened = false;
-            Check(CraftTabAvail, "equip: next to a furnace the craft tab appears"); Open(2);
+            Check(!CraftTabAvail, "equip: next to a furnace the plain equipment window has no craft tab"); OpenStation("furnace"); equipWindow.Force(); Check(CraftTabAvail && WinTab == 2, "equip: [E] at the furnace opens the craft tab");
             Check(CraftGroups().Count == 1 && CraftRows().Count > 0 && CraftRows().TrueForAll(x => x.r != null && x.group == "furnace"), "equip: next to a furnace the craft tab lists only its recipes (no tree headers, no hand craft)");
             Check(equipWindow.RecipeCellCount == CraftRows().Count && equipWindow.CardCount == 0, $"equip: recipes are an icon grid ({equipWindow.RecipeCellCount} cells, {equipWindow.CardCount} list cards)");
             Check(WinCur == 0 && CraftRows().TrueForAll(x => x.r.Known()), "equip: the first recipe is selected on open and only learned recipes are shown");

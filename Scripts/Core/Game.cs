@@ -29,7 +29,7 @@ public static class It
     public static int IngotOf(int ore) => ore == CopperOre ? Copper : ore == IronOre ? Iron : ore == SilverOre ? Silver : -1;
 }
 
-public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f; public Color C; }
+public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f, Alpha = 1f; public Color C; }
 public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
@@ -56,7 +56,7 @@ public partial class Game : Node2D
     public float Hp = 60, MaxHp = 60, Xp; public int Level = 1, Tier;
     public int[] Inv = new int[It.Count];
     public float Invuln, AtkCd, Swing, MineProg, MineNeed, Shake, Flash, Time;
-    float regenDelay, tierMsgCd, rippleT;
+    float regenDelay, tierMsgCd, rippleT, dustT;
     public Vector2I MineTile = new(-1, -1);
     public Vector2 Aim;
     public Ix Cur = new(); public int BuildCat;
@@ -199,7 +199,7 @@ public partial class Game : Node2D
         Tl.FrostOre => Art.FrostOre, Tl.Pine => Art.Pine, Tl.IceRuin => Art.IceRuin, Tl.IceBlock => Art.IceBlock, Tl.Void => Art.VoidObj, Tl.Monolith => Art.Monolith,
         Tl.Grave => Art.Grave, Tl.Tablet => Art.Tablet, Tl.FalseLantern => Art.FalseLantern, Tl.Pylon => Art.Pylon, Tl.PylonOn => Art.PylonOn, Tl.ShadowPillar => Art.ShadowPillar, Tl.Fragment => Art.Fragment,
         Tl.RiftGate => Art.RiftGate, Tl.Statue => Art.Statue, Tl.Fountain => Art.Fountain, Tl.Banner => Art.Banner, Tl.Cryo => Art.Cryo + Math.Min(lv, 3) - 1, Tl.LightBridge => Art.LightBridge,
-        Tl.Stall => Art.Stall + Math.Min(lv, 3) - 1, Tl.Hub => Art.Hub + Math.Min(lv, 3) - 1, Tl.Refinery => Art.Refinery + Math.Min(lv, 3) - 1,
+        Tl.BossTotem => Art.BossTotem, Tl.BossGate => Art.BossGate, Tl.Stall => Art.Stall + Math.Min(lv, 3) - 1, Tl.Hub => Art.Hub + Math.Min(lv, 3) - 1, Tl.Refinery => Art.Refinery + Math.Min(lv, 3) - 1,
         _ => Art.Cliff
     };
 
@@ -387,7 +387,7 @@ public partial class Game : Node2D
     float dawn, achT;
     public int TotalLit { get { int n = 0; for (int i = 1; i < W.Ancients.Count; i++) if (W.Ancients[i].Lit) n++; return n; } }
     // ───────────────────────── игрок ─────────────────────────
-    public static bool IsWall(Tl t) => t == Tl.Cliff || t == Tl.CaveWall || t == Tl.Seal || t == Tl.Void;
+    public static bool IsWall(Tl t) => t == Tl.Cliff || t == Tl.CaveWall || t == Tl.Seal || t == Tl.Void || t == Tl.BossGate;
     bool Solid(int tx, int ty, bool phase) { var t = W.Get(tx, ty); return phase ? IsWall(t) : World.Blocks(t); }
     public bool Collides(Vector2 p, float r, bool phase)
     {
@@ -455,6 +455,7 @@ public partial class Game : Node2D
         }
         PPos = Move(PPos, pVel * dt, 5f, false);
         if (pVel.LengthSquared() > 100) Walk += dt * 9f * (water ? .6f : 1f);
+        if (!water && !OnIce(PPos) && pVel.LengthSquared() > 400) { dustT -= dt; if (dustT <= 0) { dustT = .09f; var back = -pVel.Normalized(); Parts.Add(new Particle { P = PPos + new Vector2(rng.RandfRange(-2, 2), 5) + back * 2f, V = back * rng.RandfRange(6, 14) + new Vector2(0, -rng.RandfRange(3, 8)), Life = .45f, Max = .45f, C = new Color(.78f, .72f, .6f), Alpha = .45f, Size = rng.RandfRange(1.4f, 2.2f) }); } }   // пыль из-под ног при беге
         if (water && pVel.LengthSquared() > 100) { rippleT -= dt; if (rippleT <= 0) { rippleT = .12f; Burst(PPos + new Vector2(0, 4), new Color("#9fd8ff"), 2, 25); } }
         if (Mathf.Abs(Aim.X - PPos.X) > 2) Facing = Aim.X < PPos.X ? -1 : 1;
         ApplyHazards(dt);
@@ -475,15 +476,21 @@ public partial class Game : Node2D
     public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg")) * Tune.T.FistDamageMul;
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
-        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave;
+        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave || t == Tl.BossTotem;
 
     /// <summary>Что можно ломать оружием в руках (очень медленно): мягкие блоки. Руда и кристаллы только инструментом.</summary>
-    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin || t == Tl.Grave;
+    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin || t == Tl.Grave || t == Tl.BossTotem;
 
     static int TierNeed(Tl t) => t switch
     {
         Tl.Iron => 1, Tl.MeteorOre => 1, Tl.FrostOre => 3, Tl.Lumen => 2, Tl.Aether => 2, Tl.CrystalOre => 2, Tl.SilverOre => 2, Tl.Obsidian => 3, Tl.Ember => 3, _ => 0
     };
+
+    /// <summary>Блок сломать нельзя (нужна кирка получше, чужая могила): без сообщений в чате — глухой звук и дрожь блока.</summary>
+    void MineDenied(Vector2I tile)
+    {
+        if (tierMsgCd > 0 || AtkCd > 0) return; tierMsgCd = .45f; AtkCd = .42f; Swing = .22f; Sfx.Play("mine_stone", -2, .8f); TileShake(tile.X, tile.Y, 1.8f); Burst(TileCenter(tile.X, tile.Y), new Color("#b8b8c4"), 3, 22);
+    }
 
     void ActPick(float dt, bool melee)
     {
@@ -493,14 +500,14 @@ public partial class Game : Node2D
         foreach (var e in Enemies)
         {
             if (e.Hidden) continue;
-            float d = e.Pos.DistanceTo(PPos) - e.Radius;
-            if (d < bd && (d < 12 || (e.Pos - PPos).Normalized().Dot(dir) > .1f)) { bd = d; best = e; }
+            float d = BodyDist(e, PPos) - e.Radius;
+            if (d < bd && (d < 12 || (BodyPoint(e, PPos) - PPos).Normalized().Dot(dir) > .1f)) { bd = d; best = e; }
         }
         if (!melee) best = null;
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Hurt(best, PlayerDamage * td.CombatDamage * ToolDmgMul(td.Id) * (CurW < 0 && !OwnedTools.Contains(CurTool) ? HandDmgMul : 1f), dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
+            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Hurt(best, PlayerDamage * td.CombatDamage * ToolDmgMul(td.Id), dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
             return;
         }
         var tile = ToTile(Aim);
@@ -517,36 +524,32 @@ public partial class Game : Node2D
             if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Sfx.Play("tick", -9, 1.5f); }                 // замах в пустоту: инструментом можно махать в любой момент
             return;
         }
-        if (t == Tl.Grave && !OwnGrave(tile)) { if (tierMsgCd <= 0) { tierMsgCd = 2; Fail("Чужая могила: разбить её может только владелец"); } MineProg = 0; return; }
+        if (t == Tl.Grave && !OwnGrave(tile)) { MineDenied(tile); MineProg = 0; return; }
         bool bare = CurW < 0 && !OwnedTools.Contains(CurTool);               // без кирки добывают голыми руками: медленно и только мягкое
         if ((CurW >= 0 || bare) && !WeaponCanBreak(t))
         {
-            if (tierMsgCd <= 0) { tierMsgCd = 2; Fail(bare ? "Руками ломаются только дерево, камень и завалы: сделайте кирку у печи" : "Оружием ломаются только дерево, камень и завалы: для руды возьмите кирку"); }
+            MineDenied(tile);
             MineProg = 0; return;
         }
         if (Tier < TierNeed(t))
         {
-            if (tierMsgCd <= 0)
-            {
-                tierMsgCd = 2;
-                Fail(t == Tl.Iron ? "Железо не берётся. Улучшите кирку у печи [E]" : TierNeed(t) == 3 ? "Эта руда требует кристальной кирки" : "Эта руда требует железной кирки");
-            }
+            MineDenied(tile);
             MineProg = 0; return;
         }
-        float eff = td.Efficiency(t) * td.MiningPower * ToolMineMul(td.Id) * (CurW >= 0 || bare ? Tune.T.WeaponMineMul : 1f) * (bare ? HandMineMul : 1f);        // оружием блоки ломаются очень медленно: для добычи нужен инструмент
+        float eff = td.Efficiency(t) * td.MiningPower * ToolMineMul(td.Id) * (CurW >= 0 ? Tune.T.WeaponMineMul : bare ? Tune.T.BareMineMul * (TreeFell(t) ? 1f : .5f) : 1f);        // оружием блоки ломаются очень медленно: для добычи нужен инструмент
         if (eff <= 0f)
         {
-            if (tierMsgCd <= 0) { tierMsgCd = 2; Fail($"{td.Name} не подходит для добычи: {TileTitle(t)}"); }
+            MineDenied(tile);
             MineProg = 0; MineTile = new Vector2I(-1, -1); return;
         }
         if (tile != MineTile) { MineStop(); MineTile = tile; MineProg = MineRecall(tile); }
-        MineNeed = t switch { Tl.Grave => 1.4f, Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
+        MineNeed = t switch { Tl.BossTotem => 2.5f, Tl.Grave => 1.4f, Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         MineNeed *= Tune.T.MineTimeMul;                                    // начало игры: добыча медленнее, чтобы сырьё не набиралось слишком легко
         Swing = .2f; Diag.Add("mine_secs", dt);
         if (MineStrike(dt))
         {
             MineProg += MineSpeed * eff / MineHz;
-            Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), t == Tl.Tree ? .73f : 1f); hitFlash = 1f; TileShake(tile.X, tile.Y, TreeFell(t) && MineProg >= MineNeed * .66f ? 2f : 1f);
+            Fx("mine_hit", TileCenter(tile.X, tile.Y), TileColor(t), 1f, TreeFell(t) ? "mine_wood" : "mine_stone"); hitFlash = 1f; TileShake(tile.X, tile.Y, TreeFell(t) && MineProg >= MineNeed * .66f ? 2f : 1f);
             if (TreeFell(t)) TreeHitFx(tile, t, MineProg / MineNeed);
             if (MineProg >= MineNeed) BreakTile(tile, t, true);
         }
@@ -555,7 +558,7 @@ public partial class Game : Node2D
     public static Color TileColor(Tl t) => t switch
     {
         Tl.Tree => new Color("#3b8a3a"), Tl.Stone => new Color("#a0a0ac"), Tl.Copper => new Color("#e58a3d"), Tl.Ruin => new Color("#9a9fae"),
-        Tl.Grave => new Color("#a0a4b4"), Tl.Iron => new Color("#cbd6e8"), Tl.Lumen => new Color("#5fe4ff"), Tl.Aether => new Color("#d58cff"),
+        Tl.BossTotem => new Color("#c080ff"), Tl.Grave => new Color("#a0a4b4"), Tl.Iron => new Color("#cbd6e8"), Tl.Lumen => new Color("#5fe4ff"), Tl.Aether => new Color("#d58cff"),
         Tl.CrystalOre => new Color("#bfe9ff"), Tl.SilverOre => new Color("#e8eef6"), Tl.Rubble => new Color("#8a8f9c"), Tl.DeadTree => new Color("#5a4a44"),
         Tl.Obsidian => new Color("#a890ff"), Tl.Ember => new Color("#ff9a2e"), Tl.MeteorOre => new Color("#fff2b0"), Tl.FrostOre => new Color("#bfe9ff"), Tl.Pine => new Color("#2a5a3a"), Tl.IceBlock => new Color("#bfe9ff"), Tl.ShadowPillar => new Color("#8a40c0"), _ => Colors.White
     };
@@ -589,6 +592,7 @@ public partial class Game : Node2D
             case Tl.FrostOre: Give(It.Frost, rng.RandiRange(1, 2), c); GiveXp(26); break;
             case Tl.Pine: Give(It.Wood, rng.RandiRange(2, 3), c); GiveXp(3); break;
             case Tl.IceBlock: case Tl.ShadowPillar: GiveXp(1); break;
+            case Tl.BossTotem: Burst(c, new Color("#c080ff"), 20, 100); Shake = Mathf.Max(Shake, 3); Sfx.Play("boss"); break;
             case Tl.MeteorOre: Give(It.AncCrystal, 1, c); Give(It.Shard, 3, c + new Vector2(0, -6)); Give(It.Crystal, 1, c + new Vector2(0, -12)); GiveXp(40); Found.Add("Осколок светового метеорита"); break;
         }
         if (chain && ChainLimit > 0 && t != Tl.Grave)

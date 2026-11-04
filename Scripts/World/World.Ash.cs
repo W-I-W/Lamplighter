@@ -94,6 +94,7 @@ public sealed partial class World
         // арена Пепельного стража
         {
             var t = Pick(.9f, 1f, 4, 16); if (t.X < 0) t = Pick(.6f, 1f, 3, 10);
+            if (GenV >= 5) t = ArenaCenter(t, AX0 + 18, AX1 - 18);       // вокруг арены стена: круг не должен выходить за область пустошей
             Floor(t.X, t.Y, 8);
             for (int yy = t.Y - 8; yy <= t.Y + 8; yy++) for (int xx = t.X - 8; xx <= t.X + 8; xx++) if (In(xx, yy) && (xx - t.X) * (xx - t.X) + (yy - t.Y) * (yy - t.Y) <= 64) Ground[Key(xx, yy)] = (byte)Art.Scorch;
             Set(t.X, t.Y, Tl.BossOff);

@@ -11,6 +11,8 @@ namespace Lamplighter;
 public partial class Game
 {
     int nextEnemyId; float netCombatT; long aiRemote;               // aiRemote — пир, по которому сейчас «бьёт» враг (0 — хост)
+    long hitSrc;                                                    // пир, чей удар сейчас разбирает хост (0 — удар самого хоста)
+    const float HitReach = 700f;                                    // дальше этого гость не мог попасть (запас на задержку сети и дальность луча)
     readonly Dictionary<int, Enemy> proxies = new();
 
     // ───────────────────────── выбор цели (хост) ─────────────────────────
@@ -35,12 +37,18 @@ public partial class Game
         var tc = cands.Find(c => c.id == e.Target); if (e.Target != 1) { PPos = tc.pos; aiRemote = e.Target; }
     }
 
-    /// <summary>Добыча с врага достаётся тому, кто нанёс последний удар: игроку-гостю она приходит от хоста с сообщением в чате, иначе осталась бы у хоста незамеченной.</summary>
-    void LootFor(Enemy e, int item, int n, Vector2 at)
+    /// <summary>Кому достаётся убийство: тому, кто нанёс последний удар (пока он в игре), иначе хосту.</summary>
+    long KillerOf(Enemy e) => e.LastHitBy > 1 && e.LastHitBy != LocalPeer && PosOf(e.LastHitBy) != null ? e.LastHitBy : LocalPeer;
+
+    void LootFor(Enemy e, int item, int n, Vector2 at) => Give(item, n, at);          // добычу считает тот, кому достаётся убийство (см. KillEnemy)
+
+    /// <summary>Гость: хост засчитал вам убийство — награда считается у вас по вашим умениям.</summary>
+    public void NetKillCredit(int kind, int emod, string evKind, int evSeed, bool carrier, float x, float y)
     {
-        if (Authority && NetService.Active && e.LastHitBy > 1 && e.LastHitBy != LocalPeer && PosOf(e.LastHitBy) != null)
-        { GiveTo(e.LastHitBy, item, n); NoteTo(e.LastHitBy, $"{Loc.T("Получено")}: {Loc.T(It.Names[item])} ×{n}", MsgTone.Good); return; }
-        Give(item, n, at);
+        if (!NetClient || !Enum.IsDefined(typeof(EK), kind) || !float.IsFinite(x) || !float.IsFinite(y) || emod < 0 || emod > 64 || evKind == null || evKind.Length > 12) return;
+        var e = new Enemy { Kind = (EK)kind, Pos = new Vector2(x, y), Elite = emod > 0, EMod = emod, Carrier = carrier, LastHitBy = LocalPeer };
+        if (evKind.Length > 0) e.Ev = new GEvent { Kind = evKind, Seed = evSeed };
+        KillRewards(e);
     }
 
     /// <summary>Расстояние до ближайшего игрока (для удаления далёких врагов и ограничений обновления).</summary>
@@ -60,7 +68,8 @@ public partial class Game
             if (e.Hidden && !e.IsBoss) { }
             if (NearestPlayerDist(e.Pos) > 520 && !e.IsBoss) continue; if (++n > 60) break;
             d.Add(e.NetId); d.Add((int)e.Kind); d.Add(e.Pos.X); d.Add(e.Pos.Y); d.Add(e.Hp); d.Add(e.MaxHp); d.Add(e.Tele); d.Add(e.Dash); d.Add(e.State);
-            d.Add(e.Atk > 0 ? 1 : 0); d.Add(e.Elite ? e.EMod + 1 : 0); d.Add(e.Face.X < 0 ? -1 : 1); d.Add(e.Hidden ? 1 : 0);
+            d.Add(e.Atk > 0 ? 1 : 0); d.Add(e.Elite ? e.EMod + 1 : 0); d.Add(e.Face.X < 0 ? -1 : 1); d.Add((e.Hidden ? 1 : 0) | (e.Shield ? 2 : 0) | (e.Over > 0 ? 4 : 0) | (e.T3 > 0 && e.Kind == EK.Warden ? 8 : 0));
+            d.Add(e.IsBoss ? PhaseOf(e).Index : 0);                                      // фазу ведёт хост: все видят одну и ту же
         }
         Net.SendEnemies(d);
         var p = new Godot.Collections.Array<float>(); int m = 0;
@@ -71,14 +80,15 @@ public partial class Game
     public void NetApplyEnemies(Godot.Collections.Array<float> d)
     {
         if (!NetClient) return;
-        for (int i = 0; i + 12 < d.Count; i += 13)
+        for (int i = 0; i + 13 < d.Count; i += 14)
         {
             int id = (int)d[i], kind = (int)d[i + 1]; if (id <= 0 || !Enum.IsDefined(typeof(EK), kind)) continue;
             if (!proxies.TryGetValue(id, out var e)) { e = new Enemy { Kind = (EK)kind, NetId = id, Pos = new Vector2(d[i + 2], d[i + 3]) }; e.NetPos = e.Pos; proxies[id] = e; Enemies.Add(e); }
             e.NetPos = new Vector2(d[i + 2], d[i + 3]);
             float hp = d[i + 4]; if (hp < e.Hp - .05f) { e.Flash = .15f; e.VHit = 0; }
             e.Hp = hp; e.MaxHp = Mathf.Max(1f, d[i + 5]); e.Tele = d[i + 6]; e.Dash = d[i + 7]; e.State = (int)d[i + 8]; e.Atk = d[i + 9] > 0 ? .3f : 0; int em = (int)d[i + 10]; e.Elite = em > 0; e.EMod = Math.Max(0, em - 1);
-            e.Face = new Vector2(d[i + 11], 0); e.Hidden = d[i + 12] > 0; e.SeenT = 0;
+            int fl = (int)d[i + 12]; e.Face = new Vector2(d[i + 11], 0); e.Hidden = (fl & 1) != 0; e.SeenT = 0;
+            if (e.IsBoss) { e.Shield = (fl & 2) != 0; e.Over = (fl & 4) != 0 ? 1f : 0f; e.T3 = (fl & 8) != 0 ? 1f : 0f; var pc = PhaseOf(e); if (pc.ApplyNet((int)d[i + 13])) OnBossPhase(e, pc); }
         }
     }
 
@@ -110,25 +120,43 @@ public partial class Game
         Boss = null;
         for (int i = Enemies.Count - 1; i >= 0; i--)
         {
-            var e = Enemies[i]; e.Age += dt; e.SeenT += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt);
+            var e = Enemies[i]; e.Age += dt; e.SeenT += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - dt); e.Burn = Mathf.Max(0, e.Burn - dt); e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
             if (e.SeenT > .7f) { proxies.Remove(e.NetId); Enemies.RemoveAt(i); continue; }
             var d = e.NetPos - e.Pos; if (d.Length() > 120) e.Pos = e.NetPos; else e.Pos = e.Pos.Lerp(e.NetPos, 1f - Mathf.Exp(-14f * dt));
             if (e.IsBoss && e.Pos.DistanceTo(PPos) < Tune.T.BossLeashTiles * TS) Boss ??= e;
         }
+        GroveTick(dt);
     }
 
     // ───────────────────────── урон ─────────────────────────
     /// <summary>Хост: участник попал по врагу. Урон ограничен и считается на хосте.</summary>
-    public void NetEnemyHit(long sender, int id, float dmg, Vector2 dir, bool melee)
+    public void NetEnemyHit(long sender, int id, float dmg, Vector2 dir, bool melee, bool light)
     {
-        if (!float.IsFinite(dmg) || dmg <= 0) return; dmg = Mathf.Min(dmg, 60f);
-        foreach (var e in Enemies) if (e.NetId == id) { e.LastHitBy = sender; Hurt(e, dmg, dir.LengthSquared() > .01f ? dir.Normalized() : Vector2.Right, melee); return; }
+        if (!float.IsFinite(dmg) || dmg <= 0 || !float.IsFinite(dir.X) || !float.IsFinite(dir.Y)) return; dmg = Mathf.Min(dmg, 400f);                // запас под поздние оружия и криты: раньше 60 срезало урон гостя
+        foreach (var e in Enemies) if (e.NetId == id)
+        {
+            if (PosOf(sender) is not Vector2 sp || sp.DistanceTo(e.Pos) > HitReach) return;
+            hitSrc = sender; try { Hurt(e, dmg, dir.LengthSquared() > .01f ? dir.Normalized() : Vector2.Right, melee, light); } finally { hitSrc = 0; }
+            return;
+        }
+    }
+
+    /// <summary>Хост: поджог, замедление и заморозка от умений гостя (длительности ограничены).</summary>
+    public void NetEnemyFx(long sender, int id, float burn, float slow, float freeze)
+    {
+        if (!float.IsFinite(burn) || !float.IsFinite(slow) || !float.IsFinite(freeze)) return;
+        foreach (var e in Enemies) if (e.NetId == id)
+        {
+            if (PosOf(sender) is not Vector2 sp || sp.DistanceTo(e.Pos) > HitReach) return;
+            e.Burn = Mathf.Max(e.Burn, Mathf.Clamp(burn, 0, 6f)); e.Slow = Mathf.Max(e.Slow, Mathf.Clamp(slow, 0, 6f)); if (!e.IsBoss) e.Freeze = Mathf.Max(e.Freeze, Mathf.Clamp(freeze, 0, 1.5f));
+            return;
+        }
     }
 
     /// <summary>Клиент: враг ударил именно вас (решение хоста).</summary>
     public void NetHurtMe(float dmg, Vector2 kb, bool fire)
     {
         if (!float.IsFinite(dmg) || dmg <= 0) return; long saved = aiRemote; aiRemote = 0; float c = ctxDmg; ctxDmg = 1f;
-        HurtPlayer(Mathf.Min(dmg, 80f), kb, fire); aiRemote = saved; ctxDmg = c;
+        HurtPlayer(Mathf.Min(dmg, 300f), kb, fire); aiRemote = saved; ctxDmg = c;
     }
 }

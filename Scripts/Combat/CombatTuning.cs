@@ -47,6 +47,7 @@ public partial class CombatTuning : Resource
     [Export] public float GatherMul = .65f, MineTimeMul = 1.35f, RegrowMul = .6f;         // добыча: множитель выпадения сырья, время добычи, скорость восстановления деревьев и руды
     [Export] public float ScarcityMul = 1f;                    // множитель минимального числа ресурсов рядом с игроком (появление при нехватке)
     [Export] public float TechCostMul = 2f;                    // множитель цены навыков [T]
+    [Export] public float BareMineMul = .7f;                   // то же для голых рук: дерево ~2.6 с, камень ~1.2 с (кирка: камень ~0.9 с, топор быстрее по дереву)
     [Export] public float WeaponMineMul = .15f;                // скорость добычи блоков с оружием в руках относительно кирки
     [Export] public float XpMul = .6f, XpBase = 40f, XpLinear = 30f, XpQuad = 3f;        // опыт: множитель добычи и стоимость уровня (база + линейная + квадратичная часть)                   // лечение «Жнеца» за убийство (было 3)
     // кооператив: по числу игроков (1–4); не линейно

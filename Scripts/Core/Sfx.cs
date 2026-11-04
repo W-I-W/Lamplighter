@@ -27,7 +27,9 @@ public partial class Sfx : Node
         for (int i = 0; i < pool.Length; i++) { pool[i] = new AudioStreamPlayer { VolumeDb = -6, Bus = AudioServer.GetBusIndex("SFX") >= 0 ? "SFX" : "Master" }; AddChild(pool[i]); }
 
         bank["mine"] = Wav(Tone(900, 500, .06f, 1, .4f, 6));
-        bank["break"] = Wav(Tone(220, 60, .16f, 2, .8f, 5));
+        bank["mine_stone"] = bank["mine"];bank["mine_stone_2"] = bank["mine"];
+        bank["mine_wood"] = Wav(Tone(260, 140, .07f, 2, .5f, 6));
+        bank["break"] =Wav(Tone(220, 60, .16f, 2, .8f, 5));
         bank["hit"] = Wav(Tone(300, 100, .09f, 2, .6f, 7));
         bank["hurt"] = Wav(Tone(260, 70, .2f, 2, .3f, 4));
         bank["pickup"] = Wav(Tone(700, 1200, .09f, 0, 0, 4));
@@ -60,6 +62,7 @@ public partial class Sfx : Node
     void P(string name, float db, float pitch)
     {
         if (pool == null || !bank.TryGetValue(name, out var s)) return;
+        if (name == "mine_stone" && prng.Randf() < .5f && bank.TryGetValue("mine_stone_2", out var alt)) s = alt;   // второй вариант удара по камню
         var p = pool[next++ % pool.Length];
         p.Stream = s; p.VolumeDb = -7 + db; p.PitchScale = pitch * prng.RandfRange(.95f, 1.05f); p.Play();
     }

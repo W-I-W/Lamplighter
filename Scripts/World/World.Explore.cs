@@ -10,7 +10,7 @@ public enum LampKind : byte { Normal, Guarded, Damaged, Infected, Mystery }
 public sealed partial class World
 {
     /// <summary>Версия генерации: 0 — миры и сохранения до «живого мира» (ничего нового не добавляется, чтобы не ломать старые миры), 1 — природные области, новые места и виды фонарей, 2 — загадочный фонарь, алтарь искр и скрытые тайники, 3 — обелиск рун, древо-хранитель, озёра и ручьи, места во всех биомах, 4 — выжившие (жители) в местах интереса.</summary>
-    public const int CurrentGen = 4;
+    public const int CurrentGen = 5;
     public int GenV = CurrentGen;
 
     /// <summary>Отдельный проход после всей старой генерации и со своим генератором случайных чисел: порядок и результаты прежних проходов не меняются.</summary>
@@ -118,7 +118,7 @@ public sealed partial class World
         bool Far(Vector2I t, int d)
         {
             foreach (var p in Pois) if ((p.Tile.X - t.X) * (p.Tile.X - t.X) + (p.Tile.Y - t.Y) * (p.Tile.Y - t.Y) < d * d) return false;
-            foreach (var a in Ancients) if ((a.Tile.X - t.X) * (a.Tile.X - t.X) + (a.Tile.Y - t.Y) * (a.Tile.Y - t.Y) < 100) return false;
+            foreach (var a in Ancients) if ((a.Tile.X - t.X) * (a.Tile.X - t.X) + (a.Tile.Y - t.Y) * (a.Tile.Y - t.Y) < (a.Boss && GenV >= 5 ? 22 * 22 : 100)) return false;       // вокруг стража свободна арена
             return true;
         }
         foreach (var def in PoiDefs.All)

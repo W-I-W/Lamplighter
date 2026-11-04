@@ -47,6 +47,7 @@ public partial class Game
         {
             var bl = BossLantern(5); if (bl == null) { Log("NO FINAL BOSS LANTERN"); return; }
             aimOverride = null; Tp(bl.Pos + new Vector2(-70, 60)); Log($"final boss lantern {bl.Tile} pylons={W.ArenaPylons.Count}");
+            MaxHp = Hp = 99999f; var ar = W.ArenaOf(5); BreakTile(ar.Totem, Tl.BossTotem, false);       // бой начинается со сломанного тотема
         });
         S(2.5f, () => { Log($"boss alive={Boss != null} kind={Boss?.Kind} hp={Boss?.Hp}"); Shot("h4_boss"); if (Boss != null) { Boss.State = 1; Boss.T2 = .05f; } });
         S(1.3f, () => { Shot("h5_absorb"); if (Boss != null) { Boss.State = 2; Boss.T2 = .05f; } });

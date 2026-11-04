@@ -120,7 +120,7 @@ public partial class Game
         if (w.Cls == WClass.Sword)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (!SwordAttack(w, dir) && mineable && tierMsgCd <= 0) { tierMsgCd = 2; Fail("Оружием блоки не ломаются: возьмите кирку или топор"); }       // блоки — только инструментом
+            if (!SwordAttack(w, dir) && mineable) MineDenied(tile);       // блоки — только инструментом
             return;
         }
         bool enemyClose = false;
@@ -159,6 +159,7 @@ public partial class Game
             }
             chainHit.Clear(); Sfx.Play("tick", -4, 2f);
         }
+        if (NetClient && e.NetId > 0 && (e.Burn > 0 || e.Slow > 0 || e.Freeze > 0)) Net?.SendEnemyFx(e.NetId, e.Burn, e.Slow, e.Freeze);          // враг живёт на хосте: гость передаёт ему поджог, замедление и заморозку
         float sp = E(Fxk.Siphon);
         if (sp > 0)
         {
@@ -185,7 +186,7 @@ public partial class Game
         foreach (var e in Enemies)
         {
             if (e.Hidden) continue;
-            var d = e.Pos - PPos; float dist = d.Length() - e.Radius;
+            var d = BodyPoint(e, PPos) - PPos; float dist = d.Length() - e.Radius;
             if (dist > reach) continue;
             if (dist > 10 && Mathf.Abs(Mathf.Wrap(d.Angle() - dir.Angle(), -Mathf.Pi, Mathf.Pi)) > half) continue;
             hits.Add(e);
@@ -243,7 +244,7 @@ public partial class Game
             var dir = p.Vel.Normalized(); bool dead = false;
             foreach (var e in new List<Enemy>(Enemies))
             {
-                if (e.Hidden || p.Hit.Contains(e) || e.Pos.DistanceTo(p.Pos) > e.Radius + 3) continue;
+                if (e.Hidden || p.Hit.Contains(e) || BodyDist(e, p.Pos) > e.Radius + 3) continue;
                 p.Hit.Add(e);
                 if (p.Kind == 2 && e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { ReflectLight(e); p.Pierce = -1; dead = true; break; }
                 HitEnemy(e, p.Dmg * RangeFalloff(p), dir, false, 0, p.Kind == 2);

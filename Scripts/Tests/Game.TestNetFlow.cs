@@ -67,6 +67,15 @@ public partial class Game
                 S(.3f, () => { var o = Other(); var home = PPos; Tp(PPos + new Vector2(900, 0)); var b = SpawnEnemy(o.Pos + new Vector2(40, 0), EK.Warden, null, 1f); Check(b != null && b.IsBoss && b.Pos.DistanceTo(PPos) > 300f, "netflow host: a boss fight starts near the guest, far from the host"); netHome = home; });
                 WaitStepFlow(10f, () => BossInFight() != null, ok => Check(ok, "netflow host: the boss bar is shown although only the guest is fighting"));
                 S(.5f, () => { Enemies.Clear(); Boss = null; Tp(netHome); });
+                S(.5f, () => { var A = W.ArenaOf(1); BossMask = 0; SetObj(A.Totem.X, A.Totem.Y, Tl.None); });                                            // тотем сломан
+                WaitStepFlow(10f, () => ArenaIsLocked(1), ok => Check(ok, "netflow host: breaking the totem locks the arena"));
+                WaitStepFlow(10f, () => { var o = Other(); var A = W.ArenaOf(1); return o != null && A.Contains(o.Pos, 8) && A.Contains(PPos, 8); }, ok => Check(ok, "netflow host: the host and the guest were both gathered inside the arena"));
+                S(.3f, () => { Check(W.ArenaOf(1).Gates.All(g => g.All(t => W.Get(t.X, t.Y) == Tl.BossGate)), "netflow host: the passages are sealed"); var gb = Enemies.Find(e => e.Kind == EK.Warden); if (gb != null) gb.Hp = gb.MaxHp * .6f; });
+                WaitStepFlow(10f, () => PhaseOf(Enemies.Find(e => e.Kind == EK.Warden))?.Index == 1, ok => Check(ok, "netflow host: the Grove Devourer entered phase II at 60%"));
+                S(7f, () => { var gb = Enemies.Find(e => e.Kind == EK.Warden); Check(gb != null && PhaseOf(gb).Transitions == 1, "netflow host: the phase changed once (the host owns the phase)"); });
+                S(3.5f, () => Tp(TileCenter(W.Spawn.X, W.Spawn.Y)));
+                WaitStepFlow(25f, () => !ArenaIsLocked(1), ok => Check(ok, "netflow host: everybody left, the arena was reset"));
+                S(.5f, () => { var A = W.ArenaOf(1); Check(W.Get(A.Totem.X, A.Totem.Y) == Tl.BossTotem && A.Gates.All(g => g.All(t => W.Get(t.X, t.Y) == Tl.None)), "netflow host: the totem is back and the passages are open"); });
                 WaitStepFlow(40f, () => NetService.Count <= 1, ok => Check(ok, "netflow host: the guest left"));
                 S(.5f, () =>
                 {
@@ -115,6 +124,14 @@ public partial class Game
                 S(.3f, () => { Check(TryChest(false, It.Wood, 2), "netflow guest: withdrawal request"); });
                 WaitStepFlow(15f, () => Inv[It.Wood] == 38 && Stock[It.Wood] == 0, ok => Check(ok, "netflow guest: took the items back, the chest is empty"));
                 WaitStepFlow(20f, () => BossInFight() != null, ok => Check(ok, "netflow guest: the boss bar is shown during the fight"));
+                WaitStepFlow(40f, () => ArenaIsLocked(1), ok => Check(ok, "netflow guest: the host locked the arena"));
+                S(.8f, () => { var A = W.ArenaOf(1); Check(A.Contains(PPos, 8), "netflow guest: carried into the arena by the host"); Check(A.Gates.All(g => g.All(t => W.Get(t.X, t.Y) == Tl.BossGate)), "netflow guest: the passages are sealed here too"); });
+                WaitStepFlow(12f, () => Enemies.Exists(e => e.Kind == EK.Warden && PhaseOf(e).Index == 1), ok => Check(ok, "netflow guest: sees the same boss phase II as the host"));
+                WaitStepFlow(8f, () => GroveRoots.Count + GroveSweeps.Count + GroveSpores.Count > 0 || GroveAbsorbs > 0, ok => Check(ok, "netflow guest: the host's Grove attacks arrive as events and are drawn locally"));
+                S(.2f, () => { var gb = Enemies.Find(e => e.Kind == EK.Warden); Check(gb != null && PhaseOf(gb).Transitions == 1, "netflow guest: the phase transition was shown once"); });
+                S(3.5f, () => Tp(TileCenter(W.Spawn.X, W.Spawn.Y)));
+                WaitStepFlow(40f, () => !ArenaIsLocked(1), ok => Check(ok, "netflow guest: the arena was reset by the host"));
+                WaitStepFlow(10f, () => { var A = W.ArenaOf(1); return W.Get(A.Totem.X, A.Totem.Y) == Tl.BossTotem && A.Gates.All(g => g.All(t => W.Get(t.X, t.Y) == Tl.None)); }, ok => Check(ok, "netflow guest: the totem is back and the passages are open"));
                 S(.5f, () =>
                 {
                     Save(); var cs = SaveManager.LoadCharacter(netFlowChar);

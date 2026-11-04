@@ -11,7 +11,7 @@ public partial class Game
     public int EqSocket = -1, EqPick = -1; public bool EqShowAll;
     public EquipWindowUI equipWindow;
 
-    public void EqTab(int tab) { if (tab < 0 || tab > 3 || tab == WinTab || (tab == 2 && !CraftTabAvail)) return; WinTab = tab; WinCur = 0; EqSocket = -1; EqPick = -1; Sfx.Play("tick", -6, 1.4f); }
+    public void EqTab(int tab) { if (tab < 0 || tab > 3 || tab == WinTab || (StationOpened && tab != 2) || (tab == 2 && !CraftTabAvail)) return; WinTab = tab; WinCur = 0; EqSocket = -1; EqPick = -1; Sfx.Play("tick", -6, 1.4f); }
     public void EqSelect(int row) { if (row == WinCur) return; WinCur = row; EqSocket = -1; EqPick = -1; Sfx.Play("tick", -8, 1.5f); }
     public void EqEquipRow(int row) { var r = EquipRef(row); if (r == null) return; WinCur = row; HoldEquipRow(row); EqSocket = -1; EqPick = -1; }
     public void EqHotAssign(int row, int slot) { var r = EquipRef(row); if (r != null) HotAssign(slot, r); }

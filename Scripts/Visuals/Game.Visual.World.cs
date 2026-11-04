@@ -90,7 +90,7 @@ public partial class Game
         DrawStatusMarkers(c);
         DrawSelection(c);
         DrawBuildGhost(c);
-        DrawHazards(c);
+        DrawHazards(c); DrawGroveGround(c);
         DrawHeartWorld(c);
         DrawBeams(c);
         DrawRings(c); DrawSparks(c); DrawPlayerGhosts(c);
@@ -104,14 +104,15 @@ public partial class Game
         foreach (var d in deaths) { var dd = d; list.Add((d.Pos.Y, () => DrawDeath(c, dd))); }
         foreach (var v in Villagers) { var vv = v; list.Add((v.Pos.Y, () => DrawVillager(c, vv))); }
         list.Add((PPos.Y, () => { DrawCosmetic(c); DrawPlayer(c); }));
-        AddRemoteDraws(list, c);
+        AddRemoteDraws(list, c); AddGroveDraws(list, c);
         list.Sort((a, b) => a.y.CompareTo(b.y));
         foreach (var l in list) l.a();
 
         foreach (var p in Projs) { Gfx.Disc(c, p.Pos, 2.5f, new Color(p.C.R, p.C.G, p.C.B, .5f)); Gfx.Disc(c, p.Pos, 1.5f, p.C); }
+        DrawGroveBits(c);
         foreach (var p in Parts)
         {
-            var col = p.C; col.A = Mathf.Clamp(p.Life / p.Max * 1.5f, 0, 1);
+            var col = p.C; col.A = Mathf.Clamp(p.Life / p.Max * 1.5f, 0, 1) * p.Alpha;
             Gfx.Rect(c, new Rect2(p.P - new Vector2(p.Size, p.Size) * .5f, new Vector2(p.Size, p.Size)), col);
         }
     }
@@ -171,7 +172,8 @@ public partial class Game
         else
         {
             var d = Aim - PPos; d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0); float sg = d.X < 0 ? -1 : 1;       // в покое предмет виден в руке, опущенный вдоль тела
-            DrawHeldItem(c, PPos + new Vector2(0, -3), d.Angle() + sg * 1.25f);
+            if (CurW >= 0 || OwnedTools.Contains(CurTool))
+                DrawHeldItem(c, PPos + new Vector2(0, -3), d.Angle() + sg * 1.25f);       // пустая рука в покое не рисуется: видна только при замахе
         }
         if (SpinT > 0)
         {

@@ -13,15 +13,16 @@ public partial class Game
         S(.3f, () =>
         {
             Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); TestNoSpawn = true; Notify.History.Clear();
-            SkillLv[(int)Tech.Spark] = 0; for (int i = 0; i < It.Count; i++) Inv[i] = 0; Ann = 0; RecomputeEffects(); lastTutorial = "";
+            SkillLv[(int)Tech.Spark] = 0; for (int i = 0; i < It.Count; i++) Inv[i] = 0; Ann = 0; RecomputeEffects();
             Check(!HasHandLamp && PlayerLightR == 0f, "start: a new hero has no personal light (radius 0)");
             Check(IsLit(PPos), "start: the starting clearing is lit by the Central Beacon, not by the hero");
             var nd = World.StartNeeds(); var hv = W.StartCounts(); Check(hv.trees >= nd.trees && hv.stones >= nd.stones && hv.copper >= nd.copper, $"start: guaranteed resources in the clearing ({hv.trees}/{nd.trees} trees, {hv.stones}/{nd.stones} stones, {hv.copper}/{nd.copper} copper)");
         });
-        S(.6f, () => { Shot("res1_start_dark"); Check(Goals.Count > 0 && Goals[0].Title == "Собрать первые ресурсы", $"tutorial: the first goal is collecting resources ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); Check(Notify.History.Exists(m => m.Text.Contains("Цель")), "tutorial: the current goal is announced in the chat"); });
-        S(2.5f, () => { foreach (var c in LevelCost((int)Tech.Spark, 1)) Inv[c[0]] = c[1]; });
-        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Открыть навыки [T]", $"tutorial: next goal is opening the skills ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OpenTech(true); });
-        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Изучить «Искру света»", $"tutorial: next goal is learning the Spark ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OpenTech(false); Check(LearnTech((int)Tech.Spark), "spark: learned for wood and stone only"); });
+        S(.6f, () => { Shot("res1_start_dark"); Check(Goals.Count > 0 && Goals[0].Title == "Собрать ресурсы на печь", $"tutorial: the first goal is collecting resources ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); });
+        S(2.5f, () => { OwnedTools.Remove("pickaxe"); CurTool = ""; foreach (var c in CostFurnace) Inv[c[0]] = c[1]; });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Построить печь [B]", $"tutorial: next goal is building the furnace ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); HasFurnace = true; Inv[It.Wood] = 0; Inv[It.Stone] = 0; });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Создать кирку у печи [E]", $"tutorial: next goal is crafting the pickaxe ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OwnedTools.Add("pickaxe"); CurTool = "pickaxe"; foreach (var c in LevelCost((int)Tech.Spark, 1)) Inv[c[0]] = c[1]; });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Изучить навык света [T]", $"tutorial: next goal is learning the light skill ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); Check(LearnTech((int)Tech.Spark), "spark: learned for wood and stone only"); });
         S(2.5f, () => Shot("res2_spark_start"));
         S(2.5f, () =>
         {
@@ -55,7 +56,7 @@ public partial class Game
         S(.2f, () => { OpenWin(Win.Inventory); });
         S(.5f, () => { Check(ResUi.HasActions(It.Wood), "menu: the resource has actions"); ResUi.Open(It.Wood); });
         S(.4f, () => { Check(ResUi.Active, "menu: opens on a resource"); Shot("res4_menu"); ResUi.DialogForTest(1); });
-        S(.4f, () => { Shot("res5_drop_dialog"); ResUi.Close(); CloseWindows(); Check(!ResUi.Active, "menu: closes"); Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
+        S(.4f, () => { Shot("res5_drop_dialog"); ResUi.Close(); CloseWindows(); Check(!ResUi.Active, "menu: closes"); { string rid = Db.Relics[0].Id; OwnedRelics.Remove(rid); OwnedRelics.Add(rid); Drops.Clear(); Check(TryDropRelic(rid) && !OwnedRelics.Contains(rid) && Drops.Count == 1 && IsRelicDrop(Drops[0].Item), "relic: dropping puts it on the ground"); Drops[0].Born = -9; dropClock = 0; Drops[0].Pos = PPos; UpdateDrops(.1f); Check(Drops.Count == 0 && OwnedRelics.Contains(rid), "relic: picking it up returns it"); } Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
         // анимация добычи: замах вверх, удар вниз, возврат (три фазы цикла)
         foreach (var (name, ph) in new[] { ("res6_swing_windup", .27f), ("res6_swing_strike", .49f), ("res6_swing_return", .85f), ("res6_swing_left_strike", -.49f) })
         {
