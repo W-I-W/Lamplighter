@@ -310,7 +310,7 @@ public partial class Game : Node2D
         Aim = aimOverride ?? GetGlobalMousePosition();
         if (testing) AutoTest(dt);
         if (!IsInsideTree()) return;                                            // сцена перезагружена прямо в этом кадре (смена героя или мира)
-        UiTime += dt; UpdateMusic(dt); UpdateUiScale();
+        UiTime += dt; UiIcons.Tick(UiTime); UpdateMusic(dt); UpdateUiScale();
         if (Menu != Mn.None) { NetJoinTick(); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         PlaySecs += dt; achT -= dt; if (achT <= 0) { achT = 2f; Ach.Check(this); }
         if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }

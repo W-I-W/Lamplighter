@@ -22,7 +22,11 @@ public partial class Game
     {
         chunkSet = new TileSet { TileSize = new Vector2I(TS, TS) };
         var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS), UseTexturePadding = false };   // без внутренних полей: шейдеры растительности читают атлас по колонкам 16 px
-        for (int i = 0; i < Art.TileCount; i++) src.CreateTile(new Vector2I(i, 0));
+        for (int i = 0; i < Art.TileCount; i++)
+        {
+            var at = new Vector2I(i, 0); src.CreateTile(at); int fr = i < SpriteLibrary.TileFrames.Length ? SpriteLibrary.TileFrames[i] : 1;
+            if (fr > 1) { src.SetTileAnimationColumns(at, 1); src.SetTileAnimationFramesCount(at, fr); for (int k = 0; k < fr; k++) src.SetTileAnimationFrameDuration(at, k, .22f); }          // кадры лежат столбиком под тайлом атласа
+        }
         foreach (int c in TreeCols) for (int v = 1; v < TreeVariants; v++) { src.CreateAlternativeTile(new Vector2I(c, 0), v); src.GetTileData(new Vector2I(c, 0), v).Modulate = TreeTint(c, v); }      // разновидности деревьев: оттенок листвы и коры
         srcId = chunkSet.AddSource(src);
         groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); trunkRoot = new Node2D(); topRoot = new Node2D();

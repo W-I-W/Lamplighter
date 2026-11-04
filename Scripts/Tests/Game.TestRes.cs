@@ -14,6 +14,8 @@ public partial class Game
         {
             Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); TestNoSpawn = true; Notify.History.Clear();
             SkillLv[(int)Tech.Spark] = 0; for (int i = 0; i < It.Count; i++) Inv[i] = 0; Ann = 0; RecomputeEffects();
+            Check(SpriteLibrary.TileFrames[Art.Furnace] > 1 && SpriteLibrary.IconFrames[4] > 1 && Art.TileTex.GetHeight() >= 32 && Art.TileRect(Art.Furnace, .5).Position.Y > 0, "animated tiles and icons: frames are stacked in the atlas");
+            { var ai = Art.TileTex.GetImage(); bool all = true; for (int t = 134; t <= 176; t++) { if (t is >= 162 and <= 164 || t == 177) continue; bool any = false; for (int y = 0; y < 16 && !any; y++) for (int x = 0; x < 16; x++) if (ai.GetPixel(t * 16 + x, y).A > 0) { any = true; break; } all &= any; } Check(all, "sway poses 134..176 loaded from _poses strips"); }
             Check(!HasHandLamp && PlayerLightR == 0f, "start: a new hero has no personal light (radius 0)");
             Check(IsLit(PPos), "start: the starting clearing is lit by the Central Beacon, not by the hero");
             var nd = World.StartNeeds(); var hv = W.StartCounts(); Check(hv.trees >= nd.trees && hv.stones >= nd.stones && hv.copper >= nd.copper, $"start: guaranteed resources in the clearing ({hv.trees}/{nd.trees} trees, {hv.stones}/{nd.stones} stones, {hv.copper}/{nd.copper} copper)");

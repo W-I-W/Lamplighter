@@ -1,4 +1,4 @@
-"""Wind poses for the swaying tiles -> Assets/Sprites/Environment/134..161_*_p*.png (16x16).
+"""Wind poses for the swaying tiles -> Assets/Sprites/Environment/NNN_<name>_poses.png: лента 64x16 из 4 поз (pL2,pL1,pR1,pR2) под индексами NNN..NNN+3.
 Every plant gets four bent poses (strong left, left, right, strong right); the original tile is the upright pose. The wind shader picks a pose per tile from the wind phase,
 so the sway moves in whole sprite pixels and looks hand-drawn. Run from the project root: python tools/GraphicsGenerator/make_foliage_poses.py
 Rules that keep it clean pixel art: the root never moves, every row shifts at most 1 px more than the row below it (blades stay connected), nothing is pushed outside the tile.
@@ -54,17 +54,21 @@ def shifted(im, d):
 
 for pi, (tile, stem, strong) in enumerate(PLANTS):
     base = Image.open(ENV + stem + '.png').convert('RGBA')
+    strip = Image.new('RGBA', (64, 16), (0, 0, 0, 0))
     for k, (tag, level) in enumerate(POSES):
         idx = POSE_BASE + pi * 4 + k
         name = stem.split('_', 1)[1]
-        shifted(base, displacement(base, strong, level)).save(f'{ENV}{idx:03d}_{name}_p{tag}.png')
+        strip.paste(shifted(base, displacement(base, strong, level)), (k * 16, 0))
+    strip.save(f'{ENV}{idx - k:03d}_{name}_poses.png')
 # crown tiles of the two-tile trees (the trunk tile below them stays still)
 TOPS = [('162_TreeTop', 2), ('163_PineTop', 2), ('164_DeadTop', 2)]
 TOP_POSE_BASE = 165
 for pi, (stem, strong) in enumerate(TOPS):
     base = Image.open(ENV + stem + '.png').convert('RGBA')
+    strip = Image.new('RGBA', (64, 16), (0, 0, 0, 0))
     for k, (tag, level) in enumerate(POSES):
         idx = TOP_POSE_BASE + pi * 4 + k
         name = stem.split('_', 1)[1]
-        shifted(base, displacement(base, strong, level)).save(f'{ENV}{idx:03d}_{name}_p{tag}.png')
+        strip.paste(shifted(base, displacement(base, strong, level)), (k * 16, 0))
+    strip.save(f'{ENV}{idx - k:03d}_{name}_poses.png')
 print('poses written:', len(PLANTS) * 4, 'tiles', POSE_BASE, '..', POSE_BASE + len(PLANTS) * 4 - 1)

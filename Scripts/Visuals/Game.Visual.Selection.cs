@@ -46,7 +46,7 @@ public partial class Game
         var t = ToTile(Aim); var center = TileCenter(t.X, t.Y);
         bool ok = e.Unlocked && W.Get(t.X, t.Y) == Tl.None && PPos.DistanceTo(center) <= 56f && ToTile(PPos) != t && W.Ground[World.Key(t.X, t.Y)] != Art.WaterG && (!e.Key.StartsWith("bld") || IsLit(center));
         var col = ok ? new Color(.45f, 1f, .45f, .75f) : new Color(1f, .4f, .35f, .6f);
-        c.DrawTextureRectRegion(Art.TileTex, new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), new Rect2(e.Tile * 16, 0, 16, 16), col);
+        c.DrawTextureRectRegion(Art.TileTex, new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), Art.TileRect(e.Tile, UiTime), col);
         Gfx.Outline(c, new Rect2(center - new Vector2(8, 8), new Vector2(16, 16)), new Color(col.R, col.G, col.B, .9f), 1f);
     }
 }

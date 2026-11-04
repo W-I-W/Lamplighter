@@ -7,6 +7,8 @@ public static partial class Art
 {
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
         AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 182, BossTotem = 180, BossGate = 181, IconCount = 30, TreeTop = 162, Grave = 177, PineTop = 163, DeadTop = 164;
+    /// <summary>Область тайла в атласе с текущим кадром анимации (кадры лежат столбиком под основным).</summary>
+    public static Rect2 TileRect(int idx, double time) { int n = idx >= 0 && idx < SpriteLibrary.TileFrames.Length ? SpriteLibrary.TileFrames[idx] : 1; return new Rect2(idx * 16, n > 1 ? ((int)(time / .22) % n) * 16 : 0, 16, 16); }
     public static Texture2D TileTex, PlayerTex, ShadeTex, WraithTex, IconTex;
     public const int Chest = 15, ChestOpen = 16, Ruin = 17, House = 18, Tent = 19, Shrine = 20, ShrineUsed = 21,
         AetherOre = 22, Cage = 23, BossOff = 24, BossOn = 25, Obelisk = 26, ObeliskUsed = 27,

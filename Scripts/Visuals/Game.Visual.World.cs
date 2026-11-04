@@ -226,7 +226,7 @@ public partial class Game
             switch (ev.Kind)
             {
                 case "lamp":
-                    c.DrawTextureRectRegion(Art.TileTex, new Rect2(ev.Pos - new Vector2(8, 8), new Vector2(16, 16)), new Rect2(Art.Lantern * 16, 0, 16, 16));
+                    c.DrawTextureRectRegion(Art.TileTex, new Rect2(ev.Pos - new Vector2(8, 8), new Vector2(16, 16)), Art.TileRect(Art.Lantern, UiTime));
                     Gfx.Rect(c, new Rect2(ev.Pos + new Vector2(-8, 9), new Vector2(16, 2)), new Color(0, 0, 0, .7f)); Gfx.Rect(c, new Rect2(ev.Pos + new Vector2(-8, 9), new Vector2(16 * Mathf.Clamp(ev.V / 60f, 0, 1), 2)), new Color("#ffe27a")); break;
                 case "trader":
                     if (Mathf.Abs(PPos.X - ev.Pos.X) > 10) ev.Face = PPos.X < ev.Pos.X ? -1 : 1;
