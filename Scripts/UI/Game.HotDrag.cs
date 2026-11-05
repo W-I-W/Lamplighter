@@ -27,7 +27,7 @@ public partial class Game
             string r = null; int from = -1, row = -1; int s = GameHudNode.HotSlotAt(q);
             if (s >= 0 && Hot[s] != null) { r = Hot[s]; from = s; }
             else if (Window == Win.Equip && WinTab == 0 && hud != null) { row = hud.RowHit(q); if (row >= 0) r = EquipRef(row); }
-            if (r == null) return false;
+            if (r == null) { if (s >= 0 && Hot[s] == null && Window == Win.None) { HotSelect(s); OverUi = true; return true; } return false; }       // клик по пустой ячейке выбирает её: руки пусты
             dragRef = r; dragFrom = from; dragRow = row; dragStart = q; DragPos = q; dragCand = true; DragActive = false; OverUi = true;
             return true;
         }

@@ -35,8 +35,8 @@ public partial class Game
 
     public void GiveWeapon(string id, bool announce = true)
     {
-        if (HasWeapon(id)) return;
         var d = Db.Weapon(id); if (d == null) return;
+        if (HasWeapon(id)) { if (announce) { int coins = 40 * (d.Tier + 1); Inv[It.Coins] += coins; Toast($"Дубликат «{d.Name}» обменян на {coins} монет"); } return; }          // награда не пропадает молча
         Owned.Add(new OwnedWeapon { Id = id });
         AutoAssign(RefWeapon(id)); int hs = HotSlotOf(RefWeapon(id));
         if (hs >= 0 && CurW < 0 && Owned.Count == 1) HotSelect(hs);
@@ -120,7 +120,7 @@ public partial class Game
         if (w.Cls == WClass.Sword)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (!SwordAttack(w, dir) && mineable) MineDenied(tile);       // блоки — только инструментом
+            if (!SwordAttack(w, dir)) { if (mineable) MineDenied(tile); else if (AtkCd <= 0) { AtkCd = w.Cd; WhiffArc(dir, w.Reach, w.Tier == 1 ? .9f : w.Tier == 2 ? 1.2f : 1.6f); Sfx.Play("tick", -9, 1.2f); } }       // блоки — только инструментом; в пустоту меч просто взмахивает
             return;
         }
         bool enemyClose = false;
@@ -179,6 +179,13 @@ public partial class Game
         inBlast = false;
     }
 
+    /// <summary>Удар голой рукой: только эффект (волна, линии, вспышка), рисунка кулака нет.</summary>
+    public float punchT; public Vector2 punchDir; public bool punchContact;
+    void Punch(Vector2 dir, bool contact) { punchT = .17f; punchDir = dir; punchContact = contact; Swing = .17f; }
+
+    /// <summary>Взмах без цели: дуга замаха и анимация предмета в руке (Swing).</summary>
+    void WhiffArc(Vector2 dir, float reach, float half) { swArcT = .2f; swArcDir = dir.Angle(); swArcHalf = half; swArcReach = reach; Swing = .22f; }
+
     bool SwordAttack(WeaponDef w, Vector2 dir)
     {
         float reach = w.Reach, half = w.Tier == 1 ? .9f : w.Tier == 2 ? 1.2f : 1.6f;
@@ -193,7 +200,7 @@ public partial class Game
         }
         if (hits.Count == 0) return false;
         if (AtkCd > 0) return true;
-        AtkCd = w.Cd; swArcT = .2f; swArcDir = dir.Angle(); swArcHalf = half; swArcReach = reach;
+        AtkCd = w.Cd; swArcT = .2f; Swing = .22f; swArcDir = dir.Angle(); swArcHalf = half; swArcReach = reach;
         float dmg = WeaponDmg(w);
         foreach (var e in hits) HitEnemy(e, dmg, (e.Pos - PPos).Normalized(), true);
         Sfx.Play("hit");
@@ -229,7 +236,7 @@ public partial class Game
 
     void UpdateWeaponFx(float dt)
     {
-        swArcT = Mathf.Max(0, swArcT - dt);
+        swArcT = Mathf.Max(0, swArcT - dt); punchT = Mathf.Max(0, punchT - dt);
         for (int i = Bolts.Count - 1; i >= 0; i--) { Bolts[i].T -= dt; if (Bolts[i].T <= 0) Bolts.RemoveAt(i); }
         for (int i = PProjs.Count - 1; i >= 0; i--)
         {

@@ -27,6 +27,9 @@ public partial class Game
             Check(!HotAssign(3, "item:wood"), "hotbar: wood cannot be assigned");
             // создание инструментов и оружия
             Inv[It.Wood] = 40; Inv[It.Stone] = 40; Inv[It.Copper] = 20;
+            { var ot = new System.Collections.Generic.List<string>(OwnedTools); var hh = (string[])Hot.Clone(); int hs = HotSel; string ct = CurTool; OwnedTools.Clear(); System.Array.Clear(Hot); HotSel = 2;
+              Check(CraftTool("axe", new[] { new[] { It.Wood, 5 }, new[] { It.Stone, 3 } }) && HotSel == HotSlotOf("tool:axe") && CurTool == "axe", "hotbar: the first crafted tool is selected automatically");
+              OwnedTools.Clear(); foreach (var t in ot) OwnedTools.Add(t); System.Array.Copy(hh, Hot, hh.Length); HotSel = hs; CurTool = ct; Inv[It.Wood] = 40; Inv[It.Stone] = 40; ApplyHot(); }
             Check(CraftTool("axe", new[] { new[] { It.Wood, 5 }, new[] { It.Stone, 3 } }), "craft: axe made by hand crafting");
             Check(OwnedTools.Contains("axe") && HotSlotOf("tool:axe") >= 0, "hotbar: new axe lands in a free slot automatically");
             GiveWeapon("sword1", false); GiveWeapon("bow1", false); GiveWeapon("staff1", false);
@@ -55,6 +58,19 @@ public partial class Game
             HotSelect(HotSlotOf("tool:axe")); var en = SpawnEnemy(PPos + new Vector2(14, 0), EK.Shade); float hp0 = en.Hp; en.Cd = 99; Aim = en.Pos; AtkCd = 0;
             ActPick(.016f, true); float after1 = en.Hp; ActPick(.016f, true); float after2 = en.Hp;
             Check(after1 < hp0 && Mathf.IsEqualApprox(after1, after2), $"combat: axe hits an enemy exactly once per swing ({hp0:0.0} → {after1:0.0} → {after2:0.0})");
+            Check(PlayerDamage * Tune.T.BareHandMul < Db.Weapon("sword1").Dmg * .6f, $"fist: bare hands hit much weaker than the first sword ({PlayerDamage * Tune.T.BareHandMul:0.0} vs {Db.Weapon("sword1").Dmg})");
+            { int es = HotCount - 1; string keepRef = Hot[es]; Hot[es] = null; { HotSelect(es); HandFallback(); Check(HotSel == es && BareChosen && CurW < 0 && !OwnedTools.Contains(CurTool), "hotbar: an empty slot can be selected and the hands stay empty"); HotSelect(HotSlotOf("tool:axe") >= 0 ? HotSlotOf("tool:axe") : HotSlotOf("tool:pickaxe")); Check(!BareChosen, "hotbar: selecting an item again clears the empty choice"); } Hot[es] = keepRef; }
+            Enemies.Clear(); Aim = PPos + new Vector2(0, 60); AtkCd = 0; Swing = 0; ActPick(.016f, true); Check(Swing > 0, "swing: a click on empty ground swings the tool");
+            { var ow = CurW; var sv = CurToolDef; CurTool = "none_x"; Swing = 0; AtkCd = 0; punchT = 0; ActPick(.016f, true); Check(Swing > 0 && punchT > 0, "swing: bare hands throw a fist on empty ground"); CurTool = "axe"; AtkCd = 0; Swing = 0; }
+            { var tc = ToTile(PPos); var st = new Vector2I(tc.X + 1, tc.Y); var keep = W.Get(st.X, st.Y); W.Set(st.X, st.Y, Tl.Stone); Enemies.Clear(); CurTool = "pickaxe"; Aim = PPos + new Vector2(120, 0); AtkCd = 0; Swing = 0; MineStop(); ActPick(.016f, true); Check(MineTile == st, "swing: with the cursor beyond reach the hit goes to the object in its direction"); W.Set(st.X, st.Y, keep); MineStop(); }
+            { var keepP = PPos; PPos = new Vector2(World.Wd * 16f - 40f, 40f); var tc = ToTile(PPos); var lamp = new Lamp { X = tc.X, Y = tc.Y, Anim = 1 }; Lamps.Add(lamp); Enemies.Clear();
+                var rdr = new Enemy { Kind = EK.Shade, Pos = PPos + new Vector2(0, 100) }; var v = Vector2.Zero; rdr.RaidCd = 0;
+                Check(!AtLightEdge(), "raid: a player standing at the lamp is not at the shadow edge"); RaidTick(rdr, .016f, ref v, new Vector2(-1, 0), 100f, false); Check(rdr.RaidSt == 0, "raid: a player at the lamp is not raided");
+                var tcx = ToTile(PPos + new Vector2(-(LampRad(lamp) * .85f - 20f), 0)); lamp.X = tcx.X; lamp.Y = tcx.Y; Check(AtLightEdge(), "raid: a player near the shadow edge counts as at the edge");
+                edgeT = 0; rdr.RaidCd = 0; busyAtk = 0; RaidTick(rdr, .016f, ref v, new Vector2(-1, 0), 100f, false); Check(rdr.RaidSt == 0, "raid: no dash until the player has stood at the edge for a while"); edgeT = 3f; rdr.RaidCd = 0; RaidTick(rdr, .016f, ref v, new Vector2(-1, 0), 100f, false); Check(rdr.RaidSt == 1, "raid: an enemy in the shadow starts a dash at a player standing at the shadow edge");
+                for (int q = 0; q < 40 && rdr.RaidSt == 1; q++) RaidTick(rdr, .016f, ref v, new Vector2(-1, 0), 100f, false); RaidTick(rdr, .016f, ref v, new Vector2(-1, 0), 100f, false); Check(rdr.RaidSt == 2 && v.X < 0, "raid: the enemy dashes toward the player");
+                rdr.RaidT = 0; RaidTick(rdr, .016f, ref v, new Vector2(-1, 0), 100f, false); Check(rdr.RaidSt == 3, "raid: after the dash the enemy goes back to the shadow");
+                Lamps.Remove(lamp); PPos = keepP; }
         });
         S(.5f, () =>
         {

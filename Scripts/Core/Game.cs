@@ -55,7 +55,7 @@ public partial class Game : Node2D
     public Vector2 PPos; Vector2 pVel; public int Facing = 1; public float Walk;
     public float Hp = 60, MaxHp = 60, Xp; public int Level = 1, Tier;
     public int[] Inv = new int[It.Count];
-    public float Invuln, AtkCd, Swing, MineProg, MineNeed, Shake, Flash, Time;
+    public float TestSwingHold; public bool TestPunchHold; public float Invuln, AtkCd, Swing, MineProg, MineNeed, Shake, Flash, Time;
     float regenDelay, tierMsgCd, rippleT, dustT;
     public Vector2I MineTile = new(-1, -1);
     public Vector2 Aim;
@@ -420,7 +420,7 @@ public partial class Game : Node2D
 
     void UpdatePlayer(float dt)
     {
-        Invuln = Mathf.Max(0, Invuln - dt); AtkCd = Mathf.Max(0, AtkCd - dt); Swing = Mathf.Max(0, Swing - dt); HandFallback();
+        Invuln = Mathf.Max(0, Invuln - dt); AtkCd = Mathf.Max(0, AtkCd - dt); Swing = Mathf.Max(0, Swing - dt); if (TestSwingHold > 0) { Swing = TestSwingHold; swArcT = .17f; if (punchT > 0 || TestPunchHold) punchT = .09f; } HandFallback();
         SpinT = Mathf.Max(0, SpinT - dt);
         DashCd = Mathf.Max(0, DashCd - dt); SpinCd = Mathf.Max(0, SpinCd - dt); FlareCd = Mathf.Max(0, FlareCd - dt); PulseCd = Mathf.Max(0, PulseCd - dt);
         ApplyRelicHp();
@@ -507,23 +507,38 @@ public partial class Game : Node2D
         if (best != null)
         {
             MineProg = 0; MineTile = new Vector2I(-1, -1);
-            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Hurt(best, PlayerDamage * td.CombatDamage * ToolDmgMul(td.Id), dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
+            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; bool fist = CurW < 0 && !OwnedTools.Contains(CurTool); if (fist) Punch(dir, true); Hurt(best, PlayerDamage * td.CombatDamage * ToolDmgMul(td.Id) * (fist ? Tune.T.BareHandMul : 1f), dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
             return;
         }
         var tile = ToTile(Aim);
         var t = W.Get(tile.X, tile.Y);
+        bool bush = false;
         if (t == Tl.None)                                                    // клик по кроне дерева — это удар по стволу под ней; кусты ломаются сразу
         {
             var bt = W.Get(tile.X, tile.Y + 1);
             if (bt == Tl.Tree || bt == Tl.Pine || bt == Tl.DeadTree) { tile = new Vector2I(tile.X, tile.Y + 1); t = bt; }
-            else if (IsBushAt(tile.X, tile.Y)) { ActBush(tile, dt, td); return; }
+            else if (IsBushAt(tile.X, tile.Y)) bush = true;
         }
-        if (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f || !Mineable(t))
+        if (!bush && (PPos.DistanceTo(TileCenter(tile.X, tile.Y)) > 40f || !Mineable(t)))
         {
-            MineStop();
-            if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Sfx.Play("tick", -9, 1.5f); }                 // замах в пустоту: инструментом можно махать в любой момент
-            return;
+            // курсор не на достижимом предмете: бьём первый предмет на луче от игрока в сторону мыши (кусты тоже)
+            bool found = false;
+            for (float sd = 8f; sd <= 36f && !found; sd += 6f)
+            {
+                var rt = ToTile(PPos + dir * sd); var rv = W.Get(rt.X, rt.Y);
+                if (rv == Tl.None) { if (IsBushAt(rt.X, rt.Y)) { tile = rt; t = rv; bush = true; found = true; } continue; }
+                if (!Mineable(rv)) break;                                    // непробиваемая преграда на пути
+                if (PPos.DistanceTo(TileCenter(rt.X, rt.Y)) <= 44f) { tile = rt; t = rv; found = true; }
+                break;
+            }
+            if (!found)
+            {
+                MineStop();
+                if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; Sfx.Play("tick", -9, 1.5f); if (CurW < 0 && !OwnedTools.Contains(CurTool)) Punch(dir, false); }                 // замах в пустоту: инструментом можно махать в любой момент; голыми руками виден только след взмаха
+                return;
+            }
         }
+        if (bush) { ActBush(tile, dt, td); return; }
         if (t == Tl.Grave && !OwnGrave(tile)) { MineDenied(tile); MineProg = 0; return; }
         bool bare = CurW < 0 && !OwnedTools.Contains(CurTool);               // без кирки добывают голыми руками: медленно и только мягкое
         if ((CurW >= 0 || bare) && !WeaponCanBreak(t))

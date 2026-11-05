@@ -100,6 +100,7 @@ public partial class Game
     public void BuyOffer(Offer o)
     {
         if (OfferBought(o)) { TradeMsg = "Уже куплено"; return; }
+        if ((o.Kind == "frag" && BpDone.Contains(o.Id)) || (o.Kind == "relic" && OwnedRelics.Contains(o.Id))) { TradeMsg = "Это у вас уже есть"; CurOffers = BuildOffers(TradeEv); return; }          // предложение устарело (получено в игре, пока окно было открыто): деньги не списываем
         if (Inv[It.Coins] < o.Price) { Fail($"Не хватает монет: нужно {o.Price}"); return; }
         Inv[It.Coins] -= o.Price; Bought.Add(BKey(o.Key));
         switch (o.Kind)

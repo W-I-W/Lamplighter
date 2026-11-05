@@ -88,7 +88,8 @@ public partial class Game
         if ((p.Flags & 2) != 0)                                  // замах: тот предмет, что у игрока в руках, и такой же рабочий цикл, как у своего персонажа
         {
             var dd = Vector2.FromAngle(p.AimAng); float sg = dd.X < 0 ? -1 : 1; float tt = (Time * 4.5f) % 1f; float k = tt < .65f ? tt / .65f : 1f - (tt - .65f) / .35f;
-            DrawHeldIcon(c, p.Held, pos + new Vector2(0, -3), p.AimAng + sg * Mathf.Lerp(.55f, -1.45f, k * k));
+            if (p.Held < 0) DrawFist(c, pos, dd, tt, tt > .3f, p.Look.BodyCol);                 // голые руки: кулак, как у своего персонажа
+            else { var (ang, off) = SwingPoseKind(SwingKindOfIcon(p.Held), dd, sg, tt); DrawHeldIcon(c, p.Held, pos + new Vector2(0, -3) + off, ang); }       // у каждого вида предмета своя поза
         }
     }
 }

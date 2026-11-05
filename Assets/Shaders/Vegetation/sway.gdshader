@@ -7,11 +7,26 @@ uniform sampler2D noise_tex : filter_linear, repeat_enable;
 uniform sampler2D tile_data : filter_nearest, repeat_disable;   // one texel per atlas column: r = max sway (px), g = first opaque row (sprite top), b = glow
 uniform float wind = 1.0;          // overall wind strength (config * player setting)
 uniform vec2 player = vec2(-99999.0);   // world position of the player (grass bends away)
-uniform vec4 shakes[8];            // x, y = tile coords, z = amplitude (px, already decayed), w = phase
+uniform vec4 shakes[16];           // x, y = tile coords, z = amplitude (px, already decayed), w = phase (+100 = удар по кроне: двигает только колонки крон)
+uniform vec3 crown_cols = vec3(-1.0);   // колонки атласа тайлов крон дерева, сосны, мёртвого дерева
 varying vec2 wpos;
 varying vec4 vcol;                 // модуляция слоя (прозрачность крон за игроком)
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(41.7, 289.3))) * 4375.5453); }
+
+// kind = floor(w / 100): 0 блок, 1 крона дерева, 2 ствол дерева. Удар по дереву сдвигает ствол и крону ОДНОЙ плавной кривой по высоте всего дерева (два тайла),
+// поэтому на стыке ствола и кроны шва нет; чужой ствол в клетке кроны не затрагивается.
+float shake_gate(float w, float col) {
+	bool is_crown = abs(col - crown_cols.x) < 0.5 || abs(col - crown_cols.y) < 0.5 || abs(col - crown_cols.z) < 0.5;
+	float kind = floor(w / 100.0 + 0.001);
+	return (kind == 1.0) == is_crown ? 1.0 : 0.0;
+}
+// доля высоты дерева от земли (0) до верхушки кроны (1) для строки ly тайла (0 = верх тайла, 1 = низ)
+float tree_h(float w, float ly) {
+	float kind = floor(w / 100.0 + 0.001);
+	float hb = kind == 1.0 ? 0.5 + (1.0 - ly) * 0.5 : (1.0 - ly) * 0.5;
+	return hb * hb;
+}
 
 void vertex() {
 	vcol = COLOR;
@@ -45,19 +60,24 @@ void fragment() {
 		float dl = length(d);
 		if (dl < 14.0) shift += sign(d.x) * (1.0 - dl / 14.0) * min(a, 2.5) * 1.6 * wind;
 		// axe/pickaxe hits
-		for (int i = 0; i < 8; i++) {
+		float dsh = 0.0;
+		float lyy = fract(UV.y * atlas.y / 16.0);
+		for (int i = 0; i < 16; i++) {
 			vec4 s = shakes[i];
-			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) shift += s.z * sin(TIME * 48.0 + s.w);
+			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) dsh += s.z * sin(TIME * 48.0 + s.w) * shake_gate(s.w, col) * tree_h(s.w, lyy);
 		}
 		if (td.a > 0.0) {
 			// hand-drawn poses: pick the upright tile or one of four bent tiles stored next to it in the atlas (whole sprite pixels, no distortion)
 			float k = clamp(floor(shift * 2.0 / a + 0.5), -2.0, 2.0);
 			float pose_col = k == 0.0 ? col : td.a + (k < -1.5 ? 0.0 : k < 0.0 ? 1.0 : k < 1.5 ? 2.0 : 3.0);
-			uv.x = UV.x + (pose_col - col) * 16.0 / atlas.x;
-			COLOR = texture(TEXTURE, uv) * vcol;
+			uv.x = UV.x + (pose_col - col) * 16.0 / atlas.x - dsh * 1.9 / atlas.x;
+			float plo = pose_col * 16.0 / atlas.x + 0.5 / atlas.x; float phi = (pose_col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
+			float inside = (uv.x >= plo - 0.5 / atlas.x && uv.x <= phi + 0.5 / atlas.x) ? 1.0 : 0.0;       // за краем тайла — пусто, а не размазанный крайний столбец (давал тёмный прямоугольник)
+			uv.x = clamp(uv.x, plo, phi);
+			COLOR = texture(TEXTURE, uv) * vcol * inside;
 		} else {
 		float px = shift * lift;          // fractional on purpose: with nearest sampling and a 3x zoom the blade edges then move in single screen pixels (smooth), not in 3-pixel jumps
-		uv.x = UV.x - px / atlas.x;
+		uv.x = UV.x - (px + dsh) / atlas.x;
 		float lo = col * 16.0 / atlas.x + 0.5 / atlas.x;
 		float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
 		uv.x = clamp(uv.x, lo, hi);                                // edge pixels are repeated instead of cut off, so the silhouette never gets sliced
@@ -65,14 +85,23 @@ void fragment() {
 		}
 	} else {
 		// камни, руда и прочие блоки не качаются на ветру, но при ударе раскачиваются: основание на месте, верхушка ходит
-		float rock = 0.0;
+		float rock = 0.0, trunk = 0.0, trunk_out = 1.0;
 		vec2 cell = floor(wpos / 16.0);
-		for (int i = 0; i < 8; i++) {
+		float lyy = fract(UV.y * atlas.y / 16.0);
+		for (int i = 0; i < 16; i++) {
 			vec4 s = shakes[i];
-			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5) rock += s.z * sin(TIME * 48.0 + s.w);
+			if (s.z > 0.0 && abs(s.x - cell.x) < 0.5 && abs(s.y - cell.y) < 0.5 && shake_gate(s.w, col) > 0.0) {
+				float v = s.z * sin(TIME * 48.0 + s.w);
+				if (s.w >= 200.0) trunk += v * tree_h(s.w, lyy); else rock += v;
+			}
 		}
 		vec2 uv2 = UV;
-		if (rock != 0.0) {
+		if (trunk != 0.0) {
+			uv2.x = UV.x - trunk * 1.9 / atlas.x;
+			float tlo = col * 16.0 / atlas.x + 0.5 / atlas.x; float thi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
+			trunk_out = (uv2.x < tlo - 0.5 / atlas.x || uv2.x > thi + 0.5 / atlas.x) ? 0.0 : 1.0;
+			uv2.x = clamp(uv2.x, tlo, thi);
+		} else if (rock != 0.0) {
 			float ly = fract(UV.y * atlas.y / 16.0);
 			float tr = td.g / 16.0;
 			float yy = clamp((ly - tr) / max(1.0 - tr, 0.1), 0.0, 1.0);
@@ -81,7 +110,7 @@ void fragment() {
 			float hi = (col + 1.0) * 16.0 / atlas.x - 0.5 / atlas.x;
 			uv2.x = clamp(uv2.x, lo, hi);
 		}
-		COLOR = texture(TEXTURE, uv2) * vcol;
+		COLOR = texture(TEXTURE, uv2) * vcol * trunk_out;
 	}
 	float g = td.b;
 	if (g > 0.0) {

@@ -34,7 +34,7 @@ public partial class WindowView : Control
         dim.Color = new Color(0, 0, .03f, dimAlpha);
         frame.CustomMinimumSize = size; frame.Size = size; frame.Position = new Vector2(Mathf.Round(vs.X * .5f - size.X * .5f), Mathf.Round(vs.Y * .5f - size.Y * .5f - 4));
         title.Text = Loc.T(titleText); title.Modulate = accent;
-        foot.Visible = footer != null; if (footer != null) TextFx.Apply(foot, Loc.T(footer), new Color("#8a96b0"), 0);
+        foot.Visible = false;                                              // нижняя строка с клавишами убрана: окна подписаны сами
         mapArea.Visible = listW < 0; listPanel.Visible = listW >= 0; detailPanel.Visible = listW > 0;
         listPanel.CustomMinimumSize = new Vector2(listW > 0 ? listW : 0, 0); listPanel.SizeFlagsHorizontal = listW > 0 ? SizeFlags.ShrinkBegin : SizeFlags.ExpandFill;
         Visible = true; Started = true;

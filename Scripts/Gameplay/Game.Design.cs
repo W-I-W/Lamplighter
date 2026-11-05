@@ -12,6 +12,8 @@ public partial class Game
     public HashSet<string> HintsShown = new();
     float hintT = 3f, lastHintAt = -99;
 
+    static readonly bool HintsOn = false;
+
     void Hint(string id, string text)
     {
         if (HintsShown.Contains(id) || Time - lastHintAt < 6f) return;
@@ -21,6 +23,7 @@ public partial class Game
     /// <summary>Контекстные подсказки: каждая показывается один раз и только когда она применима.</summary>
     void UpdateHints(float dt)
     {
+        if (!HintsOn) return;                                            // всплывающие подсказки отключены: цели видны в панели слева
         hintT -= dt; if (hintT > 0 || testing && !Diag.Enabled && OS.GetEnvironment("LAMP_HINTS") == "") return; hintT = 1.2f;
         bool early = Level <= 6 && BeaconLevel <= 1;
         if (early && PlaySecs < 120) Hint("move", "WASD — движение · ЛКМ — бить и добывать");

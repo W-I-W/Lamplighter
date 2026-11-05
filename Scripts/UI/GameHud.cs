@@ -167,9 +167,9 @@ public partial class GameHud : Control
         for (int i = 0; i < Game.HotCount; i++)
         {
             string r = G.Hot[i]; bool has = G.HotValid(r);
-            var st = !has ? SlotState.Disabled : i == G.HotSel ? SlotState.Selected : SlotState.Normal;
-            hot[i].Visible = has || G.Window != Win.None || G.DragIcon >= 0;      // пустые слоты видны только при перетаскивании и в инвентаре: хотбар не шире, чем нужно
-            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", has ? (i + 1).ToString() : "", st, 0, "", has ? 1f : .25f); hot[i].TooltipText = has ? Loc.T(G.HotName(r)) : "";
+            var st = i == G.HotSel && (has || G.BareChosen) ? SlotState.Selected : !has ? SlotState.Disabled : SlotState.Normal;
+            hot[i].Visible = true;                                              // все три ячейки видны всегда, пустые — приглушённо
+            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f); hot[i].TooltipText = has ? Loc.T(G.HotName(r)) : "";
         }
         weapon.Visible = false; UpdateDrag();
     }

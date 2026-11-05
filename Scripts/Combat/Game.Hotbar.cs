@@ -90,17 +90,17 @@ public partial class Game
     /// <summary>Выбор слота: предмет берётся в руки. Пустой слот игнорируется.</summary>
     public bool HotSelect(int slot)
     {
-        if (slot < 0 || slot >= HotCount || !HotValid(Hot[slot])) return false;
+        if (slot < 0 || slot >= HotCount) return false;
+        if (!HotValid(Hot[slot])) { HotSel = slot; BareChosen = true; CurTool = ""; EquipNone(); return true; }       // пустая ячейка выбирается: в руках ничего (голые руки)
         HotSel = slot; ApplyHot(); return true;
     }
 
+    /// <summary>Игрок сам выбрал пустую ячейку: руки пусты, оружие само в руки не берётся (HandFallback молчит).</summary>
+    public bool BareChosen;
+
     public void HotCycle(int d)
     {
-        for (int n = 1; n <= HotCount; n++)
-        {
-            int i = ((HotSel + d * n) % HotCount + HotCount) % HotCount;
-            if (HotValid(Hot[i])) { HotSel = i; ApplyHot(); Sfx.Play("tick", -6, 1.4f); return; }
-        }
+        HotSelect(((HotSel + d) % HotCount + HotCount) % HotCount); Sfx.Play("tick", -6, 1.4f);
     }
 
     void EquipNone() { CurW = -1; MineProg = 0; RecomputeEffects(); }
@@ -108,6 +108,7 @@ public partial class Game
     void ApplyHot()
     {
         var r = Hot[HotSel]; if (!HotValid(r)) return;
+        BareChosen = false;
         if (IsToolRef(r)) { CurTool = RefId(r); EquipNone(); }
         else { int i = Owned.FindIndex(o => o.Id == RefId(r)); if (i >= 0) { CurW = i; MineProg = 0; RecomputeEffects(); } }
         
@@ -141,7 +142,7 @@ public partial class Game
     /// <summary>Руки пусты (инструмента нет), а оружие есть: берём его в руки, чтобы меч не оставался в рюкзаке.</summary>
     public void HandFallback()
     {
-        if (CurW >= 0 || OwnedTools.Contains(CurTool)) return;
+        if (BareChosen || CurW >= 0 || OwnedTools.Contains(CurTool)) return;
         int ws = HotWeaponSlot(); if (ws >= 0) { HotSel = ws; ApplyHot(); }
     }
 
@@ -158,6 +159,6 @@ public partial class Game
     {
         if (OwnedTools.Contains(id)) { Toast("Этот инструмент уже есть"); return false; }
         if (!Can(cost)) { Fail("Не хватает: " + NeedStr(cost)); return false; }
-        Pay(cost); OwnedTools.Add(id); AutoAssign(RefTool(id)); GiveXp(10); Sfx.Play("build"); Announce("Инструмент: " + ToolDef.Get(id).Name, ToolDef.Get(id).Desc, new Color("#ffd23f"), "upgrade"); Save(); return true;
+        Pay(cost); OwnedTools.Add(id); AutoAssign(RefTool(id)); if (OwnedTools.Count == 1) HotSelect(HotSlotOf(RefTool(id))); GiveXp(10); Sfx.Play("build"); Announce("Инструмент: " + ToolDef.Get(id).Name, ToolDef.Get(id).Desc, new Color("#ffd23f"), "upgrade"); Save(); return true;
     }
 }

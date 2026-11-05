@@ -32,7 +32,7 @@ public sealed class CombatSim
     public Foe MakeFoe(EnemyM d, float danger, int elitesNow, bool allowElite = true, float distance = -1)
     {
         float hm = T.EnemyHp * T.At(T.BiomeHp, Region), dm = T.EnemyDamage * T.At(T.BiomeDamage, Region);
-        var f = new Foe { Def = d, Kind = d.Kind, Hp = d.Hp * danger * hm, DmgScale = danger * dm, Speed = d.Speed * T.EnemySpeed };
+        var f = new Foe { Def = d, Kind = d.Kind, Hp = d.Hp * danger * hm, DmgScale = dm, Speed = d.Speed * T.EnemySpeed };
         f.MaxHp = f.Hp; if (distance < 0) distance = r.Range(130, 200);
         float travel = d.Ranged ? Math.Max(0, distance - 100) : distance - 20; f.Arrive = travel / Math.Max(10f, f.Speed);
         f.AtkT = r.Range(.3f, 1.2f) + d.Period * .3f;

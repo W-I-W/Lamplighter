@@ -238,7 +238,7 @@ public partial class Game
         Add("Создать кирку у печи [E]", pickOwned, NeedShort(CostPickaxe));
         Add("Изучить навык света [T]", spark, "Первый свет: [T] → Искра света. " + NeedShort(sparkCost));
         Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
-        Add("Создать оружие [C]", Owned.Count > 0, "Меч, лук и посох — вкладка «Создание» у печи");
+        Add("Создать оружие у печи [E]", Owned.Count > 0, "Меч, лук и посох — вкладка «Создание»");
         Add("Медная кирка у печи [E]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));

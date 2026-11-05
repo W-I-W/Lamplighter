@@ -86,7 +86,8 @@ public partial class Game
         int bk = BIndex(b.Type);
         if (b.Type == Tl.Warehouse && StockTotal > 0) { Fail("Сначала заберите ресурсы со склада [E]"); return; }
         if (!ConfirmDemolish($"b{b.X}:{b.Y}", BNames[bk], b.Level > 1 ? "Улучшения пропадут." : null)) return;
-        if (NetClient) Net?.SendBuildCmd(3, BKey(b), 0, 0);
+        if (NetClient) Net?.SendBuildCmd(3, BKey(b), 0, 0);                         // клиенту добычу из здания вернёт хост (RpcGrant)
+        else for (int i = 0; i < It.Count; i++) if (b.Local[i] > 0) { Inv[i] += b.Local[i]; Texts.Add(new FText { P = PPos + new Vector2(0, -12), S = $"{It.Ic(i)}+{b.Local[i]} {It.Names[i]}", Life = 1.2f, C = It.Col[i] }); b.Local[i] = 0; }     // накопленное внутри здания не пропадает
         Buildings.Remove(b); SetObj(b.X, b.Y, Tl.None); netT = 0;
         DemolishDone(b.Pos, "bld" + bk, BNames[bk]);
     }

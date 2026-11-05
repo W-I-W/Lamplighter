@@ -22,7 +22,7 @@ public partial class Hud
         if (G.Menu == Mn.None) return;
         if (G.Menu == Mn.Main || G.Menu == Mn.Pause)
         {
-            mv.Begin(true, G.Menu == Mn.Main ? .92f : .82f, "↑/↓ выбор · Enter" + (G.Menu == Mn.Pause ? " · Esc — продолжить" : ""), true);
+            mv.Begin(true, G.Menu == Mn.Main ? .92f : .82f, null, false);
             mv.Titles("LANTHER", G.Menu == Mn.Pause ? G.SessionLine : "", Gold, new Color("#9fd8ff"));
             var items = G.Menu == Mn.Main ? Game.MainItems : Game.PauseItems;
             for (int i = 0; i < items.Length; i++) mv.Item(i, G.MenuCur == i, items[i], false);

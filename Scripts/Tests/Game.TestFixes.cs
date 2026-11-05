@@ -30,11 +30,12 @@ public partial class Game
         });
         S(.2f, () =>
         {
-            Inv[It.Wood] = 30; Inv[It.Stone] = 2; Inv[It.Coins] = 90; Inv[It.Core] = 1; Drops.Clear(); Diff = 0; Tier = 2; AxeLv = 0; OwnedTools.Clear(); OwnedTools.Add("pickaxe"); OwnedTools.Add("axe"); CurTool = "pickaxe"; Graves.Clear();
+            Inv[It.Wood] = 30; Inv[It.Stone] = 2; Inv[It.Coins] = 90; Inv[It.Core] = 1; Drops.Clear(); Diff = 0; Tier = 2; AxeLv = 0; OwnedTools.Clear(); OwnedTools.Add("pickaxe"); OwnedTools.Add("axe"); CurTool = "pickaxe"; Graves.Clear(); Owned.Clear(); GiveWeapon("sword1", false); Owned[0].Lv = 2;
             var spot = ToTile(PPos); SetObj(spot.X, spot.Y, Tl.None);
             Die();
             int sum = 0; foreach (var n in Inv) sum += n;
             Check(sum == 0 && OwnedTools.Count == 0 && Tier == 0, $"death: every resource and tool is lost (items {sum}, tools {OwnedTools.Count}, tier {Tier})");
+            Check(Owned.Count == 0 && CurW < 0 && Graves.Count == 1 && Graves[0].WId.Length == 1 && Graves[0].WId[0] == "sword1" && Graves[0].WLv[0] == 2 && HotSlotOf("weapon:sword1") < 0, "death: the weapon goes into the grave too");
             Check(Graves.Count == 1 && W.Get(Graves[0].X, Graves[0].Y) == Tl.Grave, "death: a grave stands where the hero fell");
             Check(Graves.Count == 1 && Graves[0].Inv[It.Wood] == 30 && Graves[0].Inv[It.Coins] == 90 && Graves[0].Inv[It.Core] == 1 && Graves[0].Tools.Length == 2 && Graves[0].Tier == 2, "death: the grave keeps resources, coins, cores, tools and pickaxe tier");
             Check(!Drops.Exists(d => d.Item == It.Wood), "death: nothing falls on the ground any more"); Check(Owned.Count == 0 || (CurW >= 0 && HeldIcon() >= 0), "death: with no tools left the weapon is taken into the hand");
@@ -48,6 +49,14 @@ public partial class Game
             BreakTile(tile, Tl.Grave, true);
             Check(W.Get(tile.X, tile.Y) == Tl.None && Graves.Count == 0, "grave: breaking it removes the tile and the record");
             Check(Inv[It.Wood] == 30 && Inv[It.Coins] == 90 && Inv[It.Core] == 1 && OwnedTools.Contains("pickaxe") && OwnedTools.Contains("axe") && Tier == 2, "grave: breaking it returns everything that was lost");
+            Check(HasWeapon("sword1") && Owned.Find(o => o.Id == "sword1").Lv == 2 && HotSlotOf("weapon:sword1") >= 0, "grave: breaking it returns the weapon with its level");
+            { var gr = new GraveRec { X = 0, Y = 0, Seed = W.Seed, Inv = new int[It.Count], Tools = new[] { "pickaxe" }, Tier = 0, WId = new[] { "sword1" }, WLv = new[] { 4 }, WMods = new[] { new[] { 0 } } };
+              var cur = Owned.Find(o => o.Id == "sword1"); cur.Lv = 1; cur.Mods.Clear(); int mi0 = ModInv[0]; var tile2 = new Vector2I(tile.X + 3, tile.Y); SetObj(tile2.X, tile2.Y, Tl.Grave); gr.X = tile2.X; gr.Y = tile2.Y; Graves.Add(gr); OwnedTools.Add("pickaxe"); int toolsBefore = OwnedTools.Count; int wBefore = Owned.Count;
+              BreakTile(tile2, Tl.Grave, true);
+              Check(Owned.Count == wBefore && Owned.Find(o => o.Id == "sword1").Lv == 4 && Owned.Find(o => o.Id == "sword1").Mods.Count + ModInv[0] - mi0 == 1 && OwnedTools.Count == toolsBefore, "grave: old tools and weapons after re-crafting are not duplicated; the better level and mods are kept"); }
+            { int c0 = Inv[It.Coins]; var wlv = Owned.Find(o => o.Id == "sword1").Lv; GiveWeapon("sword1"); Check(Inv[It.Coins] > c0 && Owned.Find(o => o.Id == "sword1").Lv == wlv, "loot: a duplicate weapon reward is exchanged for coins, not lost");
+              string bpid = Db.Bps[0].Id; UnlockBp(bpid, false); c0 = Inv[It.Coins]; AddFragment(bpid); Check(Inv[It.Coins] > c0, "loot: a fragment of an already finished blueprint is exchanged for coins");
+              var rb = new Building { Type = Tl.Mine, X = tile.X + 6, Y = tile.Y }; rb.Local[It.Stone] = 5; Buildings.Add(rb); SetObj(rb.X, rb.Y, Tl.Mine); int st0 = Inv[It.Stone]; var keepD = demolishKey; demolishKey = $"b{rb.X}:{rb.Y}"; demolishT = 2f; DemolishBuilding(rb); Check(Inv[It.Stone] == st0 + 5 && !Buildings.Contains(rb), "demolish: items accumulated inside a building go to the inventory"); }
         });
         S(.2f, () =>
         {
@@ -76,6 +85,16 @@ public partial class Game
             Check(!IsBushAt(fgs[0].X, fgs[0].Y) && !IsBushAt(fgs[1].X, fgs[1].Y), "forage: collected sticks and pebbles do not come back after the chunk is reloaded and the resources regrow");
         });
         S(.4f, () => Shot("held_idle"));
+        S(.2f, () => { GiveWeapon("sword1", false); HotEquip("weapon:sword1"); Enemies.Clear(); Aim = PPos + new Vector2(30, 6); AtkCd = 0; Act(.016f); });
+        S(.03f, () => { TestSwingHold = .11f; });
+        S(.15f, () => Shot("sword_trail"));
+        S(.1f, () => { TestSwingHold = 0; CurTool = ""; CurW = -1; BareChosen = true; Aim = PPos + new Vector2(40, 0); AtkCd = 0; Punch(new Vector2(1, 0), true); TestSwingHold = .11f; TestPunchHold = true; });
+        S(.15f, () => Shot("fist_punch"));
+        S(.1f, () => { TestSwingHold = 0; TestPunchHold = false; BareChosen = false; HotSelect(0); });
+        Vector2I shakeTile = default;
+        S(.1f, () => { Vector2I tt = new(-1, -1); for (int r = 1; r < 40 && tt.X < 0; r++) for (int dy = -r; dy <= r && tt.X < 0; dy++) for (int dx = -r; dx <= r; dx++) { var q = ToTile(PPos) + new Vector2I(dx, dy); if (W.Get(q.X, q.Y) == Tl.Tree && W.Get(q.X, q.Y - 1) == Tl.None) { tt = q; break; } } if (tt.X >= 0) { PPos = TileCenter(tt.X, tt.Y) + new Vector2(0, 40); cam.ResetSmoothing(); shakeTile = tt; } });
+        S(.15f, () => { Shot("tree_rest"); TileShake(shakeTile.X, shakeTile.Y, 3f); });
+        S(.07f, () => Shot("tree_shake"));
         S(.1f, () => { PlayerLook.Species = 1; PlayerLook.Skin = 0; Check(Look.FromInts(PlayerLook.ToInts()).Species == 1, "look: the species survives the network form"); });
         S(.4f, () => Shot("look_cat"));
         S(.1f, () => { PlayerLook.Species = 2; PlayerLook.Skin = 4; });

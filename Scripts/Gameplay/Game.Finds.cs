@@ -13,7 +13,8 @@ public partial class Game
 
     public void AddFragment(string id, int n = 1)
     {
-        var d = Db.Bp(id); if (d == null || BpDone.Contains(id)) return;
+        var d = Db.Bp(id); if (d == null) return;
+        if (BpDone.Contains(id)) { int coins = 30 * n; Inv[It.Coins] += coins; Toast($"Чертёж «{d.Name}» уже собран: фрагмент обменян на {coins} монет"); return; }       // награда не пропадает молча
         Frag[id] = Frag.GetValueOrDefault(id) + n;
         if (Frag[id] >= d.Need) UnlockBp(id);
         else { Toast($"Фрагмент чертежа «{d.Name}»: {Frag[id]}/{d.Need}"); Sfx.Play("tech", -4, 1.2f); }

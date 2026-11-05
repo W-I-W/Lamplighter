@@ -12,7 +12,7 @@ public sealed class Enemy
     public float Hp, MaxHp, Atk, CdRec, Flash, Phase, Age, Cd = 1.5f, T1, T2, T3, Dash, Tele, Scale = 1f, Burn;
     // визуальное состояние (только отрисовка): стадии атаки, попадание, след рывка
     public float VTele0, VAtk = 9f, VPrevAtk, VPrevTele, VPrevDash, VHit = 9f, VHitMul = 1f, VTrailT; public Vector2 VHitDir; public Vector2[] VTrail = new Vector2[3];
-    public float LostT, Over, SpecT = 8f, SpecTim, SpecAng, SpecEmit; public int SpecPh, SpecN, SpecVol; public int NetId; public long Target = 1, LastHitBy; public float RetargetT, SeenT; public Vector2 NetPos; public int State, EMod; public bool Id2; public float WardT, RallyT; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
+    public float RaidCd = 2f, RaidT; public int RaidSt; public Vector2 RaidDir, RaidHome; public float LostT, Over, SpecT = 8f, SpecTim, SpecAng, SpecEmit; public int SpecPh, SpecN, SpecVol; public int NetId; public long Target = 1, LastHitBy; public float RetargetT, SeenT; public Vector2 NetPos; public int State, EMod; public bool Id2; public float WardT, RallyT; public bool Shield, Hidden, Elite, Carrier; public float VulnT; public Vector2 Mark; public float Slow, Freeze; public GEvent Ev;
     public BossPhaseController PhaseCtl;                  // фазы босса (данные BossPhaseBook); у гостя — по фазе, присланной хостом
     public bool IsBoss => Kind == EK.Warden || Kind == EK.DepthWarden || Kind == EK.AshWarden || Kind == EK.WinterWarden || Kind == EK.Source;
     public float Radius => Kind switch
@@ -29,7 +29,7 @@ public partial class Game
     public Enemy Boss;
     public float DashCd, SpinCd, FlareCd, PulseCd, SpinT, DashT;
     Vector2 DashDir, LastMoveDir;
-    float spawnT = 4; float ctxDmg = 1f, stillT;
+    float spawnT = 4; float ctxDmg = 1f, stillT, edgeT; const float EdgeWait = 2.5f;       // сколько секунд игрок должен простоять у края света, чтобы враги пошли в налёт
 
     float DangerScale => 1f + .18f * LitCount + .12f * LitIn(1) + .12f * LitIn(2) + .12f * LitIn(3) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0) + (BossDown(3) ? .1f : 0) + (BossDown(4) ? .1f : 0);
 
@@ -210,7 +210,7 @@ public partial class Game
         bool boss = k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden || k == EK.WinterWarden || k == EK.Source;
         if (NetClient) return new Enemy { Kind = k, Pos = p, Hp = 1, MaxHp = 1 };            // клиент врагов не создаёт: их присылает хост
         var (dm, hm) = EnemyMuls(k, p);
-        float hp = BaseHp(k) * (boss ? hm : scale * hm); scale *= dm;
+        float hp = BaseHp(k) * (boss ? hm : scale * hm); scale = dm;                 // здоровье растёт с прогрессом мира, а урон врага фиксирован: сильнее становятся сами виды врагов
         var e = new Enemy { Kind = k, Pos = p, Hp = hp, MaxHp = hp, Phase = rng.Randf() * 6.28f, Scale = scale, Guard = guard, Cd = rng.RandfRange(.8f, 2f) };
         e.NetId = ++nextEnemyId; if (guard != null) e.Home = p;
         if (boss) { e.Home = p; e.T1 = 2.5f; e.T3 = 4f; }
@@ -292,6 +292,47 @@ public partial class Game
     }
 
     /// <summary>Свет жжёт врагов (освещённая земля, аура героя), поэтому пока игрок стоит в свете, обычные враги держатся от света дальше его удара: останавливаются у границы, а оказавшись близко (свет вырос) отходят. Когда игрок выходит в тьму, враг нападает, даже если зайдёт на свет.</summary>
+    /// <summary>Игрок на свету, но у самого края тени (в ~40 пикселях от неё).</summary>
+    bool AtLightEdge()
+    {
+        if (!IsLit(PPos)) return false;
+        for (int i = 0; i < 8; i++) if (!IsLit(PPos + Vector2.FromAngle(i * Mathf.Pi / 4) * 40f)) return true;
+        return false;
+    }
+
+    /// <summary>Налёт есть только у Тени и Призрака — остальные виды остаются на границе света. Игрок на свету у края тени и не заходит в неё: враг из тени замирает, делает быстрый рывок через свет, ударяет и отскакивает обратно в тень.
+    /// Состояния: 1 — замер и целится, 2 — рывок, 3 — возврат на место, откуда начал. Возвращает true, пока враг занят налётом (обычное избегание света отключено).</summary>
+    bool RaidTick(Enemy e, float dt, ref Vector2 vel, Vector2 dir, float dist, bool lit)
+    {
+        bool can = !e.IsBoss && e.Ev == null && e.Guard == null && e.Freeze <= 0 && (e.Kind == EK.Shade || e.Kind == EK.Wraith);
+        if (!can || BossFightNear(e.Pos)) { e.RaidSt = 0; return false; }
+        switch (e.RaidSt)
+        {
+            case 0:
+                e.RaidCd -= dt;
+                if (e.RaidCd <= 0 && !lit && edgeT >= EdgeWait && dist > 30f && dist < 130f)
+                {
+                    if (AtkSlot()) { e.RaidSt = 1; e.RaidT = .45f; e.RaidHome = e.Pos; }
+                    else e.RaidCd = .6f;
+                }
+                else if (e.RaidCd <= 0) e.RaidCd = .5f;
+                return false;
+            case 1:
+                vel = Vector2.Zero; e.RaidT -= dt; e.Flash = Mathf.Max(e.Flash, .04f);
+                if (e.RaidT <= 0) { e.RaidSt = 2; e.RaidDir = dir; e.RaidT = Mathf.Clamp((dist + 90f) / 280f, .55f, 1.1f); Sfx.Play("dash", -8, 1.3f); }
+                return true;
+            case 2:
+                vel = e.RaidDir * 280f; e.RaidT -= dt;
+                if (dist < 14f && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(8f * e.Scale, -dir); e.RaidT = 0; }
+                if (e.RaidT <= 0) { e.RaidSt = 3; e.RaidT = 2.2f; }
+                return true;
+            default:
+                { var back = e.RaidHome - e.Pos; e.RaidT -= dt; vel = back.Length() > 6f ? back.Normalized() * 160f : Vector2.Zero; }
+                if (e.RaidT <= 0 || e.Pos.DistanceTo(e.RaidHome) <= 6f) { e.RaidSt = 0; e.RaidCd = rng.RandfRange(2.5f, 4.5f); }
+                return true;
+        }
+    }
+
     Vector2 AvoidLight(Enemy e, Vector2 vel, Vector2 toPlayerDir, float auraR)
     {
         if (BossFightNear(e.Pos) || !IsLit(PPos)) return vel;              // игрок вышел из света — враг нападает, даже если зайдёт на свет
@@ -330,14 +371,14 @@ public partial class Game
         if (!NetService.Active) { Enemies.Clear(); Projs.Clear(); Boss = null; }        // в сети враги принадлежат хосту и смерть одного игрока их не стирает
         LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
-        int lost = BuryPlayer();                                                   // все ресурсы и инструменты остаются в могиле там, где игрок пал
+        int lost = BuryPlayer();                                                   // все ресурсы, инструменты и оружие остаются в могиле там, где игрок пал
         bool lvLoss = Diff == 1 && Level > 1;                                      // сложный режим: смерть стоит уровня
         bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта
         if (lvLoss) { Level--; MaxHp = Mathf.Max(60f, MaxHp - 10f); Xp = 0; }
         else if (xpLoss) Xp = 0;
         PPos = RespawnPos(); aiRespawn = PPos; Hp = MaxHp; Invuln = 2f; Save();
-        if (lost > 0 && (lvLoss || xpLoss)) Toast("Ресурсы и инструменты остались в могиле: разбейте её");
-        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? "Тьма поглотила вас. Ресурсы и инструменты остались в могиле: разбейте её" : "Тьма поглотила вас. Прогресс сохранён");
+        if (lost > 0 && (lvLoss || xpLoss)) Toast("Ресурсы, инструменты и оружие остались в могиле: разбейте её");
+        Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? "Тьма поглотила вас. Ресурсы, инструменты и оружие остались в могиле: разбейте её" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();
     }
 
@@ -398,7 +439,7 @@ public partial class Game
     void UpdateEnemies(float dt)
     {
         if (NetClient) { ClientEnemies(dt); return; }
-        var realP = PPos; aiRespawn = null; RecordTrail(dt, realP); int attached = 0; CountBusyAttackers(); stillT = pVel.Length() < 8f ? stillT + dt : 0f;
+        var realP = PPos; aiRespawn = null; RecordTrail(dt, realP); int attached = 0; CountBusyAttackers(); stillT = pVel.Length() < 8f ? stillT + dt : 0f; if (AtLightEdge()) edgeT += dt; else if (IsLit(PPos)) edgeT = 0f;       // счётчик сбрасывается, только когда игрок ушёл вглубь света; шаг в тень его не обнуляет
         for (int i = Enemies.Count - 1; i >= 0; i--)
         {
             if (i >= Enemies.Count) continue;                                  // смерть врага (взрыв, цепочка) могла убрать нескольких сразу
@@ -575,7 +616,8 @@ public partial class Game
             if (!e.IsBoss) vel *= EnemySpeedMul(e);
             for (int pj = projN; pj < Projs.Count; pj++) Projs[pj].Dmg *= e.IsBoss ? ctxDmg : e.Kind == EK.Spitter ? 1f : Tune.T.EnemyDamage * CombatTuning.At(Tune.T.BiomeDamage, RegionAt(e.Pos));
             ctxDmg = 1f;
-            if (!e.IsBoss && e.Ev == null && !(e.Kind == EK.Leech && e.State == 1)) vel = AvoidLight(e, vel, dir, auraR);
+            bool raiding = RaidTick(e, dt, ref vel, dir, dist, lit);
+            if (!raiding && !e.IsBoss && e.Ev == null && !(e.Kind == EK.Leech && e.State == 1)) vel = AvoidLight(e, vel, dir, auraR);
             if (e.Kind == EK.Leech && e.State == 1) { }
             else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
                 if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }

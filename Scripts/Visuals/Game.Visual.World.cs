@@ -138,6 +138,57 @@ public partial class Game
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 
+    /// <summary>Поза предмета в руке при ударе (t 0..1): у каждого вида своя анимация. Кирка — удар сверху; топор — широкий боковой мах; меч — быстрый рубящий росчерк;
+    /// лук — натяг и отдача назад; посох — замах вверх и выпад вперёд.</summary>
+    (float ang, Vector2 off) SwingPose(Vector2 d, float sg, float t)
+    {
+        int kind = CurW >= 0 && CurDef != null ? (CurDef.Cls == WClass.Sword ? 2 : CurDef.Cls == WClass.Bow ? 3 : 4) : CurTool == "axe" ? 1 : 0;
+        return SwingPoseKind(kind, d, sg, t);
+    }
+
+    /// <summary>Вид предмета по значку (для чужих игроков): 0 кирка, 1 топор, 2 меч, 3 лук, 4 посох.</summary>
+    public static int SwingKindOfIcon(int icon) => icon == UiIcons.Sword ? 2 : icon == UiIcons.Bow ? 3 : icon == UiIcons.Staff ? 4 : icon == UiIcons.Axe ? 1 : 0;
+
+    public static (float ang, Vector2 off) SwingPoseKind(int kind, Vector2 d, float sg, float t)
+    {
+        float a = d.Angle(); float ease(float u) => u * u * (3f - 2f * u);
+        if (kind >= 2)
+            switch (kind)
+            {
+                case 2: { float u = ease(Mathf.Min(1f, t * 1.15f)); return (a + sg * (-1.7f + u * 3.4f), d * 2f * Mathf.Sin(u * Mathf.Pi)); }                                        // широкий быстрый росчерк
+                case 3: { float pull = t < .5f ? ease(t * 2f) : 1f - ease((t - .5f) * 2f); return (a, -d * 3.5f * pull); }                                                  // натяг и отдача
+                default: { float up = t < .4f ? ease(t / .4f) : 1f - ease((t - .4f) / .6f); float thrust = t < .4f ? 0f : Mathf.Sin((t - .4f) / .6f * Mathf.Pi); return (a - sg * .9f * up, d * (6f * thrust - 2f * up)); }   // посох: подъём, выпад
+            }
+        if (kind == 1) return (a + sg * (-1.5f + ease(t) * 3.0f), d * 3f * Mathf.Sin(t * Mathf.Pi));                                                                             // топор: боковой мах
+        float down = t < .35f ? -1.55f * ease(t / .35f) : Mathf.Lerp(-1.55f, .95f, (t - .35f) / .65f * ((t - .35f) / .65f));                                                          // кирка: замах вверх и удар вниз по дуге
+        return (a + sg * down, new Vector2(0, -2f * Mathf.Sin(Mathf.Min(1f, t / .35f) * Mathf.Pi * .5f)));
+    }
+
+    /// <summary>Эффект удара рукой без рисунка кулака: дугообразная волна летит вперёд, за ней воздушные линии, на контакте — вспышка, кольцо и искры (p 0..1). Так же рисуется у чужих игроков.</summary>
+    public static void DrawFist(CanvasItem c, Vector2 pos, Vector2 dir, float p, bool contact, Color skin)
+    {
+        float e = 1f - (1f - Mathf.Min(1f, p * 1.8f)) * (1f - Mathf.Min(1f, p * 1.8f)); var side = new Vector2(-dir.Y, dir.X); float a0 = dir.Angle();
+        var from = pos + new Vector2(0, -3) + dir * 4f; float fade = 1f - Mathf.Max(0f, p - .5f) / .5f; var tip = from + dir * (3f + 12f * e);
+        for (int i = -2; i <= 2; i++)                                                          // воздушные линии позади волны, чем дальше от центра — тем короче
+        {
+            float k = 1f - Mathf.Abs(i) * .22f; var o = side * (i * 2.6f);
+            Gfx.Line(c, from + o + dir * (1f + 2f * Mathf.Abs(i)), tip + o - dir * (2f + 4f * Mathf.Abs(i)), new Color(1f, 1f, 1f, .55f * fade * k), 1f);
+        }
+        for (int r = 0; r < 3; r++)                                                             // серп волны: три полосы, яркая спереди, тающий шлейф сзади
+        {
+            float lag = r * .09f, fr = Mathf.Max(0f, 1f - Mathf.Max(0f, p - .5f - lag) / .5f); float ee = 1f - (1f - Mathf.Max(0f, Mathf.Min(1f, (p - lag) * 1.8f))) * (1f - Mathf.Max(0f, Mathf.Min(1f, (p - lag) * 1.8f)));
+            var ctr = from + dir * (2f + 12f * ee - 5f); float rad = 6f + 3f * ee;
+            Gfx.Arc(c, ctr, rad, a0 - .85f, a0 + .85f, 10, new Color(1f, r == 0 ? 1f : .92f, r == 0 ? .9f : .7f, (r == 0 ? .95f : r == 1 ? .5f : .25f) * fr), r == 0 ? 2f : 1.2f);
+        }
+        if (contact && p > .45f)
+        {
+            float q = Mathf.Min(1f, (p - .45f) / .55f), inv = 1f - q; var hit = tip + dir * 2f;
+            if (q < .35f) Gfx.Disc(c, hit, 4.5f * (1f - q / .35f) + 1f, new Color(1f, 1f, .85f, .85f));                      // короткая вспышка в точке контакта
+            Gfx.Arc(c, hit, 3f + 8f * q, 0f, Mathf.Tau, 16, new Color(1f, .95f, .75f, inv * .9f), 1.4f);                      // расходящееся кольцо
+            for (int i = 0; i < 6; i++) { float ang = i * Mathf.Tau / 6f + .4f; var dv = Vector2.FromAngle(ang); Gfx.Line(c, hit + dv * (3f + 6f * q), hit + dv * (5f + 10f * q), new Color(1f, .85f, .5f, inv), 1f); }   // искры
+        }
+    }
+
     void DrawPlayer(EntityLayer c)
     {
         bool water = WaterAt(PPos);
@@ -154,7 +205,7 @@ public partial class Game
         {
             var d = (Aim - PPos); d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0);
             bool mining = MineTile.X >= 0 && MineProg > 0 && AtkCd <= 0;
-            float t = 1 - Swing / .22f, ang, sg = d.X < 0 ? -1 : 1;   // зеркалим замах при прицеле влево
+            float dur = CurW >= 0 && CurDef != null && CurDef.Cls != WClass.Sword ? .1f : .22f, t = Mathf.Clamp(1 - Swing / dur, 0, 1), ang, sg = d.X < 0 ? -1 : 1; var handOff = Vector2.Zero;   // зеркалим замах при прицеле влево
             if (mining)
             {
                 // удар с возвратом: замах назад (быстро замедляется), резкий удар вниз, короткая задержка на ударе и плавный возврат в исходное положение
@@ -166,8 +217,8 @@ public partial class Game
                 else { float u = (ph - .62f) / .38f; off = Mathf.Lerp(hit - .1f, rest, u * u * (3f - 2f * u)); }                     // возврат
                 ang = d.Angle() + sg * off;
             }
-            else ang = d.Angle() + sg * (-1.0f + t * 2.0f);
-            DrawHeldItem(c, PPos + new Vector2(0, -3), ang);
+            else (ang, handOff) = SwingPose(d, sg, t);
+            DrawHeldItem(c, PPos + new Vector2(0, -3) + handOff, ang);
         }
         else
         {
@@ -197,6 +248,7 @@ public partial class Game
     void MineStrikeFx()
     {
         if (MineTile.X < 0) return;
+        if (CurW < 0 && !OwnedTools.Contains(CurTool)) { var pd = TileCenter(MineTile.X, MineTile.Y) - PPos; Punch(pd.LengthSquared() > 1 ? pd.Normalized() : new Vector2(Facing, 0), true); }
         var p = TileCenter(MineTile.X, MineTile.Y); var col = new Color(1f, .9f, .6f);
         for (int i = 0; i < 4; i++)
             Parts.Add(new Particle { P = p + new Vector2(rng.RandfRange(-4, 4), rng.RandfRange(-4, 4)), V = Vector2.FromAngle(rng.Randf() * Mathf.Tau) * rng.RandfRange(18, 40), Life = .3f, Max = .3f, C = col, Size = 1.4f });
@@ -363,10 +415,25 @@ public partial class Game
                 Gfx.Line(c, prev, pt, new Color(b.C.R, b.C.G, b.C.B, b.T * 5f), 3f); Gfx.Line(c, prev, pt, new Color(1, 1, 1, b.T * 5f), 1f); prev = pt;
             }
         }
+        if (punchT > 0) DrawFist(c, PPos, punchDir, 1f - punchT / .17f, punchContact, PlayerLook.BodyCol);
         if (swArcT > 0)
         {
             float k = swArcT / .2f; var col = ElemColor(); col.A = k;
             // дуга удара «проносится» слева направо: яркая голова и затухающий хвост из нескольких отрезков
+            if (CurW >= 0 && CurDef != null && CurDef.Cls == WClass.Sword && Swing > 0)
+            {
+                // след меча: лезвие в прошлых положениях взмаха, вся его длина (от рукояти до острия) — яркий клинок и затухающие копии позади
+                var dd = Aim - PPos; dd = dd.LengthSquared() > 1 ? dd.Normalized() : new Vector2(Facing, 0); float sgn = dd.X < 0 ? -1 : 1, tNow = Mathf.Clamp(1 - Swing / .22f, 0, 1);
+                for (int i = 7; i >= 0; i--)
+                {
+                    float tt = tNow - i * .035f; if (tt < 0) continue;
+                    var (ang, off) = SwingPose(dd, sgn, tt); var hand = PPos + new Vector2(0, -3) + off; var u = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
+                    float a = Mathf.Clamp(Swing / .22f * 1.6f, 0f, 1f) * (1f - i * .1f) * (i == 0 ? 1f : .7f);
+                    Gfx.Line(c, hand + u * 4f, hand + u * 21f, new Color(col.R, col.G, col.B, a * .75f), i == 0 ? 3f : 5f);
+                    if (i == 0) Gfx.Line(c, hand + u * 5f, hand + u * 20f, new Color(1, 1, 1, a * .7f), 1f);
+                }
+                return;
+            }
             float sweep = Mathf.Clamp((1f - k) * 1.6f, 0f, 1f), a0 = swArcDir - swArcHalf, span = swArcHalf * 2f, reach = swArcReach * (1.05f - .1f * k);
             for (int i = 0; i < 6; i++)
             {

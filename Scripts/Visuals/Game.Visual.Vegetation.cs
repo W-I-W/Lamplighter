@@ -7,7 +7,7 @@ namespace Lamplighter;
 /// остальные тайлы слоя не деформируются. Логика сообщает лишь о событиях (TileShake — удар по тайлу); ветер и амплитуды — в Resources/VisualConfigs/VisualFx.tres.</summary>
 public partial class Game
 {
-    ShaderMaterial swayMat, waterMat; Node2D foliageRoot; readonly List<(Vector2I tile, float age, float amt)> tileShakes = new();
+    ShaderMaterial swayMat, waterMat; Node2D foliageRoot; readonly List<(Vector2I tile, float age, float amt, int kind)> tileShakes = new();
     const int FoliageTuft = 130, FoliageBush = 131, FoliageFlowers = 132, FoliageTall = 133, FoliageStick = 178, FoliagePebble = 179;
 
     /// <summary>Палки и камушки на стартовой поляне: растут как кусты (ломаются за несколько ударов, даже голой рукой) и дают первое дерево и камень без кирки. Чистая функция координат и зерна мира.</summary>
@@ -41,10 +41,15 @@ public partial class Game
     public void TileShake(int x, int y, float mul = 1f)
     {
         var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = (TileIsPlant(tt) ? 1f : .8f) * mul;
-        if (TileIsPlant(tt)) y--;                                                       // у дерева качается крона — клетка над стволом
-        for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == new Vector2I(x, y)) { tileShakes[i] = (tileShakes[i].tile, 0f, amt); return; }
-        if (tileShakes.Count >= 8) tileShakes.RemoveAt(0);
-        tileShakes.Add((new Vector2I(x, y), 0f, amt));
+        AddShake(new Vector2I(x, y), amt, TileIsPlant(tt) ? 2 : 0);                                      // ствол (или блок) качается сам
+        if (TileIsPlant(tt)) AddShake(new Vector2I(x, y - 1), amt, 1);              // у дерева вместе со стволом качается его крона; чужой ствол в клетке кроны не затрагивается
+    }
+
+    void AddShake(Vector2I t, float amt, int kind)
+    {
+        for (int i = 0; i < tileShakes.Count; i++) if (tileShakes[i].tile == t && tileShakes[i].kind == kind) { tileShakes[i] = (t, 0f, amt, kind); return; }
+        if (tileShakes.Count >= 16) tileShakes.RemoveAt(0);
+        tileShakes.Add((t, 0f, amt, kind));
     }
 
     bool TileSways(Tl t) => t != Tl.None;                                           // качаются от удара любые блоки: деревья кроной, остальные целиком
@@ -55,14 +60,14 @@ public partial class Game
         if (swayMat == null) return;
         UpdateTreeOcclusion();
         var cfg = VisualFxConfig.Get();
-        var arr = new Vector4[8]; int n = 0;
+        var arr = new Vector4[16]; int n = 0;
         for (int i = tileShakes.Count - 1; i >= 0; i--)
         {
-            var (t, age, am) = tileShakes[i]; age += dt; if (age >= cfg.HitShakeTime) { tileShakes.RemoveAt(i); continue; }
-            tileShakes[i] = (t, age, am);
-            float k = 1f - age / cfg.HitShakeTime; arr[n++] = new Vector4(t.X, t.Y, cfg.HitShakePx * am * k * k * Settings.Fx, t.X * 1.7f);
+            var (t, age, am, kd) = tileShakes[i]; age += dt; if (age >= cfg.HitShakeTime) { tileShakes.RemoveAt(i); continue; }
+            tileShakes[i] = (t, age, am, kd);
+            float k = 1f - age / cfg.HitShakeTime; arr[n++] = new Vector4(t.X, t.Y, cfg.HitShakePx * am * k * k * Settings.Fx, (t.X * 1.7f) % 50f + kd * 100f);
         }
-        swayMat.SetShaderParameter("shakes", arr);
+        swayMat.SetShaderParameter("shakes", arr); swayMat.SetShaderParameter("crown_cols", new Vector3(Art.TreeTop, Art.PineTop, Art.DeadTop));
         swayMat.SetShaderParameter("time_s", Time);
         swayMat.SetShaderParameter("wind", cfg.Wind * Settings.Wind);
         swayMat.SetShaderParameter("player", PPos);

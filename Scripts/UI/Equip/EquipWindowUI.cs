@@ -143,7 +143,7 @@ public partial class EquipWindowUI : Control
     void Refresh()
     {
         G.PokeHover();
-        title.Text = T(G.StationOpened ? "Создание" : "Снаряжение"); closeHint.Text = T("Esc — закрыть"); foot.Text = T(TabQuestions[Mathf.Clamp(G.WinTab, 0, 3)]);
+        title.Text = T(G.StationOpened ? "Создание" : "Снаряжение"); closeHint.Text = T("Esc — закрыть"); foot.Text = ""; foot.Visible = false;
         RefreshTabs();
         Clear(centerBox); Clear(rightBox);
         switch (G.WinTab) { case 0: BuildWeapons(); break; case 1: BuildRelics(); break; case 2: BuildCraft(); break; default: BuildLantern(); break; }
@@ -207,9 +207,9 @@ public partial class EquipWindowUI : Control
     {
         int row = G.WinCur; var td = ToolDef.Get(id); string nm = id == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; bool held = G.EqIsHeld(row); int slot = G.HotSlotOf(Game.RefTool(id));
         string status = held ? "Сейчас в руках" : slot >= 0 ? $"{T("В хотбаре")}: {T("слот")} {slot + 1}" : "Можно взять в руки";
-        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(td.Icon), null, T(nm), Gold, T(status), held ? Good : slot >= 0 ? Cyan : Dim, T(td.Desc)));
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(td.Icon), null, T(nm), Gold, T(status), held ? Good : slot >= 0 ? Cyan : Dim, null));
         var ok = new List<string>(); if (td.EffWood > 0) ok.Add(T("дерево")); if (td.EffStone > 0) ok.Add(T("камень")); if (td.EffOre > 0) ok.Add(T("руда")); if (td.EffRubble > 0) ok.Add(T("завалы"));
-        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", Level3(td.CombatDamage, .7f, 1.2f, "низкий", "обычный", "высокий")));
+        centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", G.ToolHitDmg(id).ToString("0.#"), Text));
         centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), "Добыча", Level3(td.MiningPower, 1.05f, 1.7f, "обычная", "быстрая", "очень быстрая"), Cyan));
         if (ok.Count > 0) centerBox.AddChild(Lbl($"{T("Подходит")}: {string.Join(", ", ok)}", Dim, true, null, true));
         if (!held) centerBox.AddChild(MainActionButtonUI.Make("Взять в руки", () => { G.EqEquipRow(row); Flash(centerBox); }, true));
@@ -344,7 +344,7 @@ public partial class EquipWindowUI : Control
         else top.AddChild(Lbl(Game.GroupName(cg), Gold, false, "GoldLabel"));
         top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         top.AddChild(Chip("Все", null, !G.CraftOnlyReady, () => G.EqCraftFilter(false))); top.AddChild(Chip("Доступные", null, G.CraftOnlyReady, () => G.EqCraftFilter(true)));
-        foot.Text = groups.Count > 1 ? T("Tab — режим · Enter — создать · двойной клик — создать") : T("Enter — создать · двойной клик — создать");
+        foot.Text = "";
         if (rows.Count == 0)
         {
             centerBox.AddChild(new Control { CustomMinimumSize = new Vector2(0, 40) });
@@ -371,7 +371,17 @@ public partial class EquipWindowUI : Control
         var st = G.StateOf(r); var bad = new Color("#f06a5e");
         bool up = r.IsUpgrade;
         string status = up ? "Уже есть" : st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? (r.Extra != null && r.Extra() > 0 ? $"{T("в очереди")} {r.Extra()}" : r.Improves ? "Можно улучшить" : "Можно создать") : "Не хватает ресурсов";
-        v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), up ? Cyan : st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad, T(up ? r.UpDesc ?? r.Desc ?? "" : r.Desc ?? "")));
+        v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), up ? Cyan : st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad, T(up ? r.UpDesc ?? r.Desc ?? "" : r.Id.StartsWith("tool_") ? "" : r.Desc ?? "")));
+        if (r.Id.StartsWith("tool_")) v.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", G.ToolHitDmg(r.Id.Substring(5)).ToString("0.#"), Text));
+        if (r.Id.StartsWith("w_") && r.Id.LastIndexOf('_') > 1)                          // рецепт оружия: сразу видно урон и скорость
+        {
+            var wdef = Db.Weapon(r.Id.Substring(2, r.Id.LastIndexOf('_') - 2));
+            if (wdef != null)
+            {
+                v.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", G.WeaponDmg(wdef).ToString("0.#"), Text));
+                v.AddChild(Stat(UiIcons.Item(UiIcons.Hammer), "Скорость", Level3(1f / wdef.Cd, .9f, 1.6f, "медленная", "обычная", "быстрая"), Text));
+            }
+        }
         var cost = r.CostNow;
         if (cost != null) foreach (var c in cost) { int have = G.HaveAny(c[0]); v.AddChild(Stat(UiIcons.Item(c[0]), It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : bad)); }
         v.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });

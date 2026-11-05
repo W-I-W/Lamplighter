@@ -19,8 +19,9 @@ public partial class CombatTuning : Resource
     [Export] public float EnemyAttackRate = 1.15f;             // как быстро восстанавливаются паузы между атаками
     [Export] public float EnemyAtkPause = 1.7f;                // во сколько раз длиннее паузы между атаками обычных врагов (боссов не касается): бьют реже
     [Export] public float EnemyMinHit = 60f;                   // минимальный урон любого удара по герою (после защиты от огня, до страха тени)
+    [Export] public float BareHandMul = .4f;                   // голые руки (инструмента нет): доля урона инструмента, заметно слабее меча
     [Export] public float FistDamageMul = 3f;                  // множитель урона PlayerDamage (удар рукой и инструментом без оружия)
-    [Export] public float[] BiomeDamage = { 1f, 1.15f, 1.3f, 1.5f, 1.7f };
+    [Export] public float[] BiomeDamage = { 1f, 1f, 1f, 1f, 1f };
     [Export] public float[] BiomeHp = { 1f, 1.2f, 1.4f, 1.6f, 1.8f };
     [Export] public float SpawnDelayMul = 3.2f, SpawnCapMul = .4f;     // реже появляются (×3,2 к паузе) и меньше одновременно (×0,4 к лимиту): удары теперь тяжёлые, а врагов мало
     [Export] public int SpawnCapBonus = 2;                     // дополнительные враги на территории

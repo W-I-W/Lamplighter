@@ -14,6 +14,10 @@ public partial class Game
     public int WeaponLv(string id) { foreach (var o in Owned) if (o.Id == id) return o.Lv; return 0; }
     float WeaponLvMul(string id) => 1f + WeaponLvStep * WeaponLv(id);
     float ToolMineMul(string id) => id == "axe" ? 1f + AxeMineStep * AxeLv : 1f;
+    /// <summary>Урон одного удара инструментом (число для карточек) и голой рукой.</summary>
+    public float ToolHitDmg(string id) => PlayerDamage * ToolDef.Get(id).CombatDamage * ToolDmgMul(id);
+    public float BareHandDmg => PlayerDamage * Tune.T.BareHandMul;
+
     float ToolDmgMul(string id) => id == "axe" ? 1f + AxeDmgStep * AxeLv : 1f;
     public int ToolLv(string id) => id == "axe" ? AxeLv : 0;
 

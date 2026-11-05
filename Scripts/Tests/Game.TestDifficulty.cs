@@ -38,7 +38,7 @@ public partial class Game
             var t = Tune.T; Check(t.BiomeDamage.Length == 5 && t.CoopEnemyHp.Length == 4 && t.BossHp.Length == 5 && t.EnemyDamage > 1f, "tuning: all numbers come from Resources/Combat/tuning.tres");
             var p = new[] { TileCenter(60, 60), TileCenter(200, 60), TileCenter(300, 60), TileCenter(450, 60), TileCenter(580, 60) };
             var dm = p.Select(q => EnemyMuls(EK.Shade, q).dmg).ToArray(); var hm = p.Select(q => EnemyMuls(EK.Shade, q).hp).ToArray();
-            Check(dm.Zip(dm.Skip(1), (a, b) => b > a).All(x => x) && hm.Zip(hm.Skip(1), (a, b) => b > a).All(x => x), $"biomes: damage ×{string.Join("/", dm.Select(x => x.ToString("0.00")))} and health ×{string.Join("/", hm.Select(x => x.ToString("0.00")))} grow with every biome");
+            Check(dm.All(x => Mathf.Abs(x - dm[0]) < .001f) && hm.Zip(hm.Skip(1), (a, b) => b > a).All(x => x), $"biomes: damage ×{string.Join("/", dm.Select(x => x.ToString("0.00")))} and health ×{string.Join("/", hm.Select(x => x.ToString("0.00")))} grow with every biome and damage stays fixed");
             var hp = new float[4]; for (int n = 1; n <= 4; n++) { TestPlayers = n; hp[n - 1] = EnemyMuls(EK.Shade, p[0]).hp; }
             var bh = new float[4]; for (int n = 1; n <= 4; n++) { TestPlayers = n; bh[n - 1] = EnemyMuls(EK.Warden, p[0]).hp; }
             Check(hp[0] < hp[1] && hp[1] < hp[2] && hp[2] < hp[3] && hp[3] / hp[0] < 2.2f && (hp[1] - hp[0]) / hp[0] < 1f, $"coop: enemy health {string.Join("/", hp.Select(x => x.ToString("0.00")))} grows with players but not linearly");
@@ -46,7 +46,7 @@ public partial class Game
             TestPlayers = 1; var e1 = Mk(EK.Shade, new Vector2(300, 0)); float before = e1.MaxHp; TestPlayers = 4; Sim(.2f); Check(Mathf.Abs(e1.MaxHp - before) < .001f && e1.Hp <= before, "coop: a change of group size does not change the health of enemies already in the fight");
             TestPlayers = 0; Enemies.Clear();
             // ориентиры для ручной настройки (не проверка баланса)
-            var shade = EnemyMuls(EK.Shade, p[0]); float hit = 9f * DangerScale * shade.dmg; float shp = 7f * DangerScale * shade.hp;
+            var shade = EnemyMuls(EK.Shade, p[0]); float hit = 9f * shade.dmg; float shp = 7f * DangerScale * shade.hp;
             Check(Mathf.Ceil(shp / 5f) is >= 2 and <= 4 && hit < Tune.T.EnemyMinHit * 2f, $"start: a Shade has {shp:0.0} hp ({Mathf.Ceil(shp / 5f)} sword hits) and its hit {hit:0.0} is raised to the minimum {Tune.T.EnemyMinHit:0}");
         });
 
