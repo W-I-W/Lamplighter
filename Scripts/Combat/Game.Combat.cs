@@ -291,7 +291,7 @@ public partial class Game
         }
         if (!remote && Flags.Contains("DarkHunter")) dmg *= InDark ? 1.25f : .9f;       // «Плащ теней»: сильнее в темноте, слабее на свету
         dmg *= m; ApplyEnemyDamage(e, dmg);
-        e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f);
+        e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f) * (melee ? 1f : CombatMath.RangedKnockbackMul);
         if (e.Kind == EK.Golem && rng.Randf() < .6f) AddZone(e.Pos, 40, 0, 3.5f, 0f, true);
         if (melee && !remote && Has(Tech.FlameEdge)) e.Burn = Mathf.Max(e.Burn, E(Tech.FlameEdge));
         if (melee && !remote && Has(Tech.FrostEdge)) { e.Slow = Mathf.Max(e.Slow, E(Tech.FrostEdge)); if (!e.IsBoss && Lv(Tech.FrostEdge) >= 3 && rng.Randf() < .05f * (Lv(Tech.FrostEdge) - 2)) e.Freeze = Mathf.Max(e.Freeze, 1f); }
@@ -443,7 +443,7 @@ public partial class Game
         int lost = BuryPlayer();                                                   // все ресурсы, инструменты и оружие остаются в могиле там, где игрок пал
         bool lvLoss = Diff == 1 && Level > 1;                                      // сложный режим: смерть стоит уровня
         bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта
-        if (lvLoss) { Level--; MaxHp = Mathf.Max(60f, MaxHp - 10f); Xp = 0; }
+        if (lvLoss) { float lostHealth = CombatMath.BaseHealth(Level) - CombatMath.BaseHealth(Level - 1); Level--; MaxHp = Mathf.Max(60f, MaxHp - lostHealth); ApplyRelicHp(); Xp = 0; }
         else if (xpLoss) Xp = 0;
         PPos = RespawnPos(); aiRespawn = PPos; Hp = MaxHp; Invuln = 2f; Save();
         if (lost > 0 && (lvLoss || xpLoss)) Toast("Ресурсы, инструменты и оружие остались в могиле: разбейте её");

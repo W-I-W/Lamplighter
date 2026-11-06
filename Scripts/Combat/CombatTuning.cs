@@ -13,15 +13,15 @@ public partial class CombatTuning : Resource
     [Export] public float HardEnemyHp = 1.35f, HardEnemyDamage = 1.3f, HardBossHp = 1.3f, HardBossDamage = 1.2f;
 
     // обычные враги
-    [Export] public float EnemyDamage = 1.6f;                 // урон ближних и дальних атак
-    [Export] public float EnemyHp = 1.5f;
-    [Export] public float EnemySpeed = 1.15f;
+    [Export] public float EnemyDamage = 1.8f;                 // урон ближних и дальних атак
+    [Export] public float EnemyHp = 2.2f;
+    [Export] public float EnemySpeed = 1.35f;
     [Export] public float EnemyAttackRate = 1.15f;             // как быстро восстанавливаются паузы между атаками
-    [Export] public float EnemyAtkPause = 1.7f;                // во сколько раз длиннее паузы между атаками обычных врагов (боссов не касается): бьют реже
+    [Export] public float EnemyAtkPause = 1.1f;                // во сколько раз длиннее паузы между атаками обычных врагов (боссов не касается): бьют реже
     [Export] public float EnemyMinHit = 1f;                    // нижний порог до сопротивлений; защита может уменьшить и это значение
     [Export] public float BareHandMul = .4f;                   // голые руки (инструмента нет): доля урона инструмента, заметно слабее меча
     [Export] public float FistDamageMul = .65f;                // инструменты уступают оружию своего этапа по урону
-    [Export] public float SpawnDelayMul = 3.2f, SpawnCapMul = .4f;     // реже появляются (×3,2 к паузе) и меньше одновременно (×0,4 к лимиту): удары теперь тяжёлые, а врагов мало
+    [Export] public float SpawnDelayMul = 1.35f, SpawnCapMul = 1f;     // частота появления; число одновременно ограничено бюджетом видов
     // бюджет опасности столкновений (в «стоимости» видов, см. EnemyBalance): по регионам — основа, прибавка за зажжённый фонарь региона и потолок
     [Export] public float[] EncounterBase = { 4f, 7f, 9f, 11f, 13f };
     [Export] public float[] EncounterMax = { 9f, 13f, 16f, 19f, 22f };
@@ -37,11 +37,11 @@ public partial class CombatTuning : Resource
     [Export] public float EliteHp = 1.8f, EliteDamage = 1.25f;
     // боссы
     [Export] public float[] BossHp = { 1.7f, 1.6f, 1.55f, 1.5f, 1.45f };
-    [Export] public float[] BossDamage = { 1.25f, 1.3f, 1.35f, 1.4f, 1.5f };
+    [Export] public float[] BossDamage = { 1.9f, 2f, 2.1f, 1.6f, 1.9f };
     [Export] public float BossLeashTiles = 36f;                // пока игрок ближе этого расстояния (в клетках) от места босса, бой идёт; бросив бой дальше, игрок теряет босса
     [Export] public float BossRegenDelay = 8f, BossRegenRate = .03f;   // босс начинает восстанавливаться только после стольких секунд без игрока и медленно (доля здоровья в секунду)
     [Export] public float BossWarnMul = .72f;                  // множитель времени подготовки атак боссов (кроме Рощи, у которой он свой): меньше — меньше времени увернуться
-    [Export] public float BossTempo = .7f;                     // пауза между атаками босса (меньше — чаще): бои с боссами напряжённее, увернуться «на автомате» нельзя
+    [Export] public float BossTempo = .6f;                     // пауза между атаками босса (меньше — чаще): бои с боссами напряжённее, увернуться «на автомате» нельзя
     [Export] public float WinterVuln = 9f, SourceVuln = 10f;     // достаточно времени добежать и ударить после решения щита
     // игрок
     [Export] public float HitInvuln = .5f;

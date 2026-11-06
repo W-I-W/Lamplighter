@@ -14,7 +14,7 @@ public partial class Game
         float dmgMul = float.TryParse(OS.GetEnvironment("LAMP_DMGMUL"), out var dm) ? dm : 3f; float killInt = float.TryParse(OS.GetEnvironment("LAMP_KILLINT"), out var ki) ? ki : .4f;
         S(.3f, () =>
         {
-            BossMask |= 31; BeaconLevel = 6; Finished = true; Dawn = 1; Level = lv; Tier = 4; MaxHp = 60 + 10 * (lv - 1); Hp = MaxHp; EventsEnabled = false;
+            BossMask |= 31; BeaconLevel = 6; Finished = true; Dawn = 1; Level = lv; Tier = 4; MaxHp = CombatMath.BaseHealth(lv); Hp = MaxHp; EventsEnabled = false;
             foreach (var a in W.Ancients) { a.Lit = true; a.Anim = 1; }
             RiftUnlocked = 8; StartRift(tier); Invuln = 0; Log($"RIFTBAL tier={tier} lv={lv} maxhp={MaxHp} waves={RiftWaves} cap={RiftCap} dmg={PlayerDamage:F1}");
         });

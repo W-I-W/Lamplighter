@@ -54,6 +54,7 @@ public partial class Game
     CharacterSave BuildCharacter()
     {
         var c = charSave; var sk = SaveSkills();
+        c.HealthModel = CombatMath.HealthModel;
         c.Look = PlayerLook; c.PlaySecs = PlaySecs; c.Hp = Hp; c.MaxHp = MaxHp - relicHp; c.Xp = Xp; c.Level = Level; c.Tier = Tier; c.Kills = Kills; c.HeroLamp = HeroLampLv; c.Ann = Ann;
         c.Inv = (int[])Inv.Clone(); c.ModInv = (int[])ModInv.Clone(); c.SkK = sk.k; c.SkV = sk.v;
         c.Hot = (string[])Hot.Clone(); c.HotSel = HotSel; c.Tools = OwnedTools.ToArray(); c.CurTool = CurTool;
@@ -161,7 +162,8 @@ public partial class Game
     void ApplyCharacter(CharacterSave c, string worldId)
     {
         if (worldId != null && c.Worlds != null && c.Worlds.TryGetValue(worldId, out var pw) && pw.Has) PPos = new Vector2(pw.X, pw.Y);
-        PlaySecs = c.PlaySecs; relicHp = 0; Hp = c.Hp; MaxHp = c.MaxHp; Xp = c.Xp; Level = c.Level; Tier = c.Tier; Kills = c.Kills; HeroLampLv = c.HeroLamp; Ann = c.Ann;
+        bool migrateHealth = c.HealthModel < CombatMath.HealthModel;
+        PlaySecs = c.PlaySecs; relicHp = 0; Hp = c.Hp; MaxHp = migrateHealth ? CombatMath.MigrateBaseHealth(c.MaxHp, c.Level) : c.MaxHp; Xp = c.Xp; Level = c.Level; Tier = c.Tier; Kills = c.Kills; HeroLampLv = c.HeroLamp; Ann = c.Ann;
         LoadSkills(c.SkK, c.SkV, 0);
         if (c.Inv != null) for (int i = 0; i < Inv.Length && i < c.Inv.Length; i++) Inv[i] = Math.Max(0, c.Inv[i]);
         if (c.ModInv != null) for (int i = 0; i < ModInv.Length && i < c.ModInv.Length; i++) ModInv[i] = Math.Max(0, c.ModInv[i]);
@@ -181,7 +183,14 @@ public partial class Game
         if (c.Hints != null) foreach (var h in c.Hints) HintsShown.Add(h);
         LegendMask = c.LegendMask; CosmMask = c.CosmMask | 1; CosmSel = c.CosmSel;
         RecomputeEffects();
-        Hp = Mathf.Clamp(c.Hp, 0, MaxHp);                  // в файле текущее здоровье абсолютное, максимум записан без реликвий
+        if (migrateHealth)
+        {
+            // Preserve injury fraction, permanent shrine bonuses and equipped relics.
+            float oldFullMax = c.MaxHp * (1f + N("MaxHpPct")) + N("MaxHp");
+            Hp = Mathf.Clamp(oldFullMax > 0 ? c.Hp / oldFullMax : 0, 0, 1) * MaxHp;
+            c.MaxHp = MaxHp - relicHp; c.Hp = Hp; c.HealthModel = CombatMath.HealthModel;
+        }
+        else Hp = Mathf.Clamp(c.Hp, 0, MaxHp);             // максимум в файле записан без реликвий
     }
 
     // ───────────────────────── переходы между сеансами ─────────────────────────

@@ -24,6 +24,7 @@ public sealed class CombatSim
     readonly Action<string, int> onDrop;                         // (предмет, количество) — добыча за убийства
     sealed class Impact { public Foe Foe; public BossMoveM Move; public float Wait, Warning; }
     readonly List<Impact> impacts = new();
+    float shotRecovery;
     float Warning(Foe f, BossMoveM mv) => (f.PhaseIndex >= 2 && mv.LateWindup > 0 ? mv.LateWindup : f.PhaseIndex == 1 && mv.MidWindup > 0 ? mv.MidWindup : mv.Windup) * (f.Boss.Id >= 3 ? T.BossWarnMul : 1f);
 
     public CombatSim(SimPlayer p, Profile prof, Rng rng, int region, bool lit = false, Action<string, int> drop = null) { P = p; pr = prof; r = rng; M = p.M; T = M.T; Region = region; Lit = lit; onDrop = drop; }
@@ -94,8 +95,8 @@ public sealed class CombatSim
         float c = P.E(Fxk.Chain);
         if (c > 0 && depth < 1)
         {
-            int left = 1 + (int)c;
-            foreach (var o in Foes) { if (left <= 0) break; if (o == e || !o.Alive || o.IsBoss || o.Arrive > 0) continue; Hurt(o, dmg / Math.Max(.01f, m) * .45f, false, false, depth + 1); left--; }
+            int left = 1 + (int)c; float chainDmg = dmg / Math.Max(.01f, m);
+            foreach (var o in Foes) { if (left <= 0) break; if (o == e || !o.Alive || o.IsBoss || o.Arrive > 0) continue; chainDmg *= .45f; Hurt(o, chainDmg, false, false, depth + 1); left--; }
         }
         float sp = P.E(Fxk.Siphon); if (sp > 0) { P.FlareCd = Math.Max(0, P.FlareCd - .3f * sp); P.PulseCd = Math.Max(0, P.PulseCd - .3f * sp); P.DashCd = Math.Max(0, P.DashCd - .15f * sp); }
         if (e.Hp <= 0) Kill(e);
@@ -174,12 +175,13 @@ public sealed class CombatSim
         float react = r.Normal(pr.ReactMean, pr.ReactSd);
         if (react >= window) return false;
         if (pr.UseDash && P.Has(Tech.Dash) && P.DashCd <= 0 && r.Chance(pr.DashSkill)) { P.DashCd = P.DashCooldown; return true; }
-        return r.Chance(skill * (melee ? .85f : 1f));
+        return r.Chance(skill * (melee ? .85f : 1f) * (shotRecovery > 0 ? CombatMath.RangedMoveMul : 1f));
     }
 
     /// <summary>Время без врагов: перезарядки и восстановление здоровья.</summary>
     public void Idle(float s)
     {
+        shotRecovery = Math.Max(0, shotRecovery - s);
         P.RefillKillHealing(s);
         float before = noDmgT; noDmgT += s; chillT -= s; P.DashCd = Math.Max(0, P.DashCd - s); P.SpinCd = Math.Max(0, P.SpinCd - s); P.FlareCd = Math.Max(0, P.FlareCd - s); P.PulseCd = Math.Max(0, P.PulseCd - s);
         if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * 1.5f : P.RegenSkill ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec : 0f));
@@ -189,6 +191,7 @@ public sealed class CombatSim
     public void Step()
     {
         float dt = Dt; S.Time += dt; P.Time += dt;
+        shotRecovery = Math.Max(0, shotRecovery - dt);
         P.RefillKillHealing(dt);
         for (int i = impacts.Count - 1; i >= 0; i--)
         {
@@ -269,11 +272,11 @@ public sealed class CombatSim
         // дальнее оружие стреляет, пока враг ещё идёт
         if (ranged && target == null)
         {
-            float oc = 1f + P.Se(Tech.Overcharge); float range = (w.Cls == (int)WClass.Bow ? .75f * w.Speed : .9f * w.Speed) * oc * oc;
+            float oc = 1f + P.Se(Tech.Overcharge); float range = (w.Cls == (int)WClass.Bow ? .75f * w.Speed : .9f * w.Speed) * oc;
             foreach (var f in Foes) if (f.Alive && f.Arrive > 0 && f.Arrive < range / Math.Max(10f, f.Speed)) { target = f; break; }
         }
         if (target == null) return;
-        float rangeNow = ranged ? (w.Cls == (int)WClass.Bow ? .75f : .9f) * w.Speed * MathF.Pow(1f + P.Se(Tech.Overcharge), 2) : float.MaxValue;
+        float rangeNow = ranged ? (w.Cls == (int)WClass.Bow ? .75f : .9f) * w.Speed * (1f + P.Se(Tech.Overcharge)) : float.MaxValue;
         if (target.Distance > rangeNow) return;
         float pos = pr.Uptime * (chillT > 0 ? .8f : 1f);
         float ev = target.Def?.Evasive ?? 0f;
@@ -291,13 +294,21 @@ public sealed class CombatSim
             return;
         }
         int n = 1 + (int)P.E(Fxk.Multi); int pierce = (w.Cls == (int)WClass.Bow ? w.Pierce : 0) + (int)P.E(Fxk.Pierce) + (P.Has(Tech.Piercing) ? 1 : 0);
+        shotRecovery = CombatMath.RangedRecoveryTime;
         float shot = dmg * (n > 1 ? .75f : 1f) * (1f + P.Se(Tech.Marksman)) * CombatMath.RangeFalloff(target.Distance / rangeNow);
         for (int i = 0; i < n; i++)
         {
             if (i > 0 && !r.Chance(Math.Min(1f, pos + .1f))) continue;
+            var hit = new HashSet<Foe> { target };
+            void Splash(Foe center)
+            {
+                if (w.Cls != (int)WClass.Staff) return;
+                foreach (var f in Foes.ToArray()) if (f != center && f.Alive && f.Arrive <= 0 && !hit.Contains(f) && r.Chance(.35f))
+                { hit.Add(f); Hurt(f, shot * CombatMath.OrbSplashMul, false, false, 1); }
+            }
             Hurt(target, shot, false);
-            int left = pierce; foreach (var f in Foes.ToArray()) { if (left <= 0) break; if (f != target && f.Alive && f.Arrive <= 0 && r.Chance(.5f)) { Hurt(f, shot, false); left--; } }
-            if (w.Cls == (int)WClass.Staff) foreach (var f in Foes.ToArray()) if (f != target && f.Alive && f.Arrive <= 0 && r.Chance(.35f)) Hurt(f, shot * .6f, false);
+            Splash(target);
+            int left = pierce; foreach (var f in Foes.ToArray()) { if (left <= 0) break; if (f != target && !hit.Contains(f) && f.Alive && f.Arrive <= 0 && r.Chance(.5f)) { hit.Add(f); Hurt(f, shot, false); Splash(f); left--; } }
         }
         if (P.E(Fxk.Arc) > 0 && target.Distance <= 60) Hurt(target, dmg * .5f * Math.Min(1f, P.E(Fxk.Arc)), false, true);
     }

@@ -71,6 +71,12 @@ public partial class Game
             recipes.Add(new Recipe { Id = "smelt_" + ingot, Group = "furnace", Name = It.Names[ingot], Desc = $"1 {It.Names[o].ToLowerInvariant()} + 1 дерево → слиток", Icon = ingot, Cost = C(o, 1, It.Wood, 1), Multi = true,
                 Known = () => true, Done = () => false, Extra = () => SmeltQ.FindAll(x => x == o).Count, Craft = n => SmeltOre(o, n) });
         }
+        // кузница: шестерни и линзы (раньше их делал цех переработки)
+        foreach (var (item, cost, desc) in new[] { (It.Gear, C(It.Copper, 2, It.Iron, 1), "2 медных + 1 железный слиток"), (It.Lens, C(It.Crystal, 1, It.Silver, 1), "1 кристалл + 1 серебряный слиток") })
+        {
+            int it = item; var unit = cost;
+            recipes.Add(new Recipe { Id = "make_" + it, Group = "forge", Name = It.Names[it], Desc = desc, Icon = it, Cost = unit, Multi = true, Known = () => true, Done = () => false, Craft = n => CraftItem(it, unit, n) });
+        }
         // печь и кузница: улучшение кирки, оружие, модификаторы (как раньше требовали печь или кузницу рядом)
         foreach (var g in new[] { "furnace", "forge" })
         {
@@ -149,6 +155,13 @@ public partial class Game
         qty = r.Multi ? Math.Clamp(qty, 1, Math.Max(1, MaxCraft(r))) : 1;
         var rc = r.CostNow; if (rc != null && !Can(rc)) { Fail("Не хватает: " + NeedStr(rc)); return; }
         r.Craft(qty);
+    }
+
+    void CraftItem(int item, int[][] unit, int qty)
+    {
+        int made = 0;
+        for (int i = 0; i < qty && Can(unit); i++) { Pay(unit); Inv[item]++; made++; }
+        if (made > 0) { GiveXp(made); Sfx.Play("build", -4); Toast($"Создано: {It.Names[item]} ×{made}"); }
     }
 
     /// <summary>Плавка: ставит в очередь печи qty руды (1 руда + 1 дерево на слиток); очередь живёт сама и сохраняется.</summary>

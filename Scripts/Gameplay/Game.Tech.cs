@@ -88,6 +88,9 @@ public partial class Game
         new() { Name = "Искра света", Desc = "Вокруг вас появляется круг света: можно исследовать Тьму. Открывает улучшения света", Req = "Соберите дерево и камень", Cost = C(It.Wood, 3, It.Stone, 2), Ok = g => g.Can(LevelCost((int)Tech.Spark, 1)) },     // «Соберите дерево и камень»: галочка и уведомление только когда ресурсов хватает
     };
 
+    /// <summary>Навыки пассивного производства деревни: производства больше нет, в деревьях их не показываем (в перечислении остаются ради старых сохранений).</summary>
+    public static bool Retired(int i) => i == (int)Tech.SilverGears || i == (int)Tech.AutoDrill || i == (int)Tech.Collector || i == (int)Tech.ForgeHeat;
+
     public bool HasRangedWeapon() { foreach (var o in Owned) { var d = Db.Weapon(o.Id); if (d != null && d.Cls != WClass.Sword) return true; } return false; }
 
     /// <summary>Для проверок: поднимает n-й (по порядку дерева) не наградный навык категории до максимума, пока хватает ресурсов.</summary>
@@ -102,7 +105,7 @@ public partial class Game
     /// <summary>Навыки категории в порядке дерева: сверху вниз, слева направо (по Pos из SkillDef).</summary>
     public static List<int> PageList(int page)
     {
-        var res = new List<int>(); for (int i = 0; i < Techs.Length; i++) if (Techs[i].Page == page) res.Add(i);
+        var res = new List<int>(); for (int i = 0; i < Techs.Length; i++) if (Techs[i].Page == page && !Retired(i)) res.Add(i);
         res.Sort((a, b) => { var pa = SkillOf(a).Pos; var pb = SkillOf(b).Pos; int c = pa.Y.CompareTo(pb.Y); return c != 0 ? c : pa.X.CompareTo(pb.X); });
         return res;
     }

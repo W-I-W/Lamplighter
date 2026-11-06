@@ -15,7 +15,7 @@ public partial class Game
         Vector2 spot = default;
         S(.3f, () =>
         {
-            Level = lv; Tier = Math.Min(4, lv / 8); MaxHp = 60 + 10 * (lv - 1); Hp = MaxHp; EventsEnabled = false; noHeal = true;
+            Level = lv; Tier = Math.Min(4, lv / 8); MaxHp = CombatMath.BaseHealth(lv); Hp = MaxHp; EventsEnabled = false; noHeal = true;
             for (int i = 1; i <= lit && i < W.Ancients.Count; i++) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
             spot = FindDarkArena(); PPos = spot; Enemies.Clear(); Projs.Clear(); Invuln = 0; spawnT = 1f;
             Log($"PRESSURE lv={lv} maxhp={MaxHp} dmg={PlayerDamage:F1} litCount={LitCount} spot={ToTile(spot)} lit={IsLit(spot)}");

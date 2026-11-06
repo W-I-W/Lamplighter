@@ -111,7 +111,7 @@ public static class SaveManager
 
     public static CharacterSave CreateCharacter(string name, Look look)
     {
-        var c = new CharacterSave { Id = NewId(), Name = CleanName(name, "Герой"), Look = look?.Clone() ?? new Look(), Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds() };
+        var c = new CharacterSave { HealthModel = CombatMath.HealthModel, Id = NewId(), Name = CleanName(name, "Герой"), Look = look?.Clone() ?? new Look(), Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds() };
         c.Look.Clamp(); SaveCharacter(c); return c;
     }
 

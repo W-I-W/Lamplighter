@@ -14,6 +14,8 @@ public partial class Game
     public static readonly string[] BNames = { "Склад", "Лесопилка", "Шахта", "Кузница", "Автобур", "Коллектор пепла", "Перерабатывающий цех", "Узел снабжения", "Торговая лавка", "Криоэкстрактор", "Жилой дом" };
     public static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall, Tl.Cryo, Tl.House };
     public const int BCount = 11;
+    /// <summary>Остались только постройки с понятной ролью: склад (общий сундук), кузница (станция крафта), лавка (торговля), дом (жильё). Остальные индексы зарезервированы под старые сохранения и сеть.</summary>
+    public static bool BActive(int bk) => bk == 0 || bk == 3 || bk == 8 || bk == 10;
     static readonly int[][][][] BCosts =
     {
         new[] { C(It.Wood, 15, It.Stone, 10), C(It.Wood, 20, It.Stone, 20, It.Copper, 4), C(It.Iron, 6, It.Relic, 1), C(It.Silver, 6, It.Crystal, 3), C(It.Gear, 4, It.Lens, 2, It.Crystal, 4) },
@@ -30,10 +32,10 @@ public partial class Game
     };
     static readonly string[][] BDesc =
     {
-        new[] { "хранит 60 каждого ресурса, связь 14", "хранит 120, связь 18", "хранит 250, связь 24, передаёт ресурсы вам рядом", "хранит 500, связь 32", "хранит 800, связь 40" },
+        new[] { "общий сундук: 60 каждого ресурса", "120", "250, отдаёт ресурсы вам рядом", "500", "800" },
         new[] { "2 дерева / 6 с", "2 дерева / 4 с", "3 дерева / 3 с", "4 дерева / 2,2 с", "5 деревьев / 1,6 с" },
         new[] { "камень и медная руда / 6 с", "+ железная руда / 5 с", "+ осколки света / 3,6 с", "+ серебряная руда / 2,8 с", "очень быстро / 2 с" },
-        new[] { "плавит руду со склада / 4 с", "плавка / 2,5 с", "плавка / 1,5 с", "плавка / 1 с", "плавка / 0,7 с" },
+        new[] { "станция крафта: оружие, вставки, шестерни и линзы" },
         new[] { "серебряная руда и кристаллы / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "обсидиан и уголь пепла / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "делает шестерни и линзы / 8 с", "быстрее / 6 с", "быстрее / 4,5 с", "быстрее / 3,5 с", "быстрее / 2,5 с" },
@@ -54,10 +56,10 @@ public partial class Game
     };
     public static readonly string[] PrioNames = { "Высокий", "Обычный", "Низкий" };
     public static float BIntervalOf(int bk, int lv) => BInterval[bk] != null ? BInterval[bk][lv - 1] : 1f;
-    public static int MaxLv(int bk) => bk == 7 || bk == 8 || bk == 10 ? 3 : 5;
+    public static int MaxLv(int bk) => bk == 3 ? 1 : bk == 7 || bk == 8 || bk == 10 ? 3 : 5;
 
     public static int[][] BCost(int bk, int toLevel) => BCosts[bk][toLevel - 1];
-    public bool BUnlocked(int bk) => bk switch
+    public bool BUnlocked(int bk) => BActive(bk) && bk switch
     {
         0 => HasFurnace, 1 => HasBuilding(Tl.Warehouse), 2 => LitCount >= 1, 3 => Villagers.Count >= 1, 4 => Has(Tech.AutoDrill), 5 => Has(Tech.Collector),
         6 => BpDone.Contains("bp_refinery"), 7 => BpDone.Contains("bp_hub"), 8 => BpDone.Contains("bp_stall"), 10 => Villagers.Count >= 1, _ => BpDone.Contains("bp_cryo")
@@ -85,6 +87,7 @@ public partial class Game
     /// <summary>Жители после загрузки: из сохранения (с постоянными Id) или, у старых сохранений, из спасённых мест и путников — с теми же Id, что получат новые игры.</summary>
     void InitVillage()
     {
+        RemoveRetiredBuildings();
         foreach (var b in Buildings) if (manualLoaded.Contains(BKey(b))) b.Manual = true;
         var wh = Buildings.Find(b => b.Type == Tl.Warehouse);
         var home = wh != null ? wh.Pos + new Vector2(0, 16) : TileCenter(W.Spawn.X + 2, W.Spawn.Y);
@@ -109,6 +112,22 @@ public partial class Game
         }
     }
 
+    /// <summary>Старые сохранения: убранные типы построек исчезают, а вложенные в них ресурсы (цена всех уровней и накопленное внутри) возвращаются в инвентарь.</summary>
+    void RemoveRetiredBuildings()
+    {
+        var gone = Buildings.FindAll(b => !BActive(BIndex(b.Type)));
+        if (gone.Count == 0) return;
+        foreach (var b in gone)
+        {
+            int bk = BIndex(b.Type);
+            if (bk >= 0) for (int lv = 1; lv <= b.Level && lv <= BCosts[bk].Length; lv++) foreach (var c in BCost(bk, lv)) Inv[c[0]] += c[1];
+            for (int i = 0; i < It.Count; i++) if (b.Local[i] > 0) Inv[i] += b.Local[i];
+            Buildings.Remove(b); SetObj(b.X, b.Y, Tl.None);
+        }
+        foreach (var k in new List<string>(BuildStock.Keys)) if (k.StartsWith("bld") && int.TryParse(k.Substring(3), out var kb) && kb >= 0 && kb < BCount && !BActive(kb)) { foreach (var c in BCost(kb, 1)) Inv[c[0]] += c[1] * BuildStock[k]; BuildStock.Remove(k); }
+        Toast($"Убрано построек: {gone.Count} - ресурсы возвращены");
+    }
+
     VillSave[] SaveVillagers()
     {
         var a = new VillSave[Villagers.Count];
@@ -122,6 +141,7 @@ public partial class Game
     public void BuildBuilding(int bk)
     {
         if (!BUnlocked(bk)) { Fail($"{BNames[bk]} пока недоступна: {BLock(bk)}"); return; }
+        if (!BActive(bk)) { Fail($"{BNames[bk]} больше недоступна"); return; }
         if (bk != 10 && HasBuilding(BTypes[bk])) { Fail($"{BNames[bk]} уже построена — улучшайте её [U]"); return; }
         if (bk == 10 && Buildings.FindAll(h => h.Type == Tl.House).Count >= 8) { Fail("Жилых домов уже достаточно (8)"); return; }
         var cost = BCost(bk, 1);
@@ -170,7 +190,6 @@ public partial class Game
         bool prod = IsProducer(b.Type);
         ix.Info($"{BNames[bk]} · ур.{b.Level}", TipRole.Text);
         if (prod && !b.Off && b.Status != 0 && b.Status != 4) ix.Warn("Остановлено: " + StatusText(b.Status));
-        if (!(b.Linked || b.Forced) && b.Type != Tl.Warehouse) ix.Warn("Нет связи со складом: ставьте узлы снабжения [B]");
         if (prod)
         {
             var w = WorkerOf(b); var pd = w != null ? ProfDefs.Of(w.Prof) : null; var want = ProfDefs.ForBuilding(b.Type);
@@ -200,11 +219,12 @@ public partial class Game
             ix.Action("U", $"Улучшить до ур.{b.Level + 1}"); NeedCost(ix, cost); ix.U = () => UpgradeBuilding(b);
             if (b.Level < BDesc[bk].Length) ix.Gives("Новое", BDesc[bk][b.Level], TipRole.Zone);
         }
-        else ix.Info("Максимальный уровень · [P] управление");
+        else ix.Info("Максимальный уровень");
         ix.Action("X", "Разобрать — вернуть в запас"); ix.X = () => DemolishBuilding(b);
     }
 
-    public static bool IsProducer(Tl t) => t == Tl.Sawmill || t == Tl.Mine || t == Tl.Forge || t == Tl.Drill || t == Tl.Collector || t == Tl.Refinery || t == Tl.Cryo;
+    /// <summary>Пассивного производства в деревне больше нет: ресурсы добывает игрок.</summary>
+    public static bool IsProducer(Tl t) => false;
     static int LocalTotal(Building b) { int n = 0; foreach (var x in b.Local) n += x; return n; }
 
     void CollectFrom(Building b)
@@ -259,98 +279,6 @@ public partial class Game
         netT -= dt; if (netT <= 0) { netT = 1f; RecomputeNetwork(); }
         ambT -= dt;
         if (NetClient) { UpdateVillagers(dt); return; }              // клиент: производство считает хост
-        foreach (var b in order)
-        {
-            if (!IsProducer(b.Type)) continue;
-            int bk = BIndex(b.Type);
-            if (b.Off) { b.Status = 4; continue; }
-            bool linked = b.Linked || b.Forced;
-            float rate = b.WorkMul * ProdMul * (b.Type == Tl.Forge && Has(Tech.ForgeHeat) ? 1f + E(Tech.ForgeHeat) : 1f);
-            float interval = BInterval[bk][b.Level - 1];
-            bool working = false;
-            switch (b.Type)
-            {
-                case Tl.Sawmill:
-                    if (!Room(b, It.Wood)) { b.Status = 2; break; }
-                    b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
-                    if (b.Prog >= interval) { b.Prog = 0; Produce(It.Wood, b.Level <= 2 ? 2 : b.Level == 3 ? 3 : b.Level == 4 ? 4 : 5, b); }
-                    break;
-                case Tl.Mine:
-                    b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
-                    if (b.Prog >= interval)
-                    {
-                        b.Prog = 0;
-                        int item;
-                        if (b.Mode == 0) { int cyc = b.Level == 1 ? 2 : b.Level == 2 ? 3 : b.Level == 3 ? 4 : 5; int step = b.Count++ % cyc; item = step == 0 ? It.Stone : step == 1 ? It.CopperOre : step == 2 ? It.IronOre : step == 3 ? It.Shard : It.SilverOre; }
-                        else item = b.Mode switch { 1 => It.Stone, 2 => It.CopperOre, 3 => It.IronOre, 4 => It.SilverOre, _ => It.Shard };
-                        bool allowed = b.Mode == 0 || (b.Mode == 3 && b.Level >= 2) || (b.Mode == 5 && b.Level >= 3) || (b.Mode == 4 && b.Level >= 4) || b.Mode == 1 || b.Mode == 2;
-                        if (!allowed) { b.Status = 5; break; }
-                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 5 ? 3 : b.Level >= 3 ? 2 : 1, b);
-                    }
-                    break;
-                case Tl.Drill:
-                    b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
-                    if (b.Prog >= interval)
-                    {
-                        b.Prog = 0; int item = b.Mode == 1 ? It.SilverOre : b.Mode == 2 ? It.Crystal : ((b.Count++ % 3) == 2 ? It.Crystal : It.SilverOre);
-                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 3 ? 2 : 1, b);
-                    }
-                    break;
-                case Tl.Cryo:
-                    b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
-                    if (b.Prog >= interval)
-                    {
-                        b.Prog = 0; int item = b.Mode == 2 ? It.SilverOre : b.Mode == 1 ? It.Frost : ((b.Count++ % 3) == 2 ? It.SilverOre : It.Frost);
-                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 3 ? 2 : 1, b);
-                    }
-                    break;
-                case Tl.Collector:
-                    b.Status = linked ? 0 : 3; working = true; b.Prog += dt * rate;
-                    if (b.Prog >= interval)
-                    {
-                        b.Prog = 0; int item = b.Mode == 1 ? It.Obsidian : b.Mode == 2 ? It.Ember : ((b.Count++ % 2 == 0) ? It.Obsidian : It.Ember);
-                        if (!Room(b, item)) { b.Status = 2; if (b.Mode == 0) b.Count--; } else Produce(item, b.Level >= 3 ? 2 : 1, b);
-                    }
-                    break;
-                case Tl.Forge:
-                    {
-                        if (!linked) { b.Status = 3; break; }
-                        int ore = -1;
-                        int[] order2 = b.Mode == 1 ? new[] { It.CopperOre } : b.Mode == 2 ? new[] { It.IronOre } : b.Mode == 3 ? new[] { It.SilverOre } : new[] { It.CopperOre, It.IronOre, It.SilverOre };
-                        foreach (var o in order2) if (Stock[o] > 0) { ore = o; break; }
-                        int ingot = ore < 0 ? -1 : It.IngotOf(ore);
-                        if (ore < 0 || Stock[It.Wood] < 1) { b.Status = 1; break; }
-                        if (Stock[ingot] >= StockCap) { b.Status = 2; break; }
-                        b.Status = 0; working = true; b.Prog += dt * rate;
-                        if (b.Prog >= interval) { b.Prog = 0; Stock[ore]--; Stock[It.Wood]--; Produce(ingot, 1, b); GiveXp(.5f); ForgeMilestone(); }
-                        break;
-                    }
-                case Tl.Refinery:
-                    {
-                        if (!linked) { b.Status = 3; break; }
-                        // рецепты: шестерня = 2 медных + 1 железный слиток; линза = 1 кристалл + 1 серебряный слиток
-                        bool canGear = Stock[It.Copper] >= 2 && Stock[It.Iron] >= 1 && Stock[It.Gear] < StockCap;
-                        bool canLens = Stock[It.Crystal] >= 1 && Stock[It.Silver] >= 1 && Stock[It.Lens] < StockCap;
-                        int rec = b.Mode == 1 ? (canGear ? 1 : -1) : b.Mode == 2 ? (canLens ? 2 : -1) : (Stock[It.Gear] <= Stock[It.Lens] * 2 && canGear ? 1 : canLens ? 2 : canGear ? 1 : -1);
-                        if (rec < 0) { b.Status = 1; break; }
-                        b.Status = 0; working = true; b.Prog += dt * rate;
-                        if (b.Prog >= interval)
-                        {
-                            b.Prog = 0;
-                            if (rec == 1) { Stock[It.Copper] -= 2; Stock[It.Iron]--; Produce(It.Gear, 1, b); } else { Stock[It.Crystal]--; Stock[It.Silver]--; Produce(It.Lens, 1, b); }
-                            GiveXp(1f);
-                        }
-                        break;
-                    }
-            }
-            if (working && ambT <= 0 && rng.Randf() < .5f)
-            {
-                var col = b.Type == Tl.Forge || b.Type == Tl.Collector || b.Type == Tl.Refinery ? new Color("#ff9a2e") : b.Type == Tl.Sawmill ? new Color("#d9b27c") : b.Type == Tl.Drill ? new Color("#bfe9ff") : new Color("#9aa0ae");
-                Parts.Add(new Particle { P = b.Pos + new Vector2(b.Type == Tl.Forge ? 4 : rng.RandfRange(-5, 5), b.Type == Tl.Forge ? -8 : 2), V = new Vector2(rng.RandfRange(-8, 8), -rng.RandfRange(10, 24)), Life = .7f, Max = .7f, C = col, Size = 1.5f });
-            }
-        }
-        if (ambT <= 0) ambT = .25f;
-
         var wh = Buildings.Find(x => x.Type == Tl.Warehouse);
         if (wh != null && wh.Level >= 3 && wh.Pos.DistanceTo(PPos) < (wh.Level >= 4 ? 200 : 96) && StockTotal > 0)
         {

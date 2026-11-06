@@ -38,7 +38,7 @@ public static class ModelHealth
             if (field.FieldType == typeof(float)) Need(float.IsFinite((float)field.GetValue(m.T)), "Неконечный параметр tuning." + field.Name);
             if (field.FieldType == typeof(float[])) Need(field.GetValue(m.T) is float[] values && values.All(float.IsFinite), "Некорректный массив tuning." + field.Name);
         }
-        Need(m.SchemaVersion == 2, "Несовместимая версия снимка модели; пересоздайте model.json текущей игрой.");
+        Need(m.SchemaVersion == 3, "Несовместимая версия снимка модели; пересоздайте model.json текущей игрой.");
         Need(m.Bosses.Length == 5 && m.Enemies.Length > 0 && m.Weapons.Length > 0, "Неполные таблицы игры.");
         Need(Positive(m.T.SpawnDelayMul) && Positive(m.T.EnemyHp) && Positive(m.T.EnemyDamage) && Positive(m.T.BossTempo), "Боевые множители должны быть конечными и положительными.");
         Need(m.T.BossHp?.Length == 5 && m.T.BossHp.All(Positive), "Здоровье пяти боссов должно быть положительным.");

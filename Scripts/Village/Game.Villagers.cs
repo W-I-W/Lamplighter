@@ -318,7 +318,6 @@ public partial class Game
         if (pd != null) foreach (var s in pd.Lines) l.Add(s);
         var wb = BuildingByKey(v.Work);
         if (wb != null) l.Add($"Работаю: {BNames[BIndex(wb.Type)]}, уровень {wb.Level}. Быстрее идёт, когда рядом свет.");
-        else if (pd != null && pd.Building != "") l.Add("Мне бы рабочее место. Постройте здание — я сразу приступлю.");
         if (BeaconLevel >= 2) l.Add("Печать пала — за ней шахты. Там тьма гуще, берегитесь.");
         if (BeaconLevel >= 3) l.Add("Слышал, на пустошах тлеет что-то древнее.");
         if (BeaconLevel >= 4) l.Add("Холодный ветер из монастыря... Свет там нужнее всего.");

@@ -48,6 +48,7 @@ public sealed class PerWorld { public float X, Y; public bool Has; public string
 /// <summary>Всё, что принадлежит герою и едет с ним из мира в мир: предметы, оружие, экипировка, навыки, личные характеристики.</summary>
 public sealed class CharacterSave
 {
+    public int HealthModel; // Missing/0: legacy +10 HP per level. Migration happens on load.
     public int Version = 1; public string Id = "", Name = "", Stamp = ""; public long Created; public Look Look = new();
     public float PlaySecs, Hp = 60, MaxHp = 60, Xp; public int Level = 1, Tier, Kills, HeroLamp;
     public long Ann; public int[] Inv, ModInv; public string[] SkK; public int[] SkV;

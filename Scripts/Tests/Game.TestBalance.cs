@@ -31,7 +31,7 @@ public partial class Game
                 Level = 1; Xp = 0; MaxHp = 60; Hp = 60; GiveXp(xp, true); var sp = new SimPlayer(m); sp.GiveXp(xp, true);
                 if (Level != sp.Level || !Eq(MaxHp, sp.MaxHp) || !Eq(Xp, sp.Xp, 1e-2f)) hpOk = false;
             }
-            Check(hpOk, "прирост уровней и здоровья от опыта совпадает с Game.GiveXp (60 + 10 за уровень)");
+            Check(hpOk, "прирост уровней и здоровья от опыта совпадает с Game.GiveXp (ограниченная кривая здоровья)");
             Level = 1; MaxHp = 60; Xp = 0;
             bool fearOk = true; for (int lv = 1; lv <= 9; lv++) { Level = lv; if (!Eq(FearMul, new SimPlayer(m) { Level = lv }.FearMul)) fearOk = false; }
             Level = 1; Check(fearOk && Mathf.Abs(FearMul - 1f) < .001f, $"страх тени: урон врагов не зависит от уровня героя (1 ур. ×{FearMul:0.00})");

@@ -70,7 +70,7 @@ public partial class Game
             Check(Same(depth.T1, tide.Gap * BossTempoMul()), "contract: depth tide pause");
             Check(Same(m.T.BossWarnMul, Tune.T.BossWarnMul), "contract: live boss wind-up multiplier is captured");
             Enemies.Clear(); Projs.Clear(); MaxHp = 100; Hp = 0; killHealPool = -1;
-            var sim = new SimPlayer(m) { Level = 5, Hp = 0 }; // 100 HP
+            var sim = new SimPlayer(m) { Level = 5, BonusHp = 100 - CombatMath.BaseHealth(5), Hp = 0 }; // 100 HP
             KillHealGain(50); sim.GainKillHealing(50); KillHealGain(50); sim.GainKillHealing(50);
             Check(Same(Hp, sim.Hp) && Same(Hp, 20), "contract: kill healing is capped at twenty percent");
             regenDelay = 999; PPos = W.Ancients[0].Pos; UpdatePlayer(1); sim.RefillKillHealing(1); KillHealGain(3); sim.GainKillHealing(3);
@@ -78,6 +78,30 @@ public partial class Game
             var batch = new Runner.Batch(); batch.Runs.Add(new RunResult { Profile = "novice", Out = Outcome.Stuck, StopKind = "preparation_limit", Hours = 1, Level = 1, SkillLv = new int[m.Skills.Length] });
             var summary = Summary.Build(batch, m, new Targets()).Profiles.Single();
             Check(double.IsNaN(summary.HoursMedian) && summary.PreparationStops == 1 && summary.DeathsMean == 0, "contract: zero victories have no winning time; preparation is not a combat death");
+            // The simulator alone missed these spatial staff exploits. Exercise real projectiles.
+            Diff = 0; PPos = FindDarkArena(); Enemies.Clear(); PProjs.Clear();
+            Array.Clear(SkillLv); EquippedRelics.Clear(); TempRelics.Clear(); Owned.Clear(); CurW = -1; RecomputeEffects();
+            Enemy Target(float x)
+            {
+                var e = SpawnEnemy(PPos + new Vector2(x, 0), EK.Shade, null, 1);
+                e.Hp = e.MaxHp = 1000; return e;
+            }
+            var first = Target(20); var second = Target(34); var third = Target(48);
+            Array.Clear(EffP); EffP[(int)Fxk.Chain] = 1;
+            HitEnemy(first, 20, Vector2.Right, false);
+            Check(Same(first.Hp, 980) && Same(second.Hp, 991) && Same(third.Hp, 995.95f), "contract: chain does not revisit its origin and loses damage at each jump");
+            Enemies.Clear(); first = Target(20); second = Target(34); Array.Clear(EffP);
+            var orb = new PProj { Pos = first.Pos, Vel = Vector2.Right * 100, Dmg = 20, Life = 1, Life0 = 1, Kind = 1, Pierce = 3, Blast = 26 };
+            PProjs.Add(orb); UpdateWeaponFx(0); UpdateWeaponFx(0); orb.Life = 0; UpdateWeaponFx(0);
+            Check(Same(first.Hp, 980) && Same(second.Hp, 993) && orb.Hit.Count == 2, "contract: piercing orb and expiry cannot damage the same target twice; splash is 35 percent");
+            GiveWeapon("staff1", false); CurW = 0; RecomputeEffects(); AtkCd = 0; PProjs.Clear();
+            float baseRange = ShotRange(); SkillLv[(int)Tech.Overcharge] = 5;
+            float boostedRange = ShotRange(); FireRanged(CurDef, Vector2.Right);
+            Check(Same(boostedRange / baseRange, 1f + E(Tech.Overcharge)) && Same(PProjs[0].Vel.Length() * PProjs[0].Life0, boostedRange), "contract: overcharge range grows linearly and matches the projectile");
+            Level = 1; float damage1 = WeaponDmg(CurDef); Level = 41; float damage41 = WeaponDmg(CurDef); Level = 80;
+            Check(Same(WeaponDmg(CurDef), damage41) && Same(damage41 - damage1, 7f), "contract: damage from character levels has diminishing returns and caps at seven");
+            var staffModel = new SimPlayer(m) { Level = 80 }; staffModel.GiveWeapon(Array.FindIndex(m.Weapons, w => w.Id == "staff1"));
+            Check(Same(staffModel.WeaponDmg(staffModel.Cur), WeaponDmg(CurDef)), "contract: high-level staff damage matches the simulator");
             GD.Print("[model-contract] source_sha256=" + ModelHealth.SourceHash());
             GD.Print("[model-contract] assembly_sha256=" + ModelHealth.AssemblyHash());
             GD.Print($"[check] SUMMARY failures={failures}"); GD.Print("[check] MODEL CONTRACT DONE");

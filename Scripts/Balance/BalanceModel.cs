@@ -118,7 +118,7 @@ public sealed class BalanceModel
     public AbstractM A = new();
     public Dictionary<string, double> Overrides = new();
     public string[] BlueprintIds = Array.Empty<string>(); public int[] BlueprintNeed = Array.Empty<int>();
-    public int SchemaVersion = 2;
+    public int SchemaVersion = 3;
 
     static readonly JsonSerializerOptions Js = new() { IncludeFields = true, WriteIndented = false };
     public BalanceModel Clone() => JsonSerializer.Deserialize<BalanceModel>(JsonSerializer.Serialize(this, Js), Js);

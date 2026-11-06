@@ -44,6 +44,7 @@ public partial class Game
         E("barrier", 1, Art.BarrierPost, "Столб-барьер", BarrierCost, BpDone.Contains("bp_barrier"), "чертёж «Световые барьеры»", BuildBarrier, "Два столба держат теней");
         for (int bk = 0; bk < BCount; bk++)
         {
+            if (!BActive(bk)) continue;
             int k = bk; bool has = HasBuilding(BTypes[k]);
             E("bld" + k, 2, AtlasX(BTypes[k], 1), BNames[k] + (has ? " ✓" : ""), BCost(k, 1), BUnlocked(k), BLock(k), () => BuildBuilding(k), BDesc[k][0], BCost(k, 1));
         }

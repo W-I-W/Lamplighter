@@ -27,7 +27,8 @@ public partial class Game
             for (int i = 0; i < 4; i++) UpgradeWeapon(0);
             Check(Owned[0].Lv == WeaponMaxLv && !UpgradeWeapon(0), "itemup: the maximum level is 5");
             Check(WeaponDmg(Db.Weapon("sword1")) < WeaponDmg(Db.Weapon("sword2")), "itemup: a maxed tier-1 sword is still weaker than a fresh tier-2 sword");
-            Check(WeaponDmg(Db.Weapon("sword2")) == Db.Weapon("sword2").Dmg * (1f + .35f * 0) + .35f * (Level - 1) * 1f * (1f + N("Dmg")) + (Db.Weapon("sword2").Dmg * N("Dmg")) || WeaponLv("sword2") == 0, "itemup: the second weapon keeps its own level");
+            float secondDamage = (Db.Weapon("sword2").Dmg + CombatMath.LevelDamageBonus(Level)) * (1f + N("Dmg"));
+            Check(WeaponLv("sword2") == 0 && Mathf.Abs(WeaponDmg(Db.Weapon("sword2")) - secondDamage) < .001f, "itemup: the second weapon keeps its own level");
             var tm = ToolDef.Get("axe"); float e0 = tm.Efficiency(Tl.Tree) * ToolMineMul("axe");
             Check(UpgradeAxe() && AxeLv == 1 && ToolMineMul("axe") > 1f && ToolDmgMul("axe") > 1f && ToolMineMul("pickaxe") == 1f, $"itemup: axe +1 mines faster ({e0:F2}) and hits harder");
             for (int i = 0; i < 6; i++) UpgradeAxe(); Check(AxeLv == AxeMaxLv, "itemup: axe maximum is 4");

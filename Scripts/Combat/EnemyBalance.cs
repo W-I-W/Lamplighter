@@ -13,7 +13,7 @@ public static class EnemyBalance
     public readonly record struct Def(float Hp, float Dmg, float Cost, Role Role);
 
     // Ориентир по урону — доля здоровья героя на этапе региона: слабый удар 5–12%, обычный 10–18%, сильный 20–30%.
-    // Здоровье героя ≈ 60 + 10 за уровень: лес ~60–150, шахты ~150–250, пустоши ~250–350, лёд ~350–450, Сердце ~450+.
+    // Здоровье героя по CombatMath.BaseHealth: 60 на старте, 136 на 20-м уровне, предел 180 без реликвий и благословений.
     public static Def Of(EK k) => k switch
     {
         // тёмный лес

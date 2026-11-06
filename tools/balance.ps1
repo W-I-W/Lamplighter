@@ -63,7 +63,7 @@ try {
     $runDir = Join-Path $root ('balance/out/_cli/' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $runDir -Force | Out-Null
     if ($Rest[0] -eq 'check' -or ($Game -and $Rest[0] -eq 'validate')) {
-        $stages = if ($Rest[0] -eq 'check') { @('balance','balancecontract') } else { @('balance') }
+        $stages = if ($Rest[0] -eq 'check') { @('balance','balancecontract','combatpressure') } else { @('balance') }
         foreach ($stage in $stages) {
             $testDir = Join-Path $runDir $stage; New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $env:LAMP_AUTOTEST = $testDir; $env:LAMP_STAGE = $stage

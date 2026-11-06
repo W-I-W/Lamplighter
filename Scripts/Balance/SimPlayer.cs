@@ -31,7 +31,7 @@ public sealed class SimPlayer
     public SimPlayer(BalanceModel m) { M = m; T = m.T; Sk = new int[m.Skills.Length]; Hp = MaxHp; }
 
     // ───────────────────────── характеристики ─────────────────────────
-    public float MaxHp => (60f + 10f * (Level - 1) + BonusHp) * (1f + N("MaxHpPct")) + N("MaxHp");
+    public float MaxHp => (CombatMath.BaseHealth(Level) + BonusHp) * (1f + N("MaxHpPct")) + N("MaxHp");
     public float EncounterBudget(int region, bool guarded = false) => (Math.Min(T.At(T.EncounterBase, region) + T.EncounterPerLamp * Lit[region], T.At(T.EncounterMax, region)) + (guarded ? 3 : 0) + (Level < T.FearLevel ? T.FearSpawn : 0)) * T.SpawnCapMul;
     public float XpNeed => T.XpBase + T.XpLinear * Level + T.XpQuad * Level * Level;                       // Game.XpNeed
     public float N(string k) => Num.TryGetValue(k, out var v) ? v : 0f;
@@ -45,8 +45,8 @@ public sealed class SimPlayer
     public int BossCount { get { int n = 0, m = BossMask; while (m != 0) { n += m & 1; m >>= 1; } return n; } }
     public int RelicSlots => 3 + Math.Min(3, BossCount);                                                    // Game.RelicSlots
     public float FearMul => Level >= T.FearLevel ? 1f : 1f + T.FearDamage * (T.FearLevel - Level);                  // Game.FearMul
-    public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg")) * T.FistDamageMul;                    // Game.PlayerDamage
-    public float WeaponDmg(WeaponM w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg")) * (1f + Game.WeaponLvStep * (Owned.FirstOrDefault(o => M.Weapons[o.W].Id == w.Id)?.Lv ?? 0));
+    public float PlayerDamage => (2f + 2f * Tier + CombatMath.LevelDamageBonus(Level)) * (1f + N("Dmg")) * T.FistDamageMul;                    // Game.PlayerDamage
+    public float WeaponDmg(WeaponM w) => (w.Dmg + CombatMath.LevelDamageBonus(Level)) * (1f + N("Dmg")) * (1f + Game.WeaponLvStep * (Owned.FirstOrDefault(o => M.Weapons[o.W].Id == w.Id)?.Lv ?? 0));
     public float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));          // Game.MineSpeed
     public float LensBonus => Se(Tech.Lens) + Se(Tech.LensII);
     public float FarLampBonus => Se(Tech.FarLanterns) + Se(Tech.FarLanternsII);
@@ -72,7 +72,7 @@ public sealed class SimPlayer
     public void GiveXp(float x, bool raw = false)
     {
         Xp += raw ? x : x * T.XpMul;
-        while (Xp >= XpNeed) { Xp -= XpNeed; Level++; Hp = MaxHp; }
+        while (Xp >= XpNeed) { float oldMax = MaxHp; Xp -= XpNeed; Level++; Hp = Math.Min(MaxHp, Hp + MaxHp - oldMax); }
     }
 
     // ───────────────────────── ресурсы ─────────────────────────

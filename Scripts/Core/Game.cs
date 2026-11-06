@@ -430,6 +430,7 @@ public partial class Game : Node2D
 
     void UpdatePlayer(float dt)
     {
+        RangedRecovery = Mathf.Max(0, RangedRecovery - dt);
         Invuln = Mathf.Max(0, Invuln - dt); AtkCd = Mathf.Max(0, AtkCd - dt); Swing = Mathf.Max(0, Swing - dt); if (TestSwingHold > 0) { Swing = TestSwingHold; swArcT = .17f; if (punchT > 0 || TestPunchHold) punchT = .09f; } HandFallback();
         SpinT = Mathf.Max(0, SpinT - dt);
         DashCd = Mathf.Max(0, DashCd - dt); SpinCd = Mathf.Max(0, SpinCd - dt); FlareCd = Mathf.Max(0, FlareCd - dt); PulseCd = Mathf.Max(0, PulseCd - dt);
@@ -449,7 +450,7 @@ public partial class Game : Node2D
         if (uiOpen) dir = Vector2.Zero;                                  // пока открыто окно или меню, персонаж стоит на месте
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
-        float speed = 80f * (1f + N("Speed")) * (water ? WaterSpeed : 1f);
+        float speed = PlayerWalkSpeed * (water ? WaterSpeed : 1f);
         if (DashT > 0)
         {
             DashT -= dt; pVel = DashDir * 260f;
@@ -483,7 +484,7 @@ public partial class Game : Node2D
     }
 
     float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));
-    public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg")) * Tune.T.FistDamageMul;
+    public float PlayerDamage => (2f + 2f * Tier + CombatMath.LevelDamageBonus(Level)) * (1f + N("Dmg")) * Tune.T.FistDamageMul;
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
         || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen;
@@ -661,7 +662,8 @@ public partial class Game : Node2D
         Xp += raw ? x : x * Tune.T.XpMul;
         while (Xp >= XpNeed)
         {
-            Xp -= XpNeed; Level++; Diag.Mark("first_levelup"); MaxHp += 10; ApplyRelicHp(); Hp = MaxHp;
+            float oldHp = Hp, oldMax = MaxHp;
+            Xp -= XpNeed; Level++; Diag.Mark("first_levelup"); MaxHp += CombatMath.BaseHealth(Level) - CombatMath.BaseHealth(Level - 1); ApplyRelicHp(); Hp = Mathf.Min(MaxHp, oldHp + MaxHp - oldMax);
             Toast($"Уровень {Level}", MsgTone.Gold);
             Texts.Add(new FText { P = PPos + new Vector2(0, -16), S = "УРОВЕНЬ!", Life = 1.6f, C = new Color("#ffe27a") });
             Fx("level_up", PPos);

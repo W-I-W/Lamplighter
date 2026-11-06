@@ -25,12 +25,14 @@ public partial class Game
     public HashSet<string> Flags = new(), ActiveSyn = new();
     public Dictionary<string, int> TagCount = new();
     float swArcT, swArcDir, swArcHalf, swArcReach; bool inBlast;
+    float RangedRecovery;
+    public float PlayerWalkSpeed => 80f * (1f + N("Speed")) * (RangedRecovery > 0 ? CombatMath.RangedMoveMul : 1f);
 
     public WeaponDef CurDef { get { if (CurW < 0 || CurW >= Owned.Count) return null; return Db.Weapon(Owned[CurW].Id); } }
     public OwnedWeapon CurOw => CurDef == null ? null : Owned[CurW];
     public float E(Fxk k) => EffP[(int)k];
     public float N(string k) => Num.TryGetValue(k, out var v) ? v : 0f;
-    public float WeaponDmg(WeaponDef w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg")) * WeaponLvMul(w.Id);
+    public float WeaponDmg(WeaponDef w) => (w.Dmg + CombatMath.LevelDamageBonus(Level)) * (1f + N("Dmg")) * WeaponLvMul(w.Id);
     public bool HasWeapon(string id) { foreach (var o in Owned) if (o.Id == id) return true; return false; }
 
     public void GiveWeapon(string id, bool announce = true)
@@ -150,14 +152,16 @@ public partial class Game
         float c = E(Fxk.Chain);
         if (c > 0 && depth < 1)
         {
-            int left = 1 + (int)c; var from = e;
+            chainHit.Add(e); // A chain cannot bounce back to its original target.
+            int left = 1 + (int)c; var from = e; float chainDmg = dmg;
             for (int i = 0; i < left; i++)
             {
                 Enemy best = null; float bd = 80f;
                 foreach (var o in Enemies) if (o != from && !o.Hidden && !o.IsBoss && o.Hp > 0 && !chainHit.Contains(o)) { float d = o.Pos.DistanceTo(from.Pos); if (d < bd) { bd = d; best = o; } }
                 if (best == null) break;
                 chainHit.Add(best); Bolts.Add(new BoltFx { A = from.Pos, B = best.Pos });
-                HitEnemy(best, dmg * .45f, (best.Pos - from.Pos).Normalized(), false, depth + 1); from = best;
+                chainDmg *= .45f;
+                HitEnemy(best, chainDmg, (best.Pos - from.Pos).Normalized(), false, depth + 1); from = best;
             }
             chainHit.Clear(); Sfx.Play("tick", -4, 2f);
         }
@@ -222,15 +226,16 @@ public partial class Game
     void FireRanged(WeaponDef w, Vector2 dir)
     {
         if (AtkCd > 0) return;
+        RangedRecovery = CombatMath.RangedRecoveryTime;
         AtkCd = w.Cd * (1f - E(Tech.QuickDraw)); Swing = .1f;
         int n = 1 + (int)E(Fxk.Multi); float spread = .2f;
         for (int i = 0; i < n; i++)
         {
             var d = dir.Rotated((i - (n - 1) / 2f) * spread);
             float dmg = WeaponDmg(w) * (n > 1 ? .75f : 1f) * (1f + E(Tech.Marksman));
-            int pe = (Has(Tech.Piercing) ? 1 : 0); float spd = w.Speed * (1f + E(Tech.Overcharge)), lf = 1f + E(Tech.Overcharge);
-            if (w.Cls == WClass.Bow) FireProj(0, d, dmg, spd, w.Pierce + (int)E(Fxk.Pierce) + pe, .75f * lf);
-            else FireProj(1, d, dmg, spd, (int)E(Fxk.Pierce) + pe, .9f * lf, 26f + 4f * E(Fxk.Blast));
+            int pe = (Has(Tech.Piercing) ? 1 : 0); float spd = w.Speed * (1f + E(Tech.Overcharge));
+            if (w.Cls == WClass.Bow) FireProj(0, d, dmg, spd, w.Pierce + (int)E(Fxk.Pierce) + pe, .75f);
+            else FireProj(1, d, dmg, spd, (int)E(Fxk.Pierce) + pe, .9f, 26f + 4f * E(Fxk.Blast));
         }
         if (E(Fxk.Arc) > 0) FireProj(2, dir, WeaponDmg(w) * .5f * Mathf.Min(1f, E(Fxk.Arc)), 150f, 3, 70f);
         Sfx.Play(w.Cls == WClass.Bow ? "shoot" : "flare", -4, w.Cls == WClass.Bow ? 1.4f : 1.1f);
@@ -276,13 +281,18 @@ public partial class Game
     public float ShotRange()
     {
         if (CurW < 0 || CurW >= Owned.Count) return 0f; var w = Db.Weapon(Owned[CurW].Id); if (w == null || (w.Cls != WClass.Bow && w.Cls != WClass.Staff)) return 0f;
-        float oc = 1f + E(Tech.Overcharge); return w.Speed * oc * (w.Cls == WClass.Bow ? .75f : .9f) * oc;
+        float oc = 1f + E(Tech.Overcharge); return w.Speed * oc * (w.Cls == WClass.Bow ? .75f : .9f);
     }
 
     void OrbBurst(PProj p, Enemy skip)
     {
         float r = p.Blast > 0 ? p.Blast : 22f;
-        foreach (var o in new List<Enemy>(Enemies)) if (o != skip && !o.Hidden && o.Pos.DistanceTo(p.Pos) < r + o.Radius) HitEnemy(o, p.Dmg * RangeFalloff(p) * .6f, (o.Pos - p.Pos).Normalized(), false, 1);
+        foreach (var o in new List<Enemy>(Enemies))
+            if (o != skip && !o.Hidden && o.Hp > 0 && !p.Hit.Contains(o) && o.Pos.DistanceTo(p.Pos) < r + o.Radius)
+            {
+                p.Hit.Add(o); // Piercing/expiry bursts share one damage budget per orb and target.
+                HitEnemy(o, p.Dmg * RangeFalloff(p) * CombatMath.OrbSplashMul, (o.Pos - p.Pos).Normalized(), false, 1);
+            }
         Burst(p.Pos, p.C, 10, 70); Sfx.Play("tick", -3, .7f);
     }
 

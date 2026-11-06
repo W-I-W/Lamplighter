@@ -270,18 +270,11 @@ public partial class Game
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
         var techP = NearestPoi(PK.TechCache, false);                 // указатель на постамент есть, даже если он ещё не найден: игроку не нужно искать первый вслепую
-        Add("Найти забытую технологию", BpDone.Contains("bp_hub") || !W.Pois.Exists(q => q.Kind == PK.TechCache && q.State < 3), "Светящийся постамент на открытой местности: подойдите и нажмите [E], он даёт чертёж «Логистика»", techP?.Pos);
         var cap = NearestPoi(PK.Captive, false);                      // метка на ближайшую клетку даже неоткрытую: игрок не ищет вслепую
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
         Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedShort(BCost(8, 1)));
-        Add("Построить лесопилку [B]", HasBuilding(Tl.Sawmill), NeedShort(BCost(1, 1)));
-        Add("Построить шахту [B]", HasBuilding(Tl.Mine), LitCount >= 1 ? NeedShort(BCost(2, 1)) : "Сначала зажгите древний фонарь");
         Add("Железная кирка у печи [E]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
         Add("Построить кузницу [B]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
-        Add("Подключить производство узлами [B]", HasBuilding(Tl.Hub) || !HasBuilding(Tl.Mine), BpDone.Contains("bp_hub") ? NeedShort(BCost(7, 1)) : "Нужен чертёж «Логистика» [J]");
-        { int fr = Frag.GetValueOrDefault("bp_refinery"); var pedestal = fr == 0 ? NearestPoi(PK.TechCache, false) : null;      // чертёж собирается из двух фрагментов: постамент в лесу и торговец/лавка
-          Add("Собрать чертёж цеха [J]", BpDone.Contains("bp_refinery") || !HasBuilding(Tl.Mine), $"Фрагменты {fr}/2: один на постаменте в лесу, второй продаёт торговец или лавка. Журнал чертежей — [J]", pedestal?.Pos); }
-        Add("Построить цех переработки [B]", HasBuilding(Tl.Refinery), BpDone.Contains("bp_refinery") ? NeedShort(BCost(6, 1)) : "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)", NearestExplorePoi()?.Pos);
         Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
         Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
@@ -304,7 +297,6 @@ public partial class Game
             Add("Зажечь фонари пустошей", LitIn(2) >= 3 || na == null, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
             Add("Теплозащита или огненное лезвие [T]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
             Add("Обсидиановая кирка у печи [E]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
-            Add("Построить коллектор пепла [B]", HasBuilding(Tl.Collector), Has(Tech.Collector) ? "Ставьте на освещённой земле пустошей" : "Изучите «Пепельный коллектор» [T]");
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }
@@ -313,7 +305,6 @@ public partial class Game
             var ni = NearestUnlit(3);
             Add("Зажечь фонари монастыря", LitIn(3) >= 3 || ni == null, $"Зажжено {LitIn(3)}/3 — осколки света {Inv[It.Shard]}", ni?.Pos);
             Add("Ледяные шипы или тёплые меха [T]", Has(Tech.SpikeBoots) || Has(Tech.FrostArmor), "Вкладка «Лёд»: нужны ледяные кристаллы");
-            Add("Построить криоэкстрактор [B]", HasBuilding(Tl.Cryo), BpDone.Contains("bp_cryo") ? "Ставьте в Ледяном монастыре на освещённой земле" : "Нужен чертёж «Криоэкстрактор» [J]");
             Add("Победить Хранителя Зимы", BossDown(4), "На озере монастыря. Награда: кристаллы, 4-е ядро", BossLantern(4)?.Pos);
             Add("Улучшить маяк: путь в Сердце Тьмы", BeaconLevel >= 5, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }

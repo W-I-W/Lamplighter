@@ -74,87 +74,42 @@ public partial class Game
             var q = Surv(3, 0); Check(q != null && W.Get(q.Tile.X, q.Tile.Y + 2) == Tl.Rubble, "rescue: a survivor behind a cracked wall exists");
         });
 
-        // ── здания и профессии
+        // ── постройки: остались склад, кузница, лавка и дом; пассивного производства и рабочих мест нет
         S(.3f, () =>
         {
-            Villagers.Clear(); NextVillagerId = 5000;
-            var b0 = CreateBuilding(0, sites[0]); var b1 = CreateBuilding(1, sites[1]); var b2 = CreateBuilding(2, sites[2]); var b3 = CreateBuilding(3, sites[3]); b0.Forced = b1.Forced = b2.Forced = b3.Forced = true;
+            Villagers.Clear(); NextVillagerId = 5000; Inv[It.Wood] = 500; Inv[It.Stone] = 500; Inv[It.Copper] = 500; Inv[It.Iron] = 500; Inv[It.Silver] = 500; Inv[It.Crystal] = 50;
+            int active = 0; for (int bk = 0; bk < BCount; bk++) if (BActive(bk)) active++;
+            Check(active == 4 && BActive(0) && BActive(3) && BActive(8) && BActive(10), "buildings: only the warehouse, forge, stall and house remain");
+            Check(!BUnlocked(1) && !BUnlocked(2) && !BUnlocked(4) && !BUnlocked(5) && !BUnlocked(6) && !BUnlocked(7) && !BUnlocked(9), "buildings: producers, workshop, hub and extractors are never unlocked");
+            Check(!IsProducer(Tl.Sawmill) && !IsProducer(Tl.Mine) && !IsProducer(Tl.Forge), "buildings: nothing produces by itself");
+            var b0 = CreateBuilding(0, sites[0]); var b3 = CreateBuilding(3, sites[3]); b0.Forced = b3.Forced = true;
             var lj = Mk(9001, "lumberjack"); var mn = Mk(9002, "miner"); var sm = Mk(9003, "smith"); RecomputeNetwork();
-            Check(WorkerOf(b1) == lj && WorkerOf(b2) == mn && WorkerOf(b3) == sm, "workers: each profession takes its own building");
-            Check(Math.Abs(b1.WorkMul - ProfDefs.Of("lumberjack").Rate) < .001f && Math.Abs(b2.WorkMul - ProfDefs.Of("miner").Rate) < .001f && Math.Abs(b3.WorkMul - ProfDefs.Of("smith").Rate) < .001f, "workers: the bonus is the one from the Resource");
-            Check(Buildings.All(b => Villagers.Count(v => v.Work == BKey(b)) <= 1) && Villagers.All(v => Villagers.Count(o => o.Work == v.Work && v.Work >= 0) == 1), "workers: one worker per building and one building per worker");
-            Check(PathExists(TileCenter(sites[1].X, sites[1].Y)), "workers: the work spot is reachable");
+            Check(Villagers.All(v => v.Work < 0) && !b3.Worker, "buildings: villagers get no workplace");
+            Check(MaxLv(3) == 1 && MaxLv(0) == 5, "buildings: the forge has a single level, the warehouse still grows");
+            int w0 = Buildings.Count; BuildBuilding(1); Check(Buildings.Count == w0, "buildings: a removed type cannot be built");
+            Stock[It.Wood] = 0; for (int i = 0; i < 400; i++) UpdateVillage(.05f); Check(Stock[It.Wood] == 0, "buildings: stock does not grow on its own");
+            Check(PathExists(TileCenter(sites[3].X, sites[3].Y)), "buildings: the forge is reachable");
         });
 
-        // ── экономика: бонус работника, без удвоения
+        // ── кузница делает шестерни и линзы
         S(.3f, () =>
         {
-            var b1 = B(Tl.Sawmill); B(Tl.Mine).Off = true; B(Tl.Forge).Off = true; Stock[It.Wood] = 0; b1.Prog = 0; b1.Level = 1; var w = WorkerOf(b1);
-            float iv = BInterval[1][0], T = 60f; int steps = (int)(T / .05f);
-            for (int i = 0; i < steps; i++) UpdateVillage(.05f);
-            int withWorker = Stock[It.Wood]; int expect = 2 * (int)(T * 1.4f * ProdMul / iv);
-            Check(Math.Abs(withWorker - expect) <= 4, $"economy: the lumberjack's sawmill makes {withWorker} wood in 60 s (formula {expect})");
-            w.Work = -1; b1.Manual = true; RecomputeNetwork(); Stock[It.Wood] = 0; b1.Prog = 0;
-            for (int i = 0; i < steps; i++) UpdateVillage(.05f);
-            int without = Stock[It.Wood]; int expect0 = 2 * (int)(T * .6f * ProdMul / iv);
-            Check(Math.Abs(without - expect0) <= 4 && withWorker > without * 2, $"economy: an empty sawmill runs at the base speed ({without}, formula {expect0})");
-            Check(Villagers.Count(v => v.Work == BKey(b1)) == 0, "economy: no worker, no bonus, nothing doubled");
-            b1.Manual = false; B(Tl.Mine).Off = false; B(Tl.Forge).Off = false; RecomputeNetwork();
+            var fg = B(Tl.Forge); Tp(fg.Pos + new Vector2(0, 20)); Inv[It.Copper] = 4; Inv[It.Iron] = 2; Inv[It.Crystal] = 1; Inv[It.Silver] = 1; Inv[It.Gear] = 0; Inv[It.Lens] = 0;
+            Check(StationNear() == "forge", "forge: it is a craft station");
+            var gear = RecipesOf("forge").Find(r => r.Id == "make_" + It.Gear); var lens = RecipesOf("forge").Find(r => r.Id == "make_" + It.Lens);
+            Check(gear != null && lens != null, "forge: gear and lens recipes exist");
+            if (gear == null || lens == null) return;
+            CraftRecipe(gear, 5); CraftRecipe(lens, 5);
+            Check(Inv[It.Gear] == 2 && Inv[It.Copper] == 0 && Inv[It.Iron] == 0 && Inv[It.Lens] == 1 && Inv[It.Crystal] == 0 && Inv[It.Silver] == 0, $"forge: crafting spends exactly the materials ({Inv[It.Gear]} gears, {Inv[It.Lens]} lens)");
         });
 
-        // ── назначение, смена, снятие, удаление здания
+        // ── старые сохранения: убранные постройки исчезают, ресурсы возвращаются
         S(.3f, () =>
         {
-            var b1 = B(Tl.Sawmill); var b2 = B(Tl.Mine); var mn = VillagerById(9002); var lj = VillagerById(9001);
-            CycleWorker(b1); CycleWorker(b1); CycleWorker(b1);
-            Check(b1.Manual && Villagers.Count(v => v.Work == BKey(b1)) <= 1, "assign: cycling workers keeps one worker per building");
-            for (int i = 0; i < 6 && WorkerOf(b2) != lj; i++) CycleWorker(b2);
-            Check(WorkerOf(b2) == lj && lj.Work == BKey(b2) && Villagers.Count(v => v.Work == BKey(b1)) == 0 || WorkerOf(b2) == lj, "assign: a villager moves to another building and leaves the previous one");
-            Check(Villagers.Count(v => v.Work == BKey(b2)) == 1 && Buildings.All(b => !IsProducer(b.Type) || Villagers.Count(v => v.Work == BKey(b)) <= 1), "assign: nobody works in two places and nobody doubles up");
-            ClearWorker(b2); Check(WorkerOf(b2) == null && b2.Manual, "assign: the worker can be removed");
-            b2.Manual = false; b1.Manual = false; RecomputeNetwork();
-            Check(WorkerOf(b2) != null, "assign: automatic mode refills the building");
-            var tmp = CreateBuilding(1, sites[8 % sites.Count]); // второй лесопильный пункт не нужен: проверяем освобождение на шахте
-            Buildings.Remove(tmp); SetObj(tmp.X, tmp.Y, Tl.None);
-            var wk = WorkerOf(b2); Buildings.Remove(b2); SetObj(b2.X, b2.Y, Tl.None); RecomputeVillagers();
-            Check(wk != null && wk.Work != BKey(b2) && (wk.Work < 0 || BuildingByKey(wk.Work) != null), "assign: after the building is removed the worker is freed (or reassigned to a real building)");
-            var mine = CreateBuilding(2, sites[2]); mine.Forced = true; RecomputeNetwork();
-        });
-
-        // ── движение: путь по освещённым клеткам, препятствие на пути, далёкие жители
-        S(.3f, () =>
-        {
-            var v = VillagerById(9003); var fg = B(Tl.Forge); var spot = WorkSpot(fg); Tp(TileCenter(W.Spawn.X, W.Spawn.Y + 1));
-            v.Pos = TileCenter(W.Spawn.X - 6, W.Spawn.Y + 2); v.Path.Clear(); v.Goal = new Vector2I(-1, -1); v.State = VState.Idle;
-            Check(spot.X >= 0 && SafeTile(spot.X, spot.Y), "move: the forge has a safe work spot");
-            var path = FindPath(ToTile(v.Pos), spot); Check(path != null && path.Count > 0 && path.All(q => SafeTile(ToTile(q).X, ToTile(q).Y)), $"move: the route runs through lit free tiles only ({path?.Count})");
-            var dark = new Vector2I(W.Spawn.X + 60, W.Spawn.Y + 60); Check(FindPath(ToTile(v.Pos), dark) == null, "move: no route into the Darkness");
-            if (path != null && path.Count > 4) { var mid = ToTile(path[path.Count / 2]); SetObj(mid.X, mid.Y, Tl.Stone); Check(true, "move: an obstacle is built on the route"); }
-        });
-        int steps2 = 0; bool leftLight = false;
-        S(.1f, () => { });
-        for (int k = 0; k < 8; k++) S(.1f, () => { });
-        S(.2f, () =>
-        {
-            var v = VillagerById(9003); var fg = B(Tl.Forge);
-            for (int i = 0; i < 1500; i++) { v.Think = 0; StepVillager(v, .05f); steps2++; var t = ToTile(v.Pos); if (!SafeTile(t.X, t.Y) && !World.In(t.X, t.Y)) leftLight = true; if (ToTile(v.Pos) == WorkSpot(fg) && v.State == VState.Working) break; }
-            Check(ToTile(v.Pos) == WorkSpot(fg) && v.State == VState.Working, $"move: the villager walks around the new obstacle to the forge and starts working ({steps2} steps)");
-            Check(!leftLight, "move: the villager never left the lit area");
-            Shot("village_work");
-        });
-        S(.3f, () =>
-        {
-            var v = VillagerById(9003); Tp(TileCenter(W.Spawn.X, W.Spawn.Y + 1) + new Vector2(2000, 0)); v.Pos = TileCenter(W.Spawn.X - 6, W.Spawn.Y + 2); v.State = VState.Idle; v.Path.Clear();
-            StepVillager(v, .05f); var s = WorkSpot(B(Tl.Forge));
-            Check(v.Path.Count == 0 && ToTile(v.Pos) == s && v.State == VState.Working, "perf: a villager far from every player is placed at the workplace without a route search");
-            Tp(TileCenter(W.Spawn.X, W.Spawn.Y + 1));
-        });
-        S(.3f, () =>
-        {
-            for (int i = 0; i < 30; i++) AddVillager(9100 + i, TileCenter(W.Spawn.X + (i % 6) - 3, W.Spawn.Y + 2 + i / 6), i % 3 == 0 ? "lumberjack" : i % 3 == 1 ? "miner" : "smith", "test");
-            var sw = Stopwatch.StartNew(); for (int i = 0; i < 400; i++) UpdateVillagers(.033f); sw.Stop();
-            double ms = sw.Elapsed.TotalMilliseconds / 400; Check(ms < 1.5, $"perf: {Villagers.Count} villagers cost {ms:0.000} ms per frame");
-            Villagers.RemoveAll(v => v.Id >= 9100);
+            Inv[It.Wood] = 0; var old = new Building { Type = Tl.Sawmill, X = sites[6].X, Y = sites[6].Y, Level = 2 }; old.Local[It.Wood] = 3; Buildings.Add(old); SetObj(old.X, old.Y, Tl.Sawmill);
+            int n = Buildings.Count; RemoveRetiredBuildings();
+            Check(Buildings.Count == n - 1 && !Buildings.Contains(old) && W.Get(old.X, old.Y) == Tl.None, "migration: a removed building type disappears from an old save");
+            Check(Inv[It.Wood] == 12 + 15 + 3, $"migration: its price and stored goods are refunded ({Inv[It.Wood]} wood)");
         });
 
         // ── жильё
@@ -201,7 +156,7 @@ public partial class Game
         // ── сохранение
         S(.3f, () =>
         {
-            var b = B(Tl.Sawmill); b.Manual = true; Save(); var d = ReadSave();
+            var b = B(Tl.Forge); b.Manual = true; Save(); var d = ReadSave();
             Check(d.Vills != null && d.Vills.Length == Villagers.Count && d.Vills.Select(x => x.Id).Distinct().Count() == Villagers.Count, "save: every villager is stored with a unique id");
             Check(d.ManualB != null && d.ManualB.Contains(BKey(b)), "save: manual assignments are stored");
             var snap = Villagers.Select(v => (v.Id, v.Prof, v.Work, v.Home, v.Name)).ToList(); int n = Villagers.Count;

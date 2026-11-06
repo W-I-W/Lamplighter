@@ -94,7 +94,7 @@ public partial class Game
         {
             case 1:
                 {
-                    if (a < 0 || a >= BCount) return null;
+                    if (a < 0 || a >= BCount || !BActive(a)) return null;
                     // отказ (клетка занята, здание такого типа уже есть — например, два игрока ставят склад одновременно): стоимость возвращается тому, кто её заплатил
                     bool bad = !World.In(b, c) || W.Get(b, c) != Tl.None || (a != 10 && HasBuilding(BTypes[a])) || (a == 10 && Buildings.FindAll(h => h.Type == Tl.House).Count >= 8);
                     if (bad) { var refund = new int[It.Count]; foreach (var cc in BCost(a, 1)) refund[cc[0]] += cc[1]; return refund; }

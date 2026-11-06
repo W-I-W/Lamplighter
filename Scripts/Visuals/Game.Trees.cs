@@ -16,7 +16,7 @@ public partial class Game
     /// <summary>Камни и руды: крона дерева позади такого тайла всё равно рисуется, поверх него.</summary>
     static bool IsRockTile(Tl t) => t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.SilverOre || t == Tl.CrystalOre || t == Tl.Obsidian || t == Tl.Ember || t == Tl.FrostOre || t == Tl.Rubble || t == Tl.Lumen;
 
-    static bool IsBuiltTile(Tl t) => IsProducer(t) || t == Tl.Furnace || t == Tl.Lantern || t == Tl.Warehouse || t == Tl.House || t == Tl.Tent || t == Tl.Stall || t == Tl.Hub
+    static bool IsBuiltTile(Tl t) => t == Tl.Forge || t == Tl.Furnace || t == Tl.Lantern || t == Tl.Warehouse || t == Tl.House || t == Tl.Tent || t == Tl.Stall || t == Tl.Hub
         || t == Tl.CrystalLantern || t == Tl.CombatLantern || t == Tl.AmpCrystal || t == Tl.BarrierPost;
 
     public const int TreeVariants = 4;                         // 0 — исходный вид, 1..3 — оттенки

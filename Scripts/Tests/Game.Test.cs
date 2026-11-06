@@ -83,6 +83,7 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "arena") { BuildArenaScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "grove") { BuildGroveScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "itemup") { BuildItemUpScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "combatpressure") { BuildCombatPressureScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "sessions") { BuildSessionsScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "loc") { BuildLocScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "econ") { BuildEconScript(); return; }

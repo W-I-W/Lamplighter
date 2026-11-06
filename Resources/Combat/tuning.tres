@@ -4,14 +4,14 @@
 
 [resource]
 script = ExtResource("1")
-EnemyDamage = 1.6
-EnemyHp = 1.75
-EnemySpeed = 1.15
+EnemyDamage = 1.8
+EnemyHp = 2.2
+EnemySpeed = 1.35
 EnemyAttackRate = 1.15
-EnemyAtkPause = 1.7
+EnemyAtkPause = 1.1
 EnemyMinHit = 1.0
 FistDamageMul = 0.65
-SpawnDelayMul = 2.2
+SpawnDelayMul = 1.35
 SpawnCapMul = 1.0
 SpawnCapBonus = 2
 MaxAttackers = 3
@@ -22,13 +22,13 @@ EliteMax = 2
 EliteHp = 1.8
 EliteDamage = 1.25
 BossHp = PackedFloat32Array(8, 6, 6, 4.5, 4.5)
-BossDamage = PackedFloat32Array(1.5, 1.5, 1.6, 1.15, 1.35)
+BossDamage = PackedFloat32Array(1.9, 2, 2.1, 1.6, 1.9)
 WinterVuln = 9.0
 SourceVuln = 10.0
 BossLeashTiles = 36.0
 BossRegenDelay = 8.0
 BossRegenRate = 0.03
-BossTempo = 0.7
+BossTempo = 0.6
 HitInvuln = 0.5
 RegenRate = 0.35
 RegenDelay = 5.0
