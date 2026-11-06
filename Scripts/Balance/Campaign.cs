@@ -37,10 +37,14 @@ public sealed class Campaign
     public volatile bool Cancel;
     static readonly int[] OreOf = { It.CopperOre, It.IronOre, It.SilverOre };
 
+    /// <summary>A/B-режим (команда relic-ab): реликвия, которую получает каждый герой с первой минуты. Задаётся один раз перед прогоном; null — обычная игра.</summary>
+    public static string ForceRelic;
+
     public Campaign(BalanceModel m, Profile prof, ulong seed)
     {
         M = m; T = m.T; pr = prof; r = new Rng(seed); p = new SimPlayer(m); limit = m.A.MaxHours * 3600f;
         res.Profile = prof.Name; res.Seed = seed;
+        if (ForceRelic != null) p.GiveRelic(ForceRelic);
         if (prof.PicksArchetype) arch = Profile.Archetypes[r.Int(0, Profile.Archetypes.Length - 1)];
         res.Arch = arch?.Name ?? (prof.Skills == SkillPolicy.Greedy ? "greedy" : prof.Skills == SkillPolicy.Random ? "random" : "cheapest");
     }
@@ -108,7 +112,7 @@ public sealed class Campaign
         if (dark > 0) Exposure(dark, reg, hunt, ref bucket);
     }
 
-    void Regen(float s, bool lit) { if (p.Hp < p.MaxHp) p.Hp = Math.Min(p.MaxHp, p.Hp + (lit ? 2f : p.RegenSkill ? p.RegenPerSec : 0f) * s); }
+    void Regen(float s, bool lit) { if (p.Hp < p.MaxHp) p.Hp = Math.Min(p.MaxHp, p.Hp + (lit ? 1.5f : p.RegenSkill ? p.RegenPerSec : 0f) * s); }
 
     EnemyM Pick(int reg, bool guardMode = false)
     {
@@ -367,6 +371,7 @@ public sealed class Campaign
         var perm = p.RelicsOwned.Where(id => M.Relics.First(x => x.Id == id).Permanent).ToList();
         var best = p.RelicsEq.ToList(); float bs = Power(p, pr);
         foreach (var id in perm) { if (best.Contains(id)) continue; for (int k = 0; k < best.Count; k++) { var saved = p.RelicsEq.ToList(); p.RelicsEq = best.ToList(); p.RelicsEq[k] = id; p.Recompute(); float s = Power(p, pr) * (arch != null && M.Relics.First(x => x.Id == id).Tags.Any(t => arch.Tags.Contains(t)) ? 1.03f : 1f); if (s > bs) { bs = s; best = p.RelicsEq.ToList(); } p.RelicsEq = saved; } }
+        if (ForceRelic != null && p.RelicsOwned.Contains(ForceRelic) && !best.Contains(ForceRelic)) { if (best.Count > 0) best[best.Count - 1] = ForceRelic; else best.Add(ForceRelic); }      // A/B: проверяемая реликвия всегда надета
         p.RelicsEq = best; p.Recompute();
     }
 

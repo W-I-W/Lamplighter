@@ -140,6 +140,7 @@ public partial class Game
 
     void InitEvent(GEvent ev)
     {
+        Diag.Mark("first_event");
         int reg = World.RegionOf((int)(ev.Pos.X / TS));
         Color col = EvColor(ev.Kind);
         string sub = "";
@@ -228,7 +229,7 @@ public partial class Game
                     {
                         ev.Wave++; ev.WaveT = 11f;
                         for (int i = 0; i < 3; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * rng.RandfRange(70, 95), PoolKind(reg));
-                        Sfx.Play("boss", -8, 1.4f); Toast($"Тени осаждают фонарь: волна {ev.Wave}/4");
+                        Sfx.Play("boss", -8, 1.4f);
                     }
                     foreach (var e in Enemies) if (e.Ev == ev && e.Pos.DistanceTo(ev.Pos) < 26) ev.V -= 2.2f * dt;
                     if (ev.V <= 0) { Announce("Фонарь погас", "Тени сломили осаждённый фонарь — ничего не потеряно", new Color("#9aa6bf"), "error"); ev.Done = true; }
@@ -301,7 +302,7 @@ public partial class Game
         else if (ev.Kind == "caravan" && e.Carrier)
         {
             int[] rare = reg == 1 ? new[] { It.Crystal, It.Silver } : reg == 2 ? new[] { It.Obsidian, It.Ember } : new[] { It.Iron, It.Copper };
-            foreach (var it in rare) Give(it, 3 + r.Next(3), e.Pos + new Vector2(r.Next(-8, 8), -6));
+            foreach (var it in rare) GiveLoot(it, 3 + r.Next(3), e.Pos + new Vector2(r.Next(-8, 8), -6));
             Inv[It.Coins] += 40 + r.Next(40); GrantTag(RollTag(r, 2), e.Pos);
             Announce("Караван разгромлен!", "Редкие ресурсы, монеты и находка из мешков", new Color("#ffb04a"), "chest"); GiveXp(80); ev.Done = true;
         }
@@ -328,12 +329,12 @@ public partial class Game
         {
             ev.Wave++; ev.WaveT = 24f;
             for (int i = 0; i < 3 + ev.Wave; i++) EvEnemy(ev, ev.Pos + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * rng.RandfRange(50, 90), PoolKind(reg), 1.1f);
-            Sfx.Play("boss", -6, 1.2f); Toast($"Испытание: волна {ev.Wave}/3");
+            Sfx.Play("boss", -6, 1.2f);
         }
         clear = !Enemies.Exists(e => e.Ev == ev);
         if (ev.Wave >= 3 && clear)
         {
-            var r = new Random(ev.Seed); Inv[It.Coins] += 60 + r.Next(40); GrantTag(RollTag(r, 3, .5f), ev.Pos); Give(It.AncCrystal, 1, ev.Pos + new Vector2(0, -10));
+            var r = new Random(ev.Seed); Inv[It.Coins] += 60 + r.Next(40); GrantTag(RollTag(r, 3, .5f), ev.Pos); GiveLoot(It.AncCrystal, 1, ev.Pos + new Vector2(0, -10));
             Announce("Испытание пройдено!", "Награда: монеты, находка и кристалл", new Color("#ffe27a"), "ancient"); GiveXp(120); ev.Done = true;
         }
         else if (trialT <= 0 || ev.Pos.DistanceTo(PPos) > 30 * TS) { Announce("Испытание провалено", "Ничего не потеряно — разлом закрылся", new Color("#9aa6bf"), "error"); ev.Done = true; }

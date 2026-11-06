@@ -93,9 +93,27 @@ public partial class Game
     }
 
     /// <summary>Глобальные элементы Сердца: руны, предупреждения пустоты, огни, лучи светил к боссу.</summary>
+    /// <summary>Край острова Сердца: пол и пустота почти одного цвета в темноте, поэтому по границе клеток бежит мерцающая фиолетовая кромка. Видна в радиусе света героя и гаснет к его краю.</summary>
+    void DrawVoidRim(EntityLayer c)
+    {
+        var pt = ToTile(PPos); int R = 14; float maxD = Mathf.Max(PlayerLightR, 6 * TS);
+        for (int y = pt.Y - R; y <= pt.Y + R; y++)
+            for (int x = pt.X - R; x <= pt.X + R; x++)
+            {
+                if (W.Get(x, y) != Tl.Void) continue;
+                float d = TileCenter(x, y).DistanceTo(PPos); if (d > maxD) continue;
+                float a = Mathf.Clamp(1.3f - d / maxD, 0, 1) * (.7f + .3f * Mathf.Sin(Time * 2.2f + x * .7f + y * .4f)); var col = new Color(.72f, .5f, 1f, .75f * a); float x0 = x * TS, y0 = y * TS;
+                if (W.Get(x, y - 1) != Tl.Void && W.Get(x, y - 1) != Tl.Fragment) Gfx.Rect(c, new Rect2(x0, y0, TS, 2), col);
+                if (W.Get(x, y + 1) != Tl.Void && W.Get(x, y + 1) != Tl.Fragment) Gfx.Rect(c, new Rect2(x0, y0 + TS - 2, TS, 2), col);
+                if (W.Get(x - 1, y) != Tl.Void && W.Get(x - 1, y) != Tl.Fragment) Gfx.Rect(c, new Rect2(x0, y0, 2, TS), col);
+                if (W.Get(x + 1, y) != Tl.Void && W.Get(x + 1, y) != Tl.Fragment) Gfx.Rect(c, new Rect2(x0 + TS - 2, y0, 2, TS), col);
+            }
+    }
+
     void DrawHeartWorld(EntityLayer c)
     {
         if (RegionAt(PPos) != 4 && VoidPending.Count == 0) return;
+        if (RegionAt(PPos) == 4) DrawVoidRim(c);
         foreach (var t in W.Traps)
         {
             var p = TileCenter(t.X, t.Y); float d = p.DistanceTo(PPos); float rv = N("Reveal") > 0 ? 1.7f : 1f; if (d > PlayerLightR * .9f * rv) continue;

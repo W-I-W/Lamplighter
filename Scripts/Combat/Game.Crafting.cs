@@ -68,7 +68,7 @@ public partial class Game
         foreach (var ore in new[] { It.CopperOre, It.IronOre, It.SilverOre })
         {
             int o = ore, ingot = It.IngotOf(ore);
-            recipes.Add(new Recipe { Id = "smelt_" + ingot, Group = "furnace", Name = It.Names[ingot], Desc = $"1 {It.Names[o].ToLowerInvariant()} + 1 дерево → слиток. Плавка идёт и после закрытия окна", Icon = ingot, Cost = C(o, 1, It.Wood, 1), Multi = true,
+            recipes.Add(new Recipe { Id = "smelt_" + ingot, Group = "furnace", Name = It.Names[ingot], Desc = $"1 {It.Names[o].ToLowerInvariant()} + 1 дерево → слиток", Icon = ingot, Cost = C(o, 1, It.Wood, 1), Multi = true,
                 Known = () => true, Done = () => false, Extra = () => SmeltQ.FindAll(x => x == o).Count, Craft = n => SmeltOre(o, n) });
         }
         // печь и кузница: улучшение кирки, оружие, модификаторы (как раньше требовали печь или кузницу рядом)
@@ -134,6 +134,7 @@ public partial class Game
     /// <summary>Выполняет рецепт: ручной — сразу, станции — только пока игрок рядом с ней.</summary>
     public void CraftRecipe(Recipe r)
     {
+        Diag.Mark("first_craft");
         if (ActiveStation() != r.Group) { Fail("Рецепты станции — пока вы рядом"); return; }
         if (StateOf(r) == RecState.Owned) { Toast("Это уже есть"); return; }
         CraftRecipe(r, r.Multi ? Math.Min(QtySteps[CraftQty], Math.Max(1, MaxCraft(r))) : 1);
@@ -156,6 +157,6 @@ public partial class Game
         int loaded = 0; FurnaceNear(56, out var at);
         while (loaded < qty && Inv[ore] > 0 && Inv[It.Wood] > 0) { Inv[ore]--; Inv[It.Wood]--; SmeltQ.Add(ore); loaded++; }
         if (loaded == 0) { Fail("Нужна руда и дерево (топливо): по 1 дереву на слиток"); return; }
-        SmeltAt = at; Sfx.Play("build", -4); Toast($"Плавка: {loaded} шт.");
+        SmeltAt = at; Sfx.Play("build", -4);
     }
 }

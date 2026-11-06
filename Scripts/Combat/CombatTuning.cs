@@ -37,6 +37,7 @@ public partial class CombatTuning : Resource
     [Export] public float[] BossDamage = { 1.25f, 1.3f, 1.35f, 1.4f, 1.5f };
     [Export] public float BossLeashTiles = 36f;                // пока игрок ближе этого расстояния (в клетках) от места босса, бой идёт; бросив бой дальше, игрок теряет босса
     [Export] public float BossRegenDelay = 8f, BossRegenRate = .03f;   // босс начинает восстанавливаться только после стольких секунд без игрока и медленно (доля здоровья в секунду)
+    [Export] public float BossWarnMul = .72f;                  // множитель времени подготовки атак боссов (кроме Рощи, у которой он свой): меньше — меньше времени увернуться
     [Export] public float BossTempo = .7f;                     // пауза между атаками босса (меньше — чаще): бои с боссами напряжённее, увернуться «на автомате» нельзя
     [Export] public float WinterVuln = 9f, SourceVuln = 10f;     // достаточно времени добежать и ударить после решения щита
     // игрок

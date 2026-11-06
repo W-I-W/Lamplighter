@@ -221,7 +221,7 @@ public partial class EquipWindowUI : Control
     {
         if (idx < 0 || idx >= G.Owned.Count) return; var ow = G.Owned[idx]; var w = Db.Weapon(ow.Id); int row = G.ToolList().Count + idx; bool held = G.EqIsHeld(row); int slot = G.HotSlotOf(Game.RefWeapon(w.Id));
         string status = held ? "Сейчас в руках" : slot >= 0 ? $"{T("В хотбаре")}: {T("слот")} {slot + 1}" : "Можно взять в руки";
-        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(G.HotIcon(Game.RefWeapon(w.Id))), null, T(w.Name), Db.RarCol[(int)w.Rar], T(status), held ? Good : slot >= 0 ? Cyan : Dim, $"{T(Db.ClassNames[(int)w.Cls])} · {T(Db.RarName[(int)w.Rar])}"));
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(G.HotIcon(Game.RefWeapon(w.Id))), null, T(w.Name), Db.RarCol[(int)w.Rar], T(status), held ? Good : slot >= 0 ? Cyan : Dim, null));
         float dmg = G.WeaponDmg(w), rate = 1f / w.Cd; var cmp = held ? null : HeldWeaponDef();
         string D(float a, float b2, string fmt = "0.0#") { float d = a - b2; return Mathf.Abs(d) < .005f ? null : (d > 0 ? "+" : "") + d.ToString(fmt); }
         centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", dmg.ToString("0.#"), Text, cmp == null ? null : D(dmg, G.WeaponDmg(cmp)), cmp == null || dmg >= G.WeaponDmg(cmp)));
@@ -371,7 +371,7 @@ public partial class EquipWindowUI : Control
         var st = G.StateOf(r); var bad = new Color("#f06a5e");
         bool up = r.IsUpgrade;
         string status = up ? "Уже есть" : st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? (r.Extra != null && r.Extra() > 0 ? $"{T("в очереди")} {r.Extra()}" : r.Improves ? "Можно улучшить" : "Можно создать") : "Не хватает ресурсов";
-        v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), up ? Cyan : st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad, T(up ? r.UpDesc ?? r.Desc ?? "" : r.Id.StartsWith("tool_") ? "" : r.Desc ?? "")));
+        v.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(r.Icon >= 0 ? r.Icon : UiIcons.Pickaxe), null, T(r.Title), Gold, T(status), up ? Cyan : st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad));      // серое описание рецепта убрано: цена и состояние видны ниже
         if (r.Id.StartsWith("tool_")) v.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", G.ToolHitDmg(r.Id.Substring(5)).ToString("0.#"), Text));
         if (r.Id.StartsWith("w_") && r.Id.LastIndexOf('_') > 1)                          // рецепт оружия: сразу видно урон и скорость
         {
@@ -406,7 +406,7 @@ public partial class EquipWindowUI : Control
         int lv = G.HeroLampLv;
         var c = Card(0); c.Visible = true; c.Bind(0, UiIcons.Tile(Art.Lantern), T("Фонарь героя"), new Color("#fff2b0"), $"{T("Ступень")} {lv} {T("из")} 3", Dim, true, 0, true);
         for (int i = 1; i < cards.Count; i++) cards[i].Visible = false; G.WinCur = 0;
-        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Tile(Art.Lantern), null, T("Фонарь героя"), new Color("#fff2b0"), lv >= 3 ? T("Улучшен полностью") : $"{T("Ступень")} {lv} {T("из")} 3", lv >= 3 ? Good : Gold, T("Ваш личный свет: он идёт за вами в Тьму.")));
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Tile(Art.Lantern), null, T("Фонарь героя"), new Color("#fff2b0"), lv >= 3 ? T("Улучшен полностью") : $"{T("Ступень")} {lv} {T("из")} 3", lv >= 3 ? Good : Gold));
         var stepBar = new ProgressBar { MinValue = 0, MaxValue = 3, Value = lv, ShowPercentage = false, CustomMinimumSize = new Vector2(0, 8), ThemeTypeVariation = "LightBar", MouseFilter = MouseFilterEnum.Ignore }; centerBox.AddChild(stepBar);
         if (G.HasHandLamp) centerBox.AddChild(Stat(UiIcons.Tile(Art.Lantern), "Радиус света", $"{(int)G.PlayerLightR}", Gold));
         else centerBox.AddChild(Lbl("Света пока нет: изучите «Искру света» в дереве навыков [T].", new Color("#ffb36a"), true));

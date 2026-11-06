@@ -119,16 +119,41 @@ public partial class Game
         return Mathf.Floor(mineAcc - .5f) > Mathf.Floor(prev - .5f);
     }
 
+    static readonly Dictionary<int, Texture2D> heldTex = new();
+    static readonly Dictionary<int, string> heldName = new() { [UiIcons.Pickaxe] = "pickaxe", [UiIcons.Axe] = "axe", [UiIcons.Shovel] = "shovel", [UiIcons.Hammer] = "hammer", [UiIcons.Sword] = "sword", [UiIcons.Bow] = "bow", [UiIcons.Staff] = "staff" };
+
+    /// <summary>Спрайт предмета в руке по значку (Assets/Sprites/Held/held_*.png, 16×16, смотрит вправо). Нет файла — рисуется значок, как раньше.</summary>
+    static Texture2D HeldTex(int icon)
+    {
+        if (heldTex.TryGetValue(icon, out var t)) return t;
+        Texture2D tex = null;
+        if (heldName.TryGetValue(icon, out var n)) { var im = SpriteLibrary.LoadImage($"{SpriteLibrary.Root}Held/held_{n}.png"); if (im != null) tex = ImageTexture.CreateFromImage(im); }
+        heldTex[icon] = tex; return tex;
+    }
+
+    const float HeldHandDx = 3f, HeldHandDy = 6f;
+
     void DrawHeldItem(CanvasItem c, Vector2 hand, float ang)
     {
         if (CurW < 0 && !OwnedTools.Contains(CurTool)) return;                                                                  // руки пусты: ничего не рисуется
         string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool);
         int icon = HotIcon(r); if (icon < 0) return;
         float baseAng = icon == UiIcons.Pickaxe ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;          // куда «смотрит» рисунок значка
-        var centre = hand + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 10f;
         // при прицеле вправо рисунок зеркалится вдоль своей оси, чтобы рабочая сторона инструмента смотрела вперёд
-        bool mirror = Mathf.Cos(ang) >= 0;
-        c.DrawSetTransformMatrix(new Transform2D(ang, centre) * (mirror ? Transform2D.FlipY : Transform2D.Identity) * new Transform2D(-baseAng, Vector2.Zero));
+        // сторона зеркала берётся от направления прицела, а не от текущего угла: угол замаха уходит за вертикаль, и предмет «переворачивался» посреди анимации
+        var aimD = Aim - PPos; bool aimRight = (aimD.LengthSquared() > 1 ? aimD.X : Facing) >= 0;
+        hand += new Vector2(-HeldHandDx, HeldHandDy);                                                    // кисть героя: слева на экране у пояса (лампа в другой руке), а не у шеи
+        var centre = hand + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 10f;
+        var held = HeldTex(icon);
+        if (held != null)
+        {
+            // отдельные спрайты в руке (Assets/Sprites/Held): все смотрят вправо, при прицеле влево зеркалятся, чтобы не оказаться вверх ногами
+            c.DrawSetTransformMatrix(new Transform2D(ang, centre) * (aimRight ? Transform2D.Identity : Transform2D.FlipY));
+            c.DrawTextureRect(held, new Rect2(-8, -8, 16, 16), false);
+            c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+            return;
+        }
+        c.DrawSetTransformMatrix(new Transform2D(ang, centre) * (aimRight ? Transform2D.FlipY : Transform2D.Identity) * new Transform2D(-baseAng, Vector2.Zero));
         c.DrawTextureRect(UiIcons.Item(icon), new Rect2(-8, -8, 16, 16), false);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }

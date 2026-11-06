@@ -157,6 +157,7 @@ public partial class Game
     /// <summary>Создание инструмента (ручной крафт): появляется в списке и сам встаёт в свободный слот хотбара.</summary>
     public bool CraftTool(string id, int[][] cost)
     {
+        Diag.Mark("first_craft");
         if (OwnedTools.Contains(id)) { Toast("Этот инструмент уже есть"); return false; }
         if (!Can(cost)) { Fail("Не хватает: " + NeedStr(cost)); return false; }
         Pay(cost); OwnedTools.Add(id); AutoAssign(RefTool(id)); if (OwnedTools.Count == 1) HotSelect(HotSlotOf(RefTool(id))); GiveXp(10); Sfx.Play("build"); Announce("Инструмент: " + ToolDef.Get(id).Name, ToolDef.Get(id).Desc, new Color("#ffd23f"), "upgrade"); Save(); return true;

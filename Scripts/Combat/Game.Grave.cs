@@ -20,6 +20,13 @@ public partial class Game
     public GraveRec GraveAt(Vector2I tile) => Graves.Find(g => g.Seed == W.Seed && g.X == tile.X && g.Y == tile.Y);
     public bool OwnGrave(Vector2I tile) => GraveAt(tile) != null;
 
+    /// <summary>Центр могилы, которую нужно вскрыть первой (для указателя на экране): указатель горит только у одной могилы, в порядке смертей — сначала самая ранняя (Graves ведётся по порядку добавления). Null, если могил нет.</summary>
+    public Vector2? NextGravePos()
+    {
+        foreach (var g in Graves) if (g.Seed == W.Seed) return TileCenter(g.X, g.Y);
+        return null;
+    }
+
     /// <summary>Ближайшая свободная клетка для могилы: пустая, не вода, не на пороге построек.</summary>
     Vector2I? GraveSpot(Vector2I from)
     {

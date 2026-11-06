@@ -89,7 +89,7 @@ public partial class Game
         {
             int coins = 20 * (d.Rarity + 1); Inv[It.Coins] += coins; Toast($"Дубликат «{d.Title}» обменян на {coins} монет"); return;
         }
-        OwnedRelics.Add(id);
+        OwnedRelics.Add(id); Diag.Mark("first_relic");
         if (d.Permanent && EquippedRelics.Count < RelicSlots) EquippedRelics.Add(id);
         RecomputeEffects();
         Found.Add($"{Db.RarName[d.Rarity]}: реликвия «{d.Title}»");

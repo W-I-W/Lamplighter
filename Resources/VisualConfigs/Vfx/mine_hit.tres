@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "mine_hit"
-Particles = 3
+Particles = 5
 Speed = 40
 ParticleSize = 1.5
 Tint = Color(1, 1, 1, 1)

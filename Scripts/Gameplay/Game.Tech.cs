@@ -85,7 +85,7 @@ public partial class Game
         new() { Name = "Линза света II", Desc = "Ваш свет шире ещё на 4% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 6, It.Crystal, 4), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Дальний свет II", Desc = "Ваши фонари светят дальше ещё на 6% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 5, It.Crystal, 5), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Регенерация", Desc = "Здоровье восстанавливается быстрее вне света; каждый уровень добавляет скорость", Req = "Победите 5 врагов", Cost = C(It.Shard, 3, It.Copper, 3), Ok = g => g.Kills >= 5 },
-        new() { Name = "Искра света", Desc = "Вокруг вас появляется круг света: можно исследовать Тьму. Открывает улучшения света", Req = "Соберите дерево и камень", Cost = C(It.Wood, 3, It.Stone, 2), Ok = g => true },
+        new() { Name = "Искра света", Desc = "Вокруг вас появляется круг света: можно исследовать Тьму. Открывает улучшения света", Req = "Соберите дерево и камень", Cost = C(It.Wood, 3, It.Stone, 2), Ok = g => g.Can(LevelCost((int)Tech.Spark, 1)) },     // «Соберите дерево и камень»: галочка и уведомление только когда ресурсов хватает
     };
 
     public bool HasRangedWeapon() { foreach (var o in Owned) { var d = Db.Weapon(o.Id); if (d != null && d.Cls != WClass.Sword) return true; } return false; }

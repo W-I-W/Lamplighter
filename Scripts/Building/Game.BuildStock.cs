@@ -27,7 +27,7 @@ public partial class Game
         var cost = e.Raw ?? e.CostArr; if (cost == null) return false;
         if (!Can(cost)) { Fail("Не хватает: " + MissingStr(cost)); return false; }
         Pay(cost); StockAdd(e.Key, 1); GiveXp(BuildCraftXp(e.Key)); Sfx.Play("build", -3, 1.2f); Save();
-        Toast($"Создано: {e.Name} (в запасе: {StockOf(e.Key)})"); return true;
+        Toast($"Создано: {e.Name}"); return true;
     }
 
     /// <summary>Установка из запаса (ЛКМ в режиме размещения). Цена уже оплачена при создании.</summary>
@@ -46,8 +46,8 @@ public partial class Game
         }
         finally { Array.Copy(snap, Inv, snap.Length); placingStock = false; }
         if (!ok) return false;
-        StockAdd(e.Key, -1); Placed.Add(World.Key(tile.X, tile.Y));
-        if (StockOf(e.Key) <= 0) { Placing = null; Toast("Запас закончился"); }
+        StockAdd(e.Key, -1); Placed.Add(World.Key(tile.X, tile.Y)); PlaceFx(tile);
+        if (StockOf(e.Key) <= 0) Placing = null;
         Save();
         return true;
     }

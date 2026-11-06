@@ -109,7 +109,7 @@ public partial class Game
         Burst(PPos, new Color("#8ff0ff"), lv == 0 ? 20 : 10, 100);
         if (lv == 0) Announce("Изучено: " + t.Name, t.Desc, new Color("#8ff0ff"), "tech");
         else if (lv + 1 == mx) Announce("Максимальный уровень: " + t.Name, "Открыты связанные навыки", new Color("#ffd23f"), "tech");
-        else { Sfx.Play("upgrade", -4, 1f + .06f * lv); Toast($"{t.Name}: {lv + 1}/{mx}"); }
+        else Sfx.Play("upgrade", -4, 1f + .06f * lv);
         TechLearned = i; TechLearnT = .6f; Save(); return true;
     }
 

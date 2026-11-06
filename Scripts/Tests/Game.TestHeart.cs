@@ -69,7 +69,7 @@ public partial class Game
         S(.2f, () =>
         {
             Tp(W.Ancients[0].Pos + new Vector2(0, 30)); BeaconLevel = 5; Cur = FindIx(); Log("beacon interact lines: " + string.Join(" | ", Cur.Lines));
-            Cur.E?.Invoke(); Log($"finale started stage={FinStage} level={BeaconLevel} finished={Finished}");
+            (Cur.U ?? Cur.E)?.Invoke(); Log($"finale started stage={FinStage} level={BeaconLevel} finished={Finished}");
         });
         S(3f, () => { Shot("f1_wave"); Log($"dawn={dawn:F2} stage={FinStage}"); });
         S(5.5f, () => { Shot("f2_dawn"); });

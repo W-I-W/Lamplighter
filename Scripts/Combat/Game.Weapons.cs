@@ -41,7 +41,7 @@ public partial class Game
         AutoAssign(RefWeapon(id)); int hs = HotSlotOf(RefWeapon(id));
         if (hs >= 0 && CurW < 0 && Owned.Count == 1) HotSelect(hs);
         RecomputeEffects();
-        if (announce && hs < 0) Toast("Новое оружие: наденьте его в экипировке [C]");
+        if (announce && hs < 0) HintOnce("equip_weapon", "Новое оружие: наденьте его в экипировке [C]");     // подсказка один раз, не при каждом оружии
         if (announce) Announce($"Оружие: {d.Name}", $"{Db.ClassNames[(int)d.Cls]} · {Db.RarName[(int)d.Rar]} · {d.Desc}", Db.RarCol[(int)d.Rar], "chest");
     }
 
@@ -66,6 +66,7 @@ public partial class Game
 
     public bool CraftWeapon(WeaponDef w)
     {
+        Diag.Mark("first_craft");
         if (w.Cost == null) return false;
         if (HasWeapon(w.Id)) { Toast("Это оружие уже есть"); return false; }
         if (!BpOk(w.Bp)) { Fail("Нужен чертёж: " + Db.Bp(w.Bp).Name + " (журнал [J])"); return false; }

@@ -44,6 +44,44 @@ public sealed partial class World
         b.Corners.Add(cur); b.EndTile = cur; b.EndDir = d; return b;
     }
 
+    /// <summary>Сундук, случайно попавший на путь луча постоянного излучателя, глушит луч (приёмник не зажечь) и сам оказывается «в луче». Переносит такие сундуки в сторону от линии света.</summary>
+    public int ClearBeamChests()
+    {
+        int moved = 0;
+        foreach (var (et, ed) in Emitters)
+        {
+            var cur = et; var d = ed;
+            for (int i = 0; i < 26; i++)
+            {
+                var n = cur + d; var t = Get(n.X, n.Y);
+                if (t == Tl.Mirror1 || t == Tl.Mirror2) { d = Reflect(t, d); cur = n; continue; }
+                if (t == Tl.Receiver || t == Tl.ReceiverOn) break;
+                if (t == Tl.Chest && ByTile.TryGetValue(Key(n.X, n.Y), out var p) && p.Kind == PK.Chest) { if (MoveChestOffLane(p, d)) moved++; cur = n; continue; }
+                if (Blocks(t)) break;
+                cur = n;
+            }
+        }
+        return moved;
+    }
+
+    bool MoveChestOffLane(Poi p, Vector2I lane)
+    {
+        var perp = new Vector2I(lane.Y, lane.X);
+        for (int r = 2; r <= 9; r++)
+            for (int along = -r; along <= r; along++)
+                foreach (int side in new[] { -1, 1 })
+                {
+                    var t = p.Tile + new Vector2I(lane.X * along, lane.Y * along) + new Vector2I(perp.X * side * r, perp.Y * side * r);
+                    if (!In(t.X, t.Y) || Get(t.X, t.Y) != Tl.None || ByTile.ContainsKey(Key(t.X, t.Y))) continue;
+                    byte g = Ground[Key(t.X, t.Y)]; if (g == Art.WaterG || g == Art.VoidG || g == Art.HotAsh) continue;
+                    bool open = true; foreach (var dd in D4) { var q = t + dd; if (Get(q.X, q.Y) == Tl.Receiver || Get(q.X, q.Y) == Tl.Emitter) open = false; }
+                    if (!open) continue;
+                    Set(p.Tile.X, p.Tile.Y, Tl.None); ByTile.Remove(Key(p.Tile.X, p.Tile.Y));
+                    p.Tile = t; Set(t.X, t.Y, Tl.Chest); ByTile[Key(t.X, t.Y)] = p; return true;
+                }
+        return false;
+    }
+
     // ───────────────────────── достижимость ─────────────────────────
     public bool[] Reach(Vector2I start)
     {

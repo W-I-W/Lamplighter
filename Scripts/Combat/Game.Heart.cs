@@ -383,7 +383,7 @@ public partial class Game
     {
         BossMask |= 16; if (Boss == e) Boss = null;
         if (!NetClient) ClearHeartTemps();
-        Give(It.Core, 1, e.Pos + new Vector2(0, -20)); Give(It.Shard, 12, e.Pos); Give(It.Relic, 3, e.Pos + new Vector2(0, -8)); Give(It.AncCrystal, 3, e.Pos + new Vector2(10, -8));
+        GiveLoot(It.Core, 1, e.Pos + new Vector2(0, -20)); GiveLoot(It.Shard, 12, e.Pos); GiveLoot(It.Relic, 3, e.Pos + new Vector2(0, -8)); GiveLoot(It.AncCrystal, 3, e.Pos + new Vector2(10, -8));
         GiveRelic("r_voidlens"); Found.Add("Победа над Источником Тьмы"); GiveXp(900);
         Flash = 1f; Shake = 10; Burst(e.Pos, new Color("#ffe9a0"), 80, 220); VictoryFx(e.Pos, new Color("#ffe9a0"));
         Announce("Источник Тьмы повержен!", "Пятое ядро! Зажгите Центральный маяк", new Color("#ffe9a0"), "ancient");

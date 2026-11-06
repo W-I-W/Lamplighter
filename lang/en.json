@@ -649,6 +649,8 @@
   "Подключить производство узлами [B]": "Connect production with hubs [B]",
   "Нужен чертёж «Логистика» [J]": "Needs the \"Logistics\" blueprint [J]",
   "Построить цех переработки [B]": "Build a refinery [B]",
+  "Собрать чертёж цеха [J]": "Collect the refinery blueprint [J]",
+  "Фрагменты {0}/2: один на постаменте в лесу, второй продаёт торговец или лавка. Журнал чертежей — [J]": "Fragments {0}/2: one on a pedestal in the forest, the other sold by a trader or the stall. Blueprint journal: [J]",
   "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений": "Needs the \"Refinery\" blueprint [J]: gears and lenses for upgrades",
   "Исследовать 4 места": "Explore 4 places",
   "Исследовано {0}/4 (сундуки, руины, лагеря…)": "Explored {0}/4 (chests, ruins, camps…)",
@@ -1224,7 +1226,7 @@
   "Цель: ядра света стражей. Карта — [M]": "Goal: guardians' light cores. Map — [M]",
   "Производство идёт само. Управление — [P]": "Production runs itself. Manage with [P]",
   "Страж леса у особого фонаря. Готовьте оружие [C]": "Forest guardian at the special lamp. Ready weapons [C]",
-  "Быстрый путь: [U] у зажжённого фонаря": "Fast travel: [U] at a lit lamp",
+  "Быстрый путь: [E] у зажжённого фонаря": "Fast travel: [E] at a lit lamp",
   "Центральный маяк": "Central Beacon",
   "фонарь стража": "guardian's lantern",
   "{0}, фонарь": "{0}, lantern",
@@ -2242,5 +2244,12 @@
   "Бой": "Battle",
   "Tab — режим": "Tab — mode",
   "Чертёж «{0}» уже собран: фрагмент обменян на {1} монет": "Blueprint \"{0}\" is already complete: the fragment was exchanged for {1} coins",
-  "Это у вас уже есть": "You already have this"
+  "Это у вас уже есть": "You already have this",
+  "Плащ теней": "Shadow Cloak",
+  "В темноте урон +25%, на свету −10%: охота из тени": "+25% damage in darkness, −10% in light: hunt from the shadows",
+  "Угольки": "Embers",
+  "Убитые враги оставляют пламя на несколько секунд": "Slain enemies leave flames for a few seconds",
+  "Печать жадности": "Seal of Greed",
+  "Вы получаете на 20% больше урона, но опыт и добыча с врагов вдвое выше": "You take 20% more damage, but enemies give double XP and loot",
+  "Печь готова": "Furnace ready"
 }

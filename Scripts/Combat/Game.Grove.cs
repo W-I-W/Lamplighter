@@ -39,6 +39,7 @@ public partial class Game
 
     public const float GroveHealCapPerAbsorb = .07f, GroveHealCapTotal = .14f;   // доля MaxHp: за одно поглощение и за весь бой
     const float GroveInterrupt = .05f;                                          // урон по открытому ядру (доля MaxHp), который срывает поглощение
+    const float GroveWarn = .7f;                                                // множитель времени предупреждения атак: корни и ветви срабатывают быстрее, увернуться «на автомате» нельзя
     public const float GroveTransition = 1.6f;                                  // переход фазы: ствол неуязвим
 
     float GroveArenaR(Enemy e) { var ar = ArenaHolding(e.Pos); return ar != null ? (ar.Radius + .5f) * TS : 150f; }
@@ -71,7 +72,7 @@ public partial class Game
                 e.T1 -= dt; if (e.T1 <= 0) GroveChoose(e, pc, dist, tempo);
                 break;
             case 1: case 2: case 3:      // анимации каста корней, ветви, спор — сами удары идут по своим таймерам
-                e.T2 -= dt; if (e.T2 <= 0) { e.State = 0; e.T1 = (pn == 2 ? 1.0f : 1.5f) * tempo; }
+                e.T2 -= dt; if (e.T2 <= 0) { e.State = 0; e.T1 = (pn == 2 ? .7f : 1.0f) * tempo; }
                 break;
             case 4:     // поглощение зелени: ядро открыто, линии к корням
                 GroveAbsorbT -= dt;
@@ -119,19 +120,23 @@ public partial class Game
         switch (pick)
         {
             case "root":
-                GroveRootAt(target + pVelOf(target) * .25f, pn == 0 ? .95f : .8f, 14f); GroveRootOthers(target, .95f, 12f);
+                {
+                    float w = (pn == 0 ? .95f : .8f) * GroveWarn;
+                    GroveRootAt(target + pVelOf(target) * .25f, w, 14f); GroveRootAt(target + pVelOf(target) * .6f, w + .15f, 14f);          // под героем и на опережение бегущему
+                    GroveRootAt(target + Vector2.FromAngle(rng.Randf() * Mathf.Tau) * rng.RandfRange(26f, 44f), w + .1f, 14f); GroveRootOthers(target, .95f * GroveWarn, 12f);
+                }
                 e.State = 1; e.T2 = .8f; Sfx.Play("break", -4, .55f); break;
             case "rootseries":
                 {
                     var d = (target - e.Pos); if (d.LengthSquared() < 1) d = Vector2.Down; d = d.Normalized();
                     float len = Mathf.Max(dist + 30f, 80f); int n = Mathf.Clamp((int)(len / 22f), 4, 7);
-                    for (int i = 0; i < n; i++) GroveRootAt(e.Pos + d * (30f + i * 22f), .55f + i * .13f, 12f);
-                    GroveRootOthers(target, .7f, 12f); e.State = 1; e.T2 = .9f; Sfx.Play("break", -2, .5f); break;
+                    for (int i = 0; i < n; i++) GroveRootAt(e.Pos + d * (30f + i * 22f), (.55f + i * .13f) * GroveWarn, 12f);
+                    GroveRootOthers(target, .7f * GroveWarn, 12f); e.State = 1; e.T2 = .7f; Sfx.Play("break", -2, .5f); break;
                 }
             case "branch":
                 {
                     var d = target - e.Pos; float ang = d.LengthSquared() < 1 ? Mathf.Pi / 2 : d.Angle();
-                    var s = new GroveSweep { C = e.Pos + new Vector2(0, -10), Ang = ang, Half = pn == 2 ? 1.2f : .95f, R0 = 14f, R1 = 100f, Warn = pn == 2 ? .75f : 1f, Dmg = 16f };
+                    var s = new GroveSweep { C = e.Pos + new Vector2(0, -10), Ang = ang, Half = pn == 2 ? 1.2f : .95f, R0 = 14f, R1 = 100f, Warn = (pn == 2 ? .75f : 1f) * GroveWarn, Dmg = 16f };
                     GroveSweeps.Add(s); GroveNet(2, s.C.X, s.C.Y, s.Ang, s.Half, s.R0, s.R1, s.Warn);
                     e.State = 2; e.T2 = s.Warn + .35f; Sfx.Play("dash", -6, .45f); break;
                 }
@@ -180,7 +185,7 @@ public partial class Game
     {
         int n = 8; int s0 = rng.RandiRange(0, n - 1);
         int safe = (1 << s0) | (1 << ((s0 + 3) % n)) | (1 << ((s0 + 5) % n));            // три безопасных сектора, ни один не соседний с другим
-        var hg = new GroveHunger { C = e.Pos, Ang0 = rng.Randf() * Mathf.Tau, R = GroveArenaR(e) + 24f, Warn = 1.9f, Dmg = 30f, N = n, Safe = safe };
+        var hg = new GroveHunger { C = e.Pos, Ang0 = rng.Randf() * Mathf.Tau, R = GroveArenaR(e) + 24f, Warn = 1.5f, Dmg = 30f, N = n, Safe = safe };
         GroveHungers.Add(hg); GroveHungerN++; groveHungerCd = 13f;
         GroveNet(6, hg.C.X, hg.C.Y, hg.Ang0, hg.R, hg.Warn, hg.N, hg.Safe);
         e.State = 5; e.T2 = hg.Warn;

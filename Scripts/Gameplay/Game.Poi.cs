@@ -133,6 +133,7 @@ public partial class Game
 
     void OpenChest(Poi p)
     {
+        Diag.Mark("first_chest");
         var r = new Random(W.Seed * 7919 + p.Tile.X * 131 + p.Tile.Y);
         float distC = p.Pos.DistanceTo(TileCenter(World.N / 2, World.N / 2)) / TS;
         int reg = World.RegionOf(p.Tile.X);
@@ -183,7 +184,7 @@ public partial class Game
     void UseObelisk(Poi p)
     {
         var list = new List<Poi>();
-        foreach (var q in W.Pois) if (q != p && q.State < 3 && !q.Seen && !q.Revealed && q.Kind != PK.Obelisk && q.Kind != PK.Vault) list.Add(q);
+        foreach (var q in W.Pois) if (q != p && q.State < 3 && !q.Seen && !q.Revealed && q.Kind != PK.Obelisk && q.Kind != PK.Vault && q.Kind != PK.Chest) list.Add(q);
         list.Sort((a, b) => a.Pos.DistanceTo(PPos).CompareTo(b.Pos.DistanceTo(PPos)));
         var names = new List<string>();
         for (int i = 0; i < Math.Min(2, list.Count); i++) { list[i].Revealed = true; names.Add($"{PoiName(list[i].Kind)} ({(int)(list[i].Pos.DistanceTo(PPos) / TS)})"); }
@@ -207,17 +208,34 @@ public partial class Game
         Save();
     }
 
+    bool TechGoalActive => Goals.Count > 0 && Goals[0].Title == "Найти забытую технологию";
+
     public IEnumerable<Poi> MarkerPois()
     {
+        var nearestTech = TechGoalActive ? NearestPoi(PK.TechCache, false) : null;
         foreach (var p in W.Pois)
         {
             if (p.State >= 3) continue;
+            if (p.Kind == PK.TechCache && TechGoalActive) { if (p == nearestTech) yield return p; continue; }  // пока активна цель «Найти забытую технологию», помечен только ближайший постамент
             if (p.Revealed && !p.Seen) { yield return p; continue; }
-            if (Has(Tech.Sight) && p.Kind != PK.Grove && p.Kind != PK.Vault && p.Pos.DistanceTo(PPos) < SightTiles * TS) yield return p;
+            if (Has(Tech.Sight) && p.Kind != PK.Chest && p.Kind != PK.Grove && p.Kind != PK.Vault && p.Pos.DistanceTo(PPos) < SightTiles * TS) yield return p;
         }
     }
 
     // ───────────────────────── цели ─────────────────────────
+    /// <summary>Ближайшее неисследованное обычное место для цели «Исследовать N мест» (тайники и сокровищницы, которые должны оставаться скрытыми, не берутся).</summary>
+    Poi NearestExplorePoi()
+    {
+        Poi best = null; float bd = float.MaxValue;
+        foreach (var p in W.Pois)
+        {
+            if (p.State >= 3 || p.Seen) continue;
+            if (p.Kind != PK.Chest && p.Kind != PK.Ruins && p.Kind != PK.House && p.Kind != PK.Camp && p.Kind != PK.Shrine && p.Kind != PK.Tower && p.Kind != PK.Glade && p.Kind != PK.Lore) continue;
+            float d = p.Pos.DistanceTo(PPos); if (d < bd) { bd = d; best = p; }
+        }
+        return best;
+    }
+
     Poi NearestPoi(PK kind, bool knownOnly)
     {
         Poi best = null; float bd = float.MaxValue;
@@ -251,9 +269,9 @@ public partial class Game
         Add("Медная кирка у печи [E]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
-        var techP = NearestPoi(PK.TechCache, true);
+        var techP = NearestPoi(PK.TechCache, false);                 // указатель на постамент есть, даже если он ещё не найден: игроку не нужно искать первый вслепую
         Add("Найти забытую технологию", BpDone.Contains("bp_hub") || !W.Pois.Exists(q => q.Kind == PK.TechCache && q.State < 3), "Светящийся постамент на открытой местности: подойдите и нажмите [E], он даёт чертёж «Логистика»", techP?.Pos);
-        var cap = NearestPoi(PK.Captive, true);
+        var cap = NearestPoi(PK.Captive, false);                      // метка на ближайшую клетку даже неоткрытую: игрок не ищет вслепую
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
         Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedShort(BCost(8, 1)));
         Add("Построить лесопилку [B]", HasBuilding(Tl.Sawmill), NeedShort(BCost(1, 1)));
@@ -261,8 +279,10 @@ public partial class Game
         Add("Железная кирка у печи [E]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
         Add("Построить кузницу [B]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
         Add("Подключить производство узлами [B]", HasBuilding(Tl.Hub) || !HasBuilding(Tl.Mine), BpDone.Contains("bp_hub") ? NeedShort(BCost(7, 1)) : "Нужен чертёж «Логистика» [J]");
+        { int fr = Frag.GetValueOrDefault("bp_refinery"); var pedestal = fr == 0 ? NearestPoi(PK.TechCache, false) : null;      // чертёж собирается из двух фрагментов: постамент в лесу и торговец/лавка
+          Add("Собрать чертёж цеха [J]", BpDone.Contains("bp_refinery") || !HasBuilding(Tl.Mine), $"Фрагменты {fr}/2: один на постаменте в лесу, второй продаёт торговец или лавка. Журнал чертежей — [J]", pedestal?.Pos); }
         Add("Построить цех переработки [B]", HasBuilding(Tl.Refinery), BpDone.Contains("bp_refinery") ? NeedShort(BCost(6, 1)) : "Нужен чертёж «Цех» [J]: шестерни и линзы для улучшений");
-        Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)");
+        Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)", NearestExplorePoi()?.Pos);
         Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
         Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
         Add("Победить Пожирателя Рощи", BossDown(1), "Заражённое дерево в роще на краю леса. Награда: первое ядро", boss1?.Pos);
@@ -272,7 +292,7 @@ public partial class Game
         {
             var nm = NearestUnlit(1);
             Add("Зажечь фонари шахт", LitIn(1) >= 3 || nm == null, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
-            Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник");
+            Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник", NearestPoi(PK.Puzzle, false)?.Pos);
             Add("Кристальная кирка у печи [E]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
             Add("Изучить «Кристальную оптику» [T]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
             Add("Победить Хранителя глубин", BossDown(2), "В глубоком озере шахт. Награда: Прожектор [R], ядро", BossLantern(2)?.Pos);
@@ -342,6 +362,6 @@ public partial class Game
     {
         int n = World.RegionOf(p.Tile.X) == 0 ? 1 : 2;
         SetObj(p.Tile.X, p.Tile.Y, Tl.ObeliskUsed); p.State = 3; GiveXp(20);
-        Give(It.AncCrystal, n, p.Pos); Found.Add("Древний кристалл"); Burst(p.Pos, new Color("#ffb0ff"), 24, 100); Sfx.Play("chest"); Save();
+        GiveLoot(It.AncCrystal, n, p.Pos); Found.Add("Древний кристалл"); Burst(p.Pos, new Color("#ffb0ff"), 24, 100); Sfx.Play("chest"); Save();
     }
 }

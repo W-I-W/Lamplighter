@@ -40,7 +40,7 @@ public partial class Game
     static readonly string[] BasicBps = { "bp_mod_multi", "bp_sword2", "bp_bow2", "bp_staff2", "bp_hub", "bp_refinery", "bp_stall", "bp_amp" };
     static readonly string[] AdvBps = { "bp_mod_ignite", "bp_mod_frost", "bp_mod_shock", "bp_mod_siphon", "bp_sword3", "bp_bow3", "bp_staff3", "bp_barrier", "bp_herolamp", "bp_cryo" };
     static readonly string[] CommonRelics = { "r_embersp", "r_frostshard", "r_beaconwick", "r_sparkcoil", "r_minercharm", "r_luckycoin", "r_merchant", "r_lifeseed", "r_ironheart", "r_keenedge", "r_stonehand", "r_windstep" };
-    static readonly string[] RareRelics = { "r_ashcrown", "r_rimemirror", "r_firstlight", "r_stormclaw", "r_shadowblood", "r_titanheart" };
+    static readonly string[] RareRelics = { "r_ashcrown", "r_rimemirror", "r_firstlight", "r_stormclaw", "r_shadowblood", "r_titanheart", "r_shadowcloak", "r_embers", "r_greedseal" };
 
     string PickUnowned(Random r, string[] pool)
     {
@@ -93,7 +93,7 @@ public partial class Game
             case "relic": GiveRelic(p[1]); break;
             case "weapon": GiveWeapon(p[1]); Found.Add("Оружие: " + Db.Weapon(p[1])?.Name); break;
             case "mod": { int m = int.Parse(p[1]); ModInv[m]++; Announce($"Модификатор: {Db.Mods[m].Name}", Db.Mods[m].Desc + " · [C] установить в оружие", Db.RarCol[1], "chest"); Found.Add("Модификатор: " + Db.Mods[m].Name); break; }
-            case "item": { int it = int.Parse(p[1]), n = int.Parse(p[2]); Give(it, n, at); if (it == It.AncCrystal) Found.Add("Древний кристалл"); break; }
+            case "item": { int it = int.Parse(p[1]), n = int.Parse(p[2]); GiveLoot(it, n, at); if (it == It.AncCrystal) Found.Add("Древний кристалл"); break; }
             case "coins": { int n = int.Parse(p[1]); Inv[It.Coins] += n; Texts.Add(new FText { P = at, S = $"+{n} монет", Life = 1.2f, C = It.Col[It.Coins] }); break; }
         }
         if (Found.Count > 60) Found.RemoveRange(0, Found.Count - 60);

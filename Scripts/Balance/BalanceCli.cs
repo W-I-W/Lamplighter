@@ -70,6 +70,7 @@ public static class BalanceCli
             case "optimize": return Optimize(a);
             case "prune": return Optimize(a, true);
             case "compare": return Compare(a);
+            case "relic-ab": return RelicAb(a);
             case "report": return ReportCmd(a);
             case "validate": return Validate.Run(a.I("n", 120), a.I("threads", 0));
             case "targets": return WriteTargets(a);
@@ -154,6 +155,30 @@ public static class BalanceCli
         Say($"готово за {s.Seconds:F1} с{(b.Cancelled ? " (ОСТАНОВЛЕНО)" : "")}; отчёты: {dir}");
         Say("RESULT " + JsonSerializer.Serialize(Brief(s)));
         return b.Cancelled ? 3 : 0;
+    }
+
+    /// <summary>A/B реликвий: каждому герою с первой минуты выдаётся одна реликвия; те же сиды, что у базового прогона. Печатает разницу по профилям.
+    /// Параметры: --relics r_a,r_b (по умолчанию три «стилевые»), --n, --seed, --profiles.</summary>
+    static int RelicAb(Args a)
+    {
+        var m = LoadModel(a); var tg = LoadTargets(a); int n = a.I("n", 1000); ulong seed = (ulong)a.I("seed", 1);
+        var ids = (a.S("relics") ?? "r_shadowcloak,r_embers,r_greedseal").Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var ct = StopToken(); var sb = new System.Text.StringBuilder();
+        Summary Go(string relic)
+        {
+            Campaign.ForceRelic = relic;
+            try { return Summary.Build(Runner.Simulate(m, Profiles(a), n, seed, a.I("threads", 0), ct), m, tg); } finally { Campaign.ForceRelic = null; }
+        }
+        Say($"relic-ab: {n} прогонов × {Profiles(a).Length} профилей, сид {seed}"); var bs = Go(null);
+        sb.AppendLine("| реликвия | профиль | часы (мед.) | Δ часов | смертей | Δ смертей | победа |"); sb.AppendLine("|---|---|---|---|---|---|---|");
+        foreach (var id in ids)
+        {
+            if (Db.Relic(id) == null) { Say("нет реликвии " + id); continue; }
+            var s = Go(id);
+            foreach (var p in s.Profiles) { var b0 = bs.Profiles.First(x => x.Profile == p.Profile); sb.AppendLine($"| {id} | {p.Profile} | {p.HoursMedian:F2} | {p.HoursMedian - b0.HoursMedian:+0.00;-0.00;0.00} ({(b0.HoursMedian > 0 ? p.HoursMedian / b0.HoursMedian - 1 : 0):+0%;-0%;0%}) | {p.DeathsMean:F2} | {p.DeathsMean - b0.DeathsMean:+0.00;-0.00;0.00} | {p.WinRate:P0} |"); }
+        }
+        string dir = Path.Combine(a.S("out") ?? OutRoot, a.S("name") ?? "relic_ab"); Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "relic_ab.md"), sb.ToString());
+        Say("\n" + sb); Say("отчёт: " + dir); return 0;
     }
 
     static void AddBenchFindings(Summary s, Extras ex, Targets tg)

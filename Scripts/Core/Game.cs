@@ -180,6 +180,14 @@ public partial class Game : Node2D
         UpdateChunks(0, true);
     }
 
+    /// <summary>Скалы под гигантским деревом: стена нужна для коллизии, но рисунок торчит по бокам сужающегося ствола — не рисуем.</summary>
+    bool HiddenCliff(int x, int y)
+    {
+        if (W.Get(x, y) != Tl.Cliff) return false;
+        for (int d = -1; d <= 1; d++) if (W.ByTile.TryGetValue(World.Key(x + d, y + 1), out var p) && p.Kind == PK.GiantTree) return true;
+        return false;
+    }
+
     static int AtlasX(Tl t, int lv = 1) => t switch
     {
         Tl.Tree => Art.BigTree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
@@ -214,7 +222,7 @@ public partial class Game : Node2D
         {
             var lc = new Vector2I(x % CS, y % CS);
             if (t != Tl.None) ch.F.EraseCell(lc);
-            if (t == Tl.None || t == Tl.SecretCache || IsPlantTile(t)) ch.O.EraseCell(lc); else ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
+            if (t == Tl.None || t == Tl.SecretCache || IsPlantTile(t) || HiddenCliff(x, y)) ch.O.EraseCell(lc); else ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
         }
         SetTreeCell(x, y);
     }
@@ -316,6 +324,8 @@ public partial class Game : Node2D
         if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         if (FinStage == 1) UpdateFinale(dt);
 
+        if (hitStop > 0) { hitStop -= dt; dt *= .05f; }                         // hit-stop: мир почти замирает на доли секунды при сильном ударе
+
         UpdatePlayer(dt);
         UpdateAncients(dt);
         UpdateLamps(dt);
@@ -342,7 +352,7 @@ public partial class Game : Node2D
         UpdateSmelting(dt);
         UpdateRegion(dt);
         UpdateMap(dt);
-        UpdateFx(dt);
+        UpdateFx(dt); UpdateFlies(dt);
         UpdateUnlocks(dt);
         UpdateUiScale();
         OverUi = UiOver(GetViewport().GetMousePosition() / UiScaleVp);
@@ -462,7 +472,7 @@ public partial class Game : Node2D
 
         if (Hp < MaxHp)
         {
-            if (IsLit(PPos)) Hp = Mathf.Min(MaxHp, Hp + 2f * dt);
+            if (IsLit(PPos) && regenDelay <= 0) Hp = Mathf.Min(MaxHp, Hp + 1.5f * dt);          // свет лечит только вне боя: стоя в свете под ударами исцеляться нельзя
             else if (regenDelay <= 0 && E(Tech.Regen) > 0) Hp = Mathf.Min(MaxHp, Hp + RegenPerSec * dt);
         }
 
@@ -476,10 +486,10 @@ public partial class Game : Node2D
     public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg")) * Tune.T.FistDamageMul;
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
-        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave || t == Tl.BossTotem;
+        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen;
 
     /// <summary>Что можно ломать оружием в руках (очень медленно): мягкие блоки. Руда и кристаллы только инструментом.</summary>
-    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin || t == Tl.Grave || t == Tl.BossTotem;
+    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen;
 
     static int TierNeed(Tl t) => t switch
     {
@@ -558,7 +568,7 @@ public partial class Game : Node2D
             MineProg = 0; MineTile = new Vector2I(-1, -1); return;
         }
         if (tile != MineTile) { MineStop(); MineTile = tile; MineProg = MineRecall(tile); }
-        MineNeed = t switch { Tl.BossTotem => 2.5f, Tl.Grave => 1.4f, Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
+        MineNeed = t switch { Tl.BossTotem => 2.5f, Tl.Grave => 1.4f, Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.ChestOpen => 1.0f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         MineNeed *= Tune.T.MineTimeMul;                                    // начало игры: добыча медленнее, чтобы сырьё не набиралось слишком легко
         Swing = .2f; Diag.Add("mine_secs", dt);
         if (MineStrike(dt))
@@ -596,6 +606,7 @@ public partial class Game : Node2D
             case Tl.Stone: Give(It.Stone, rng.RandiRange(1, 2), c); GiveXp(4); break;
             case Tl.Ruin: Give(It.Stone, 2, c); GiveXp(2); break;
             case Tl.Rubble: Give(It.Stone, 1, c); GiveXp(1); break;
+            case Tl.ChestOpen: Give(It.Wood, rng.RandiRange(2, 3), c); GiveXp(1); break;           // пустой сундук разбирается на доски
             case Tl.Copper: Give(It.CopperOre, rng.RandiRange(1, 2), c); GiveXp(6); break;
             case Tl.Iron: Give(It.IronOre, rng.RandiRange(1, 2), c); GiveXp(10); break;
             case Tl.Lumen: Give(It.Shard, rng.RandiRange(1, 2), c); GiveXp(15); break;
@@ -625,7 +636,7 @@ public partial class Game : Node2D
         }
     }
 
-    bool inBreak;
+    bool inBreak, inLoot;
     /// <summary>Выпадение сырья при добыче блоков: множитель из tuning.tres, дробная часть — случайно, минимум 1 (осколки света, реликвии и ядра не меняются).</summary>
     int Yield(int item, int n)
     {
@@ -636,10 +647,12 @@ public partial class Game : Node2D
     public void Give(int item, int n, Vector2 at)
     {
         if (inBreak) n = Yield(item, n);
-        Inv[item] += n; Diag.Count("give_" + item);
-        Texts.Add(new FText { P = at, S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });
+        if ((inBreak || inLoot) && SpawnLoot(item, n, at)) { Diag.Count("give_" + item); Diag.Mark("first_gather"); if (IsRareItem(item)) RareGiveFx(item, at); return; }          // добыча падает на землю: игрок подбирает её сам
+        Inv[item] += n; Diag.Count("give_" + item); Diag.Mark("first_gather");
+        if (!inBreak || Settings.Fx <= 0f) Texts.Add(new FText { P = at, S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });          // при добыче вместо надписи «+N» летят значки ресурсов
         if (IsRareItem(item)) RareGiveFx(item, at);
-        Sfx.Play("pickup", -6, 1f + .05f * (item % 5));
+        if (inBreak && Settings.Fx > 0f) SpawnFlies(item, n, at);                      // добыча: звук подбора играет, когда значок долетит
+        else Sfx.Play("pickup", -6, 1f + .05f * (item % 5));
     }
 
     public void GiveXp(float x, bool raw = false)
@@ -648,8 +661,8 @@ public partial class Game : Node2D
         Xp += raw ? x : x * Tune.T.XpMul;
         while (Xp >= XpNeed)
         {
-            Xp -= XpNeed; Level++; MaxHp += 10; ApplyRelicHp(); Hp = MaxHp;
-            Toast($"Уровень {Level}! Здоровье +10, добыча и урон выросли", MsgTone.Gold);
+            Xp -= XpNeed; Level++; Diag.Mark("first_levelup"); MaxHp += 10; ApplyRelicHp(); Hp = MaxHp;
+            Toast($"Уровень {Level}", MsgTone.Gold);
             Texts.Add(new FText { P = PPos + new Vector2(0, -16), S = "УРОВЕНЬ!", Life = 1.6f, C = new Color("#ffe27a") });
             Fx("level_up", PPos);
         }
@@ -657,6 +670,9 @@ public partial class Game : Node2D
 
     /// <summary>Короткое сообщение игроку: попадает в журнал в левом нижнем углу (см. ChatHud), отдельных панелей нет.</summary>
     public void Toast(string s, MsgTone tone = MsgTone.Info) => Notify.Post(MsgKind.System, tone, Loc.T(s));
+
+    /// <summary>Подсказка, которая показывается герою один раз (запоминается в сохранении героя через HintsShown).</summary>
+    public void HintOnce(string key, string s) { if (HintsShown.Add("h_" + key)) Toast(s); }
 
     /// <summary>Событие игры: строка в журнале (цвет по смыслу звука/названия). Опасность боя и победы над стражами дополнительно показываются коротким баннером сверху.</summary>
     public void Announce(string title, string sub, Color c, string sfx = "discover")
@@ -709,8 +725,8 @@ public partial class Game : Node2D
         if (!Can(CostFurnace)) { Fail("Для печи нужно: 10 камня и 5 дерева"); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(CostFurnace); SetObj(t.Value.X, t.Value.Y, Tl.Furnace); HasFurnace = true;
-        Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#ff9a2e"), 14, 60); Sfx.Play("build");
-        GiveXp(20); Toast("Печь готова! Плавка: [E] (руда + дерево)");
+        PlaceFx(t.Value, new Color("#ff9a2e"), 1.3f); Sfx.Play("build");
+        GiveXp(20); Toast("Печь готова");
         Save();
     }
 
@@ -747,7 +763,6 @@ public partial class Game : Node2D
         }
         if (loaded == 0) { Fail("Нужна руда и дерево (топливо): по 1 дереву на слиток"); return; }
         SmeltAt = at; Sfx.Play("build", -4);
-        Toast($"Плавка: {loaded} шт.");
     }
 
     void UpdateSmelting(float dt)

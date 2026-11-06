@@ -47,13 +47,13 @@ public partial class Game
     // ───────────────────────── взаимодействие ─────────────────────────
     void BeaconIx(Ix ix)
     {
-        FastTravelIx(W.Ancients[0], ix);
+        FastTravelIx(W.Ancients[0], ix);          // быстрый путь везде на [E]; улучшение маяка — на [U]
         ix.Lines.Add($"Центральный маяк · уровень {BeaconLevel}/6 · радиус {(int)BeaconRadius(BeaconLevel)}");
         if (BeaconLevel < 6)
         {
-            ix.Action("E", "Улучшить маяк").Need((It.Ic(It.Core) + It.Names[It.Core], 1, Inv[It.Core]));
+            ix.Action("U", "Улучшить маяк").Need((It.Ic(It.Core) + It.Names[It.Core], 1, Inv[It.Core]));
             if (BeaconOpens[BeaconLevel] != "") ix.Gives("Откроет", BeaconOpens[BeaconLevel]); else ix.Gives("Результат", "Волна света очистит мир", TipRole.Key);
-            ix.E = UpgradeBeacon;
+            ix.U = UpgradeBeacon;
         }
     }
 

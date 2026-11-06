@@ -36,7 +36,7 @@ public partial class Game
         if (Inv[It.Core] > 0 && BeaconLevel < 6) Hint("core", It.Ic(It.Core) + "Ядро света! Отнесите к маяку, [E]");
         if (Buildings.Count >= 3 && HasBuilding(Tl.Warehouse)) Hint("auto", "Производство идёт само. Управление — [P]");
         if (TotalLit >= 3 && BossDown(1) == false) Hint("boss1", "Страж леса у особого фонаря. Готовьте оружие [C]");
-        if (BossDown(1)) Hint("travel", "Быстрый путь: [U] у зажжённого фонаря");
+        if (BossDown(1)) Hint("travel", "Быстрый путь: [E] у зажжённого фонаря");
     }
 
     // ───────────────────────── быстрый путь ─────────────────────────
@@ -45,17 +45,16 @@ public partial class Game
     bool FastOk(Ancient a)
     {
         if (!a.Lit || (a.Boss && !BossDown(a.BossId))) return false;
-        if (a == W.Ancients[0]) return true;
-        return BossDown(a.Region + 1);
+        return true;                                                       // любой зажжённый фонарь (фонарь стража — после победы над стражем) годится для переноса
     }
 
     List<Ancient> TravelList() { var l = new List<Ancient>(); foreach (var a in W.Ancients) if (FastOk(a)) l.Add(a); return l; }
 
-    void FastTravelIx(Ancient from, Ix ix)
+    void FastTravelIx(Ancient from, Ix ix, bool viaE = true)
     {
         var l = TravelList(); if (!l.Contains(from) || l.Count < 2) return;
-        ix.Lines.Add($"[U] Быстрый путь: выбрать фонарь на карте ({l.Count - 1} доступно)");
-        ix.U = () => OpenTravelMap(from);
+        ix.Lines.Add($"[{(viaE ? "E" : "U")}] Быстрый путь: выбрать фонарь на карте ({l.Count - 1} доступно)");
+        if (viaE) ix.E = () => OpenTravelMap(from); else ix.U = () => OpenTravelMap(from);
     }
 
     // ───────────────────────── карта быстрого пути ─────────────────────────

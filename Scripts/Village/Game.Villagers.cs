@@ -351,7 +351,7 @@ public partial class Game
     void NoticeSomething()
     {
         Poi best = null; float bd = 70 * TS;
-        foreach (var p in W.Pois) { if (p.Seen || p.Revealed || p.State >= 3 || p.Kind == PK.Vault || p.Kind == PK.Secret) continue; float d = p.Pos.DistanceTo(TileCenter(W.Spawn.X, W.Spawn.Y)); if (d < bd) { bd = d; best = p; } }
+        foreach (var p in W.Pois) { if (p.Seen || p.Revealed || p.State >= 3 || p.Kind == PK.Vault || p.Kind == PK.Secret || p.Kind == PK.Chest) continue; float d = p.Pos.DistanceTo(TileCenter(W.Spawn.X, W.Spawn.Y)); if (d < bd) { bd = d; best = p; } }
         if (best == null) return;
         best.Revealed = true; Toast($"Житель заметил неподалёку: {PoiName(best.Kind)} — метка на карте"); VillageSay(PPos, "Кажется, там что-то светится...");
     }

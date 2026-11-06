@@ -79,6 +79,7 @@ public sealed class CombatSim
     {
         if (!e.Alive) return;
         if (melee && e.Burn > 0 && P.Has(Tech.FlameEdge)) dmg *= 1f + .06f * P.Lv(Tech.FlameEdge);
+        if (P.Flags.Contains("DarkHunter")) dmg *= DarkFightShare * 1.25f +(1f - DarkFightShare) * .9f;          // Game.Hurt: «Плащ теней»; бои идут в основном в темноте
         float m = DamageMul(e, melee, light, out _); dmg *= m; ApplyDamage(e, dmg);
         // эффекты попадания (Game.Hurt + Game.OnHit)
         if (melee && P.Has(Tech.FlameEdge)) e.Burn = Math.Max(e.Burn, P.Se(Tech.FlameEdge));
@@ -112,18 +113,25 @@ public sealed class CombatSim
         ApplyDamage(f, dmg * DamageMul(f, false, light, out _));
     }
 
+    // Допущения модели для реликвий-флагов (в игре зависят от положения игрока; уточнить по телеметрии)
+    const float DarkFightShare = .85f;      // доля боя, идущая в темноте (остальное — у края света)
+    const int EmberVictims = 2;             // сколько ближайших врагов задевает пламя «Угольков»
+    const float EmberDamage = 20f;          // зона 14 урона/с × 4 с × ~35% времени внутри
+
     void Kill(Foe e)
     {
         if (e.Dead) return; e.Dead = true; S.Kills++; P.Kills++;
         if (e.IsBoss) return;
         var d = e.Def; float xp = d.Xp * (1f + .3f * Region);
+        bool greed = P.Flags.Contains("Greed"); if (greed) xp *= 2f;                                         // Game.KillRewards: опыт и шанс добычи ×1,6
+        if (P.Flags.Contains("KillEmbers")) { int n = 0; foreach (var o in Foes) { if (n >= EmberVictims) break; if (o.Alive && o != e && !o.IsBoss && o.Arrive <= 0) { TickDamage(o, EmberDamage); n++; } } }
         P.GiveXp(xp); S.XpGained += xp * T.XpMul;
         if (P.E(Fxk.Blast) > 0 && !inBlast) { inBlast = true; float dmg = P.Cur != null ? P.WeaponDmg(P.Cur) : P.PlayerDamage; foreach (var o in Foes) if (o.Alive && o != e && o.Arrive <= 0) Hurt(o, dmg * (.4f + .15f * P.E(Fxk.Blast)), false); inBlast = false; }
         float h0 = P.Hp;
         if (P.N("KillHeal") > 0) P.Hp = Math.Min(P.MaxHp, P.Hp + P.N("KillHeal"));
         if (P.Has(Tech.Reaper)) P.Hp = Math.Min(P.MaxHp, P.Hp + P.ReaperHeal);
         S.Healed += P.Hp - h0;
-        if (r.Chance(d.ShardChance)) { int n = d.Kind == "Golem" ? 2 : 1; P.Inv[It.Shard] += n; S.Shards += n; }
+        if (r.Chance(greed ? Math.Min(1f, d.ShardChance * 2f) : d.ShardChance)) { int n = d.Kind == "Golem" ? 2 : 1; P.Inv[It.Shard] += n; S.Shards += n; }
         if (d.Kind == "Weaver" || d.Kind == "Stalker") if (r.Chance(.5f)) { P.Inv[It.Shard]++; S.Shards++; }
         if (d.ExtraItem != null && r.Chance(d.ExtraDrop)) P.Inv[ItemId(d.ExtraItem)]++;
         if (e.Elite && e.EMod > 0)
@@ -147,6 +155,7 @@ public sealed class CombatSim
     {
         if (invuln > 0) return;
         dmg = Math.Max(dmg, T.EnemyMinHit);
+        if (P.Flags.Contains("Greed")) dmg *= 1.2f;                                                               // Game.HurtPlayer: «Печать жадности»
         if (fire) { if (P.Has(Tech.Fireproof)) return; if (P.Has(Tech.HeatShield)) dmg *= P.HeatTaken; dmg *= 1f - P.N("HeatResist"); }
         dmg = Math.Max(0, dmg) * P.FearMul; P.Hp -= dmg; S.DamageTaken += dmg; S.Hits++; invuln = T.HitInvuln; noDmgT = 0;
         if (cold) chillT = Math.Max(chillT, 2.2f * (P.Has(Tech.FrostArmor) ? P.ColdTaken : 1f));
@@ -169,7 +178,7 @@ public sealed class CombatSim
     public void Idle(float s)
     {
         float before = noDmgT; noDmgT += s; chillT -= s; P.DashCd = Math.Max(0, P.DashCd - s); P.SpinCd = Math.Max(0, P.SpinCd - s); P.FlareCd = Math.Max(0, P.FlareCd - s); P.PulseCd = Math.Max(0, P.PulseCd - s);
-        if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? 2f * s : P.RegenSkill ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec : 0f));
+        if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * 1.5f : P.RegenSkill ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec : 0f));
     }
 
     // ───────────────────────── шаг боя ─────────────────────────
@@ -179,7 +188,7 @@ public sealed class CombatSim
         invuln -= dt; noDmgT += dt; chillT -= dt; atkCd -= dt; reactT -= dt;
         P.DashCd = Math.Max(0, P.DashCd - dt); P.SpinCd = Math.Max(0, P.SpinCd - dt); P.FlareCd = Math.Max(0, P.FlareCd - dt); P.PulseCd = Math.Max(0, P.PulseCd - dt);
         // восстановление: в свете 4/с, в темноте 0,35/с после 5 с без урона (Game.Update)
-        if (P.Hp < P.MaxHp) { if (Lit) P.Hp = Math.Min(P.MaxHp, P.Hp + 2f * dt); else if (noDmgT > T.RegenDelay && P.RegenSkill) P.Hp = Math.Min(P.MaxHp, P.Hp + P.RegenPerSec * dt); }
+        if (P.Hp < P.MaxHp) { if (Lit && noDmgT > T.RegenDelay) P.Hp = Math.Min(P.MaxHp, P.Hp + 1.5f * dt); else if (noDmgT > T.RegenDelay && P.RegenSkill) P.Hp = Math.Min(P.MaxHp, P.Hp + P.RegenPerSec * dt); }
         int contact = 0, busy = 0; Foe target = null;
         foreach (var f in Foes)
         {

@@ -40,7 +40,10 @@ public partial class Game
     /// <summary>Кому достаётся убийство: тому, кто нанёс последний удар (пока он в игре), иначе хосту.</summary>
     long KillerOf(Enemy e) => e.LastHitBy > 1 && e.LastHitBy != LocalPeer && PosOf(e.LastHitBy) != null ? e.LastHitBy : LocalPeer;
 
-    void LootFor(Enemy e, int item, int n, Vector2 at) => Give(item, n, at);          // добычу считает тот, кому достаётся убийство (см. KillEnemy)
+    void LootFor(Enemy e, int item, int n, Vector2 at) => GiveLoot(item, n, at);
+
+    /// <summary>Выдать ресурс «на землю»: он падает рядом и ждёт, пока игрок подберёт (награды боссов, сундуков, событий, добыча с врагов). Гость и тесты получают сразу.</summary>
+    public void GiveLoot(int item, int n, Vector2 at) { inLoot = true; try { Give(item, n, at); } finally { inLoot = false; } }          // добычу считает тот, кому достаётся убийство (см. KillEnemy)
 
     /// <summary>Гость: хост засчитал вам убийство — награда считается у вас по вашим умениям.</summary>
     public void NetKillCredit(int kind, int emod, string evKind, int evSeed, bool carrier, float x, float y)

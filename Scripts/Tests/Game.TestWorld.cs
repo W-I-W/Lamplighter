@@ -51,6 +51,17 @@ public partial class Game
                 Log($"seed {seed}: max gap to landmark per region=[{string.Join(",", gap)}] cells>36: [{string.Join(",", big)}]");
                 Log($"seed {seed}: ancients ok={ok} bad={bad} bosses={bosses}/5 pois={w.Pois.Count} badPois={badPoi} perRegion=[{string.Join(",", perReg)}] arena={w.IceArena}");
                 if (bad > 0 || bosses < 5 || badPoi > 0) fails++;
+                foreach (var (et, ed) in w.Emitters)                                  // постоянный луч не должен упираться в сундук: иначе приёмник не зажечь, а сундук «в луче»
+                {
+                    var cur = et; var dd = ed; bool chestHit = false;
+                    for (int i = 0; i < 26 && !chestHit; i++)
+                    {
+                        var n = cur + dd; var tt = w.Get(n.X, n.Y);
+                        if (tt == Tl.Mirror1 || tt == Tl.Mirror2) { dd = World.Reflect(tt, dd); cur = n; continue; }
+                        if (tt == Tl.Chest) chestHit = true; if (World.Blocks(tt)) break; cur = n;
+                    }
+                    if (chestHit) { Log($"seed {seed}: CHEST ON BEAM LANE emitter {et}"); fails++; }
+                }
             }
             // чертежи: каждый должен продаваться в лавке/у торговца либо выдаваться фиксированными находками
             BeaconLevel = 6; var shop = new List<Offer>(); var saveEp = TradeEpoch; var sl = Buildings.Count;

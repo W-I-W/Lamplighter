@@ -48,12 +48,7 @@ public partial class Game
     public Vector2I RiftGateTile()
     {
         var bc = W.Ancients[0].Tile;
-        for (int r = 4; r <= 14; r++)
-            for (int a = 0; a < 24; a++)
-            {
-                var t = bc + new Vector2I((int)Math.Round(Math.Cos(a * Math.PI / 12) * r), (int)Math.Round(Math.Sin(a * Math.PI / 12) * r));
-                if (W.Get(t.X, t.Y) == Tl.RiftGate) return t;
-            }
+        var have = AllRiftGates(); if (have.Count > 0) return have[0];                // уже стоящие врата ищутся по всей окрестности: при постановке угол сдвинут, и кольцо без сдвига их не находило, из-за чего после перезахода вырастали вторые
         for (int r = 5; r <= 14; r++)
             for (int a = 0; a < 24; a++)
             {
@@ -65,10 +60,19 @@ public partial class Game
         return new Vector2I(-1, -1);
     }
 
+    List<Vector2I> AllRiftGates()
+    {
+        var l = new List<Vector2I>(); var bc = W.Ancients[0].Tile;
+        for (int y = bc.Y - 16; y <= bc.Y + 16; y++) for (int x = bc.X - 16; x <= bc.X + 16; x++) if (W.Get(x, y) == Tl.RiftGate) l.Add(new Vector2I(x, y));
+        l.Sort((a, c) => a.DistanceSquaredTo(bc).CompareTo(c.DistanceSquaredTo(bc)));
+        return l;
+    }
+
     void EnsureRiftGate()
     {
         if (!Finished) return;
         var t = RiftGateTile(); if (t.X < 0) return;
+        var all = AllRiftGates(); for (int i = 1; i < all.Count; i++) SetObj(all[i].X, all[i].Y, Tl.None);          // лишние врата от прошлых запусков убираем
         if (W.Get(t.X, t.Y) != Tl.RiftGate) { SetObj(t.X, t.Y, Tl.RiftGate); Burst(TileCenter(t.X, t.Y), new Color("#c070ff"), 24, 90); }
     }
 
@@ -115,18 +119,32 @@ public partial class Game
         if (Boss != null) { Fail("Сначала разберитесь с хранителем рядом"); return; }
         var r = new Random(System.Environment.TickCount);
         RiftAffix[0] = r.Next(Affixes.Length); do RiftAffix[1] = r.Next(Affixes.Length); while (RiftAffix[1] == RiftAffix[0]);
-        RiftOn = true; RiftTier = tier; RiftWave = 0; RiftWaves = 3 + (tier >= 4 ? 1 : 0) + (tier >= 7 ? 1 : 0); RiftState = 0; riftSpawned = false; riftWaveT = 3.5f;
+        RiftOn = true; RiftTier = tier; RiftWave = 0; RiftWaves = 3 + (tier >= 4 ? 1 : 0) + (tier >= 7 ? 1 : 0); RiftState = 0; riftSpawned = false; riftQuota = 0; riftWaveT = 3.5f;
         riftReturn = PPos; riftEv = new GEvent { Kind = "riftx" };
         ClearTemp(); Enemies.Clear(); Projs.Clear(); Zones.Clear(); Boss = null; CloseWindows();
         var c = W.HeartArena; PPos = TileCenter(c.X, c.Y + 3); cam.ResetSmoothing(); Flash = .5f; Hp = MaxHp; Invuln = 2f;
         Announce($"Разлом Тьмы · уровень {tier}", $"Враги: {AffixNames[RiftAffix[0]]} и {AffixNames[RiftAffix[1]]}. Волн: {RiftWaves}. Прогресс мира не затронут", new Color("#c070ff"), "boss");
     }
 
+    int riftQuota, riftEliteDue; float riftSpawnT;                                     // сколько врагов волны ещё не вышло из разлома; им управляет подпитка
+
+    /// <summary>Волна-«месиво»: огромная толпа. Часть врагов выходит сразу, остальные вливаются по мере того, как герой косит передних, — поле почти всегда забито.</summary>
     void RiftSpawnWave()
     {
         RiftWave++; riftSpawned = true;
-        int n = 3 + RiftTier + RiftWave; var c = W.HeartArena; float scale = 1f + .22f * RiftTier;
-        for (int i = 0; i < n; i++)
+        riftQuota = 8 + 3 * RiftTier + 4 * RiftWave; riftEliteDue = RiftWave == RiftWaves ? 1 : 0; riftSpawnT = 0;
+        RiftFeed(true);
+        Sfx.Play("boss", -5, 1.3f);
+    }
+
+    int RiftCap => 12 + 2 * RiftTier;
+    int RiftAlive => Enemies.FindAll(e => e.Ev == riftEv && e.Hp > 0).Count;
+
+    void RiftFeed(bool burst)
+    {
+        var c = W.HeartArena; float scale = 1f + .15f * RiftTier;                       // врагов больше, поэтому каждый чуть слабее прежнего
+        int room = RiftCap - RiftAlive, batch = burst ? room : Mathf.Min(room, rng.RandiRange(2, 4));
+        for (int i = 0; i < batch && riftQuota > 0; i++)
         {
             Vector2 pos = TileCenter(c.X, c.Y);
             for (int tries = 0; tries < 20; tries++)
@@ -135,11 +153,10 @@ public partial class Game
                 if (W.Walkable(t.X, t.Y)) { pos = p; break; }
             }
             var pool = Affixes[RiftAffix[rng.Randf() < .5f ? 0 : 1]];
-            var e = SpawnEnemy(pos, pool[rng.RandiRange(0, pool.Length - 1)], null, scale); e.Ev = riftEv; e.Age = -.8f;
+            var en = SpawnEnemy(pos, pool[rng.RandiRange(0, pool.Length - 1)], null, scale); en.Ev = riftEv; en.Age = -.8f; riftQuota--;
             Burst(pos, new Color("#c070ff"), 8, 60);
-            if (RiftWave == RiftWaves && i == 0) { e.Elite = true; e.Hp = e.MaxHp = e.MaxHp * 2.5f; }
+            if (riftEliteDue > 0) { riftEliteDue = 0; en.Elite = true; en.Hp = en.MaxHp = en.MaxHp * 2.5f; }
         }
-        Sfx.Play("boss", -5, 1.3f); Toast($"Разлом: волна {RiftWave}/{RiftWaves}");
     }
 
     void UpdateEndgame(float dt)
@@ -155,7 +172,8 @@ public partial class Game
         if (RiftState == 1) return;
         riftWaveT -= dt;
         if (!riftSpawned && riftWaveT <= 0 && RiftWave < RiftWaves) RiftSpawnWave();
-        if (riftSpawned && !Enemies.Exists(e => e.Ev == riftEv))
+        if (riftSpawned && riftQuota > 0) { riftSpawnT -= dt; if (riftSpawnT <= 0) { riftSpawnT = .6f; RiftFeed(false); } }
+        if (riftSpawned && riftQuota <= 0 && !Enemies.Exists(e => e.Ev == riftEv))
         {
             riftSpawned = false;
             if (RiftWave >= RiftWaves) RiftWin();
@@ -184,7 +202,7 @@ public partial class Game
         int tier = RiftTier; var r = new Random(System.Environment.TickCount);
         RiftClears++; bool first = (RiftFirst & (1 << tier)) == 0; RiftFirst |= 1 << tier;
         if (tier >= RiftUnlocked && tier < MaxRiftTier) RiftUnlocked = tier + 1;
-        int shards = 3 + 2 * tier; Give(It.RiftShard, shards, PPos + new Vector2(0, -10));
+        int shards = 3 + 2 * tier; GiveLoot(It.RiftShard, shards, PPos + new Vector2(0, -10));
         Inv[It.Coins] += 80 * tier; GiveXp(100 * tier); if (tier >= 3) Give(It.AncCrystal, 1, PPos + new Vector2(8, -8));
         GrantTag(RollTag(r, 3, .3f + .05f * tier), PPos);
         string extra = "";
@@ -211,7 +229,7 @@ public partial class Game
 
     void RiftIx(Ix ix)
     {
-        int left = Enemies.FindAll(e => e.Ev == riftEv).Count;
+        int left = Enemies.FindAll(e => e.Ev == riftEv).Count + riftQuota;
         ix.Lines.Add($"Разлом уровня {RiftTier}: волна {RiftWave}/{RiftWaves} · врагов: {left}");
         ix.Lines.Add("[E] Покинуть разлом (без награды)"); ix.E = () => RiftEnd(false);
     }

@@ -141,7 +141,7 @@ public partial class Game
     {
         var b = new Building { Type = BTypes[bk], X = t.X, Y = t.Y };
         Buildings.Add(b); SetObj(b.X, b.Y, b.Type); netT = 0;
-        Burst(b.Pos, new Color("#d9b27c"), 16, 70); Sfx.Play("build"); GiveXp(30);
+        PlaceFx(t, null, 1.6f); Sfx.Play("build"); GiveXp(30);
         Announce($"Построено: {BNames[bk]}", BDesc[bk][0] + (bk == 7 ? " · дальше ставьте узлы цепочкой" : ""), new Color("#d9b27c"), "build");
         Save(); return b;
     }
@@ -390,8 +390,7 @@ public partial class Game
         for (int i = 0; i < Techs.Length; i++)
             if (!Techs[i].Reward && (Ann & (1L << (12 + i))) == 0 && Upgrades.IsPageUnlocked(Techs[i].Page) && Techs[i].Ok(this))
             {
-                Ann |= 1L << (12 + i);
-                Announce("Доступно улучшение: " + Techs[i].Name, "Меню [T], вкладка «" + TechPages[Techs[i].Page] + "»", new Color("#8ff0ff"), "tech");
+                Ann |= 1L << (12 + i);                                      // отмечаем без сообщения: список улучшений и цели сами показывают, что доступно
             }
         if (Has(Tech.Spark) && (Ann & TutExplored) == 0 && PPos.DistanceTo(W.Ancients[0].Pos) > AncientR(W.Ancients[0]) + 12f) Ann |= TutExplored;
         Goals = BuildGoals();                             // у каждого игрока свои задания: по его инвентарю, оружию и навыкам, а мир (постройки, фонари, стражи) общий

@@ -124,6 +124,7 @@ public sealed partial class World
             if (req[i].X < cx[0]) k = 0;
             MakeReachable(starts[k], req[i]);
         }
+        ClearBeamChests();
         Traps.RemoveAll(t => Get(t.X, t.Y) != Tl.None);
     }
 

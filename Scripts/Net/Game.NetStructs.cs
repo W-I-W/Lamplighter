@@ -13,7 +13,7 @@ public partial class Game
     byte[] shObj; readonly Dictionary<int, (int k, int l, int d)> shLamps = new(); float netStructT;
 
     static readonly HashSet<Tl> PlaceSet = new() { Tl.Furnace, Tl.Lantern, Tl.CombatLantern, Tl.CrystalLantern, Tl.AmpCrystal, Tl.BarrierPost, Tl.Statue, Tl.Fountain, Tl.Banner, Tl.Mirror1, Tl.Mirror2 };
-    static readonly HashSet<Tl> MineSet = new() { Tl.Tree, Tl.Pine, Tl.DeadTree, Tl.Stone, Tl.Copper, Tl.Iron, Tl.Lumen, Tl.Aether, Tl.CrystalOre, Tl.SilverOre, Tl.Rubble, Tl.Ruin, Tl.Obsidian, Tl.Ember, Tl.MeteorOre, Tl.FrostOre, Tl.IceBlock,
+    static readonly HashSet<Tl> MineSet = new() { Tl.Tree, Tl.Pine, Tl.DeadTree, Tl.Stone, Tl.Copper, Tl.Iron, Tl.Lumen, Tl.Aether, Tl.CrystalOre, Tl.SilverOre, Tl.Rubble, Tl.ChestOpen, Tl.Ruin, Tl.Obsidian, Tl.Ember, Tl.MeteorOre, Tl.FrostOre, Tl.IceBlock,
         Tl.Furnace, Tl.Lantern, Tl.CombatLantern, Tl.CrystalLantern, Tl.AmpCrystal, Tl.BarrierPost, Tl.Statue, Tl.Fountain, Tl.Banner, Tl.Mirror1, Tl.Mirror2, Tl.ShadowPillar, Tl.Grave, Tl.BossTotem };
 
     /// <summary>Разрешённые для синхронизации переходы клетки: поставить объект на пустое место (или повернуть зеркало) и убрать добываемый или поставленный объект.</summary>

@@ -40,7 +40,7 @@ public partial class Game
         var t = PlaceTarget(); if (t == null) return;
         Pay(BarrierCost); SetObj(t.Value.X, t.Value.Y, Tl.BarrierPost); Posts.Add(t.Value); GiveXp(10);
         Burst(TileCenter(t.Value.X, t.Value.Y), new Color("#8ff0ff"), 14, 70); Sfx.Play("build", -2, 1.3f); RecomputeLightTech();
-        Toast("Два столба в линию (до 9 клеток) задерживают теней");
+        HintOnce("pillar_line", "Два столба в линию (до 9 клеток) задерживают теней");
     }
 
     static readonly int[][][] HeroCost = { C(It.Lens, 1, It.Copper, 4), C(It.Lens, 2, It.Silver, 3), C(It.Lens, 3, It.AncCrystal, 1) };

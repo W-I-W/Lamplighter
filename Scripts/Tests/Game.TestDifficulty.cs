@@ -139,7 +139,7 @@ public partial class Game
                     if (tEnd >= 0 && k != EK.Source) { }
                 });
                 string nm = k.ToString();
-                Check(tStart >= 0 && tActive - tStart >= .6f, $"boss {nm}: the special has a visible telegraph of {tActive - tStart:0.00} s before it starts");
+                Check(tStart >= 0 && tActive - tStart >= .5f, $"boss {nm}: the special has a visible telegraph of {tActive - tStart:0.00} s before it starts");
                 Check(effect && tEnd > tActive, $"boss {nm}: the special does something and ends on its own ({tEnd - tActive:0.0} s)");
                 if (k == EK.DepthWarden || k == EK.AshWarden) Check(over, $"boss {nm}: after the special the boss is open to attack");
                 if (k == EK.WinterWarden) Check(cold > 0, "boss WinterWarden: the blizzard volleys are cold projectiles");

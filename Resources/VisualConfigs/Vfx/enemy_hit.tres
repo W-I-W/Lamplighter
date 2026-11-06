@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "enemy_hit"
-Particles = 6
+Particles = 9
 Speed = 70
 ParticleSize = 1.5
 Tint = Color(0.7529412, 0.4392157, 1, 1)
@@ -15,5 +15,5 @@ RingColor = Color(1, 1, 1, 1)
 Sfx = ""
 SfxDb = 0
 SfxPitch = 1
-Shake = 0
+Shake = 0.4
 Flash = 0

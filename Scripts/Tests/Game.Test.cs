@@ -103,6 +103,8 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "explore") { BuildExploreScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "village") { BuildVillageScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "difficulty") { BuildDifficultyScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "riftbal") { BuildRiftBalScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "pressure") { BuildPressureScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interact") { BuildInteractScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "interactload") { BuildInteractLoadScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "texcheck") { BuildTexCheckScript(); return; }
@@ -202,7 +204,8 @@ public partial class Game
         S(.4f, () =>
         {
             Tp(W.Ancients[7].Pos + new Vector2(0, 40));
-            TestAim(FreeAdj(true)); BuildLamp(2); Log($"crystal lamp built: lamps={Lamps.Count}");
+            for (int ri = 0; ri < Inv.Length; ri++) Inv[ri] = Math.Max(Inv[ri], 50);            // технологии со стоимостью ×TechCostMul съедают запас: кристальному фонарю нужно своё
+            TestAim(FreeAdj(true)); BuildLamp(2); Log($"crystal lamp built: lamps={Lamps.Count} canPay={Can(LampCost[2])} target={PlaceTarget()} cost={CostStr(LampCost[2])} crystal={Inv[It.Crystal]}");
         });
         S(.3f, () =>
         {

@@ -43,6 +43,7 @@ public partial class Game
 
     public void AddZone(Vector2 p, float r, float warn, float dur, float dps, bool smoke = false, bool friendly = false, bool cold = false, bool dark = false)
     {
+        if (!friendly && warn > .3f) warn *= Tune.T.BossWarnMul;                                    // опасные зоны вспыхивают раньше: от них нужно уходить сразу
         Zones.Add(new FireZone { Pos = p, R = r, Warn = warn, Dur = dur, Dps = dps, Smoke = smoke, Friendly = friendly, Cold = cold, Dark = dark });
         if (Zones.Count > 70) Zones.RemoveAt(0);
     }

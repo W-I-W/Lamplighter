@@ -66,7 +66,7 @@ public partial class Game
                 c.G.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[k], 0));
                 var t = (Tl)W.Obj[k];
                 if (IsPlantTile(t)) c.R.SetCell(new Vector2I(x, y), srcId, new Vector2I(TreeAtlas(t, wx, wy), 0), TreeAlt(wx, wy));
-                else if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0));
+                else if (t != Tl.None && t != Tl.SecretCache && !HiddenCliff(wx, wy)) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0));
             }
         groundRoot.AddChild(c.G); blendRoot.AddChild(c.X1); blendRoot.AddChild(c.X2); decorRoot.AddChild(c.D); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); treeRoot.AddChild(c.R); topRoot.AddChild(c.T); chunks[ci] = c; LoadedChunks++;
         LastChunkMs = (float)sw.Elapsed.TotalMilliseconds;

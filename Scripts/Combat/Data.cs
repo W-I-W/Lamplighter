@@ -128,6 +128,10 @@ public static class Db
         R("t_frost", "Иней испытания", "Временно: заморозка на всех ударах", Rar.Rare, new[] { "ice" }, new[] { "Slow:1", "Freeze:0.6" }, "#7ad0ff", false),
         R("t_light", "Свет испытания", "Временно: сильный свет и сифон", Rar.Rare, new[] { "light" }, new[] { "Siphon:1", "HeroRadius:0.15" }, "#ffe9a0", false),
         R("t_storm", "Гроза испытания", "Временно: цепные молнии", Rar.Rare, new[] { "storm" }, new[] { "Chain:2" }, "#c8a8ff", false),
+        // реликвии, меняющие стиль игры (добавлены в конец списка: номера прежних реликвий на земле и в сохранениях не сдвигаются)
+        R("r_shadowcloak", "Плащ теней", "В темноте урон +25%, на свету −10%: охота из тени", Rar.Rare, new string[0], new[] { "Flag:DarkHunter" }, "#6a4aa0"),
+        R("r_embers", "Угольки", "Убитые враги оставляют пламя на несколько секунд", Rar.Rare, new[] { "fire" }, new[] { "Flag:KillEmbers" }, "#ff7a2a"),
+        R("r_greedseal", "Печать жадности", "Вы получаете на 20% больше урона, но опыт и добыча с врагов вдвое выше", Rar.Epic, new string[0], new[] { "Flag:Greed" }, "#ffc04a"),
     };
 
     public static List<SynergyDef> DefaultSynergies() => new()
