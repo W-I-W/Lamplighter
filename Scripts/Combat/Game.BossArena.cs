@@ -66,7 +66,7 @@ public partial class Game
         if (!Enemies.Exists(e => e.Kind == k))
         {
             if (id == 1) GroveReset(false);
-            Boss = SpawnEnemy(id == 1 ? ar.Pos : ar.Pos + new Vector2(0, -36), k, null, DangerScale);          // Пожиратель Рощи растёт в самом центре арены
+            Boss = SpawnEnemy(id == 1 ? ar.Pos : ar.Pos + new Vector2(0, -36), k, null);          // Пожиратель Рощи растёт в самом центре арены
             Announce(EnemyName(k) + " пробудился!", id == 1 ? "Корни бьют из-под земли, ветви — по дуге. Не стойте на месте" : id == 2 ? "Вода и тьма — его стихия. Береги свет!" : id == 3 ? "Огонь и дым — его оружие" : id == 4 ? "Зеркальный щит, лёд и метель. Свет призм сломит его защиту" : id == 5 ? "Он поглощает свет. Ставьте фонари" : "Хранитель древнего фонаря. Победа даст силу света", new Color("#d58cff"), "boss");
             Shake = 4;
         }

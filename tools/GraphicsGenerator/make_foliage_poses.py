@@ -3,6 +3,7 @@ Every plant gets four bent poses (strong left, left, right, strong right); the o
 so the sway moves in whole sprite pixels and looks hand-drawn. Run from the project root: python tools/GraphicsGenerator/make_foliage_poses.py
 Rules that keep it clean pixel art: the root never moves, every row shifts at most 1 px more than the row below it (blades stay connected), nothing is pushed outside the tile.
 Replace any pose PNG with your own art of the same size to restyle it."""
+import os, sys
 from PIL import Image
 
 ENV = 'Assets/Sprites/Environment/'
@@ -52,7 +53,9 @@ def shifted(im, d):
     return out
 
 
+ONLY = sys.argv[1:]          # python make_foliage_poses.py Bush — перерисовать позы только этих растений (остальные PNG, возможно нарисованные вручную, не трогаем)
 for pi, (tile, stem, strong) in enumerate(PLANTS):
+    if not os.path.exists(ENV + stem + '.png') or (ONLY and not any(o.lower() in stem.lower() for o in ONLY)): continue      # старые деревья 16x16 удалены: теперь они большие тайлы
     base = Image.open(ENV + stem + '.png').convert('RGBA')
     strip = Image.new('RGBA', (64, 16), (0, 0, 0, 0))
     for k, (tag, level) in enumerate(POSES):
@@ -60,15 +63,4 @@ for pi, (tile, stem, strong) in enumerate(PLANTS):
         name = stem.split('_', 1)[1]
         strip.paste(shifted(base, displacement(base, strong, level)), (k * 16, 0))
     strip.save(f'{ENV}{idx - k:03d}_{name}_poses.png')
-# crown tiles of the two-tile trees (the trunk tile below them stays still)
-TOPS = [('162_TreeTop', 2), ('163_PineTop', 2), ('164_DeadTop', 2)]
-TOP_POSE_BASE = 165
-for pi, (stem, strong) in enumerate(TOPS):
-    base = Image.open(ENV + stem + '.png').convert('RGBA')
-    strip = Image.new('RGBA', (64, 16), (0, 0, 0, 0))
-    for k, (tag, level) in enumerate(POSES):
-        idx = TOP_POSE_BASE + pi * 4 + k
-        name = stem.split('_', 1)[1]
-        strip.paste(shifted(base, displacement(base, strong, level)), (k * 16, 0))
-    strip.save(f'{ENV}{idx - k:03d}_{name}_poses.png')
-print('poses written:', len(PLANTS) * 4, 'tiles', POSE_BASE, '..', POSE_BASE + len(PLANTS) * 4 - 1)
+print('poses written for', ONLY or 'all existing plants')

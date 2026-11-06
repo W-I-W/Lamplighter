@@ -22,7 +22,7 @@ public partial class Game
         var t = Tune.T; int reg = Math.Clamp(World.RegionOf((int)(p.X / TS)), 0, 4), ci = CoopIdx; int bid = BossIdOf(k);
         bool hard = Diff == 1;
         if (bid > 0) return (1f, CombatTuning.At(t.BossHp, bid - 1) * CombatTuning.At(t.CoopBossHp, ci) * (hard ? t.HardBossHp : 1f));
-        return (t.EnemyDamage * CombatTuning.At(t.BiomeDamage, reg) * (hard ? t.HardEnemyDamage : 1f), t.EnemyHp * CombatTuning.At(t.BiomeHp, reg) * CombatTuning.At(t.CoopEnemyHp, ci) * (hard ? t.HardEnemyHp : 1f));
+        return (t.EnemyDamage * (hard ? t.HardEnemyDamage : 1f), t.EnemyHp * (hard ? t.HardEnemyHp : 1f));          // вид врага одинаков в любом регионе, при любом числе игроков и на любом этапе: меняется лишь выбор мира «сложно»
     }
 
     /// <summary>Страх тени: ниже FearLevel урон умеренно растёт (1 ур. при 0,1 и пороге 5 — ×1,4).</summary>

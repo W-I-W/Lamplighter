@@ -18,7 +18,7 @@ public partial class Game
             Level = lv; Tier = Math.Min(4, lv / 8); MaxHp = 60 + 10 * (lv - 1); Hp = MaxHp; EventsEnabled = false; noHeal = true;
             for (int i = 1; i <= lit && i < W.Ancients.Count; i++) { W.Ancients[i].Lit = true; W.Ancients[i].Anim = 1; }
             spot = FindDarkArena(); PPos = spot; Enemies.Clear(); Projs.Clear(); Invuln = 0; spawnT = 1f;
-            Log($"PRESSURE lv={lv} maxhp={MaxHp} dmg={PlayerDamage:F1} danger={DangerScale:F2} litCount={LitCount} spot={ToTile(spot)} lit={IsLit(spot)}");
+            Log($"PRESSURE lv={lv} maxhp={MaxHp} dmg={PlayerDamage:F1} litCount={LitCount} spot={ToTile(spot)} lit={IsLit(spot)}");
         });
         S(.1f, () =>
         {

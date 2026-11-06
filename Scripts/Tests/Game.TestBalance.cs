@@ -34,7 +34,7 @@ public partial class Game
             Check(hpOk, "прирост уровней и здоровья от опыта совпадает с Game.GiveXp (60 + 10 за уровень)");
             Level = 1; MaxHp = 60; Xp = 0;
             bool fearOk = true; for (int lv = 1; lv <= 9; lv++) { Level = lv; if (!Eq(FearMul, new SimPlayer(m) { Level = lv }.FearMul)) fearOk = false; }
-            Level = 1; Check(fearOk && FearMul > 1f && FearMul < 2f, $"страх тени: умеренный множитель ниже 5 уровня совпадает (1 ур. ×{FearMul:0.00}, 5 ур. ×1)");
+            Level = 1; Check(fearOk && Mathf.Abs(FearMul - 1f) < .001f, $"страх тени: урон врагов не зависит от уровня героя (1 ур. ×{FearMul:0.00})");
             // ── урон, добыча
             bool dmgOk = true, mineOk = true, lightOk = true;
             foreach (int tier in new[] { 0, 1, 2, 3, 4 }) foreach (int lv in new[] { 1, 6, 15, 30 })
@@ -112,7 +112,7 @@ public partial class Game
                     var k = Enum.Parse<EK>(e.Kind); var re = SpawnEnemy(TileCenter(regStart[e.Region], 30), k, null, danger);
                     var sp = new SimPlayer(m); var cs = new CombatSim(sp, Profile.Expert(), new Rng(1), e.Region); var f = cs.MakeFoe(e, danger, 0, false);
                     if (!Eq(re.MaxHp, f.MaxHp)) { hpE = false; eBad = $"{e.Kind}@{e.Region} здоровье: игра {re.MaxHp} / модель {f.MaxHp}"; }
-                    if (!Eq(re.Scale, f.DmgScale)) { dmE = false; eBad = $"{e.Kind}@{e.Region} урон: игра {re.Scale} / модель {f.DmgScale}"; }
+                    if (!Eq(re.Scale * EnemyBalance.Dmg(k), f.DmgScale)) { dmE = false; eBad = $"{e.Kind}@{e.Region} урон: игра {re.Scale} / модель {f.DmgScale}"; }
                     Enemies.Remove(re);
                 }
             foreach (var b in m.Bosses)
@@ -131,9 +131,9 @@ public partial class Game
             {
                 BossMask = rnd.Next(0, 32); var sp = new SimPlayer(m) { BossMask = BossMask }; sp.Lit[0] = LitIn(0); sp.Lit[1] = LitIn(1); sp.Lit[2] = LitIn(2); sp.Lit[3] = LitIn(3); sp.Lit[4] = LitIn(4);
                 int total = sp.LitCount; if (total != LitCount) { dgOk = false; }
-                if (!Eq(Priv<float>("DangerScale"), sp.DangerScale)) dgOk = false;
+                if (!Eq(1f, sp.DangerScale)) dgOk = false;
             }
-            Check(dgOk, "масштаб опасности (фонари × боссы) совпадает с Game.DangerScale");
+            Check(dgOk, "масштаб опасности (фонари × боссы) отсутствует: враги не растут с прогрессом");
             BossMask = 0;
             // ── число ударов до смерти: настоящий Hurt против модели
             bool hitsOk = true; string hBad = "";

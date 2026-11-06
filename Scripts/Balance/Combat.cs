@@ -22,6 +22,9 @@ public sealed class CombatSim
     public readonly List<Foe> Foes = new(); public CombatStats S; public int Region; public bool Lit;
     float invuln, noDmgT = 99, atkCd, chillT, reactT, puzzleT, vulnT; public float Dt = .05f;
     readonly Action<string, int> onDrop;                         // (предмет, количество) — добыча за убийства
+    sealed class Impact { public Foe Foe; public BossMoveM Move; public float Wait, Warning; }
+    readonly List<Impact> impacts = new();
+    float Warning(Foe f, BossMoveM mv) => (f.PhaseIndex >= 2 && mv.LateWindup > 0 ? mv.LateWindup : f.PhaseIndex == 1 && mv.MidWindup > 0 ? mv.MidWindup : mv.Windup) * (f.Boss.Id >= 3 ? T.BossWarnMul : 1f);
 
     public CombatSim(SimPlayer p, Profile prof, Rng rng, int region, bool lit = false, Action<string, int> drop = null) { P = p; pr = prof; r = rng; M = p.M; T = M.T; Region = region; Lit = lit; onDrop = drop; }
 
@@ -32,8 +35,8 @@ public sealed class CombatSim
     // ───────────────────────── создание врагов ─────────────────────────
     public Foe MakeFoe(EnemyM d, float danger, int elitesNow, bool allowElite = true, float distance = -1)
     {
-        float hm = T.EnemyHp * T.At(T.BiomeHp, Region), dm = T.EnemyDamage * T.At(T.BiomeDamage, Region);
-        var f = new Foe { Def = d, Kind = d.Kind, Hp = d.Hp * danger * hm, DmgScale = dm, Speed = d.Speed * T.EnemySpeed };
+        float hm = T.EnemyHp, dm = T.EnemyDamage * EnemyBalance.Dmg(Enum.Parse<EK>(d.Kind));
+        var f = new Foe { Def = d, Kind = d.Kind, Hp = d.Hp * hm, DmgScale = dm, Speed = d.Speed * T.EnemySpeed };
         f.MaxHp = f.Hp; if (distance < 0) distance = r.Range(130, 200);
         f.Distance = distance; float travel = d.Ranged ? Math.Max(0, distance - 100) : distance - 20; f.Arrive = travel / Math.Max(10f, f.Speed);
         f.AtkT = r.Range(.3f, 1.2f) + d.Period * .3f;
@@ -124,12 +127,12 @@ public sealed class CombatSim
         if (e.IsBoss) return;
         var d = e.Def; float xp = d.Xp * (1f + .3f * Region);
         bool greed = P.Flags.Contains("Greed"); if (greed) xp *= 2f;                                         // Game.KillRewards: опыт и шанс добычи ×1,6
-        if (P.Flags.Contains("KillEmbers")) { int n = 0; foreach (var o in Foes) { if (n >= EmberVictims) break; if (o.Alive && o != e && !o.IsBoss && o.Arrive <= 0) { TickDamage(o, EmberDamage); n++; } } }
+        if (P.Flags.Contains("KillEmbers")) { int n = 0; foreach (var o in Foes) { if (n >= EmberVictims) break; if (o.Alive && o != e && !o.IsBoss && o.Kind != "Imp" && o.Arrive <= 0) { TickDamage(o, EmberDamage); n++; } } }
         P.GiveXp(xp); S.XpGained += xp * T.XpMul;
         if (P.E(Fxk.Blast) > 0 && !inBlast) { inBlast = true; float dmg = P.Cur != null ? P.WeaponDmg(P.Cur) : P.PlayerDamage; foreach (var o in Foes) if (o.Alive && o != e && o.Arrive <= 0) Hurt(o, dmg * (.4f + .15f * P.E(Fxk.Blast)), false); inBlast = false; }
         float h0 = P.Hp;
-        if (P.N("KillHeal") > 0) P.Hp = Math.Min(P.MaxHp, P.Hp + P.N("KillHeal"));
-        if (P.Has(Tech.Reaper)) P.Hp = Math.Min(P.MaxHp, P.Hp + P.ReaperHeal);
+        if (P.N("KillHeal") > 0) P.GainKillHealing(P.N("KillHeal"));
+        if (P.Has(Tech.Reaper)) P.GainKillHealing(P.ReaperHeal);
         S.Healed += P.Hp - h0;
         if (r.Chance(greed ? Math.Min(1f, d.ShardChance * 2f) : d.ShardChance)) { int n = d.Kind == "Golem" ? 2 : 1; P.Inv[It.Shard] += n; S.Shards += n; }
         if (d.Kind == "Weaver" || d.Kind == "Stalker") if (r.Chance(.5f)) { P.Inv[It.Shard]++; S.Shards++; }
@@ -177,6 +180,7 @@ public sealed class CombatSim
     /// <summary>Время без врагов: перезарядки и восстановление здоровья.</summary>
     public void Idle(float s)
     {
+        P.RefillKillHealing(s);
         float before = noDmgT; noDmgT += s; chillT -= s; P.DashCd = Math.Max(0, P.DashCd - s); P.SpinCd = Math.Max(0, P.SpinCd - s); P.FlareCd = Math.Max(0, P.FlareCd - s); P.PulseCd = Math.Max(0, P.PulseCd - s);
         if (P.Hp < P.MaxHp) P.Hp = Math.Min(P.MaxHp, P.Hp + (Lit ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * 1.5f : P.RegenSkill ? Math.Max(0, noDmgT - Math.Max(T.RegenDelay, before)) * P.RegenPerSec : 0f));
     }
@@ -185,6 +189,14 @@ public sealed class CombatSim
     public void Step()
     {
         float dt = Dt; S.Time += dt; P.Time += dt;
+        P.RefillKillHealing(dt);
+        for (int i = impacts.Count - 1; i >= 0; i--)
+        {
+            var hit = impacts[i]; hit.Wait -= dt; if (hit.Wait > 0) continue; impacts.RemoveAt(i);
+            if (!hit.Foe.Alive || !r.Chance(hit.Move.FollowupHitShare)) continue;
+            if (Dodges(hit.Warning, 0, false, true) && r.Chance(BossDodgeFactor)) S.Dodged++;
+            else DamagePlayer(hit.Move.Dmg * hit.Foe.DmgScale, hit.Move.Fire, hit.Move.Cold, hit.Foe);
+        }
         invuln -= dt; noDmgT += dt; chillT -= dt; atkCd -= dt; reactT -= dt;
         P.DashCd = Math.Max(0, P.DashCd - dt); P.SpinCd = Math.Max(0, P.SpinCd - dt); P.FlareCd = Math.Max(0, P.FlareCd - dt); P.PulseCd = Math.Max(0, P.PulseCd - dt);
         // восстановление: в свете 4/с, в темноте 0,35/с после 5 с без урона (Game.Update)
@@ -320,9 +332,9 @@ public sealed class CombatSim
     // ───────────────────────── боссы ─────────────────────────
     void BossAct(Foe f, float dt)
     {
-        var b = f.Boss; float hpf = f.Hp / f.MaxHp; int ph = f.PhaseIndex; float mul = (ph == 2 ? b.RageMul : 1f) * T.BossTempo;
+        var b = f.Boss; float hpf = f.Hp / f.MaxHp; int ph = f.PhaseIndex; float mul = (ph == 2 ? b.RageMul : b.Id == 1 && ph == 1 ? .85f : 1f) * T.BossTempo;
         bool kiter = P.Cur != null && P.Cur.Cls != (int)WClass.Sword;
-        if (f.Hide > 0) { f.Hide -= dt; if (f.Hide <= 0) { f.Hide = 0; f.PendingMove = Array.FindIndex(b.Moves, x => x.Name == "dive"); f.WindT = f.PendingMove >= 0 ? b.Moves[f.PendingMove].Windup : 0; } return; }
+        if (f.Hide > 0) { f.Hide -= dt; if (f.Hide <= 0) { f.Hide = 0; f.PendingMove = Array.FindIndex(b.Moves, x => x.Name == "dive"); f.WindT = f.PendingMove >= 0 ? Warning(f, b.Moves[f.PendingMove]) : 0; } return; }
         if (f.Open > 0) { f.Open -= dt; return; }
         if (f.WindT > 0)
         {
@@ -332,14 +344,15 @@ public sealed class CombatSim
             if (mv.Hide > 0) f.MoveCd[f.PendingMove] = 0;
             if (mv.Dmg > 0)
             {
-                bool dodge = Dodges(mv.Windup, mv.Ranged ? .9f : 0f, mv.Ranged, !mv.Ranged) && r.Chance(BossDodgeFactor);
+                bool dodge = Dodges(Warning(f, mv), mv.Ranged ? .9f : 0f, mv.Ranged, !mv.Ranged) && r.Chance(BossDodgeFactor);
                 if (!mv.Ranged && kiter && r.Chance(.35f * pr.DodgeSkill)) dodge = true;
                 if (dodge) S.Dodged++; else DamagePlayer((mv.Dmg + mv.Ring * .5f) * f.DmgScale, mv.Fire || b.Fire && mv.Fire, mv.Cold, f);
             }
+            if (mv.Followups != null) foreach (float offset in mv.Followups) impacts.Add(new Impact { Foe = f, Move = mv, Wait = offset, Warning = Warning(f, mv) + offset });
             if (mv.Summon != null) foreach (var k in mv.Summon) { var d = M.Enemies.FirstOrDefault(x => x.Kind == k); if (d != null) Foes.Add(MakeFoe(d, mv.SummonDanger, 0, false, r.Range(20, 60))); }
             if (mv.Open > 0) f.Open = mv.Open;
             if (mv.Cooldown > 0) f.MoveCd[f.PendingMove] = mv.Cooldown * mul * r.Range(.9f, 1.1f);
-            else f.NextT = (mv.Gap * mul + mv.Post) * r.Range(.9f, 1.1f) + Math.Min(0f, f.WindT);
+            else f.NextT = ((ph >= 2 && mv.LateGap > 0 ? mv.LateGap : mv.Gap) * mul + mv.Post * (b.Id >= 3 ? T.BossWarnMul : 1f)) * r.Range(.9f, 1.1f) + Math.Min(0f, f.WindT);
             f.PendingMove = -1; return;
         }
         // обычный удар вблизи (HurtPlayer(12f) раз в Atk секунд)
@@ -354,14 +367,14 @@ public sealed class CombatSim
         for (int i = 0; i < b.Moves.Length; i++)
         {
             var mv = b.Moves[i]; if (mv.Cooldown <= 0 || hpf >= mv.PhaseBelowHp || f.MoveCd[i] > 0) continue;
-            f.PendingMove = i; f.WindT = mv.Windup; return;
+            f.PendingMove = i; f.WindT = Warning(f, mv); return;
         }
         f.NextT -= dt; if (f.NextT > 0) return;
         float sum = 0; foreach (var mv in b.Moves) if (mv.Cooldown <= 0) sum += ph == 0 ? mv.W0 : ph == 1 ? mv.W1 : mv.W2;
         float rr = r.F() * sum; int pick = -1;
         for (int i = 0; i < b.Moves.Length; i++) { var mv = b.Moves[i]; if (mv.Cooldown > 0) continue; rr -= ph == 0 ? mv.W0 : ph == 1 ? mv.W1 : mv.W2; if (rr <= 0 && (ph == 0 ? mv.W0 : ph == 1 ? mv.W1 : mv.W2) > 0) { pick = i; break; } }
         if (pick < 0) { f.NextT = 1f; return; }
-        f.PendingMove = pick; f.WindT = b.Moves[pick].Windup + Math.Min(0f, f.NextT); f.MoveCd[pick] = b.Moves[pick].Hide > 0 ? 0 : f.MoveCd[pick];
+        f.PendingMove = pick; f.WindT = Warning(f, b.Moves[pick]) + Math.Min(0f, f.NextT); f.MoveCd[pick] = b.Moves[pick].Hide > 0 ? 0 : f.MoveCd[pick];
     }
 
     // ───────────────────────── прогон ─────────────────────────

@@ -62,6 +62,7 @@ public partial class Game
 
     void BuildScript()
     {
+        if (OS.GetEnvironment("LAMP_STAGE") == "balancecontract") { BuildBalanceContractScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "balanceaudit") { BuildBalanceAuditScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "ash") { BuildAshScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "s4") { BuildS4Script(); return; }

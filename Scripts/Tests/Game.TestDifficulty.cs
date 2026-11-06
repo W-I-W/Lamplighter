@@ -35,18 +35,20 @@ public partial class Game
             Menu = Mn.None; noHeal = true; MaxHp = 5000f; Hp = MaxHp; Enemies.Clear(); Projs.Clear(); EventsEnabled = false; TestPlayers = 0;      // удар врага не меньше EnemyMinHit: герою на 60 здоровья хватило бы одного удара, а проверки смотрят на серию
             spot = FindDarkArena();
             Check(spot != default, "setup: a dark free arena exists"); Tp(spot);
-            var t = Tune.T; Check(t.BiomeDamage.Length == 5 && t.CoopEnemyHp.Length == 4 && t.BossHp.Length == 5 && t.EnemyDamage > 1f, "tuning: all numbers come from Resources/Combat/tuning.tres");
+            var t = Tune.T; Check(t.EncounterBase.Length == 5 && t.BossHp.Length == 5 && t.EnemyDamage > 1f, "tuning: all numbers come from Resources/Combat/tuning.tres");
             var p = new[] { TileCenter(60, 60), TileCenter(200, 60), TileCenter(300, 60), TileCenter(450, 60), TileCenter(580, 60) };
             var dm = p.Select(q => EnemyMuls(EK.Shade, q).dmg).ToArray(); var hm = p.Select(q => EnemyMuls(EK.Shade, q).hp).ToArray();
-            Check(dm.All(x => Mathf.Abs(x - dm[0]) < .001f) && hm.Zip(hm.Skip(1), (a, b) => b > a).All(x => x), $"biomes: damage ×{string.Join("/", dm.Select(x => x.ToString("0.00")))} and health ×{string.Join("/", hm.Select(x => x.ToString("0.00")))} grow with every biome and damage stays fixed");
+            Check(dm.All(x => Mathf.Abs(x - dm[0]) < .001f) && hm.All(x => Mathf.Abs(x - hm[0]) < .001f), "no scaling: a Shade has identical health and damage multipliers in every biome");
             var hp = new float[4]; for (int n = 1; n <= 4; n++) { TestPlayers = n; hp[n - 1] = EnemyMuls(EK.Shade, p[0]).hp; }
             var bh = new float[4]; for (int n = 1; n <= 4; n++) { TestPlayers = n; bh[n - 1] = EnemyMuls(EK.Warden, p[0]).hp; }
-            Check(hp[0] < hp[1] && hp[1] < hp[2] && hp[2] < hp[3] && hp[3] / hp[0] < 2.2f && (hp[1] - hp[0]) / hp[0] < 1f, $"coop: enemy health {string.Join("/", hp.Select(x => x.ToString("0.00")))} grows with players but not linearly");
-            Check(bh[0] < bh[1] && bh[1] < bh[2] && bh[2] < bh[3] && bh[3] / bh[0] < 3f, $"coop: boss health {string.Join("/", bh.Select(x => x.ToString("0.00")))}");
+            Check(hp.All(x => Mathf.Abs(x - hp[0]) < .001f), "coop: regular enemy health does not depend on the number of players");
+            Check(bh[0] <= bh[1] && bh[1] <= bh[2] && bh[2] <= bh[3] && bh[3] / bh[0] < 3f, $"coop: boss health {string.Join("/", bh.Select(x => x.ToString("0.00")))} is the only explicit group scaling");
+            Level = 1; var lowHp = SpawnEnemy(spot, EK.Shade, null).MaxHp; Level = 30; BossMask = 31; var highHp = SpawnEnemy(spot, EK.Shade, null).MaxHp; Level = 1; BossMask = 0; Enemies.Clear();
+            Check(Mathf.Abs(lowHp - highHp) < .001f, "no scaling: Shade health is the same at level 1 and level 30 with every boss defeated");
             TestPlayers = 1; var e1 = Mk(EK.Shade, new Vector2(300, 0)); float before = e1.MaxHp; TestPlayers = 4; Sim(.2f); Check(Mathf.Abs(e1.MaxHp - before) < .001f && e1.Hp <= before, "coop: a change of group size does not change the health of enemies already in the fight");
             TestPlayers = 0; Enemies.Clear();
             // ориентиры для ручной настройки (не проверка баланса)
-            var shade = EnemyMuls(EK.Shade, p[0]); float hit = 9f * shade.dmg; float shp = 7f * DangerScale * shade.hp;
+            var shade = EnemyMuls(EK.Shade, p[0]); float hit = 9f * shade.dmg; float shp = EnemyBalance.Hp(EK.Shade) * shade.hp;
             Check(Mathf.Ceil(shp / 5f) is >= 2 and <= 4 && hit > Tune.T.EnemyMinHit && hit * (1 + 4 * Tune.T.FearDamage) < 30f, $"start: a Shade has {shp:0.0} hp ({Mathf.Ceil(shp / 5f)} sword hits) and first-level damage stays below half of starting health");
         });
 
@@ -188,7 +190,7 @@ public partial class Game
                 Check(Level == 4 && MaxHp == 80f && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, $"death hard: loses a level (now {Level}) and respawns at the main beacon");
                 Diff = 0; PPos = spot; Die(); Check(Level == 4 && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, "death normal: keeps the level, respawns at the main beacon");
                 Diff = 1; Level = 1; Xp = 7; PPos = spot; Die(); Check(Level == 1 && Xp == 0, "death hard at level 1: keeps the level but loses the xp"); Diff = d0;
-                int cap0 = 0; Check(Tune.T.SpawnDelayMul > 1f && Tune.T.SpawnCapMul < 1f && cap0 == 0, "spawn: pause is longer and the cap is lower than before");
+                int cap0 = 0; Check(Tune.T.SpawnDelayMul > 1f && Tune.T.EncounterMax.Length == 5 && cap0 == 0, "spawn: pause is longer than the base and the encounter budget is defined per region");
             }
             GD.Print($"[check] SUMMARY failures={fails}"); GD.Print("[check] DIFFICULTY DONE");
         });

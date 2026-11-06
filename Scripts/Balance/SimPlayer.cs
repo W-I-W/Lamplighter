@@ -19,20 +19,27 @@ public sealed class SimPlayer
     public List<OwnedW> Owned = new(); public int CurW = -1; public int[] ModInv = new int[7];
     public HashSet<string> Bp = new(); public Dictionary<string, int> Frag = new();
     public List<string> RelicsOwned = new(), RelicsEq = new();
-    public double Time; public int Deaths; public float DashCd, SpinCd, FlareCd, PulseCd;
+    public double Time; public int Deaths; public float DashCd, SpinCd, FlareCd, PulseCd, KillHealPool = -1;
+    public void RefillKillHealing(float seconds) => KillHealPool = Math.Min(MaxHp * .2f, KillHealPool < 0 ? MaxHp * .2f : KillHealPool + MaxHp * .02f * seconds);
+    public void GainKillHealing(float amount)
+    {
+        if (KillHealPool < 0) KillHealPool = MaxHp * .2f;
+        float gain = Math.Min(amount, KillHealPool); KillHealPool -= gain; Hp = Math.Min(MaxHp, Hp + gain);
+    }
     public float[] EffP = new float[(int)Fxk.Count]; public Dictionary<string, float> Num = new(); public HashSet<string> Flags = new(); public Dictionary<string, int> Tags = new();
 
     public SimPlayer(BalanceModel m) { M = m; T = m.T; Sk = new int[m.Skills.Length]; Hp = MaxHp; }
 
     // ───────────────────────── характеристики ─────────────────────────
     public float MaxHp => (60f + 10f * (Level - 1) + BonusHp) * (1f + N("MaxHpPct")) + N("MaxHp");
+    public float EncounterBudget(int region, bool guarded = false) => (Math.Min(T.At(T.EncounterBase, region) + T.EncounterPerLamp * Lit[region], T.At(T.EncounterMax, region)) + (guarded ? 3 : 0) + (Level < T.FearLevel ? T.FearSpawn : 0)) * T.SpawnCapMul;
     public float XpNeed => T.XpBase + T.XpLinear * Level + T.XpQuad * Level * Level;                       // Game.XpNeed
     public float N(string k) => Num.TryGetValue(k, out var v) ? v : 0f;
     public float E(Fxk k) => EffP[(int)k];
     public float Se(Tech t) => M.Skills[(int)t].Eff(Sk[(int)t]);                                            // Game.E(Tech)
     public int Lv(Tech t) => Sk[(int)t];
     public bool Has(Tech t) => Sk[(int)t] > 0;
-    public int LitCount { get { int n = 0; foreach (var x in Lit) n += x; return n; } }
+    public int LitCount => Lit[0];       // Game.LitCount — только обычные фонари леса
     public int LitIn(int r) => Lit[r];
     public bool BossDown(int id) => ((BossMask >> (id - 1)) & 1) == 1;
     public int BossCount { get { int n = 0, m = BossMask; while (m != 0) { n += m & 1; m >>= 1; } return n; } }
@@ -55,7 +62,7 @@ public sealed class SimPlayer
     public float HeatTaken => 1f - Se(Tech.HeatShield);
     public float ColdTaken => 1f - Se(Tech.FrostArmor);
     public float AuraDps { get { float a = Has(Tech.Searing) ? Se(Tech.Searing) : 0f, b = Has(Tech.HeroLamp) ? 2.5f + .5f * (Lv(Tech.HeroLamp) - 1) : 0f; return a + b; } }
-    public float DangerScale => 1f + .18f * LitCount + .12f * (Lit[1] + Lit[2] + Lit[3]) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0) + (BossDown(3) ? .1f : 0) + (BossDown(4) ? .1f : 0);   // Game.DangerScale
+    public float DangerScale => 1f;   // характеристики видов не растут с прогрессом (EnemyBalance)
     public int ChainLimit => (Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0) + (int)N("MineChain");
     public WeaponM Cur => CurW >= 0 && CurW < Owned.Count ? M.Weapons[Owned[CurW].W] : null;
     public bool HasWeapon(string id) { foreach (var o in Owned) if (M.Weapons[o.W].Id == id) return true; return false; }

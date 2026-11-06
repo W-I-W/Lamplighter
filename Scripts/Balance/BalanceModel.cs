@@ -12,10 +12,12 @@ namespace Lamplighter.Balance;
 public sealed class TuneM
 {
     public float EnemyDamage, EnemyHp, EnemySpeed, EnemyAttackRate, SpawnCapBonus, SpawnDelayMul, SpawnCapMul, MaxAttackers, ShadeWindup;
-    public float[] BiomeDamage, BiomeHp, EliteChance, BossHp, BossDamage;
+    public float[] EliteChance, BossHp, BossDamage;
     public float EliteMinLit, EliteMax, EliteHp, EliteDamage, BossTempo, HitInvuln, RegenRate, RegenDelay, DashCooldown, DashInvuln, ReaperHeal, FearLevel = 5, FearDamage, FearSpawn, EnemyMinHit, FistDamageMul = 1, EnemyAtkPause = 1;
     public float GatherMul, MineTimeMul, ScarcityMul, TechCostMul, WeaponMineMul, XpMul, XpBase, XpLinear, XpQuad;
     public float WinterVuln = 9f, SourceVuln = 10f;
+    public float BossWarnMul = 1f, EncounterPerLamp = 1f, MaxRangedNear = 2;
+    public float[] EncounterBase = { 4, 7, 9, 11, 13 }, EncounterMax = { 9, 13, 16, 19, 22 };
     public float At(float[] a, int i) => a == null || a.Length == 0 ? 1f : a[Math.Clamp(i, 0, a.Length - 1)];
 }
 
@@ -69,6 +71,7 @@ public sealed class EnemyM
 /// <summary>Действие босса. Цикловое (Weight ≠ 0): после паузы Gap босс выбирает действие по весам фазы; периодическое (Cooldown &gt; 0): отдельная перезарядка (кольцо снарядов, уникальная способность).</summary>
 public sealed class BossMoveM
 {
+    public float MidWindup, LateWindup, LateGap, FollowupHitShare = .35f; public float[] Followups;
     public string Name; public float Dmg, Windup, Gap, Post, Open, Hide, Ring, Cooldown, PhaseBelowHp = 1f; public bool Fire, Cold, Ranged;
     public float W0, W1, W2; public string[] Summon; public float SummonDanger = 1.2f;
 }
@@ -115,6 +118,7 @@ public sealed class BalanceModel
     public AbstractM A = new();
     public Dictionary<string, double> Overrides = new();
     public string[] BlueprintIds = Array.Empty<string>(); public int[] BlueprintNeed = Array.Empty<int>();
+    public int SchemaVersion = 2;
 
     static readonly JsonSerializerOptions Js = new() { IncludeFields = true, WriteIndented = false };
     public BalanceModel Clone() => JsonSerializer.Deserialize<BalanceModel>(JsonSerializer.Serialize(this, Js), Js);
@@ -202,15 +206,15 @@ public sealed class BalanceModel
     {
         // Пожиратель Рощи (EK.Warden): неподвижен, касанием не бьёт — «ближний удар» модели заменён шипами у ствола (кольцо корней раз в 4.5 с); фазы игры 70%/35% сведены к фазам модели 66%/33%
         new BossM { Id = 1, Kind = "Warden", Hp = hp(EK.Warden), Region = 0, MeleeDmg = 12, MeleePeriod = 4.5f, RageMul = .62f, Src = "Game.Grove.cs (BossPhaseBook: root, branch, thorns / spores, absorb / rootseries, hunger)", Moves = new[] {
-            new BossMoveM { Name = "root", Dmg = 14, Windup = .9f, Gap = 1.5f, W0 = .5f, W1 = .3f, W2 = 0f },
-            new BossMoveM { Name = "rootseries", Dmg = 12, Windup = .6f, Gap = 1.0f, W2 = .4f },
-            new BossMoveM { Name = "branch", Dmg = 16, Windup = .9f, Gap = 1.5f, W0 = .5f, W1 = .35f, W2 = .3f },
+            new BossMoveM { Name = "root", Dmg = 14, Windup = .665f, MidWindup = .56f, LateWindup = .56f, Gap = 1f, LateGap = .7f, Post = .135f, Followups = new[] { .1f, .15f }, W0 = .5f, W1 = .3f, W2 = 0f },
+            new BossMoveM { Name = "rootseries", Dmg = 12, Windup = .385f, Gap = .7f, Post = .315f, Followups = new[] { .091f, .182f, .273f }, W2 = .4f },
+            new BossMoveM { Name = "branch", Dmg = 16, Windup = .7f, LateWindup = .525f, Gap = 1f, LateGap = .7f, Post = .35f, W0 = .5f, W1 = .35f, W2 = .3f },
             new BossMoveM { Name = "spores", Dmg = 12, Windup = 1f, Gap = 1.5f, Ranged = true, W1 = .35f, W2 = .3f },
             new BossMoveM { Name = "absorb", Windup = .5f, Cooldown = 14f, Open = 2.2f, PhaseBelowHp = .70f },
-            new BossMoveM { Name = "hunger", Dmg = 30, Windup = 1.9f, Cooldown = 13f, Open = 4.5f, PhaseBelowHp = .35f } } },
+            new BossMoveM { Name = "hunger", Dmg = 30, Windup = 1.5f, Cooldown = 13f, Open = 4.5f, PhaseBelowHp = .35f } } },
         new BossM { Id = 2, Kind = "DepthWarden", Hp = hp(EK.DepthWarden), Region = 1, MeleeDmg = 10, MeleePeriod = 1f, RageMul = .6f, Src = "Game.Combat.cs:624 + Game.BossSpecials.cs", Moves = new[] {
-            new BossMoveM { Name = "dive", Dmg = 18, Windup = .35f, Hide = 2.2f, Post = 1.1f, Gap = 1.6f, W0 = .75f, W1 = .25f, W2 = .25f },
-            new BossMoveM { Name = "tide", Dmg = 20, Windup = 1f, Gap = 2f, Ring = 10f, W0 = .25f, W1 = .25f, W2 = .25f },
+            new BossMoveM { Name = "dive", Dmg = 18, Windup = .35f, Hide = 2.2f, Post = .8f, Gap = 1.1f, W0 = .75f, W1 = .25f, W2 = .25f },
+            new BossMoveM { Name = "tide", Dmg = 20, Windup = .7f, Gap = 1.4f, Ring = 10f, W0 = .25f, W1 = .25f, W2 = .25f },
             new BossMoveM { Name = "summon", Windup = 1f, Gap = 2.6f, W1 = .22f, W2 = .22f, Summon = new[] { "Eel", "Leech" } },
             new BossMoveM { Name = "darkness", Windup = 1.2f, Gap = 2.4f, W1 = .28f, W2 = .28f },
             new BossMoveM { Name = "whirlpool", Dmg = 16, Windup = 1f, Cooldown = 10.5f, Open = 2.4f, PhaseBelowHp = .6f } } },
@@ -252,7 +256,7 @@ public sealed class BalanceModel
             }
             else if (f.FieldType == typeof(float[]))
             {
-                var arr = (float[])f.GetValue(T); var fi = f;
+                var arr = (float[])f.GetValue(T); var fi = f; if (arr == null) continue;
                 for (int i = 0; i < arr.Length; i++)
                 {
                     int ii = i; double v = arr[i]; if (v == 0) continue;

@@ -434,7 +434,7 @@ public partial class Game : Node2D
         SpinT = Mathf.Max(0, SpinT - dt);
         DashCd = Mathf.Max(0, DashCd - dt); SpinCd = Mathf.Max(0, SpinCd - dt); FlareCd = Mathf.Max(0, FlareCd - dt); PulseCd = Mathf.Max(0, PulseCd - dt);
         ApplyRelicHp();
-        regenDelay = Mathf.Max(0, regenDelay - dt); tierMsgCd = Mathf.Max(0, tierMsgCd - dt); SparkT += dt;
+        killHealPool = Mathf.Min(MaxHp * .2f, killHealPool < 0 ? MaxHp * .2f : killHealPool + MaxHp * .02f * dt); regenDelay = Mathf.Max(0, regenDelay - dt); tierMsgCd = Mathf.Max(0, tierMsgCd - dt); SparkT += dt;
 
         var dir = Vector2.Zero;
         if (!testing || aimOverride == null)

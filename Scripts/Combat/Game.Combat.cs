@@ -31,7 +31,6 @@ public partial class Game
     Vector2 DashDir, LastMoveDir;
     float spawnT = 4; float ctxDmg = 1f, stillT, edgeT; const float EdgeWait = 2.5f;       // сколько секунд игрок должен простоять у края света, чтобы враги пошли в налёт
 
-    float DangerScale => 1f + .18f * LitCount + .12f * LitIn(1) + .12f * LitIn(2) + .12f * LitIn(3) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0) + (BossDown(3) ? .1f : 0) + (BossDown(4) ? .1f : 0);
 
     public static string EnemyName(EK k) => k switch
     {
@@ -130,11 +129,11 @@ public partial class Game
         float nearUnlit = float.MaxValue;
         for (int i = 1; i < W.Ancients.Count; i++) if (!W.Ancients[i].Lit && !W.Ancients[i].Boss && W.Ancients[i].Region == reg) nearUnlit = Mathf.Min(nearUnlit, W.Ancients[i].Pos.DistanceTo(tp));
         bool guarded = nearUnlit < 9 * TS;
-        int free = 0; foreach (var e in Enemies) if (e.Guard == null && !e.IsBoss && e.Pos.DistanceTo(tp) < 420f) free++;
-        int baseCap = reg == 0 ? 3 + LitCount * 2 : 4 + LitIn(reg) * 2;
-        int cap = Math.Min(Math.Max(2, (int)Math.Ceiling((baseCap + Tune.T.SpawnCapBonus + (guarded ? 3 : 0) + (Level < Tune.T.FearLevel ? (int)Tune.T.FearSpawn : 0)) * Tune.T.SpawnCapMul * (targets.Count > 1 ? 1f : CombatTuning.At(Tune.T.CoopCap, CoopIdx)))), 18);
+        float spent = 0; int ranged = 0;                                           // бюджет опасности: каждый вид стоит по-своему, дальнобойных рядом не больше MaxRangedNear
+        foreach (var e in Enemies) if (e.Guard == null && !e.IsBoss && e.Pos.DistanceTo(tp) < 420f) { spent += EnemyCost(e); if (EnemyBalance.IsRanged(e.Kind)) ranged++; }
+        float budget = EncounterBudget(reg, guarded, targets.Count);
         spawnT = rng.RandfRange(2.2f, 3.8f) * Tune.T.SpawnDelayMul * (guarded ? .55f : 1f) / targets.Count;
-        if (free >= cap) return;
+        if (spent >= budget) return;
         for (int tries = 0; tries < 24; tries++)
         {
             float a2 = rng.Randf() * Mathf.Tau, d = rng.RandfRange(130, 200);
@@ -146,10 +145,32 @@ public partial class Game
             if (nearOther) continue;
             var k = PickKind(p, reg);
             if (k == EK.Eel && !WaterAt(p)) continue;
+            float kc = EnemyBalance.Cost(k) * (k == EK.Swarm ? 4 : 1);
+            if (spent + kc > budget + .01f || (EnemyBalance.IsRanged(k) && ranged >= Tune.T.MaxRangedNear)) continue;     // не помещается в бюджет или слишком много стрелков
             if (k == EK.Swarm) for (int s2 = 0; s2 < 4; s2++) SpawnEnemy(p + new Vector2(rng.RandfRange(-8, 8), rng.RandfRange(-8, 8)), k);
             else { var ne = SpawnEnemy(p, k); TryMakeElite(ne, reg); }
             return;
         }
+    }
+
+    float killHealPool = -1;                                  // лечение за убийства не бесконечно: запас до 20% здоровья, пополняется 2% здоровья в секунду
+    void KillHealGain(float amt)
+    {
+        if (killHealPool < 0) killHealPool = MaxHp * .2f;
+        float g = Mathf.Min(amt, killHealPool); killHealPool -= g; Hp = Mathf.Min(MaxHp, Hp + g);
+    }
+
+    /// <summary>Стоимость живого врага в бюджете столкновения: фиксированная стоимость вида (+ элитность).</summary>
+    static float EnemyCost(Enemy e) => EnemyBalance.Cost(e.Kind) + (e.Elite ? EnemyBalance.EliteCost : 0f);
+
+    /// <summary>Бюджет опасности рядом с игроком: растёт с числом зажжённых фонарей региона (больше врагов вместе, но не сильнее), ограничен потолком региона.</summary>
+    public float EncounterBudget(int reg, bool guarded, int players)
+    {
+        var tn = Tune.T; float b = CombatTuning.At(tn.EncounterBase, reg) + tn.EncounterPerLamp * (reg == 0 ? LitCount : LitIn(reg));
+        b = Math.Min(b, CombatTuning.At(tn.EncounterMax, reg));
+        if (guarded) b += 3f; if (Level < tn.FearLevel) b += tn.FearSpawn;
+        b *= CombatTuning.At(tn.CoopCap, CoopIdx);   // в группе врагов одновременно больше, но каждый вид прежний
+        return b * tn.SpawnCapMul;
     }
 
     EK PickKind(Vector2 p, int reg)
@@ -194,23 +215,17 @@ public partial class Game
         return false;
     }
 
-    static float BaseHp(EK k) => k switch
-    {
-        EK.Shade => 7f, EK.Wraith => 3.5f, EK.Spitter => 4.5f, EK.Swarm => 1.3f, EK.Bomber => 5f, EK.Warden => 170f,
-        EK.Eel => 6f, EK.Leech => 4f, EK.Beetle => 12f, EK.DepthWarden => 260f, EK.Imp => 5f, EK.Golem => 22f, EK.Spirit => 6f, EK.IceWolf => 9f, EK.FrostPriest => 8f, EK.Sentinel => 20f,
-        EK.WinterWarden => 420f, EK.Mirage => 7f, EK.Decoy => 1f, EK.Weaver => 10f, EK.Stalker => 12f, EK.Source => 560f, _ => 300f
-    };
+    static float BaseHp(EK k) => EnemyBalance.Hp(k);                    // фиксированное здоровье вида: EnemyBalance
 
     /// <summary>Рядом идёт бой с боссом: призванные им враги (и все остальные) на свету не горят.</summary>
     bool BossFightNear(Vector2 p) { foreach (var b in Enemies) if (b.IsBoss && b.Hp > 0 && b.Pos.DistanceTo(p) < 420f) return true; return false; }
 
-    public Enemy SpawnEnemy(Vector2 p, EK k, Poi guard = null, float scale = -1)
+    public Enemy SpawnEnemy(Vector2 p, EK k, Poi guard = null, float scale = -1)      // scale не используется: характеристики вида фиксированы (EnemyBalance)
     {
-        if (scale < 0) scale = DangerScale;
         bool boss = k == EK.Warden || k == EK.DepthWarden || k == EK.AshWarden || k == EK.WinterWarden || k == EK.Source;
         if (NetClient) return new Enemy { Kind = k, Pos = p, Hp = 1, MaxHp = 1 };            // клиент врагов не создаёт: их присылает хост
         var (dm, hm) = EnemyMuls(k, p);
-        float hp = BaseHp(k) * (boss ? hm : scale * hm); scale = dm;                 // здоровье растёт с прогрессом мира, а урон врага фиксирован: сильнее становятся сами виды врагов
+        float hp = BaseHp(k) * hm; scale = dm;
         var e = new Enemy { Kind = k, Pos = p, Hp = hp, MaxHp = hp, Phase = rng.Randf() * 6.28f, Scale = scale, Guard = guard, Cd = rng.RandfRange(.8f, 2f) };
         e.NetId = ++nextEnemyId; if (guard != null) e.Home = p;
         if (boss) { e.Home = p; e.T1 = 2.5f; e.T3 = 4f; }
@@ -481,8 +496,8 @@ public partial class Game
         GiveXp(xp);
         Burst(e.Pos, new Color("#a060ff"), e.Kind == EK.Swarm ? 5 : 14, 90);
         if (E(Fxk.Blast) > 0 && !inBlast) BlastAt(e.Pos, CurDef != null ? WeaponDmg(CurDef) : PlayerDamage);
-        if (N("KillHeal") > 0) Hp = Mathf.Min(MaxHp, Hp + N("KillHeal"));
-        if (Has(Tech.Reaper)) { Hp = Mathf.Min(MaxHp, Hp + ReaperHeal); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+" + ReaperHeal.ToString("0.#"), Life = .7f, C = new Color("#7ad45a") }); }
+        if (N("KillHeal") > 0) KillHealGain(N("KillHeal"));
+        if (Has(Tech.Reaper)) { KillHealGain(ReaperHeal); Texts.Add(new FText { P = PPos + new Vector2(0, -14), S = "+" + ReaperHeal.ToString("0.#"), Life = .7f, C = new Color("#7ad45a") }); }
         if (rng.Randf() < chance) LootFor(e, It.Shard, e.Kind == EK.Golem ? 2 : 1, e.Pos);
         if (e.Kind == EK.Beetle && rng.Randf() < .3f) LootFor(e, It.Crystal, 1, e.Pos + new Vector2(0, -8));
         if ((e.Kind == EK.IceWolf || e.Kind == EK.Sentinel || e.Kind == EK.FrostPriest) && rng.Randf() < .3f) LootFor(e, It.Frost, 1, e.Pos + new Vector2(0, -8));
@@ -502,7 +517,7 @@ public partial class Game
             if (aiRespawn is Vector2 rp) { realP = rp; aiRespawn = null; }     // игрок погиб от удара этого же прохода — не возвращаем его на место смерти
             var e = Enemies[i]; PPos = realP; ChooseTarget(e, dt, realP);
             if (!e.IsBoss && Tune.T.EnemyAtkPause > 1f) { float dec = e.CdRec - e.Cd; if (dec > 0 && dec <= dt * 2.5f) e.Cd += dec * (1f - 1f / Tune.T.EnemyAtkPause); e.CdRec = e.Cd; }       // паузы в EnemyAtkPause раз длиннее: возвращаем часть того, что отсчитали за прошлый такт
-            EliteTick(e, dt); if (e.Over > 0) e.Over -= dt; e.Cd -= dt * EnemyCdMul(e); ctxDmg = BossDamageMul(e.Kind); int projN = Projs.Count;
+            EliteTick(e, dt); if (e.Over > 0) e.Over -= dt; e.Cd -= dt * EnemyCdMul(e); ctxDmg = e.IsBoss ? BossDamageMul(e.Kind) : EnemyBalance.Dmg(e.Kind); int projN = Projs.Count;
             e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - (e.IsBoss ? dt : dt / Tune.T.EnemyAtkPause));
             e.Kb *= Mathf.Max(0, 1 - 9 * dt);
             e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
@@ -671,7 +686,7 @@ public partial class Game
                 default: vel = UpdateOtherEnemy(e, dt, dir, dist, perp, k); break;
             }
             if (!e.IsBoss) vel *= EnemySpeedMul(e);
-            for (int pj = projN; pj < Projs.Count; pj++) Projs[pj].Dmg *= e.IsBoss ? ctxDmg : e.Kind == EK.Spitter ? 1f : Tune.T.EnemyDamage * CombatTuning.At(Tune.T.BiomeDamage, RegionAt(e.Pos));
+            for (int pj = projN; pj < Projs.Count; pj++) Projs[pj].Dmg *= e.IsBoss ? ctxDmg : e.Kind == EK.Spitter ? 1f : Tune.T.EnemyDamage * EnemyBalance.Dmg(e.Kind);
             ctxDmg = 1f;
             bool raiding = RaidTick(e, dt, ref vel, dir, dist, lit);
             if (!raiding && !e.IsBoss && e.Ev == null && !(e.Kind == EK.Leech && e.State == 1)) { vel = AvoidCover(e, vel, dir, dist); vel = AvoidLight(e, vel, dir, auraR); }

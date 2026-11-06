@@ -105,7 +105,7 @@ public partial class Game
                 Check("sessions: one character in another world keeps inventory, weapon, level, skills", Inv[It.Wood] == 77 && Level == 7 && Owned.Count == 1 && SkillLv[0] == 2);
                 Check("sessions: appearance is saved", PlayerLook.Skin == 3 && PlayerLook.Hair == 2 && PlayerLook.HairCol == 1 && PlayerLook.Cloth1 == 2 && PlayerLook.Cloth2 == 3 && PlayerLook.Variant == 1);
                 Check("sessions: the other world has no buildings, lit lamps or stock of the first", Buildings.Count == 0 && LitCount == 0 && Stock[It.Stone] == 0);
-                Check("sessions: world difficulty is applied (hard)", Diff == 1 && EnemyMuls(EK.Shade, PPos).hp > 1.5f * 1.3f);
+                Check("sessions: world difficulty is applied (hard)", Diff == 1 && EnemyMuls(EK.Shade, PPos).hp > Tune.T.EnemyHp * 1.2f);
                 Inv[It.Wood] += 5; AddB(Tl.Sawmill, 3, 0, 1); Save(); sessionsPhase = 2; StartSolo(sB, "testworld");  // другой герой — первый мир
             });
         }

@@ -14,7 +14,7 @@ public static class Ms
 
 public sealed class RunResult
 {
-    public string Profile, Arch, StuckReason = ""; public ulong Seed; public Outcome Out; public float Hours; public int Deaths, Level, Kills, Tier, Beacon;
+    public string Profile, Arch, StuckReason = "", StopKind = "none"; public ulong Seed; public Outcome Out; public float Hours; public int Deaths, Level, Kills, Tier, Beacon;
     public float[] Ms = Enumerable.Repeat(-1f, Balance.Ms.Names.Length).ToArray();
     public int[] DeathsRegion = new int[5], DeathsBoss = new int[5], BossAttempts = new int[5];
     public Dictionary<string, int> Killers = new();
@@ -108,7 +108,7 @@ public sealed class Campaign
     {
         if (seconds <= 0) return; region = reg;
         float dark = hunt ? seconds : seconds * DarkShare(reg), safe = seconds - dark;
-        if (safe > 0) { Tick(safe, ref bucket); Regen(safe, true); }
+        if (safe > 0) { Tick(safe, ref bucket); p.RefillKillHealing(safe); Regen(safe, true); }
         if (dark > 0) Exposure(dark, reg, hunt, ref bucket);
     }
 
@@ -130,7 +130,17 @@ public sealed class Campaign
 
     void Spawn(CombatSim cs, int reg)
     {
-        var d = Pick(reg); int elites = 0; foreach (var f in cs.Foes) if (f.Alive && f.Elite) elites++;
+        float spent = cs.Foes.Where(f => f.Alive).Sum(f => EnemyBalance.Cost(Enum.Parse<EK>(f.Kind)) + (f.Elite ? EnemyBalance.EliteCost : 0));
+        int ranged = cs.Foes.Count(f => f.Alive && EnemyBalance.IsRanged(Enum.Parse<EK>(f.Kind)));
+        EnemyM d = null;
+        for (int i = 0; i < 24; i++)
+        {
+            var candidate = Pick(reg); var kind = Enum.Parse<EK>(candidate.Kind);
+            if (spent + EnemyBalance.Cost(kind) * candidate.Group > p.EncounterBudget(reg) + .01f || EnemyBalance.IsRanged(kind) && ranged >= T.MaxRangedNear) continue;
+            d = candidate; break;
+        }
+        if (d == null) return;
+        int elites = cs.Foes.Count(f => f.Alive && f.Elite);
         res.Spawned[d.Kind + "@" + reg] = res.Spawned.GetValueOrDefault(d.Kind + "@" + reg) + d.Group;
         for (int i = 0; i < d.Group; i++) cs.Foes.Add(cs.MakeFoe(d, p.DangerScale, elites, true, d.Group > 1 ? r.Range(130, 200) : -1f));
     }
@@ -140,7 +150,6 @@ public sealed class Campaign
     {
         var cs = new CombatSim(p, pr, r, reg, false);
         float done = 0, spawnT = r.Range(1f, 3f);
-        int baseCap = reg == 0 ? 3 + p.LitCount * 2 : 4 + p.LitIn(reg) * 2; int cap = Math.Min(Math.Max(2, (int)Math.Ceiling((baseCap + T.SpawnCapBonus + (p.Level < T.FearLevel ? T.FearSpawn : 0)) * T.SpawnCapMul)), 18);
         while (done < work && !Over)
         {
             if (!cs.AnyAlive)
@@ -157,7 +166,7 @@ public sealed class Campaign
             }
             if (spawnT <= 0)
             {
-                spawnT = r.Range(2.2f, 3.8f) * T.SpawnDelayMul; if (cs.Alive < cap) Spawn(cs, reg);
+                spawnT = r.Range(2.2f, 3.8f) * T.SpawnDelayMul; Spawn(cs, reg);
             }
         }
         Hourly();
@@ -165,7 +174,7 @@ public sealed class Campaign
 
     void Rest()
     {
-        float t = M.A.RestTravel + Math.Max(0, p.MaxHp - p.Hp) / 2f; Tick(t, ref res.TRest); p.Hp = p.MaxHp;
+        float t = M.A.RestTravel + T.RegenDelay + Math.Max(0, p.MaxHp - p.Hp) / 1.5f; Tick(t, ref res.TRest); p.RefillKillHealing(t); p.Hp = p.MaxHp;
     }
 
     void Die(string killer, bool boss, int reg, int bossId)
@@ -505,9 +514,9 @@ public sealed class Campaign
     public RunResult Run()
     {
         try { Play(); }
-        catch (StuckException e) { res.Out = Outcome.Stuck; res.StuckReason = e.Message; }
+        catch (StuckException e) { res.Out = Outcome.Stuck; res.StuckReason = e.Message; res.StopKind = e.Message.StartsWith("cannot reach readiness") ? "preparation_limit" : e.Message.Contains("failed attempts") ? "attempt_limit" : "policy_limit"; }
         res.Hours = (float)(p.Time / 3600.0); res.Level = p.Level; res.Kills = p.Kills; res.Tier = p.Tier; res.Beacon = p.Beacon;
-        if (res.Out != Outcome.Won && Over) res.Out = Outcome.Timeout;
+        if (res.Out != Outcome.Won && Over) { res.Out = Outcome.Timeout; res.StopKind = "time_limit"; }
         res.SkillLv = (int[])p.Sk.Clone(); res.EndInv = (int[])p.Inv.Clone(); res.Weapon = p.Cur != null ? p.Cur.Id : "none";
         res.ModsOn = p.CurW >= 0 ? p.Owned[p.CurW].Mods.ToArray() : Array.Empty<int>(); res.Relics = p.RelicsEq.ToArray(); res.Gathered = (int[])res.Gathered.Clone();
         return res;

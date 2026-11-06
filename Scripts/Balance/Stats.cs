@@ -76,7 +76,8 @@ public static class Runner
 public sealed class ProfileSummary
 {
     public string Profile; public int N, Wins, Stuck, Timeout; public double WinRate, WinLo, WinHi, StuckRate, TimeoutRate;
-    public double HoursMean, HoursMedian, HoursCi, HoursP10, HoursP90, HoursSd, HoursMedLo, HoursMedHi;
+    public double HoursMean = double.NaN, HoursMedian = double.NaN, HoursCi = double.NaN, HoursP10 = double.NaN, HoursP90 = double.NaN, HoursSd = double.NaN, HoursMedLo = double.NaN, HoursMedHi = double.NaN;
+    public int PreparationStops, AttemptStops;
     public double DeathsMean, DeathsMedian, DeathsSd, DeathsPerHour, LevelMedian, KillsMean;
     public double[] MilestoneMedian = new double[Ms.Names.Length]; public int[] MilestoneN = new int[Ms.Names.Length]; public double[] LevelAtMs = new double[Ms.Names.Length];
     public double[] DeathsRegion = new double[5], DeathsBoss = new double[5], BossAttempts = new double[5], BossFirstTry = new double[5];
@@ -105,6 +106,7 @@ public sealed class Summary
         {
             var rs = g.ToList(); var ps = new ProfileSummary { Profile = g.Key, N = rs.Count };
             ps.Wins = rs.Count(r => r.Out == Outcome.Won); ps.Stuck = rs.Count(r => r.Out == Outcome.Stuck); ps.Timeout = rs.Count(r => r.Out == Outcome.Timeout);
+            ps.PreparationStops = rs.Count(r => r.StopKind == "preparation_limit"); ps.AttemptStops = rs.Count(r => r.StopKind == "attempt_limit");
             ps.WinRate = (double)ps.Wins / ps.N; (ps.WinLo, ps.WinHi) = Mx.Wilson(ps.Wins, ps.N); ps.StuckRate = (double)ps.Stuck / ps.N; ps.TimeoutRate = (double)ps.Timeout / ps.N;
             var wt = rs.Where(r => r.Out == Outcome.Won).Select(r => (double)r.Hours).ToList();
             if (wt.Count > 0) { ps.HoursMean = wt.Average(); ps.HoursMedian = Mx.Median(wt); ps.HoursCi = Mx.CiHalf(wt); ps.HoursP10 = Mx.Pct(wt, .1); ps.HoursP90 = Mx.Pct(wt, .9); ps.HoursSd = Mx.Sd(wt); (ps.HoursMedLo, ps.HoursMedHi) = Mx.MedianCi(wt); }
@@ -167,12 +169,18 @@ public sealed class Summary
             if (ps.LowConfidence) F("info", "stats", $"{ps.Profile}: {ps.N} прогонов < {tg.MinSims}: выводы по профилю предварительные");
             if (!tg.Profiles.TryGetValue(ps.Profile, out var t)) continue; bool ok = !ps.LowConfidence;
             string sev = ok ? "warn" : "info";
-            if (ps.WinHi < t.WinMin) F(sev, "difficulty", $"{ps.Profile}: побеждает {ps.WinRate:P0} (ДИ {ps.WinLo:P0}–{ps.WinHi:P0}), цель ≥ {t.WinMin:P0}: слишком сложно", ps.WinRate, "уменьшить EnemyHp/EnemyDamage/BossHp");
+            if (ps.WinHi < t.WinMin)
+            {
+                bool preparationDominates = ps.PreparationStops > ps.N / 2;
+                F(sev, preparationDominates ? "bot-readiness" : "difficulty", $"{ps.Profile}: побеждает {ps.WinRate:P0} (ДИ {ps.WinLo:P0}–{ps.WinHi:P0}), цель ≥ {t.WinMin:P0}: " + (preparationDominates ? "большинство остановок — подготовка бота; оценка боевой сложности требует отдельного сценария" : "слишком сложно"), ps.WinRate, preparationDominates ? "проверить критерий готовности и боевые стенды" : "уменьшить EnemyHp/EnemyDamage/BossHp");
+            }
             if (ps.WinLo > t.WinMax) F(sev, "difficulty", $"{ps.Profile}: побеждает {ps.WinRate:P0} (ДИ {ps.WinLo:P0}–{ps.WinHi:P0}), цель ≤ {t.WinMax:P0}: слишком легко", ps.WinRate, "увеличить EnemyHp/EnemyDamage/BossHp");
             if (ps.Wins > 5 && ps.HoursMedian < t.HoursMin) F(sev, "pace", $"{ps.Profile}: медианное время {ps.HoursMedian:F1} ч < цели {t.HoursMin} ч: прогрессия слишком быстрая", ps.HoursMedian, "увеличить XpBase/XpLinear/XpQuad, MineTimeMul, TechCostMul");
             if (ps.Wins > 5 && ps.HoursMedian > t.HoursMax) F(sev, "pace", $"{ps.Profile}: медианное время {ps.HoursMedian:F1} ч > цели {t.HoursMax} ч: прогрессия слишком медленная", ps.HoursMedian, "уменьшить XpBase/XpLinear/XpQuad, MineTimeMul, TechCostMul");
             if (ps.DeathsPerHour > t.DeathsPerHourMax) F("warn", "difficulty", $"{ps.Profile}: {ps.DeathsPerHour:F1} смертей/ч > {t.DeathsPerHourMax}", ps.DeathsPerHour);
-            if (ps.StuckRate > t.QuitMax) F("warn", "softlock", $"{ps.Profile}: {ps.StuckRate:P1} прогонов застряли или бросили игру (> {t.QuitMax:P0}); причины: {string.Join("; ", b.Runs.Where(r => r.Profile == ps.Profile && r.Out == Outcome.Stuck).Select(r => r.StuckReason).GroupBy(x => x).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key + " ×" + g.Count()))}", ps.StuckRate);
+            if ((double)ps.PreparationStops / ps.N > t.QuitMax) F("warn", "bot-policy", $"{ps.Profile}: {ps.PreparationStops}/{ps.N} остановились на подготовке; проверьте критерий готовности бота и доступность улучшений. Это не подтверждённый проигрыш в бою.", (double)ps.PreparationStops / ps.N);
+            double combatQuitRate = (double)(ps.Stuck - ps.PreparationStops) / ps.N;
+            if (combatQuitRate > t.QuitMax) F("warn", "softlock", $"{ps.Profile}: {combatQuitRate:P1} остановились после боевых попыток или других ограничений; причины: {string.Join("; ", b.Runs.Where(r => r.Profile == ps.Profile && r.Out == Outcome.Stuck && r.StopKind != "preparation_limit").Select(r => r.StuckReason).GroupBy(x => x).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key + " ×" + g.Count()))}", combatQuitRate);
             foreach (var kv in t.Milestones) { int mi = Array.IndexOf(Ms.Names, kv.Key); if (mi < 0 || ps.MilestoneN[mi] < 5) continue; double v = ps.MilestoneMedian[mi]; if (v < kv.Value[0] || v > kv.Value[1]) F(sev, "pace", $"{ps.Profile}: этап «{kv.Key}» наступает на {v:F2}-м часе (цель {kv.Value[0]}–{kv.Value[1]} ч, PLAYTEST.md)", v); }
             if (ps.TimeoutRate > tg.StuckMax) F("warn", "pace", $"{ps.Profile}: {ps.TimeoutRate:P1} прогонов не уложились в {m.A.MaxHours} ч", ps.TimeoutRate);
         }

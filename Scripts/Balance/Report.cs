@@ -42,12 +42,12 @@ public static class Report
 
     static void WriteRunsCsv(string path, Runner.Batch b, BalanceModel m)
     {
-        var sb = new StringBuilder("profile,arch,seed,outcome,hours,deaths,level,kills,tier,beacon,weapon,stuck_reason,deaths_r0,deaths_r1,deaths_r2,deaths_r3,deaths_r4,deaths_b1,deaths_b2,deaths_b3,deaths_b4,deaths_b5,t_fight_h,t_gather_h,t_travel_h,t_rest_h,t_craft_h,t_explore_h");
+        var sb = new StringBuilder("profile,arch,seed,outcome,hours,deaths,level,kills,tier,beacon,weapon,stuck_reason,stop_kind,deaths_r0,deaths_r1,deaths_r2,deaths_r3,deaths_r4,deaths_b1,deaths_b2,deaths_b3,deaths_b4,deaths_b5,t_fight_h,t_gather_h,t_travel_h,t_rest_h,t_craft_h,t_explore_h");
         foreach (var n in Ms.Names) sb.Append(",ms_" + n);
         sb.AppendLine();
         foreach (var r in b.Runs)
         {
-            sb.Append($"{r.Profile},{r.Arch},{r.Seed},{r.Out},{F(r.Hours, "F3")},{r.Deaths},{r.Level},{r.Kills},{r.Tier},{r.Beacon},{r.Weapon},\"{r.StuckReason}\"");
+            sb.Append($"{r.Profile},{r.Arch},{r.Seed},{r.Out},{F(r.Hours, "F3")},{r.Deaths},{r.Level},{r.Kills},{r.Tier},{r.Beacon},{r.Weapon},\"{r.StuckReason?.Replace("\"", "\"\"")}\",{r.StopKind}");
             foreach (var d in r.DeathsRegion) sb.Append("," + d); foreach (var d in r.DeathsBoss) sb.Append("," + d);
             foreach (var t in new[] { r.TFight, r.TGather, r.TTravel, r.TRest, r.TCraft, r.TExplore }) sb.Append("," + F(t / 3600.0, "F3"));
             foreach (var x in r.Ms) sb.Append("," + (x < 0 ? "" : F(x, "F3")));

@@ -10,7 +10,7 @@ using Godot;
 namespace Lamplighter.Balance;
 
 /// <summary>Командная строка: godot --headless --path . -- balance &lt;команда&gt; [--параметры]. Запуск не создаёт мира и не читает сохранений (Game._Ready возвращается до загрузки).</summary>
-public static class BalanceCli
+public static partial class BalanceCli
 {
     static readonly JsonSerializerOptions Js = new() { IncludeFields = true, WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
@@ -63,10 +63,17 @@ public static class BalanceCli
 
     static int Dispatch(Args a)
     {
+        foreach (string key in new[] { "n", "bench-k", "validation-n", "train", "valid", "iters", "lambda" })
+            if (a.Flags.Contains(key) || a.Kv.ContainsKey(key) && (!int.TryParse(a.S(key), out int value) || value <= 0)) throw new ArgumentException("--" + key + " должен быть положительным целым числом.");
+        if (a.Kv.ContainsKey("threads") && (!int.TryParse(a.S("threads"), out int threads) || threads < 0)) throw new ArgumentException("--threads должен быть целым числом >= 0.");
+        if (a.Kv.ContainsKey("max-hours") && (!double.IsFinite(a.D("max-hours", double.NaN)) || a.D("max-hours", 0) <= 0)) throw new ArgumentException("--max-hours должен быть конечным положительным числом.");
+        foreach (string profile in Profiles(a)) Profile.ByName(profile);
+        if (Profiles(a).Length == 0) throw new ArgumentException("Нужен хотя бы один профиль.");
         switch (a.Cmd)
         {
             case "simulate": return Simulate(a, false);
             case "analyze": return Simulate(a, true);
+            case "check": return CheckSuite(a);
             case "optimize": return Optimize(a);
             case "prune": return Optimize(a, true);
             case "compare": return Compare(a);
@@ -81,7 +88,8 @@ public static class BalanceCli
 
     static void Help()
     {
-        Say("Команды: simulate | analyze | optimize | prune | compare | report | validate | targets | apply");
+        Say("Команды: check | simulate | analyze | optimize | prune | compare | relic-ab | report | validate | targets | apply");
+        Say("check: проверка модели, сценарии навыков/оружия/боссов и quality.json; --strict возвращает код 1 при проблемах баланса. tools/balance.ps1 check дополнительно сверяет с настоящим Game.");
         Say("Общие параметры: --n <прогонов на профиль> --profiles novice,average,expert,optimizer --seed <число> --threads <0=авто> --name <имя> --overrides <файл.json> --targets <файл.json> --max-hours <ч>");
         Say("simulate: массовый прогон, отчёт JSON/CSV/MD в balance/out/<name>.   analyze: simulate + эффективность навыков, оружие, вставки (--bench-k <схваток>).");
         Say("optimize: --iters <12> --lambda <6> --train <150> --valid <600> --groups tuning,boss,weapon,skill,enemy --skill-bench.  Результат — предложение balance/proposals/<name>.json, ресурсы игры не меняются.");
@@ -95,8 +103,10 @@ public static class BalanceCli
     {
         string cal = Path.Combine(Root, "balance", "profiles.json"); if (File.Exists(cal)) Profile.Calibration = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, double>>>(File.ReadAllText(cal));
         var m = a.S("model") != null ? JsonSerializer.Deserialize<BalanceModel>(File.ReadAllText(a.S("model")), new JsonSerializerOptions { IncludeFields = true }) : BalanceModel.FromGame();
+        if (a.S("model") != null && !JsonDocument.Parse(File.ReadAllText(a.S("model"))).RootElement.TryGetProperty("SchemaVersion", out _)) m.SchemaVersion = 0;
         if (a.D("max-hours", 0) > 0) m.A.MaxHours = (float)a.D("max-hours", 60);
         var ov = a.S(overridesKey); if (!string.IsNullOrEmpty(ov) && ov != "base") m = m.With(LoadOverrides(ov));
+        if (a.Cmd != "check") { var errors = ModelHealth.Errors(m); if (errors.Count > 0) throw new ArgumentException(string.Join("; ", errors)); }
         return m;
     }
 
@@ -132,7 +142,7 @@ public static class BalanceCli
     static Dictionary<string, object> Brief(Summary s) => new()
     {
         ["total_runs"] = s.TotalRuns, ["seconds"] = Math.Round(s.Seconds, 2),
-        ["profiles"] = s.Profiles.Select(p => new { p.Profile, p.N, win = Math.Round(p.WinRate, 4), win_lo = Math.Round(p.WinLo, 4), win_hi = Math.Round(p.WinHi, 4), median_hours = Math.Round(p.HoursMedian, 2), mean_deaths = Math.Round(p.DeathsMean, 2), stuck = Math.Round(p.StuckRate, 4) }).ToList(),
+        ["profiles"] = s.Profiles.Select(p => new { p.Profile, p.N, win = Math.Round(p.WinRate, 4), win_lo = Math.Round(p.WinLo, 4), win_hi = Math.Round(p.WinHi, 4), median_hours = double.IsFinite(p.HoursMedian) ? (double?)Math.Round(p.HoursMedian, 2) : null, mean_deaths = Math.Round(p.DeathsMean, 2), stuck = Math.Round(p.StuckRate, 4), p.PreparationStops, p.AttemptStops }).ToList(),
         ["findings"] = s.Findings.Where(f => f.Severity != "info").Select(f => f.Area + ": " + f.Text).ToList()
     };
 

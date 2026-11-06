@@ -224,7 +224,7 @@ public partial class Game
         {
             var d = Aim - PPos; d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0); float sg = d.X < 0 ? -1 : 1;       // в покое предмет виден в руке, опущенный вдоль тела
             if (CurW >= 0 || OwnedTools.Contains(CurTool))
-                DrawHeldItem(c, PPos + new Vector2(0, -3), d.Angle() + sg * 1.25f);       // пустая рука в покое не рисуется: видна только при замахе
+                { float fs = Facing < 0 ? -1 : 1; var rest = Vector2.FromAngle(fs > 0 ? 1.05f : Mathf.Pi - 1.05f); DrawHeldItem(c, PPos + new Vector2(fs * 3f, -3) - rest * 5f, rest.Angle()); }       // пустая рука в покое не рисуется: видна только при замахе
         }
         if (SpinT > 0)
         {

@@ -142,7 +142,7 @@ public partial class Game
 
     void RiftFeed(bool burst)
     {
-        var c = W.HeartArena; float scale = 1f + .15f * RiftTier;                       // врагов больше, поэтому каждый чуть слабее прежнего
+        var c = W.HeartArena;;
         int room = RiftCap - RiftAlive, batch = burst ? room : Mathf.Min(room, rng.RandiRange(2, 4));
         for (int i = 0; i < batch && riftQuota > 0; i++)
         {
@@ -153,9 +153,9 @@ public partial class Game
                 if (W.Walkable(t.X, t.Y)) { pos = p; break; }
             }
             var pool = Affixes[RiftAffix[rng.Randf() < .5f ? 0 : 1]];
-            var en = SpawnEnemy(pos, pool[rng.RandiRange(0, pool.Length - 1)], null, scale); en.Ev = riftEv; en.Age = -.8f; riftQuota--;
+            var en = SpawnEnemy(pos, pool[rng.RandiRange(0, pool.Length - 1)], null); en.Ev = riftEv; en.Age = -.8f; riftQuota--;
             Burst(pos, new Color("#c070ff"), 8, 60);
-            if (riftEliteDue > 0) { riftEliteDue = 0; en.Elite = true; en.Hp = en.MaxHp = en.MaxHp * 2.5f; }
+            if (riftEliteDue > 0) { riftEliteDue = 0; TryMakeElite(en, 4, true); }
         }
     }
 

@@ -107,6 +107,7 @@ Run-Stage 'hud: density modes, collapsing hint, one event line, temporary resour
 Run-Stage 'equip: equipment window, cards, sockets, hotbar, relics, lantern, crafting, resolutions' 'equip' @('EQUIP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'skills: multi-level tree, costs, bonuses (+30% light), migration, icons, window' 'skills' @('SKILLS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'balance simulator parity: formulas, costs, skill unlocks, effects, enemy stats and hits-to-kill match the real Game' 'balance' @('BALANCE DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'balance model contract: encounter budgets, boss warnings, healing and outcome semantics' 'balancecontract' @('MODEL CONTRACT DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'EXCEPTION')
 Run-Stage 'balance audit: placement XP, relic health, guards, damage, DOT, model graves and upgrades' 'balanceaudit' @('BALANCE AUDIT DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'EXCEPTION')
 Run-Stage 'steam host (real Steam lobby, 1 client; skipped without Steam/GodotSteam)' 'netsteam' @('NETSTEAM DONE', 'SUMMARY failures=0') @{ LAMP_NET = 'hoststeam' } @('\[check\] FAIL')
 Run-Stage 'net menu pages (screenshots, en localization)' 'netmenu' @('NETMENU DONE') @{ LAMP_LANG = 'en' } @('loc-missing')

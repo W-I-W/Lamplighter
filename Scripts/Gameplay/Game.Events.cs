@@ -121,7 +121,7 @@ public partial class Game
 
     Enemy EvEnemy(GEvent ev, Vector2 p, EK k, float hpMul = 1f, bool elite = false)
     {
-        var e = SpawnEnemy(p, k, null, DangerScale * (elite ? 1.3f : 1f)); e.Ev = ev; e.Home = ev.Pos; e.Age = -.3f;
+        var e = SpawnEnemy(p, k, null); e.Ev = ev; e.Home = ev.Pos; e.Age = -.3f;
         e.Hp *= hpMul; e.MaxHp = e.Hp; e.Elite = elite; return e;
     }
 

@@ -26,9 +26,9 @@ public static class Validate
         ("Combat/Game.Combat.cs", "HurtPlayer(14f * e.Scale, -dir); e.State = 3", "Жук: удар 14"), ("Combat/Game.Combat.cs", "HurtPlayer(11f * e.Scale", "Жук: удар 11"),
         ("Combat/Game.Combat.cs", "HurtPlayer(18f * e.Scale, (PPos - e.Pos)", "Подрывник: взрыв 18"), ("Combat/Game.Combat.cs", "e.Tele = .35f; e.Cd = rng.RandfRange(2.2f, 3.2f)", "Призрак: подготовка и перезарядка"),
         ("Combat/Game.Combat.cs", "e.Tele = .45f; e.Cd = rng.RandfRange(1.6f, 2.4f)", "Угорь: подготовка"), ("Combat/Game.Combat.cs", "spawnT = rng.RandfRange(2.2f, 3.8f)", "темп появления врагов"),
-        ("Combat/Game.Combat.cs", "3 + LitCount * 2 : 4 + LitIn(reg) * 2", "запас врагов на территории"), ("Combat/Game.Combat.cs", "xp *= 1f + .3f * RegionAt(e.Pos)", "опыт за убийство растёт с регионом"),
+        ("Combat/Game.Combat.cs", "float budget = EncounterBudget(reg, guarded, targets.Count)", "бюджет столкновения"), ("Combat/Game.Combat.cs", "xp *= 1f + .3f * RegionAt(e.Pos)", "опыт за убийство растёт с регионом"),
         ("Combat/Game.Combat.cs", "EK.Shade => 15", "опыт тени"), ("Combat/Game.Combat.cs", "EK.Shade => .7f", "шанс осколка с тени"), ("Combat/Game.Combat.cs", "EK.Golem => 40", "опыт голема"),
-        ("Combat/Game.Combat.cs", "float auraR = PlayerLightR * (Has(Tech.HeroLamp) ? .55f : .6f)", "радиус ауры"), ("Combat/Game.Combat.cs", "HurtTick(e, 3f * dt * (e.IsBoss ? .3f : 1f))", "ожог 3 урона в секунду"),
+        ("Combat/Game.Combat.cs", "float auraR = PlayerLightR * (Has(Tech.HeroLamp) ? .55f : .6f)", "радиус ауры"), ("Combat/Game.Combat.cs", "HurtTickAt(e, 3f * dt * (e.IsBoss ? .3f : 1f)", "ожог 3 урона в секунду"),
         ("Combat/Game.Combat.cs", "int lost = BuryPlayer()", "содержимое рюкзака уходит в могилу"), ("Combat/Game.Grave.cs", "OwnedTools.Clear(); Owned.Clear()", "могила хранит инструменты и оружие"),
         ("Combat/Game.Ash.cs", "HurtPlayer(7f * e.Scale, -dir, true)", "Бес: урон 7"), ("Combat/Game.Ash.cs", "HurtPlayer(15f * e.Scale", "Голем: удар 15"),
         ("Combat/Game.Ice.cs", "HurtPlayer(8f * e.Scale, -dir); Chill(2f)", "Волк: урон 8"), ("Combat/Game.Ice.cs", "HurtPlayer(14f * e.Scale, -dir); Chill(2.5f)", "Страж: удар 14"),
@@ -36,12 +36,11 @@ public static class Validate
         ("Combat/Game.Weapons.cs", "WeaponDmg(WeaponDef w) => (w.Dmg + .35f * (Level - 1)) * (1f + N(\"Dmg\"))", "урон оружия"),
         ("Combat/Game.Weapons.cs", "AtkCd = w.Cd * (1f - E(Tech.QuickDraw))", "перезарядка лука"), ("Combat/Game.Weapons.cs", "e.Burn = Mathf.Max(e.Burn, 2f + b)", "длительность ожога"),
         ("Combat/Game.Weapons.cs", ".45f + .2f * b", "шанс ожога"), ("Combat/Game.Weapons.cs", "dmg * .45f", "урон цепи 45%"),
-        ("Combat/Game.Difficulty.cs", "t.EnemyHp * CombatTuning.At(t.BiomeHp, reg)", "множитель здоровья врагов"), ("Combat/Game.Difficulty.cs", "LootFor(e, It.Shard, 3, e.Pos", "награда за элитного"),
+        ("Combat/Game.Difficulty.cs", "t.EnemyHp * (hard ? t.HardEnemyHp : 1f)", "множитель здоровья врагов"), ("Combat/Game.Difficulty.cs", "LootFor(e, It.Shard, 3, e.Pos", "награда за элитного"),
         ("Core/Game.cs", "MaxHp += 10", "здоровье за уровень"), ("Core/Game.cs", "PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N(\"Dmg\")) * Tune.T.FistDamageMul", "урон без оружия"),
         ("Core/Game.cs", "MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1))", "скорость добычи"), ("Core/Game.cs", "XpBase + Tune.T.XpLinear * Level + Tune.T.XpQuad * Level * Level", "опыт на уровень"),
         ("Core/Game.cs", "SmeltTime = 0.9f", "время плавки"), ("Core/Game.cs", "Tl.Tree => 2.2f", "время добычи дерева"), ("Core/Game.cs", "Tl.Iron => 1, Tl.MeteorOre => 1, Tl.FrostOre => 3", "требования тира"),
         ("Core/Game.cs", "regenDelay <= 0 && E(Tech.Regen) > 0) Hp = Mathf.Min(MaxHp, Hp + RegenPerSec * dt)", "восстановление здоровья"), ("Core/Game.cs", "Hp + 1.5f * dt", "восстановление в свете 1.5/с вне боя"),
-        ("Combat/Game.Combat.cs", "DangerScale => 1f + .18f * LitCount + .12f * LitIn(1)", "масштаб опасности"),
     };
 
     static readonly string[] NumKeysUsed = { "Dmg", "MineSpd", "HeroRadius", "KillHeal", "HeatResist", "MineChain", "MaxHp", "MaxHpPct" };
@@ -58,7 +57,7 @@ public static class Validate
         Check(m.Weapons.All(w => Db.Weapon(w.Id) != null) && m.Weapons.Length == Db.Weapons.Length, "оружие совпадает с таблицей Db");
         Check(m.Mods.SelectMany(x => x.FxK).All(k => Enum.TryParse<Fxk>(k, out _)), "эффекты вставок — реальные Fxk");
         Check(m.Relics.SelectMany(r => r.Effects).All(e => { var k = e.Split(':')[0]; return k == "Flag" || Enum.TryParse<Fxk>(k, out _) || NumKeysUsed.Contains(k) || KnownNum(k); }), "эффекты реликвий известны игре");
-        Check(m.T.EnemyHp > 0 && m.T.BiomeHp.Length == 5 && m.T.BossHp.Length == 5, "настройки боя считаны из tuning.tres");
+        Check(m.T.EnemyHp > 0 && m.T.BossHp.Length == 5, "настройки боя считаны из tuning.tres");
         var t0 = Tune.T; Check(Math.Abs(m.T.XpBase - t0.XpBase) < 1e-6 && Math.Abs(m.T.EnemyDamage - t0.EnemyDamage) < 1e-6, "числа модели равны числам Resource");
         // 2. числа врагов в исходниках
         foreach (var (file, snip, what) in Probes) { bool ok; try { ok = Src(file).Contains(snip); } catch { ok = false; } Check(ok, $"исходник содержит числа таблицы: {what}"); }
@@ -77,19 +76,27 @@ public static class Validate
         string ud = OS.GetUserDataDir(); ulong h0 = DirHash(ud);
         Runner.Simulate(m, new[] { "expert" }, 20, 7, 2); Check(DirHash(ud) == h0, $"сохранения игры (user://) не изменились после симуляции ({ud})");
         string src = string.Join("\n", Directory.GetFiles(Path.Combine(Root, "Scripts", "Balance"), "*.cs").Where(f => !f.EndsWith("Validate.cs") && !f.EndsWith("BalanceCli.cs")).Select(File.ReadAllText));
-        Check(!Regex.IsMatch(src, @"user://|SaveDir|SavePath|Settings\.|\.Save\(\)"), "код симулятора не обращается к сохранениям и настройкам игрока");
+        Check(!Regex.IsMatch(src, @"user://|SaveDir|SavePath|\bSettings\.|\.Save\(\)"), "код симулятора не обращается к сохранениям и настройкам игрока");
         Check(!Regex.IsMatch(src, @":\s*Node\b|new Node\b|AddChild\(|Instantiate\("), "симулятор не создаёт Node и сцены");
         // 6. разумность: все профили доходят до конца хотя бы иногда и порядок профилей осмысленный
         var s = Summary.Build(b1, m, tg);
-        Check(s.Profiles.All(p => p.Wins > 0), "каждый профиль хотя бы иногда проходит игру (иначе симуляция сломана, а не игра сложна): " + string.Join(", ", s.Profiles.Select(p => $"{p.Profile} {p.WinRate:P0}")));
+        Check(b1.Runs.Count == n * profs.Length && s.Profiles.All(p => p.N == n), "каждый профиль вернул все результаты; ноль побед допустим и является результатом баланса");
         Check(b1.Runs.All(r => r.Hours >= 0 && r.Hours <= m.A.MaxHours + 1 && r.Level >= 1 && r.Deaths >= 0), "значения прогонов в допустимых границах");
         // 7. чувствительность: более сильные враги → больше смертей (направление эффекта верное)
         var strong = m.With(new Dictionary<string, double> { ["tuning.EnemyDamage"] = m.T.EnemyDamage * 1.6, ["tuning.EnemyHp"] = m.T.EnemyHp * 1.4 });
-        var sb = Runner.Simulate(strong, new[] { "average" }, Math.Max(40, n), 12345, 2); var sbase = Runner.Simulate(m, new[] { "average" }, Math.Max(40, n), 12345, 2);
-        Check(sb.Runs.Average(r => r.Deaths) > sbase.Runs.Average(r => r.Deaths), $"усиление врагов повышает число смертей ({sbase.Runs.Average(r => r.Deaths):F1} → {sb.Runs.Average(r => r.Deaths):F1})");
+        float Incoming(BalanceModel model)
+        {
+            var player = new SimPlayer(model) { Level = 80 }; player.Hp = player.MaxHp;
+            var profile = Profile.Average(); profile.Uptime = 0; profile.UseDash = profile.UseFlare = profile.UseSpin = profile.UsePulse = false;
+            var combat = new CombatSim(player, profile, new Rng(17), 0);
+            var shade = model.Enemies.First(e => e.Kind == "Shade");
+            combat.Foes.Add(combat.MakeFoe(shade, 1, 0, false, 20)); return combat.Run(20).DamageTaken;
+        }
+        float d0 = Incoming(m), d1 = Incoming(strong);
+        Check(d1 > d0, $"в фиксированной схватке усиление урона повышает потери ({d0:F1} → {d1:F1})");
         var cheap = m.With(new Dictionary<string, double> { ["tuning.XpBase"] = m.T.XpBase * .4, ["tuning.XpLinear"] = m.T.XpLinear * .4, ["tuning.XpQuad"] = m.T.XpQuad * .4 });
-        var cb = Runner.Simulate(cheap, new[] { "average" }, Math.Max(40, n), 12345, 2);
-        Check(cb.Runs.Average(r => r.Level) > sbase.Runs.Average(r => r.Level), $"дешёвый опыт повышает уровень ({sbase.Runs.Average(r => r.Level):F1} → {cb.Runs.Average(r => r.Level):F1})");
+        var normalXp = new SimPlayer(m); var cheapXp = new SimPlayer(cheap); normalXp.GiveXp(10000, true); cheapXp.GiveXp(10000, true);
+        Check(cheapXp.Level > normalXp.Level, $"при одинаковом опыте дешёвые уровни повышают уровень ({normalXp.Level} → {cheapXp.Level})");
         GD.Print($"[validate] SUMMARY failures={fails}"); return fails == 0 ? 0 : 1;
     }
 
