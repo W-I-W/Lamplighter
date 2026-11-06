@@ -186,8 +186,8 @@ public partial class Game
             {
                 var free = spot; int tx = (int)(free.X / TS), ty = (int)(free.Y / TS); var keep = W.Get(tx, ty); W.Set(tx, ty, Tl.Stone);
                 var moved = Move(free, new Vector2(1, 0), 5f, false); Check(!Collides(moved, 5f, false), "stuck: a creature inside a block is pushed out and free to move"); W.Set(tx, ty, keep);
-                int d0 = Diff; Diff = 1; Level = 5; MaxHp = 90; Xp = 3; PPos = spot; Die();
-                Check(Level == 4 && MaxHp == 80f && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, $"death hard: loses a level (now {Level}) and respawns at the main beacon");
+                int d0 = Diff; Diff = 1; Level = 5; MaxHp = 96; Xp = 3; PPos = spot; Die();
+                Check(Level == 4 && MaxHp == 92f && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, $"death hard: loses a level (now {Level}), its four health, and respawns at the main beacon");
                 Diff = 0; PPos = spot; Die(); Check(Level == 4 && PPos.DistanceTo(W.Ancients[0].Pos + new Vector2(0, 28)) < 1f, "death normal: keeps the level, respawns at the main beacon");
                 Diff = 1; Level = 1; Xp = 7; PPos = spot; Die(); Check(Level == 1 && Xp == 0, "death hard at level 1: keeps the level but loses the xp"); Diff = d0;
                 int cap0 = 0; Check(Tune.T.SpawnDelayMul > 1f && Tune.T.EncounterMax.Length == 5 && cap0 == 0, "spawn: pause is longer than the base and the encounter budget is defined per region");

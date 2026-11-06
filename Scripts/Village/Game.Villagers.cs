@@ -170,23 +170,6 @@ public partial class Game
     public int HomeCount(Building h) { int k = BKey(h), n = 0; foreach (var v in Villagers) if (v.Home == k) n++; return n; }
     public int HousingFree { get { int cap = 0, used = 0; foreach (var h in Buildings) if (h.Type == Tl.House) cap += HouseCap(h); foreach (var v in Villagers) if (v.Home >= 0) used++; return cap - used; } }
 
-    /// <summary>Сменить работника здания по кругу: Авто → жители → никто → Авто. Любой ручной выбор отключает автоназначение для здания.</summary>
-    public void CycleWorker(Building b)
-    {
-        if (!IsProducer(b.Type)) return;
-        var cur = WorkerOf(b); var list = new List<Villager>(); foreach (var v in Villagers) list.Add(v);
-        if (list.Count == 0) { Toast("В деревне нет жителей"); return; }
-        int idx = !b.Manual ? -2 : cur == null ? list.Count : list.IndexOf(cur);       // −2 авто, n — никто
-        idx++; if (idx == -1) idx = 0;
-        if (idx > list.Count) { b.Manual = false; Sfx.Play("tick"); Toast("Работник: автоматически"); netT = 0; return; }
-        b.Manual = true;
-        if (idx == list.Count) { if (cur != null) cur.Work = -1; Toast("Работник убран"); }
-        else { var v = list[idx]; foreach (var o in Villagers) if (o != v && o.Work == BKey(b)) o.Work = -1; v.Work = BKey(b); v.Path.Clear(); v.Goal = new Vector2I(-1, -1); Toast($"{v.Name}: {ProfTitle(v)} → {BNames[BIndex(b.Type)]}"); }
-        Sfx.Play("tick"); netT = 0; RecomputeVillagers(); if (NetService.Active && NetService.Role == NetRole.Client) Net?.SendAssign(BKey(b), (b.Manual ? 1 : 0), WorkerOf(b)?.Id ?? -1);
-    }
-
-    public void ClearWorker(Building b) { if (!IsProducer(b.Type)) return; b.Manual = true; var cur = WorkerOf(b); if (cur != null) cur.Work = -1; Sfx.Play("tick"); Toast("Работник убран"); netT = 0; RecomputeVillagers(); if (NetService.Active && NetService.Role == NetRole.Client) Net?.SendAssign(BKey(b), 1, -1); }
-
     /// <summary>Назначение от хоста/участника по сети (хост применяет и рассылает).</summary>
     public bool NetApplyAssign(int key, int manual, int villagerId)
     {

@@ -22,7 +22,7 @@ public partial class Game
         Win1(Win.Inventory, 0, "ui_inventory");
         for (int t = 0; t < 4; t++) Win1(Win.Equip, t);
         for (int t = 0; t < 3; t++) Win1(Win.Journal, t);
-        Win1(Win.Prod); Win1(Win.Trade);
+        Win1(Win.Trade);
         S(.2f, () => { CloseWindows(); TechOpen = true; TechPage = 0; }); S(.5f, () => Shot("ui_tech"));
         S(.2f, () => { CloseWindows(); MapOpen = true; }); S(.5f, () => Shot("ui_map"));
         S(.2f, () => { CloseWindows(); OpenStory("Фонарщик", string.Join("\n\n", Story.Prologue), "Пролог"); }); S(.9f, () => Shot("ui_story_typing")); S(.2f, () => hud.StorySkip()); S(.6f, () => Shot("ui_story"));

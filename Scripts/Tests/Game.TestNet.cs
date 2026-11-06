@@ -187,7 +187,7 @@ public partial class Game
                 S(.2f, () => { UpdateChunks(0, true); Check(fg.Count == 0 || Gone(fg[0]), "net client: a stick or pebble collected by the host before joining is gone here too (late join)"); if (fg.Count > 1) CutBushAt(fg[1]); });
                 WaitStep(10f, () => VillagerById(9501) != null && Saw() != null && WorkerOf(Saw())?.Id == 9501, ok => Check(ok, "net client: the host's villager, sawmill and assignment arrive with the world (late join)"));
                 WaitStep(10f, () => VillagerById(9501)?.State == VState.Working, ok => Check(ok, "net client: the villager's work state is shown (host-simulated)"));
-                S(.3f, () => { Check(!IsOpen(chests[2]), "net client: untouched chest stays closed"); Open(chests[2]); ClearWorker(Saw()); Inv[It.Wood] = 20; Inv[It.Stone] = 10; Tp(surv.Pos + new Vector2(0, 30)); RescueSurvivor(surv); });
+                S(.3f, () => { Check(!IsOpen(chests[2]), "net client: untouched chest stays closed"); Open(chests[2]); Inv[It.Wood] = 20; Inv[It.Stone] = 10; Tp(surv.Pos + new Vector2(0, 30)); RescueSurvivor(surv); });
                 WaitStep(10f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, ok => Check(ok, "net client: the rescued villager appears once for the client too"));
                 Vector2 arena = default; float hit = 0;
                 S(.3f, () => { arena = FindDarkArena(); Tp(arena + new Vector2(60, 0)); Hp = MaxHp; Invuln = 0; });

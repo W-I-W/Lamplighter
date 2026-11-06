@@ -285,7 +285,6 @@ public partial class Game : Node2D
                 case Key.V: if (k.ShiftPressed) CycleOwnedWeapon(); else CycleWeapon(); break;
                 case Key.C: OpenWin(Win.Equip); break;
                 case Key.J: OpenWin(Win.Journal); break;
-                case Key.P: OpenWin(Win.Prod); break;
                 case Key.B: OpenWin(Win.Build); break;
                 case Key.I: OpenWin(Win.Inventory); break;
                 case Key.G: if (GameHudNode != null) GameHudNode.GoalsOpen = !GameHudNode.GoalsOpen; break;

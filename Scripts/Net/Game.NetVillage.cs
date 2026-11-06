@@ -117,9 +117,6 @@ public partial class Game
                     var g3 = new int[It.Count]; bool any3 = false; for (int i = 0; i < It.Count; i++) if (bd.Local[i] > 0) { g3[i] = bd.Local[i]; any3 = true; bd.Local[i] = 0; }       // накопленное в здании отдаём тому, кто его разобрал
                     Buildings.Remove(bd); SetObj(bd.X, bd.Y, Tl.None); netT = 0; return any3 ? g3 : null;
                 }
-            case 4: { var modes = BModes[bk]; if (modes != null) { bd.Mode = Math.Clamp(b, 0, modes.Length - 1); bd.Prog = 0; } break; }
-            case 5: bd.Prio = Math.Clamp(b, 0, 2); netT = 0; break;
-            case 6: bd.Off = b != 0; break;
             case 7:
                 {
                     var g = new int[It.Count]; bool any = false;

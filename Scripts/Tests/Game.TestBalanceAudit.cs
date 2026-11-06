@@ -115,8 +115,8 @@ public partial class Game
         });
         S(.1f, () =>
         {
-            Clean(); var m = BalanceModel.FromGame(); Level = 20; MaxHp = Hp = 250;
-            var sp = new SimPlayer(m) { Level = 20, Hp = 250 };
+            Clean(); var m = BalanceModel.FromGame(); Level = 20; MaxHp = Hp = CombatMath.BaseHealth(20);
+            var sp = new SimPlayer(m) { Level = 20, Hp = CombatMath.BaseHealth(20) };
             GiveWeapon("sword3", false); Owned[0].Lv = 4; CurW = 0;
             sp.GiveWeapon(Array.FindIndex(m.Weapons, w => w.Id == "sword3")); sp.Owned[0].Lv = 4;
             foreach (var id in new[] { "r_ironheart", "r_lifeseed" }) { OwnedRelics.Add(id); EquippedRelics.Add(id); sp.RelicsEq.Add(id); }

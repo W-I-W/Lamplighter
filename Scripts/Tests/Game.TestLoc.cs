@@ -23,7 +23,7 @@ public partial class Game
         });
         for (int t = 0; t < 4; t++) { int tt = t; S(.25f, () => Open(Win.Equip, tt)); }
         for (int t = 0; t < 2; t++) { int tt = t; S(.25f, () => Open(Win.Journal, tt)); }
-        S(.25f, () => Open(Win.Prod));
+        S(.25f, () => Open(Win.Build));
         S(.25f, () => Open(Win.Build));
         S(.25f, () => { CloseWindows(); OpenTrade(null); });
         S(.25f, () => { TradeTab = 1; });

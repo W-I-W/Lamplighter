@@ -44,18 +44,7 @@ public partial class Game
         new[] { "ледяной кристалл и серебро / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "2 места для жителей", "3 места, цветы у входа", "4 места, скамейка и фонарь" },
     };
-    static readonly float[][] BInterval = { null, new[] { 6f, 4f, 3f, 2.2f, 1.6f }, new[] { 6f, 5f, 3.6f, 2.8f, 2f }, new[] { 4f, 2.5f, 1.5f, 1f, .7f }, new[] { 12f, 9f, 6f, 4.5f, 3f }, new[] { 12f, 9f, 6f, 4.5f, 3f }, new[] { 8f, 6f, 4.5f, 3.5f, 2.5f }, null, null, new[] { 12f, 9f, 6f, 4.5f, 3f }, null };
     static readonly int[] WhCap = { 20, 60, 120, 250, 500, 800 };
-    static readonly int[] WhLink = { 14, 18, 24, 32, 40 };
-    static readonly int[] HubLink = { 14, 20, 28 };
-    public static readonly string[][] BModes =
-    {
-        null, new[] { "Авто" }, new[] { "Авто", "Камень", "Медная руда", "Железная руда", "Серебряная руда", "Осколки света" },
-        new[] { "Авто", "Медь", "Железо", "Серебро" }, new[] { "Авто", "Серебряная руда", "Кристаллы" }, new[] { "Авто", "Обсидиан", "Уголь пепла" },
-        new[] { "Авто", "Шестерни", "Линзы" }, null, null, new[] { "Авто", "Ледяной кристалл", "Серебряная руда" }, null
-    };
-    public static readonly string[] PrioNames = { "Высокий", "Обычный", "Низкий" };
-    public static float BIntervalOf(int bk, int lv) => BInterval[bk] != null ? BInterval[bk][lv - 1] : 1f;
     public static int MaxLv(int bk) => bk == 3 ? 1 : bk == 7 || bk == 8 || bk == 10 ? 3 : 5;
 
     public static int[][] BCost(int bk, int toLevel) => BCosts[bk][toLevel - 1];
@@ -189,7 +178,6 @@ public partial class Game
         ix.Title = $"{BNames[bk]} — уровень {b.Level}";
         bool prod = IsProducer(b.Type);
         ix.Info($"{BNames[bk]} · ур.{b.Level}", TipRole.Text);
-        if (prod && !b.Off && b.Status != 0 && b.Status != 4) ix.Warn("Остановлено: " + StatusText(b.Status));
         if (prod)
         {
             var w = WorkerOf(b); var pd = w != null ? ProfDefs.Of(w.Prof) : null; var want = ProfDefs.ForBuilding(b.Type);
@@ -240,44 +228,14 @@ public partial class Game
     }
 
     // ───────────────────────── сеть и производство ─────────────────────────
-    float whAuto, ambT, netT;
-    List<Building> order = new();
+    float whAuto, netT;
 
-    float NodeRange(Building b) => b.Type == Tl.Warehouse ? WhLink[b.Level - 1] * TS : b.Type == Tl.Hub ? HubLink[b.Level - 1] * TS : 0f;
-
-    /// <summary>Раз в секунду: какие здания подключены к складу через узлы; порядок обработки по приоритету.</summary>
-    void RecomputeNetwork()
-    {
-        var nodes = Buildings.FindAll(b => b.Type == Tl.Warehouse || b.Type == Tl.Hub);
-        var conn = new List<Building>(); var q = new Queue<Building>();
-        foreach (var n in nodes) if (n.Type == Tl.Warehouse) { conn.Add(n); q.Enqueue(n); }
-        while (q.Count > 0)
-        {
-            var c = q.Dequeue();
-            foreach (var n in nodes) if (!conn.Contains(n) && n.Pos.DistanceTo(c.Pos) <= Mathf.Max(NodeRange(c), NodeRange(n))) { conn.Add(n); q.Enqueue(n); }
-        }
-        foreach (var b in Buildings)
-        {
-            bool l = b.Forced;
-            if (!l) foreach (var n in conn) if (n.Pos.DistanceTo(b.Pos) <= NodeRange(n) + 1) { l = true; break; }
-            b.Linked = l;
-        }
-        order = new List<Building>(Buildings); order.Sort((a, b) => a.Prio.CompareTo(b.Prio));
-        RecomputeVillagers();
-    }
-
-    void Put(Building b, int item, int n)
-    {
-        if (b.Linked || b.Forced) { int add = Math.Min(n, StockCap - Stock[item]); if (add > 0) Stock[item] += add; }
-        else { int add = Math.Min(n, 8 - b.Local[item]); if (add > 0) b.Local[item] += add; }
-    }
-    bool Room(Building b, int item) => (b.Linked || b.Forced) ? Stock[item] < StockCap : b.Local[item] < 8;
-    int Have(int item) => Stock[item];
+    /// <summary>Раз в секунду: жильё и назначения жителей.</summary>
+    void RecomputeNetwork() => RecomputeVillagers();
 
     void UpdateVillage(float dt)
     {
         netT -= dt; if (netT <= 0) { netT = 1f; RecomputeNetwork(); }
-        ambT -= dt;
         if (NetClient) { UpdateVillagers(dt); return; }              // клиент: производство считает хост
         var wh = Buildings.Find(x => x.Type == Tl.Warehouse);
         if (wh != null && wh.Level >= 3 && wh.Pos.DistanceTo(PPos) < (wh.Level >= 4 ? 200 : 96) && StockTotal > 0)
@@ -287,15 +245,6 @@ public partial class Game
         }
 
         UpdateVillagers(dt);
-    }
-
-    void Produce(int item, int n, Building b)
-    {
-        int before = (b.Linked || b.Forced) ? Stock[item] : b.Local[item];
-        Put(b, item, n);
-        int add = ((b.Linked || b.Forced) ? Stock[item] : b.Local[item]) - before; if (add <= 0) return;
-        Texts.Add(new FText { P = b.Pos + new Vector2(0, -10), S = "+" + add, Life = .9f, C = It.Col[item] });
-        Sfx.Play("tick", -10, 1.2f);
     }
 
     // ───────────────────────── открытия ─────────────────────────

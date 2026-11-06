@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Win { None, Equip, Journal, Prod, Build, Trade, Story, Rift, Inventory, Talk }
+public enum Win { None, Equip, Journal, Build, Trade, Story, Rift, Inventory, Talk }
 
 public sealed class BuildEntry { public string Key, Name, Cost, Lock, Hint = ""; public bool Unlocked, Affordable; public Action Do; public int Cat, Tile = -1, Stock; public int[][] CostArr, Raw; }
 
@@ -26,7 +26,6 @@ public partial class Game
     // ───────────────────────── списки окон ─────────────────────────
     public const int CraftCols = 5;
     public List<WeaponDef> CraftableWeapons() { var l = new List<WeaponDef>(); foreach (var w in Db.Weapons) if (w.Cost != null) l.Add(w); return l; }
-    public List<Building> ProdList() => Buildings.FindAll(b => IsProducer(b.Type));
 
     public static readonly string[] BuildCatNames = { "Базовое", "Производство", "Декор" };
 
@@ -76,7 +75,6 @@ public partial class Game
         {
             case Win.Equip: return WinTab == 0 ? ToolList().Count + Owned.Count : WinTab == 1 ? OwnedRelics.Count : WinTab == 2 ? CraftRows().Count : 1;
             case Win.Journal: return WinTab == 0 ? Db.Bps.Length : WinTab == 2 ? Goals.Count : Found.Count;
-            case Win.Prod: return ProdList().Count;
             case Win.Build: return BuildEntriesFiltered().Count;
             case Win.Inventory: return InvVisible().Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
@@ -140,7 +138,6 @@ public partial class Game
             case Key.Escape: CloseWindows(); return true;
             case Key.C: OpenWin(Win.Equip); return true;
             case Key.J: OpenWin(Win.Journal); return true;
-            case Key.P: OpenWin(Win.Prod); return true;
             case Key.B: OpenWin(Win.Build); return true;
             case Key.I: OpenWin(Win.Inventory); return true;
             case Key.T: OpenTech(true); return true;
@@ -154,7 +151,6 @@ public partial class Game
         {
             case Win.Equip: EquipKey(k, shift); break;
             case Win.Journal: if (k == Key.Left) { WinTab = (WinTab + 2) % 3; WinCur = 0; } else if (k == Key.Right) { WinTab = (WinTab + 1) % 3; WinCur = 0; } break;
-            case Win.Prod: ProdKey(k); break;
             case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
             case Win.Talk: TalkKey(k); break;
@@ -223,21 +219,6 @@ public partial class Game
                 }
             case 3: if (enter) UpgradeHeroLamp(); break;
         }
-    }
-
-    void ProdKey(Key k)
-    {
-        var l = ProdList(); if (WinCur >= l.Count) return; var b = l[WinCur]; int bk = BIndex(b.Type);
-        if (k == Key.Left || k == Key.Right)
-        {
-            var modes = BModes[bk]; if (modes == null || modes.Length < 2) return;
-            b.Mode = (b.Mode + (k == Key.Right ? 1 : modes.Length - 1)) % modes.Length; b.Prog = 0; Sfx.Play("tick"); if (NetClient) Net?.SendBuildCmd(4, BKey(b), b.Mode, 0);
-        }
-        else if (k == Key.Key1 || k == Key.Key2 || k == Key.Key3) { b.Prio = (int)k - (int)Key.Key1; netT = 0; Sfx.Play("tick"); if (NetClient) Net?.SendBuildCmd(5, BKey(b), b.Prio, 0); }
-        else if (k == Key.Enter || k == Key.KpEnter) { b.Off = !b.Off; Sfx.Play("tick"); if (NetClient) Net?.SendBuildCmd(6, BKey(b), b.Off ? 1 : 0, 0); }
-        else if (k == Key.U) UpgradeBuilding(b);
-        else if (k == Key.Tab) CycleWorker(b);
-        else if (k == Key.Backspace || k == Key.Delete) ClearWorker(b);
     }
 
     void TradeKey(Key k, bool shift)

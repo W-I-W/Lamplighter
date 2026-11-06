@@ -154,7 +154,7 @@ public partial class Game
             Stock = new int[It.Count]; Stock[It.CopperOre] = 10; Stock[It.IronOre] = 6; Stock[It.Wood] = 30; Stock[It.Crystal] = 5; Stock[It.SilverOre] = 4;
             for (int i = 0; i < 1500; i++) UpdateVillage(.2f);
             Log($"chain: gears={Stock[It.Gear]} lenses={Stock[It.Lens]} copper={Stock[It.Copper]} iron={Stock[It.Iron]} silver={Stock[It.Silver]}");
-            rf.Prio = 2; fg.Prio = 0; netT = 0; RecomputeNetwork(); Log($"order first={order[0].Type} (expect Forge)"); rf.Off = true; Stock = new int[It.Count]; Stock[It.Copper] = 10; Stock[It.Iron] = 5; for (int i = 0; i < 100; i++) UpdateVillage(.2f); Log($"paused refinery: gears={Stock[It.Gear]} (expect 0)"); rf.Off = false;
+            rf.Prio = 2; fg.Prio = 0; netT = 0; RecomputeNetwork(); rf.Off = true; Stock = new int[It.Count]; Stock[It.Copper] = 10; Stock[It.Iron] = 5; for (int i = 0; i < 100; i++) UpdateVillage(.2f); Log($"paused refinery: gears={Stock[It.Gear]} (expect 0)"); rf.Off = false;
         });
         // ── свет: усилители, барьеры, фонарь героя ──
         S(.2f, () =>
@@ -180,7 +180,7 @@ public partial class Game
         S(.4f, () => { Shot("s4b_8_equip_relics"); WinTab = 2; WinCur = 0; });
         S(.4f, () => { Shot("s4b_9_equip_craft"); WinTab = 3; });
         S(.4f, () => { Shot("s4b_10_equip_lamp"); OpenWin(Win.Journal); });
-        S(.4f, () => { Shot("s4b_11_journal"); OpenWin(Win.Prod); });
+        S(.4f, () => { Shot("s4b_11_journal"); OpenWin(Win.Build); });
         S(.4f, () => { Shot("s4b_12_prod"); OpenWin(Win.Build); });
         S(.4f, () => { Shot("s4b_13_build"); CloseWindows(); Buildings.Add(new Building { Type = Tl.Stall, X = W.Spawn.X - 3, Y = W.Spawn.Y }); OpenTrade(null); });
         S(.4f, () => { Shot("s4b_14_trade_stall"); TradeTab = 1; });

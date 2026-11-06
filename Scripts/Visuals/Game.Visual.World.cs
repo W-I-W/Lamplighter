@@ -369,7 +369,6 @@ public partial class Game
     {
         foreach (var b in Buildings)
         {
-            bool linked = b.Linked || b.Forced;
             if (b.Type == Tl.Warehouse)
             {
                 float f = Mathf.Clamp(StockTotal / (float)(StockCap * 3), 0, 1);
@@ -379,21 +378,7 @@ public partial class Game
                 if (b.Level >= 5) Gfx.Disc(c, b.Pos + new Vector2(0, -11), 1.6f, new Color("#ffe27a"));
                 continue;
             }
-            if (b.Type == Tl.Hub || b.Type == Tl.Stall || b.Type == Tl.House)
-            {
-                if (b.Type == Tl.Hub) Gfx.Ring(c, b.Pos, NodeRange(b), 48, new Color(.55f, .9f, 1f, .08f + .04f * Mathf.Sin(Time * 2f)), 1f);
-                if (!linked && b.Type == Tl.Hub) Gfx.Disc(c, b.Pos + new Vector2(0, -11), 2.2f, new Color("#ff5050"));
-                continue;
-            }
-            int bk = BIndex(b.Type); float p = Mathf.Clamp(b.Prog / BInterval[bk][b.Level - 1], 0, 1);
-            var o2 = b.Pos + new Vector2(-7, 9);
-            Gfx.Rect(c, new Rect2(o2, new Vector2(14, 2)), new Color(0, 0, 0, .6f));
-            Gfx.Rect(c, new Rect2(o2, new Vector2(14 * p, 2)), b.Type == Tl.Forge || b.Type == Tl.Collector || b.Type == Tl.Refinery ? new Color("#ff9a2e") : b.Type == Tl.Sawmill ? new Color("#7ad45a") : new Color("#8ff0ff"));
-            if (b.Status == 1) { Gfx.Disc(c, b.Pos + new Vector2(0, -11), 2.2f, new Color("#ff5050")); Gfx.Rect(c, new Rect2(b.Pos + new Vector2(-.5f, -13.5f), new Vector2(1, 2.5f)), Colors.White); }
-            else if (b.Status == 2) Gfx.Disc(c, b.Pos + new Vector2(0, -11), 2.2f, new Color("#ffd86b"));
-            else if (b.Status == 3) { Gfx.Disc(c, b.Pos + new Vector2(0, -11), 2.2f, new Color("#ff9a3a")); Gfx.Line(c, b.Pos + new Vector2(-3, -11), b.Pos + new Vector2(3, -11), new Color(0, 0, 0, .8f), 1f); }
-            else if (b.Status == 4) Gfx.Rect(c, new Rect2(b.Pos + new Vector2(-2.5f, -13), new Vector2(5, 4)), new Color("#8a909c"));
-            if (b.Level >= 5) Gfx.Disc(c, b.Pos + new Vector2(6, -9), 1.6f, new Color("#ffe27a"));
+
         }
     }
 

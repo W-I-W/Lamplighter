@@ -16,7 +16,6 @@ public partial class Hud
         {
             case Win.Equip: break;   // окно экипировки — сцена EquipWindowUI
             case Win.Journal: DrawJournal(vs); break;
-            case Win.Prod: DrawProd(vs); break;
             case Win.Trade: DrawTrade(vs); break;
             case Win.Story: DrawStory(vs); break;
             case Win.Talk: DrawTalk(vs); break;
@@ -70,30 +69,6 @@ public partial class Hud
             int sc = Scroll(G.WinCur, vis);
             for (int i = sc; i < G.Found.Count && i < sc + vis; i++) { var s = G.Found[i]; Color col = Text; for (int k = 0; k < 5; k++) if (s.StartsWith(Db.RarName[k])) col = Db.RarCol[k]; wv.Row(i, Sel(i), s, null, col); }
         }
-    }
-
-    // ───────────────────────── производство ─────────────────────────
-    string StatusText(Building b) => b.Off ? "пауза" : b.Status switch { 0 => "работает", 1 => "нет сырья", 2 => "склад полон", 3 => "нет связи", 5 => "нет режима", _ => "работает" };
-
-    void DrawProd(Vector2 vs)
-    {
-        wv.Begin(vs, "Производство", new Color("#ff9a2e"), "↑/↓ здание · ←/→ режим · 1-3 приоритет · Enter пауза · U ап · Tab работник · Backspace убрать", new Vector2(640, 330));
-        var list = G.ProdList();
-        for (int i = 0, sh = 0; i < It.Count && sh < 12; i++) if (G.Stock[i] > 0) { wv.Chip(Icon(i), G.Stock[i].ToString(), Text); sh++; }
-        wv.Text(false, $"Склад {G.StockTotal}/{G.StockCap} на ресурс · скорость ×{G.ProdMul:F2} · жителей {G.Villagers.Count}", Dim, false);
-float[] ws = { 96, 18, 64, 50, 60, 84, 0 };
-        wv.Cols(-1, false, new[] { "Здание", "Ур", "Состояние", "Связь", "Приоритет", "Работник", "Режим" }, ws, new[] { Gold, Gold, Gold, Gold, Gold, Gold, Gold }, null, Dim);
-        if (list.Count == 0) wv.Text(false, "Нет зданий: стройте лесопилку, шахту, цех [B]", Dim);
-        int vis = wv.Fit(11, 60), sc = Scroll(G.WinCur, vis);
-        for (int i = sc; i < list.Count && i < sc + vis; i++)
-        {
-            var b = list[i]; int bk = Game.BIndex(b.Type); bool lk = b.Linked || b.Forced; var modes = Game.BModes[bk];
-            wv.Cols(i, i == G.WinCur,
-                new[] { Game.BNames[bk], b.Level.ToString(), StatusText(b), lk ? (b.Forced ? "авто" : "связь") : "нет связи", Game.PrioNames[b.Prio], G.WorkerOf(b)?.Name ?? "—", modes != null ? modes[b.Mode % modes.Length] : "—" }, ws,
-                new[] { b.Off ? Dim : Text, Gold, b.Status == 0 && !b.Off ? Good : b.Status == 4 || b.Off ? Dim : Warn, lk ? Good : Bad, b.Prio == 0 ? Warn : b.Prio == 2 ? Dim : Text, G.WorkerOf(b) == null ? Dim : b.WorkMul > 1.05f ? Good : Text, Cyan },
-                $"{(int)(b.Prog / Mathf.Max(.1f, Game.BIntervalOf(bk, b.Level)) * 100)}%", Dim);
-        }
-        wv.Text(false, "Приоритет: кто первым берёт сырьё. Режим: продукт. Далеко от склада — соединяйте узлами", Dim, true, 3);
     }
 
     // ───────────────────────── разговор с жителем ─────────────────────────

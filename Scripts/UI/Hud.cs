@@ -82,7 +82,7 @@ public partial class Hud : Control
         if (G.Menu == Mn.Main || G.Menu == Mn.Flow) { DrawMenu(vs); FinishViews(); return; }
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
-        DrawDrops(vs); DrawMarkers(vs); DrawStatusLabels(); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
+        DrawDrops(vs); DrawMarkers(vs); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
         LayoutTop(vs);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);
@@ -208,17 +208,6 @@ public partial class Hud : Control
         }
         var col = NetService.State == NetState.Online ? new Color("#9be07a") : NetService.State == NetState.Failed ? new Color("#f06a5e") : new Color("#8ff0ff");
         Txt($"● {NetService.Count}/{NetConst.MaxPlayers}", new Vector2(vs.X - 56, vs.Y - 14), 9, col, HorizontalAlignment.Right, 48);
-    }
-
-    void DrawStatusLabels()
-    {
-        foreach (var b in G.Buildings)
-        {
-            if (!Game.IsProducer(b.Type) || b.Status == 0 || b.Pos.DistanceTo(G.PPos) >= 70) continue;
-            var col = b.Status == 4 ? new Color(.7f, .72f, .8f) : b.Status == 2 ? new Color("#ffb04a") : new Color("#ff6a5a");
-            var p = ToScreen(b.Pos + new Vector2(0, -15 - 1.5f * Mathf.Sin(G.Time * 5f)));
-            Txt(Game.StatusText(b.Status), p + new Vector2(-30, -4), 9, col, HorizontalAlignment.Center, 60);
-        }
     }
 
     /// <summary>Скрывает вид, который в этом кадре не использовался, и закрывает кадр у использованного.</summary>

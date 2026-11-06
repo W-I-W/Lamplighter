@@ -18,9 +18,11 @@ public partial class Game
             Menu = Mn.None; noHeal = true; TestNoSpawn = true; EventsEnabled = false; Diff = 0; TestPlayers = 0;
             Array.Clear(SkillLv); Owned.Clear(); CurW = -1; EquippedRelics.Clear(); OwnedRelics.Clear(); TempRelics.Clear(); RecomputeEffects();
             Check(Same(CombatMath.BaseHealth(1), 60) && Same(CombatMath.BaseHealth(20), 136) && Same(CombatMath.BaseHealth(80), 180), "pressure: health growth is bounded, 60 / 136 / 180");
-            var legacy = new CharacterSave { Level = 20, MaxHp = 270, Hp = 155, Equipped = new[] { "r_titanheart" }, Relics = new[] { "r_titanheart" } };
+            var legacy = new CharacterSave { Id = "migration_probe", Level = 20, MaxHp = 270, Hp = 155, Equipped = new[] { "r_titanheart" }, Relics = new[] { "r_titanheart" } };
             ApplyCharacter(legacy, null);
             Check(Same(MaxHp, 196) && Same(Hp, 98), "pressure: legacy health preserves shrine bonus, relic and half-health injury");
+            Check(SaveManager.SaveCharacter(legacy), "pressure: upgraded health can be saved in the isolated test directory");
+            legacy = SaveManager.LoadCharacter(legacy.Id);
             EquippedRelics.Clear(); OwnedRelics.Clear(); ApplyCharacter(legacy, null);
             Check(legacy.HealthModel == CombatMath.HealthModel && Same(MaxHp, 196) && Same(Hp, 98), "pressure: loading an upgraded character does not reduce health twice");
             EquippedRelics.Clear(); OwnedRelics.Clear(); RecomputeEffects();
