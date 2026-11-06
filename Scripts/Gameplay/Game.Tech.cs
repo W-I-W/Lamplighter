@@ -67,7 +67,7 @@ public partial class Game
         new() { Name = "Болотные сапоги", Desc = "Вода меньше замедляет: +7% скорости за уровень", Req = "Откройте путь в шахты", Cost = C(It.Silver, 3, It.Wood, 10, It.Crystal, 2), Ok = g => g.BeaconLevel >= 2, Page = 1 },
         new() { Name = "Прожектор [R]", Desc = "Награда Хранителя глубин: луч, что отражается зеркалами", Req = "Победите Хранителя глубин", Cost = C(), Ok = g => g.BossDown(2), Page = 1, Reward = true },
 
-        new() { Name = "Огненное лезвие", Desc = "Удары поджигают врагов; поджог длится дольше с каждым уровнем", Req = "Откройте путь в пустоши", Cost = C(It.Ember, 4, It.Iron, 4), Ok = g => g.BeaconLevel >= 3, Page = 2 },
+        new() { Name = "Огненное лезвие", Desc = "Удары поджигают врагов; каждый уровень продлевает ожог и усиливает удары по горящим целям на 6%", Req = "Откройте путь в пустоши", Cost = C(It.Ember, 4, It.Iron, 4), Ok = g => g.BeaconLevel >= 3, Page = 2 },
         new() { Name = "Теплозащита", Desc = "Огонь, пепел и дым вредят меньше на 12% за уровень", Req = "Откройте путь в пустоши", Cost = C(It.Obsidian, 3, It.Silver, 3), Ok = g => g.BeaconLevel >= 3, Page = 2 },
         new() { Name = "Пепельный коллектор [B]", Desc = "Новая постройка: добывает обсидиан и уголь", Req = "Откройте путь в пустоши", Cost = C(It.Obsidian, 4, It.Silver, 4, It.Crystal, 3), Ok = g => g.BeaconLevel >= 3, Page = 2 },
         new() { Name = "Раскалённые горны", Desc = "Кузница работает быстрее на 20% за уровень", Req = "Кузница и путь в пустоши", Cost = C(It.Ember, 6, It.Obsidian, 4), Ok = g => g.BeaconLevel >= 3 && g.HasBuilding(Tl.Forge), Page = 2 },

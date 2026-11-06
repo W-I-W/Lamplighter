@@ -8,7 +8,7 @@ uniform sampler2D tile_data : filter_nearest, repeat_disable;   // one texel per
 uniform float wind = 1.0;          // overall wind strength (config * player setting)
 uniform vec2 player = vec2(-99999.0);   // world position of the player (grass bends away)
 uniform vec4 shakes[16];           // x, y = tile coords, z = amplitude (px, already decayed), w = phase (+100 = удар по кроне: двигает только колонки крон)
-uniform vec3 crown_cols = vec3(-1.0);   // колонки атласа тайлов крон дерева, сосны, мёртвого дерева
+uniform float tree_cut[9];                 // строка тайла, с которой начинается ствол (выше — крона), по видам деревьев; виды — большие тайлы 32×32 с левым столбцем 182, 184, ... 198
 varying vec2 wpos;
 varying vec4 vcol;                 // модуляция слоя (прозрачность крон за игроком)
 
@@ -17,7 +17,7 @@ float hash(vec2 p) { return fract(sin(dot(p, vec2(41.7, 289.3))) * 4375.5453); }
 // kind = floor(w / 100): 0 блок, 1 крона дерева, 2 ствол дерева. Удар по дереву сдвигает ствол и крону ОДНОЙ плавной кривой по высоте всего дерева (два тайла),
 // поэтому на стыке ствола и кроны шва нет; чужой ствол в клетке кроны не затрагивается.
 float shake_gate(float w, float col) {
-	bool is_crown = abs(col - crown_cols.x) < 0.5 || abs(col - crown_cols.y) < 0.5 || abs(col - crown_cols.z) < 0.5;
+	bool is_crown = false;
 	float kind = floor(w / 100.0 + 0.001);
 	return (kind == 1.0) == is_crown ? 1.0 : 0.0;
 }
@@ -36,9 +36,34 @@ void vertex() {
 void fragment() {
 	vec2 atlas = vec2(textureSize(TEXTURE, 0));
 	float col = floor(UV.x * atlas.x / 16.0 + 0.001);
-	vec4 td = texture(tile_data, vec2((col + 0.5) / 192.0, 0.5));
+	vec4 td = texture(tile_data, vec2((col + 0.5) / 256.0, 0.5));
 	float a = td.r;
 	vec2 uv = UV;
+	// ---- дерево: один тайл 32×32 (крона и ствол вместе). Качание от ветра — покадровая анимация атласа (кадры нарисованы в PNG); здесь только удар: крона целиком сдвигается на целые пиксели ----
+	float tbase = -1.0; float tcut = 22.0;
+	if (col >= 181.5 && col <= 199.5) {
+		float ti = floor((col - 182.0) * 0.5 + 0.001);
+		tbase = 182.0 + ti * 2.0; tcut = tree_cut[int(ti)];
+	}
+	if (tbase >= 0.0) {
+		bool right = col > tbase + 0.5;
+		float ypix = mod(UV.y * atlas.y, 32.0);                           // строка внутри кадра: 0 — макушка, 32 — корень (кадры лежат столбиком по 32 px)
+		float cxx = floor((wpos.x + (right ? -8.0 : 8.0)) / 16.0);        // клетка ствола: тайл центрирован по X на клетке, нижняя половина — клетка ствола
+		float cyy = floor(wpos.y / 16.0) + (ypix < 16.0 ? 1.0 : 0.0);
+		vec2 tcell = vec2(cxx, cyy);
+		float tshift = 0.0;
+		for (int i = 0; i < 16; i++) {
+			vec4 sh = shakes[i];
+			float kind = floor(sh.w / 100.0 + 0.001);
+			if (sh.z > 0.0 && kind > 1.5 && abs(sh.x - tcell.x) < 0.5 && abs(sh.y - tcell.y) < 0.5) tshift += sh.z * sin(TIME * 48.0 + sh.w - kind * 100.0);
+		}
+		float tpx = ypix < tcut ? floor(tshift + 0.5) : 0.0;               // крона целиком, на целое число пикселей: ни один пиксель не «уезжает» от соседей
+		vec2 tuv = UV; tuv.x = UV.x - tpx / atlas.x;
+		float tlo = tbase * 16.0 / atlas.x; float thi = (tbase + 2.0) * 16.0 / atlas.x;
+		float tin = (tuv.x >= tlo && tuv.x < thi) ? 1.0 : 0.0;
+		tuv.x = clamp(tuv.x, tlo + 0.5 / atlas.x, thi - 0.5 / atlas.x);
+		COLOR = texture(TEXTURE, tuv) * vcol * tin;
+	} else
 	if (a > 0.0) {
 		vec2 cell = floor(wpos / 16.0);
 		float ph = hash(cell) * 6.2831;

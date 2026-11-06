@@ -5,13 +5,14 @@ using System.Linq;
 
 namespace Lamplighter.Balance;
 
-public sealed class OwnedW { public int W; public List<int> Mods = new(); }
+public sealed class OwnedW { public int W, Lv; public List<int> Mods = new(); }
+public sealed class SimGrave { public int[] Inv; public List<OwnedW> Owned; public int CurW, Tier; public bool HasAxe; }
 
 /// <summary>Состояние героя в симуляции. Формулы — копии формул Game (имя метода указано рядом); соответствие проверяет команда validate на настоящем Game.</summary>
 public sealed class SimPlayer
 {
     public readonly BalanceModel M; readonly TuneM T;
-    public int Level = 1; public float Xp, Hp = 60; public int Tier, Kills, BossMask, Beacon = 1, PoisDone;
+    public int Level = 1; public float Xp, Hp = 60, BonusHp; public int Tier, Kills, BossMask, Beacon = 1, PoisDone;
     public int[] Lit = new int[5];
     public bool HasFurnace, HasForge, HasLantern, HasAxe;
     public int[] Inv = new int[It.Count]; public int[] Sk;
@@ -24,7 +25,7 @@ public sealed class SimPlayer
     public SimPlayer(BalanceModel m) { M = m; T = m.T; Sk = new int[m.Skills.Length]; Hp = MaxHp; }
 
     // ───────────────────────── характеристики ─────────────────────────
-    public float MaxHp => 60f + 10f * (Level - 1);                                                         // Game.GiveXp: +10 за уровень
+    public float MaxHp => (60f + 10f * (Level - 1) + BonusHp) * (1f + N("MaxHpPct")) + N("MaxHp");
     public float XpNeed => T.XpBase + T.XpLinear * Level + T.XpQuad * Level * Level;                       // Game.XpNeed
     public float N(string k) => Num.TryGetValue(k, out var v) ? v : 0f;
     public float E(Fxk k) => EffP[(int)k];
@@ -38,7 +39,7 @@ public sealed class SimPlayer
     public int RelicSlots => 3 + Math.Min(3, BossCount);                                                    // Game.RelicSlots
     public float FearMul => Level >= T.FearLevel ? 1f : 1f + T.FearDamage * (T.FearLevel - Level);                  // Game.FearMul
     public float PlayerDamage => (2f + 2f * Tier + .4f * (Level - 1)) * (1f + N("Dmg")) * T.FistDamageMul;                    // Game.PlayerDamage
-    public float WeaponDmg(WeaponM w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg"));                    // Game.WeaponDmg
+    public float WeaponDmg(WeaponM w) => (w.Dmg + .35f * (Level - 1)) * (1f + N("Dmg")) * (1f + Game.WeaponLvStep * (Owned.FirstOrDefault(o => M.Weapons[o.W].Id == w.Id)?.Lv ?? 0));
     public float MineSpeed => (1f + .7f * Tier) * (1f + .06f * (Level - 1)) * (1f + N("MineSpd"));          // Game.MineSpeed
     public float LensBonus => Se(Tech.Lens) + Se(Tech.LensII);
     public float FarLampBonus => Se(Tech.FarLanterns) + Se(Tech.FarLanternsII);
@@ -53,7 +54,7 @@ public sealed class SimPlayer
     public float ReaperHeal => Se(Tech.Reaper) * T.ReaperHeal / 1.5f;
     public float HeatTaken => 1f - Se(Tech.HeatShield);
     public float ColdTaken => 1f - Se(Tech.FrostArmor);
-    public float AuraDps { get { float a = Has(Tech.Searing) ? Se(Tech.Searing) : 0f, b = Has(Tech.HeroLamp) ? 2.5f + .5f * (Lv(Tech.HeroLamp) - 1) : 0f; return Math.Max(a, b); } }
+    public float AuraDps { get { float a = Has(Tech.Searing) ? Se(Tech.Searing) : 0f, b = Has(Tech.HeroLamp) ? 2.5f + .5f * (Lv(Tech.HeroLamp) - 1) : 0f; return a + b; } }
     public float DangerScale => 1f + .18f * LitCount + .12f * (Lit[1] + Lit[2] + Lit[3]) + (BossDown(1) ? .1f : 0) + (BossDown(2) ? .1f : 0) + (BossDown(3) ? .1f : 0) + (BossDown(4) ? .1f : 0);   // Game.DangerScale
     public int ChainLimit => (Tier >= 4 ? 5 : Tier >= 3 ? 3 : Has(Tech.WideSwing) ? 1 : 0) + (int)N("MineChain");
     public WeaponM Cur => CurW >= 0 && CurW < Owned.Count ? M.Weapons[Owned[CurW].W] : null;
@@ -128,6 +129,7 @@ public sealed class SimPlayer
     // ───────────────────────── эффекты оружия, реликвий, синергий ─────────────────────────
     public void Recompute()
     {
+        float oldMax = MaxHp;
         Array.Clear(EffP); Num.Clear(); Flags.Clear(); Tags.Clear();
         void Tag(string t) { if (!string.IsNullOrEmpty(t)) Tags[t] = Tags.GetValueOrDefault(t) + 1; }
         var w = Cur;
@@ -143,6 +145,20 @@ public sealed class SimPlayer
             bool ok = true; foreach (var rq in s.Requires) if (!SynReq(rq)) { ok = false; break; }
             if (ok) foreach (var g in s.Grants) AddEffect(g);
         }
+        if (oldMax > 0) Hp = Math.Clamp(Hp / oldMax, 0, 1) * MaxHp;
+    }
+
+    public SimGrave Bury()
+    {
+        var grave = new SimGrave { Inv = Inv, Owned = Owned, CurW = CurW, Tier = Tier, HasAxe = HasAxe };
+        Inv = new int[It.Count]; Owned = new(); CurW = -1; Tier = 0; HasAxe = false; Recompute();
+        return grave;
+    }
+
+    public void Recover(SimGrave grave)
+    {
+        for (int i = 0; i < Inv.Length; i++) Inv[i] += grave.Inv[i];
+        Owned = grave.Owned; CurW = grave.CurW; Tier = grave.Tier; HasAxe = grave.HasAxe; Recompute();
     }
 
     void AddEffect(string eff)
@@ -180,7 +196,7 @@ public sealed class SimPlayer
     public SimPlayer Copy()
     {
         var c = (SimPlayer)MemberwiseClone(); c.Lit = (int[])Lit.Clone(); c.Inv = (int[])Inv.Clone(); c.Sk = (int[])Sk.Clone(); c.ModInv = (int[])ModInv.Clone();
-        c.Owned = Owned.Select(o => new OwnedW { W = o.W, Mods = new List<int>(o.Mods) }).ToList(); c.Bp = new HashSet<string>(Bp); c.Frag = new Dictionary<string, int>(Frag);
+        c.Owned = Owned.Select(o => new OwnedW { W = o.W, Lv = o.Lv, Mods = new List<int>(o.Mods) }).ToList(); c.Bp = new HashSet<string>(Bp); c.Frag = new Dictionary<string, int>(Frag);
         c.RelicsOwned = new List<string>(RelicsOwned); c.RelicsEq = new List<string>(RelicsEq); c.EffP = (float[])EffP.Clone(); c.Num = new Dictionary<string, float>(Num);
         c.Flags = new HashSet<string>(Flags); c.Tags = new Dictionary<string, int>(Tags); return c;
     }

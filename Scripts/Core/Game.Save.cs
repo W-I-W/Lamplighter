@@ -36,7 +36,7 @@ public partial class Game
     /// <summary>Записывает героя и (если мир принадлежит этому игроку) мир. Миниатюра мира обновляется не на каждое автосохранение.</summary>
     public void SaveAll(bool thumb)
     {
-        if (!GameSession.Active || W == null || charSave == null) return;
+        if (placingStock || !GameSession.Active || W == null || charSave == null) return;
         try
         {
             while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
@@ -180,6 +180,8 @@ public partial class Game
         if (c.Found != null) Found.AddRange(c.Found);
         if (c.Hints != null) foreach (var h in c.Hints) HintsShown.Add(h);
         LegendMask = c.LegendMask; CosmMask = c.CosmMask | 1; CosmSel = c.CosmSel;
+        RecomputeEffects();
+        Hp = Mathf.Clamp(c.Hp, 0, MaxHp);                  // в файле текущее здоровье абсолютное, максимум записан без реликвий
     }
 
     // ───────────────────────── переходы между сеансами ─────────────────────────

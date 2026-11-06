@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blsrm7haxjd52"
-path="res://.godot/imported/163_PineTop.png-2782f49a61279d9b0fd58f0d83211d8e.ctex"
+uid="uid://b555pb46gxwqf"
+path="res://.godot/imported/192_FatPine_big.png-058a382775185376897eab41a1dc994a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Environment/163_PineTop.png"
-dest_files=["res://.godot/imported/163_PineTop.png-2782f49a61279d9b0fd58f0d83211d8e.ctex"]
+source_file="res://Assets/Sprites/Environment/192_FatPine_big.png"
+dest_files=["res://.godot/imported/192_FatPine_big.png-058a382775185376897eab41a1dc994a.ctex"]
 
 [params]
 

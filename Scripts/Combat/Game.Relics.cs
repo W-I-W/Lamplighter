@@ -48,7 +48,8 @@ public partial class Game
     {
         float baseHp = MaxHp - relicHp, want = N("MaxHp") + N("MaxHpPct") * baseHp;
         if (Mathf.Abs(want - relicHp) < .01f) return;
-        float delta = want - relicHp; MaxHp = baseHp + want; relicHp = want; Hp = Mathf.Clamp(Hp + Mathf.Max(0, delta), 1, MaxHp);
+        float fraction = MaxHp > 0 ? Mathf.Clamp(Hp / MaxHp, 0, 1) : 0;
+        MaxHp = baseHp + want; relicHp = want; Hp = fraction * MaxHp;
     }
 
     public void RecomputeEffects()
@@ -99,7 +100,7 @@ public partial class Game
     {
         if (EquippedRelics.Contains(id)) { EquippedRelics.Remove(id); RecomputeEffects(); Sfx.Play("tick", 0, .8f); return true; }
         if (EquippedRelics.Count >= RelicSlots) { Fail($"Все слоты реликвий заняты ({RelicSlots}) — снимите другую"); return false; }
-        var d = Db.Relic(id); if (d == null || !d.Permanent) return false;
+        var d = Db.Relic(id); if (d == null || !d.Permanent || !OwnedRelics.Contains(id)) return false;
         EquippedRelics.Add(id); RecomputeEffects(); Sfx.Play("upgrade", -3, 1.4f);
         foreach (var s in ActiveSyn) { }
         return true;

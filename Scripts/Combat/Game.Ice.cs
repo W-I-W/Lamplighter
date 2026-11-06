@@ -141,7 +141,7 @@ public partial class Game
         {
             if (e.VulnT > 0) { e.VulnT -= dt; if (e.VulnT <= 0) { e.Shield = true; Toast("Зеркальный щит восстановлен"); } }
             else if (!e.Shield && ph >= 2) e.Shield = true;
-            if (e.Shield && ArenaPrismsLit() >= need) { e.Shield = false; e.VulnT = 6f; Announce("Щит разбит!", "Хранитель уязвим — бейте!", new Color("#ffe27a"), "ancient"); Burst(e.Pos, new Color("#ffffff"), 30, 150); Shake = 4; }
+            if (e.Shield && ArenaPrismsLit() >= need) { e.Shield = false; e.VulnT = Tune.T.WinterVuln; Announce("Щит разбит!", "Хранитель уязвим — бейте!", new Color("#ffe27a"), "ancient"); Burst(e.Pos, new Color("#ffffff"), 30, 150); Shake = 4; }
         }
         if (e.State == 20) return BossSpecialState(e, dt, dir, dist, hpf);
         Vector2 vel = Vector2.Zero;

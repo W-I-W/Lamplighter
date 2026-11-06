@@ -265,7 +265,7 @@ public partial class Game
             else if (!e.Shield) e.Shield = true;
             if (e.Shield && PylonsOn() >= need)
             {
-                e.Shield = false; e.VulnT = ph == 2 ? 7f : 9f; DrainPylons();
+                e.Shield = false; e.VulnT = Tune.T.SourceVuln + (ph == 3 ? 2f : 0f); DrainPylons();
                 Announce("Защита сломлена!", "Источник уязвим — бейте обычным оружием!", new Color("#ffe27a"), "ancient"); Burst(e.Pos, new Color("#ffffff"), 40, 170); Shake = 6; Flash = .3f;
             }
             if (e.Shield) e.Hp = Mathf.Max(e.Hp, e.MaxHp * (ph == 2 ? .335f : .02f));

@@ -25,7 +25,7 @@ public partial class Game
         return (t.EnemyDamage * CombatTuning.At(t.BiomeDamage, reg) * (hard ? t.HardEnemyDamage : 1f), t.EnemyHp * CombatTuning.At(t.BiomeHp, reg) * CombatTuning.At(t.CoopEnemyHp, ci) * (hard ? t.HardEnemyHp : 1f));
     }
 
-    /// <summary>Страх тени: герой ниже FearLevel получает больше урона (1 ур. при 0,45 и пороге 5 — ×2,8), поэтому выходить во тьму до пятого уровня страшно.</summary>
+    /// <summary>Страх тени: ниже FearLevel урон умеренно растёт (1 ур. при 0,1 и пороге 5 — ×1,4).</summary>
     public float FearMul => Level >= Tune.T.FearLevel ? 1f : 1f + Tune.T.FearDamage * (Tune.T.FearLevel - Level);
 
     public float BossDamageMul(EK k) { int b = BossIdOf(k); return b > 0 ? CombatTuning.At(Tune.T.BossDamage, b - 1) * (Diff == 1 ? Tune.T.HardBossDamage : 1f) : 1f; }

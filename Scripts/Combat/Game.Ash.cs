@@ -92,7 +92,7 @@ public partial class Game
             var z = Zones[i]; z.T += dt;
             if (z.T >= z.Warn + z.Dur) { Zones.RemoveAt(i); continue; }
             if (z.T < z.Warn || z.Dps <= 0) continue;
-            if (z.Friendly) { foreach (var e in Enemies) if (!e.Hidden && e.Kind != EK.Imp && e.Kind != EK.AshWarden && e.Pos.DistanceTo(z.Pos) < z.R + e.Radius) { e.Hp -= z.Dps * dt; e.Burn = Mathf.Max(e.Burn, 1f); e.Flash = Mathf.Max(e.Flash, .04f); } }
+            if (z.Friendly) { foreach (var e in Enemies) if (!e.Hidden && e.Kind != EK.Imp && e.Kind != EK.AshWarden && e.Pos.DistanceTo(z.Pos) < z.R + e.Radius) { HurtTick(e, z.Dps * dt); e.Burn = Mathf.Max(e.Burn, 1f); e.Flash = Mathf.Max(e.Flash, .04f); } }
             else if (PPos.DistanceTo(z.Pos) < z.R) { if (z.Dark) DarkDot(z.Dps * dt); else if (z.Cold) ColdDot(z.Dps * dt); else DotDamage(z.Dps * dt, true); }
             if (rng.Randf() < dt * 14) Parts.Add(new Particle { P = z.Pos + new Vector2(rng.RandfRange(-z.R, z.R) * .7f, rng.RandfRange(-z.R, z.R) * .5f), V = new Vector2(rng.RandfRange(-4, 4), -rng.RandfRange(14, 30)), Life = .6f, Max = .6f, C = z.Dark ? new Color("#7a3aff") : z.Cold ? new Color("#e8faff") : rng.Randf() < .5f ? new Color("#ff7a2a") : new Color("#ffd04a"), Size = 1.8f });
         }

@@ -133,7 +133,7 @@ public static class Report
     static void SkillSection(StringBuilder sb, List<SkillRow> rows, Targets tg)
     {
         sb.AppendLine("\n## Эффективность навыков по уровням\n");
-        sb.AppendLine("Метод: контрольные схватки с тремя врагами региона, один и тот же набор сидов для соседних уровней. «Прирост» — изменение оценки `1/(урон на убийство + 0,3·время на убийство)`; «цена» — в секундах труда при текущей добыче. Эффективность = прирост на 100 с цены. `±` — стандартная ошибка прироста; уровень считается значимым при |прирост| > 2·SE.\n");
+        sb.AppendLine("Метод: контрольные схватки с тремя врагами региона, один и тот же набор сидов для соседних уровней. «Прирост» — изменение оценки `нанесённый урон / (чистые потери здоровья + 5)`; «цена» — в секундах труда при текущей добыче. Эффективность = прирост на 100 с цены. `±` — стандартная ошибка прироста; уровень считается значимым при |прирост| > 2·SE.\n");
         var sig = rows.Where(r => r.Category == "combat" && r.Significant && r.GainPct > 0 && r.CostSec > 0).ToList();
         double medUnlock = Mx.Median(sig.Where(r => r.Level == 1).Select(r => r.GainPer100s).DefaultIfEmpty(1).ToList()), medUp = Mx.Median(sig.Where(r => r.Level > 1).Select(r => r.GainPer100s).DefaultIfEmpty(1).ToList());
         sb.AppendLine($"Опорные значения (медиана значимых боевых уровней, % на 100 с): первый уровень навыка (открытие) — **{F(medUnlock)}**, улучшения — **{F(medUp)}**. Сравнение идёт внутри своей группы: «слишком силён» — более {tg.SkillEffRatioMax}× медианы группы, «слаб» — менее {tg.SkillEffRatioMin}×.\n");
@@ -143,7 +143,7 @@ public static class Report
             double med = r.Level == 1 ? medUnlock : medUp;
             string verdict = r.Category switch
             {
-                "combat" => !r.Significant ? (2 * r.GainSe < tg.SkillMinGainPct * 2 ? "бесполезный уровень (подтверждено)" : "эффект не выявлен: мало данных") : r.GainPct < tg.SkillMinGainPct ? "бесполезный уровень" : (r.GainPer100s > med * tg.SkillEffRatioMax ? "слишком силён" : (r.GainPer100s < med * tg.SkillEffRatioMin ? "слаб" : "норма")),
+                "combat" => !r.Significant ? (2 * r.GainSe < tg.SkillMinGainPct * 2 ? "малый эффект в этом сценарии" : "эффект не выявлен: мало данных") : r.GainPct < tg.SkillMinGainPct ? "малый эффект в этом сценарии" : (r.GainPer100s > med * tg.SkillEffRatioMax ? "слишком силён" : (r.GainPer100s < med * tg.SkillEffRatioMin ? "слаб" : "норма")),
                 "not-simulated" => "не симулируется", "combat-partial" => "частично (см. примечание)", "safety" => "через допущение о свете", _ => "через допущение"
             };
             sb.AppendLine($"| {r.Skill} | {r.Level}/{r.MaxLevel} | {r.Category} | {F(r.CostSec, "F0")} | {F(r.GainPct)} (±{F(r.GainSe)}) | {F(r.GainPer100s)} | {verdict} |");
@@ -163,7 +163,7 @@ public static class Report
     static void ProbeSection(StringBuilder sb, Summary main, Summary pr)
     {
         sb.AppendLine("\n## Поиск эксплойтов: стратегии-пробы\n");
-        sb.AppendLine("Те же правила игры, но осознанно «ломающее» поведение: без фонарей (DangerScale растёт на 0,18 за фонарь), все фонари, «нахрапом» без подготовки и отдыха (смерть стоит только до 25 осколков и дороги). Сравнение с профилем `optimizer`.\n");
+        sb.AppendLine("Те же правила игры, но осознанно «ломающее» поведение: без фонарей (DangerScale растёт на 0,18 за фонарь), все фонари, «нахрапом» без подготовки и отдыха (снаряжение и ресурсы остаются в могиле; путь обратно учитывается по A.RespawnTravel, риск возвращения без снаряжения не моделируется). Сравнение с профилем `optimizer`.\n");
         var opt = main.Profiles.FirstOrDefault(p => p.Profile == "optimizer");
         sb.AppendLine("| Стратегия | N | Победы (ДИ) | Медиана, ч (ДИ) | Смертей | Время к оптимизатору |"); sb.AppendLine("|---|---|---|---|---|---|");
         if (opt != null) sb.AppendLine($"| optimizer (база) | {opt.N} | {Pc(opt.WinRate)} ({Ci(opt.WinLo, opt.WinHi)}) | {F(opt.HoursMedian, "F2")} ({F(opt.HoursMedLo, "F2")}–{F(opt.HoursMedHi, "F2")}) | {F(opt.DeathsMean, "F1")} | 1.00× |");
@@ -191,6 +191,7 @@ public static class Report
         sb.AppendLine("* Мир не генерируется: вместо поиска жил — время на клетку `TravelPerTile` и доля добычи вне света; доступность ресурсов по регионам взята из таблиц добычи и открывается ядрами босса.");
         sb.AppendLine("* Боссы — набор ударов с уроном/предупреждением/перезарядкой, переписанный по коду, но без полной геометрии (вихрь, водоворот, перегрев, метель, эхо). Щит Хранителя Зимы и Источника — цикл «головоломка → уязвимость» с временем головоломки по профилю.");
         sb.AppendLine("* Исследование мест, чертежи (фрагменты) и реликвии: число мест в минуту и шансы находок — допущения (`A.PoiPerMinute`, `PoiFragChance`, `PoiRelicChance`); настоящие таблицы наград мест не воспроизводятся.");
+        sb.AppendLine("* При смерти ресурсы и улучшенное снаряжение остаются в могиле. Возвращение учитывает A.RespawnTravel; засады, геометрия пути и повторные смерти без снаряжения не воспроизводятся. Процент завершивших кампанию учитывает повторные попытки и сам по себе не измеряет лёгкость игры.");
         sb.AppendLine("* **Не симулируются:** деревня и жители (производство, шестерни, линзы), торговля и монеты, квесты и события, головоломки фонарей (лишь время `LampTravel` и стражи), фоновый жар/холод/дым, водные зоны, эффекты Эндгейма, кооператив, фонарь героя. Навыки производства деревни (`Collector`, `SilverGears`, `ForgeHeat`, `AutoDrill`) помечены «не симулируется» и **не** считаются бесполезными.");
         sb.AppendLine("* Боссов 5 и конец игры: победа = убийство Источника Тьмы. Финал и послеигровой режим не проходят.");
         sb.AppendLine("\n**Допущения о мире (настраиваемые, `BalanceModel.A`):**\n");

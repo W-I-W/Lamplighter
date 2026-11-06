@@ -170,13 +170,13 @@ public partial class Game
     public float HeatTaken => 1f - E(Tech.HeatShield);
     public float ColdTaken => 1f - E(Tech.FrostArmor);
     public float WaterSpeed => E(Tech.Boots);
-    /// <summary>Урон света по врагам вокруг героя в секунду: лучшее из трёх источников (Жгучий свет, Звёздный фонарь, улучшение фонаря героя).</summary>
+    /// <summary>Жгучий свет добавляет урон к лучшему из двух фонарей: каждый уровень навыка полезен в любой сборке.</summary>
     public float AuraDps
     {
         get
         {
             float a = Has(Tech.Searing) ? E(Tech.Searing) : 0f, b = Has(Tech.HeroLamp) ? 2.5f + .5f * (Lv(Tech.HeroLamp) - 1) : 0f, c = HeroLampLv >= 2 ? 2.5f : 0f;
-            return Math.Max(a, Math.Max(b, c));
+            return a + Math.Max(b, c);
         }
     }
 }

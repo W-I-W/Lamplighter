@@ -171,7 +171,7 @@ public static class BalanceCli
         foreach (var g in comb.GroupBy(r => r.Skill))
         {
             var useless = g.Where(r => (!r.Significant && 2 * r.GainSe < tg.SkillMinGainPct * 2) || (r.Significant && r.GainPct < tg.SkillMinGainPct)).ToList();
-            if (useless.Count > 0) s.Findings.Add(new Finding { Severity = "warn", Area = "skills", Text = $"{g.Key}: уровни {string.Join(",", useless.Select(r => r.Level))} из {g.First().MaxLevel} не дают значимого прироста в бою (< {tg.SkillMinGainPct}%)", Fix = $"поднять skill.{g.Key}.EffPer или снизить цену" });
+            if (useless.Count > 0) s.Findings.Add(new Finding { Severity = "warn", Area = "skills", Text = $"{g.Key}: уровни {string.Join(",", useless.Select(r => r.Level))} из {g.First().MaxLevel} не дали значимого прироста в стендовом сценарии (< {tg.SkillMinGainPct}%)", Fix = $"поднять skill.{g.Key}.EffPer или снизить цену" });
             var strong = g.Where(r => r.Significant && r.GainPer100s > (r.Level == 1 ? medU : medP) * tg.SkillEffRatioMax).ToList();
             if (strong.Count > 0) s.Findings.Add(new Finding { Severity = "warn", Area = "skills", Text = $"{g.Key}: уровни {string.Join(",", strong.Select(r => r.Level))} в {strong.Max(r => r.GainPer100s / (r.Level == 1 ? medU : medP)):F1}× эффективнее медианы своей группы", Fix = $"снизить skill.{g.Key}.EffPer или поднять цену" });
         }
@@ -179,7 +179,7 @@ public static class BalanceCli
         foreach (var (mod, g, c) in ex.ModRows) if (g < 0.5) s.Findings.Add(new Finding { Severity = "info", Area = "mods", Text = $"вставка «{mod}» почти не меняет результат схватки ({g:F1}%)", Fix = "" });
     }
 
-    static string T0(Extras ex) => "потеря до 25 осколков и дорога";
+    static string T0(Extras ex) => "возвращение к могиле; риск пути без снаряжения не моделируется";
 
     // ───────────────────────── optimize ─────────────────────────
     static int Optimize(Args a, bool prune = false)

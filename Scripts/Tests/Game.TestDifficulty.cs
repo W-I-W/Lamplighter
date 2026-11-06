@@ -47,7 +47,7 @@ public partial class Game
             TestPlayers = 0; Enemies.Clear();
             // ориентиры для ручной настройки (не проверка баланса)
             var shade = EnemyMuls(EK.Shade, p[0]); float hit = 9f * shade.dmg; float shp = 7f * DangerScale * shade.hp;
-            Check(Mathf.Ceil(shp / 5f) is >= 2 and <= 4 && hit < Tune.T.EnemyMinHit * 2f, $"start: a Shade has {shp:0.0} hp ({Mathf.Ceil(shp / 5f)} sword hits) and its hit {hit:0.0} is raised to the minimum {Tune.T.EnemyMinHit:0}");
+            Check(Mathf.Ceil(shp / 5f) is >= 2 and <= 4 && hit > Tune.T.EnemyMinHit && hit * (1 + 4 * Tune.T.FearDamage) < 30f, $"start: a Shade has {shp:0.0} hp ({Mathf.Ceil(shp / 5f)} sword hits) and first-level damage stays below half of starting health");
         });
 
         // ── ближний враг: подготовка → рывок → пауза

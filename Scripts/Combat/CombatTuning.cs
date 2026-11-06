@@ -18,9 +18,9 @@ public partial class CombatTuning : Resource
     [Export] public float EnemySpeed = 1.15f;
     [Export] public float EnemyAttackRate = 1.15f;             // как быстро восстанавливаются паузы между атаками
     [Export] public float EnemyAtkPause = 1.7f;                // во сколько раз длиннее паузы между атаками обычных врагов (боссов не касается): бьют реже
-    [Export] public float EnemyMinHit = 60f;                   // минимальный урон любого удара по герою (после защиты от огня, до страха тени)
+    [Export] public float EnemyMinHit = 1f;                    // нижний порог до сопротивлений; защита может уменьшить и это значение
     [Export] public float BareHandMul = .4f;                   // голые руки (инструмента нет): доля урона инструмента, заметно слабее меча
-    [Export] public float FistDamageMul = 3f;                  // множитель урона PlayerDamage (удар рукой и инструментом без оружия)
+    [Export] public float FistDamageMul = .65f;                // инструменты уступают оружию своего этапа по урону
     [Export] public float[] BiomeDamage = { 1f, 1f, 1f, 1f, 1f };
     [Export] public float[] BiomeHp = { 1f, 1.2f, 1.4f, 1.6f, 1.8f };
     [Export] public float SpawnDelayMul = 3.2f, SpawnCapMul = .4f;     // реже появляются (×3,2 к паузе) и меньше одновременно (×0,4 к лимиту): удары теперь тяжёлые, а врагов мало
@@ -38,13 +38,14 @@ public partial class CombatTuning : Resource
     [Export] public float BossLeashTiles = 36f;                // пока игрок ближе этого расстояния (в клетках) от места босса, бой идёт; бросив бой дальше, игрок теряет босса
     [Export] public float BossRegenDelay = 8f, BossRegenRate = .03f;   // босс начинает восстанавливаться только после стольких секунд без игрока и медленно (доля здоровья в секунду)
     [Export] public float BossTempo = .7f;                     // пауза между атаками босса (меньше — чаще): бои с боссами напряжённее, увернуться «на автомате» нельзя
+    [Export] public float WinterVuln = 9f, SourceVuln = 10f;     // достаточно времени добежать и ударить после решения щита
     // игрок
     [Export] public float HitInvuln = .5f;
     [Export] public float RegenRate = .35f, RegenDelay = 5f;
     [Export] public float DashCooldown = 2.2f, DashInvuln = .2f;
-    [Export] public float ReaperHeal = 1.5f;
+    [Export] public float ReaperHeal = 3f;
     [Export] public int FearLevel = 5;                         // ниже этого уровня тень смертельна: урон по герою растёт на FearDamage за каждый недостающий уровень, врагов больше на FearSpawn
-    [Export] public float FearDamage = .45f, FearSpawn = 2f;
+    [Export] public float FearDamage = .1f, FearSpawn = 2f;
     [Export] public float GatherMul = .65f, MineTimeMul = 1.35f, RegrowMul = .6f;         // добыча: множитель выпадения сырья, время добычи, скорость восстановления деревьев и руды
     [Export] public float ScarcityMul = 1f;                    // множитель минимального числа ресурсов рядом с игроком (появление при нехватке)
     [Export] public float TechCostMul = 2f;                    // множитель цены навыков [T]

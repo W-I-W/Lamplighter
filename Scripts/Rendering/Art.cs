@@ -6,9 +6,19 @@ namespace Lamplighter;
 public static partial class Art
 {
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
-        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 182, BossTotem = 180, BossGate = 181, IconCount = 30, TreeTop = 162, Grave = 177, PineTop = 163, DeadTop = 164;
+        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 200, BossTotem = 180, BossGate = 181, IconCount = 30, TreeTop = 162, Grave = 177, PineTop = 163, DeadTop = 164;
     /// <summary>Область тайла в атласе с текущим кадром анимации (кадры лежат столбиком под основным).</summary>
     public static Rect2 TileRect(int idx, double time) { int n = idx >= 0 && idx < SpriteLibrary.TileFrames.Length ? SpriteLibrary.TileFrames[idx] : 1; return new Rect2(idx * 16, n > 1 ? ((int)(time / .22) % n) * 16 : 0, 16, 16); }
+    /// <summary>Дерево — один большой тайл 32×32 (два столбца и два ряда атласа): крона над стволом и по 8 px запаса по бокам для качания. Индекс — левый столбец.</summary>
+    public const int BigTree = 182, BigPine = 184, BigDead = 186;
+    public const int BigLast = 199;
+    /// <summary>Виды деревьев по семействам (левые столбцы больших тайлов): дерево — обычное, дуб, тополь; сосна — обычная, пышная, высокая; мёртвое — обычное, зеркальное, толстое.</summary>
+    public static readonly int[] TreeKinds = { BigTree, 188, 190 }, PineKinds = { BigPine, 192, 194 }, DeadKinds = { BigDead, 196, 198 };
+    /// <summary>Строка тайла, с которой начинается ствол, по левому столбцу вида (шейдер: выше — крона, ниже — ствол). Порядок: 182, 184, 186, 188, 190, 192, 194, 196, 198.</summary>
+    public static readonly float[] TreeCut = { 22, 23, 21, 22, 22, 23, 23, 21, 21 };
+    public static bool IsBig(int c) => c >= BigTree && c <= BigLast;
+    public static bool IsBigAnchor(int c) => IsBig(c) && ((c - BigTree) & 1) == 0;
+    public static int TreeFamily(int col) => col == BigPine || col == 192 || col == 194 ? 1 : col == BigDead || col == 196 || col == 198 ? 2 : 0;
     public static Texture2D TileTex, PlayerTex, ShadeTex, WraithTex, IconTex;
     public const int Chest = 15, ChestOpen = 16, Ruin = 17, House = 18, Tent = 19, Shrine = 20, ShrineUsed = 21,
         AetherOre = 22, Cage = 23, BossOff = 24, BossOn = 25, Obelisk = 26, ObeliskUsed = 27,

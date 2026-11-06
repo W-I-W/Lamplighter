@@ -75,12 +75,12 @@ public sealed class Profile
     {
         "novice" or "newbie" => Novice(), "average" or "mid" => Average(), "expert" => Expert(), "optimizer" or "opt" => Optimizer(),
         "probe-nolamps" => With(Optimizer(), "probe-nolamps", q => q.LampsWanted = new[] { 0, 0, 0, 0, 0 }),
-        "probe-maxlamps" => With(Expert(), "probe-maxlamps", q => q.LampsWanted = new[] { 5, 3, 3, 3, 0 }),
+        "probe-maxlamps" => With(Optimizer(), "probe-maxlamps", q => q.LampsWanted = new[] { 5, 3, 3, 3, 0 }),
         "probe-rush" => With(Optimizer(), "probe-rush", q => { q.BossRisk = 99f; q.SimulatedReadiness = false; q.QuitDeaths = 100000; q.RestBelow = 0f; q.PanicDeaths = 100000; }),
         _ => throw new ArgumentException("unknown profile " + n)
     };
     static Profile With(Profile p, string name, Action<Profile> f) { p.Name = name; f(p); return p; }
-    /// <summary>Стратегии для поиска эксплойтов: без фонарей (враги слабее), все фонари, «нахрапом» без подготовки и отдыха (смерть почти бесплатна).</summary>
+    /// <summary>Все стратегии наследуют Optimizer и меняют только проверяемое решение.</summary>
     public static readonly string[] Probes = { "probe-nolamps", "probe-maxlamps", "probe-rush" };
     public static readonly string[] All = { "novice", "average", "expert", "optimizer" };
 

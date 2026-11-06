@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c6361ehkipwcb"
-path="res://.godot/imported/142_DeadTree_poses.png-18a2f3b8be9029587df558844f3c88d5.ctex"
+uid="uid://cam8svlldv37p"
+path="res://.godot/imported/198_DeadThick_big.png-3bbacf47637c033d04e1ccfb9655ccb9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Environment/142_DeadTree_poses.png"
-dest_files=["res://.godot/imported/142_DeadTree_poses.png-18a2f3b8be9029587df558844f3c88d5.ctex"]
+source_file="res://Assets/Sprites/Environment/198_DeadThick_big.png"
+dest_files=["res://.godot/imported/198_DeadThick_big.png-3bbacf47637c033d04e1ccfb9655ccb9.ctex"]
 
 [params]
 

@@ -323,6 +323,16 @@ public partial class NetNode : Node
 
     public void SendEnemyFx(int id, float burn, float slow, float freeze) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcEnemyFx), id, burn, slow, freeze); }
 
+    public void SendEnemyDot(int id, float dmg, bool light) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcEnemyDot), id, dmg, light); }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcEnemyDot(int id, float dmg, bool light)
+    {
+        if (!Multiplayer.IsServer()) return; long s = Multiplayer.GetRemoteSenderId();
+        if (!NetService.Players.TryGetValue(s, out var p) || !p.Handshaken || !WorldRateOk(s)) return;
+        G.NetEnemyHit(s, id, dmg, Vector2.Zero, false, light, true);
+    }
+
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     public void RpcEnemyFx(int id, float burn, float slow, float freeze)
     {

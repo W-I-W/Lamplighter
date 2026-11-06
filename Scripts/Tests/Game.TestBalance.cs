@@ -34,7 +34,7 @@ public partial class Game
             Check(hpOk, "прирост уровней и здоровья от опыта совпадает с Game.GiveXp (60 + 10 за уровень)");
             Level = 1; MaxHp = 60; Xp = 0;
             bool fearOk = true; for (int lv = 1; lv <= 9; lv++) { Level = lv; if (!Eq(FearMul, new SimPlayer(m) { Level = lv }.FearMul)) fearOk = false; }
-            Level = 1; Check(fearOk && FearMul > 2f, $"страх тени: множитель урона ниже 5 уровня совпадает (1 ур. ×{FearMul:0.00}, 5 ур. ×1)");
+            Level = 1; Check(fearOk && FearMul > 1f && FearMul < 2f, $"страх тени: умеренный множитель ниже 5 уровня совпадает (1 ур. ×{FearMul:0.00}, 5 ур. ×1)");
             // ── урон, добыча
             bool dmgOk = true, mineOk = true, lightOk = true;
             foreach (int tier in new[] { 0, 1, 2, 3, 4 }) foreach (int lv in new[] { 1, 6, 15, 30 })

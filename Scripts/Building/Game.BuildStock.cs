@@ -11,6 +11,9 @@ public partial class Game
     public readonly Dictionary<string, int> BuildStock = new();
     public readonly HashSet<int> Placed = new();                 // клетки (World.Key), где стоит предмет, поставленный игроком (зеркала мира разбирать нельзя)
     string demolishKey; float demolishT;
+    bool placingStock;
+
+    static float BuildCraftXp(string key) => key == "furnace" ? 20 : key.StartsWith("lamp") ? 25 : key.StartsWith("bld") ? 30 : key == "mirror" ? 5 : key == "amp" || key == "barrier" ? 10 : 30;
 
     public int StockOf(string key) => BuildStock.TryGetValue(key, out var n) ? n : 0;
     void StockAdd(string key, int d) { int n = Math.Max(0, StockOf(key) + d); if (n == 0) BuildStock.Remove(key); else BuildStock[key] = n; }
@@ -23,7 +26,7 @@ public partial class Game
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
         var cost = e.Raw ?? e.CostArr; if (cost == null) return false;
         if (!Can(cost)) { Fail("Не хватает: " + MissingStr(cost)); return false; }
-        Pay(cost); StockAdd(e.Key, 1); Sfx.Play("build", -3, 1.2f);
+        Pay(cost); StockAdd(e.Key, 1); GiveXp(BuildCraftXp(e.Key)); Sfx.Play("build", -3, 1.2f); Save();
         Toast($"Создано: {e.Name} (в запасе: {StockOf(e.Key)})"); return true;
     }
 
@@ -33,13 +36,19 @@ public partial class Game
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
         if (StockOf(e.Key) <= 0) { Fail("Нет в запасе: создайте в меню [B]"); Placing = null; return false; }
         var raw = e.Raw; var snap = (int[])Inv.Clone(); var tile = ToTile(Aim);
-        if (raw != null) foreach (var c in raw) Inv[c[0]] += c[1];
-        e.Do();
-        bool ok = raw != null && System.Linq.Enumerable.SequenceEqual(Inv, snap);        // постройка списала ровно возвращённую цену
-        Array.Copy(snap, Inv, snap.Length);
+        bool ok;
+        placingStock = true;
+        try
+        {
+            if (raw != null) foreach (var c in raw) Inv[c[0]] += c[1];
+            e.Do();
+            ok = raw != null && System.Linq.Enumerable.SequenceEqual(Inv, snap);
+        }
+        finally { Array.Copy(snap, Inv, snap.Length); placingStock = false; }
         if (!ok) return false;
         StockAdd(e.Key, -1); Placed.Add(World.Key(tile.X, tile.Y));
         if (StockOf(e.Key) <= 0) { Placing = null; Toast("Запас закончился"); }
+        Save();
         return true;
     }
 

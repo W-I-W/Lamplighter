@@ -97,7 +97,8 @@ public static class Bench
         note = "";
         switch (t)
         {
-            case Tech.Dash: case Tech.Reaper: case Tech.Spin: case Tech.Searing: case Tech.SilverEdge: case Tech.FlameEdge: case Tech.FrostEdge: case Tech.Marksman: case Tech.QuickDraw: case Tech.Piercing: case Tech.Overcharge: case Tech.HeroLamp: case Tech.Pulse: return "combat";
+            case Tech.Overcharge: note = "баллистика и уменьшение потерь урона с дистанцией учитываются; уклонение движущихся целей упрощено"; return "combat-partial";
+            case Tech.Dash: case Tech.Reaper: case Tech.Spin: case Tech.Searing: case Tech.SilverEdge: case Tech.FlameEdge: case Tech.FrostEdge: case Tech.Marksman: case Tech.QuickDraw: case Tech.Piercing: case Tech.HeroLamp: case Tech.Pulse: return "combat";
             case Tech.Lens: case Tech.LensII: note = "радиус света героя в коде влияет на ауру и на видимость в темноте; видимость не симулируется, боевая ценность — только радиус ауры"; return "combat-partial";
             case Tech.HeatShield: note = "щит от огня работает только против огненных атак, фоновый жар не симулируется"; return "combat-partial";
             case Tech.FrostArmor: note = "сокращает озноб после ледяных ударов, фоновый холод не симулируется"; return "combat-partial";

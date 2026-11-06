@@ -1804,7 +1804,7 @@
   "Свет героя +5% за уровень, сильнее жжёт врагов вокруг": "Hero's light +5% per level, burns nearby enemies harder",
   "Производство деревни быстрее на 10% за уровень": "Village production is 10% faster per level",
   "Вода меньше замедляет: +7% скорости за уровень": "Water slows less: +7% speed per level",
-  "Удары поджигают врагов; поджог длится дольше с каждым уровнем": "Hits set enemies on fire; the burn lasts longer each level",
+  "Удары поджигают врагов; каждый уровень продлевает ожог и усиливает удары по горящим целям на 6%": "Hits ignite enemies; each level extends burning and adds 6% melee damage against burning targets",
   "Огонь, пепел и дым вредят меньше на 12% за уровень": "Fire, ash and smoke hurt 12% less per level",
   "Кузница работает быстрее на 20% за уровень": "The forge works 20% faster per level",
   "Фонари светят дальше на 6% за уровень, боевые поджигают": "Lanterns shine 6% farther per level, combat ones ignite",

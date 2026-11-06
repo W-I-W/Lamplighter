@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-/// <summary>Деревья в две клетки и кусты. Ствол — обычная твёрдая клетка; крона — тайл в клетке над ним (слой выше игрока, без коллизии), поэтому за деревом можно пройти.
+/// <summary>Деревья в две клетки и кусты. Ствол — обычная твёрдая клетка; крона — часть того же спрайта 32×32 (рисуется в клетке над стволом, без коллизии), поэтому за деревом можно пройти.
 /// Кусты — декор леса, который ломается с одного удара и даёт 1 дерево.</summary>
 public partial class Game
 {
@@ -20,34 +20,29 @@ public partial class Game
         || t == Tl.CrystalLantern || t == Tl.CombatLantern || t == Tl.AmpCrystal || t == Tl.BarrierPost;
 
     public const int TreeVariants = 4;                         // 0 — исходный вид, 1..3 — оттенки
-    static readonly int[] TreeCols = { Art.Tree, Art.Pine, Art.DeadTree, Art.TreeTop, Art.PineTop, Art.DeadTop };
+    static readonly int[] AllTreeCols = { Art.BigTree, 188, 190, Art.BigPine, 192, 194, Art.BigDead, 196, 198 };
+    /// <summary>Вид дерева в клетке (рисунок: форма кроны): стабильно по координатам, одинаково у всех игроков. Равные доли обычного вида и двух новых.</summary>
+    public static int TreeKind(int x, int y) { uint h = (uint)(x * 19349663) ^ (uint)(y * 83492791) ^ 0x9e3779b9u; h ^= h >> 15; h *= 0x2c1b3c6du; h ^= h >> 12; return (int)(h % 3); }
+    /// <summary>Столбец атласа дерева клетки: семейство берётся по типу тайла, форма — по координатам.</summary>
+    public static int TreeAtlas(Tl t, int x, int y) { var k = t == Tl.Pine ? Art.PineKinds : t == Tl.DeadTree ? Art.DeadKinds : Art.TreeKinds; return k[TreeKind(x, y)]; }
     /// <summary>Номер разновидности дерева в клетке: стабильно по координатам, одинаков у ствола и кроны и у всех игроков.</summary>
     public static int TreeAlt(int x, int y) { uint h = (uint)(x * 73856093) ^ (uint)(y * 19349663); h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15; return (int)(h % TreeVariants); }
     static Color TreeTint(int col, int v)
     {
-        bool pine = col == Art.Pine || col == Art.PineTop, dead = col == Art.DeadTree || col == Art.DeadTop;
+        int fam = Art.TreeFamily(col); bool pine = fam == 1, dead = fam == 2;
         if (dead) return v == 1 ? new Color(1.12f, 1.05f, .95f) : v == 2 ? new Color(.88f, .88f, .94f) : new Color(1f, .92f, .85f);
         if (pine) return v == 1 ? new Color(.9f, 1.04f, 1.1f) : v == 2 ? new Color(1.08f, 1.08f, .95f) : new Color(.95f, .95f, 1.05f);
         return v == 1 ? new Color(1.14f, 1.1f, .78f) : v == 2 ? new Color(.82f, 1.02f, .96f) : new Color(1.06f, .9f, .88f);          // жёлто-зелёное, сине-зелёное, осеннее
     }
 
-    /// <summary>Тайл кроны для клетки (x, y): крона рисуется над стволом, если снизу стоит дерево, а сама клетка не занята твёрдым объектом.</summary>
-    int CrownId(int x, int y)
-    {
-        if (!World.In(x, y + 1)) return -1;
-        var below = W.Get(x, y + 1); if (!IsPlantTile(below)) return -1;
-        var own = W.Get(x, y); if (own != Tl.None && !IsPlantTile(own) && !IsBuiltTile(own) && !IsRockTile(own)) return -1;      // постройка за деревом — крона рисуется поверх неё, как поверх игрока
-        return below == Tl.Tree ? Art.TreeTop : below == Tl.Pine ? Art.PineTop : Art.DeadTop;
-    }
-
-    /// <summary>Крона клетки (x, y): по умолчанию рисуется под игроком (слой B); пока игрок стоит за этим деревом — над ним (слой T).</summary>
-    void RefreshCrown(int x, int y)
+    /// <summary>Дерево клетки (x, y) — один тайл 32×32 (крона и ствол вместе): по умолчанию в слое под игроком (R); пока игрок стоит за деревом — целиком в слое над ним (T), полупрозрачном.</summary>
+    void SetTreeCell(int x, int y)
     {
         var ch = ChunkAt(x, y); if (ch == null) return;
-        var lc = new Vector2I(x % CS, y % CS); int id = CrownId(x, y); bool above = behindTrunks.Contains(new Vector2I(x, y + 1)) || behindTrunks.Contains(new Vector2I(x, y)) || IsBuiltTile(W.Get(x, y)) || IsRockTile(W.Get(x, y));      // свой ствол за игроком или в этой клетке копия чужого ствола — крона выше
-        if (id < 0) { ch.B.EraseCell(lc); ch.T.EraseCell(lc); return; }
-        var layer = above ? ch.T : ch.B; var other = above ? ch.B : ch.T;
-        layer.SetCell(lc, srcId, new Vector2I(id, 0), TreeAlt(x, y + 1)); other.EraseCell(lc);
+        var lc = new Vector2I(x % CS, y % CS); var t = W.Get(x, y);
+        if (!IsPlantTile(t)) { ch.R.EraseCell(lc); ch.T.EraseCell(lc); return; }
+        bool above = behindTrunks.Contains(new Vector2I(x, y)); var layer = above ? ch.T : ch.R; var other = above ? ch.R : ch.T;
+        layer.SetCell(lc, srcId, new Vector2I(TreeAtlas(t, x, y), 0), TreeAlt(x, y)); other.EraseCell(lc);
     }
 
     /// <summary>Есть ли на клетке видимый куст (по слою растительности).</summary>
@@ -158,17 +153,6 @@ public partial class Game
         foreach (var o in behindTrunks) if (!want.Contains(o)) changed.Add(o);
         foreach (var n in want) if (!behindTrunks.Contains(n)) changed.Add(n);
         behindTrunks.Clear(); foreach (var n in want) behindTrunks.Add(n);
-        foreach (var k in changed)
-        {
-            var ch = ChunkAt(k.X, k.Y); var lc = new Vector2I(k.X % CS, k.Y % CS);
-            if (ch != null)
-            {
-                var tt = W.Get(k.X, k.Y);
-                // пока копия ствола в K полупрозрачна, настоящий ствол слоя O скрыт — иначе низ дерева выглядит плотным, а крона прозрачной
-                if (behindTrunks.Contains(k) && IsPlantTile(tt)) { ch.K.SetCell(lc, srcId, new Vector2I(AtlasX(tt, 1), 0), TreeAlt(k.X, k.Y)); ch.O.EraseCell(lc); }
-                else { ch.K.EraseCell(lc); if (IsPlantTile(tt)) ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(tt, LevelAt(k.X, k.Y)), 0), TreeAlt(k.X, k.Y)); }
-            }
-            RefreshCrown(k.X, k.Y - 1); RefreshCrown(k.X, k.Y);
-        }
+        foreach (var k in changed) SetTreeCell(k.X, k.Y);
     }
 }

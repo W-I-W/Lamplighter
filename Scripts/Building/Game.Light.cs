@@ -103,7 +103,7 @@ public partial class Game
                 float rr = 56f * (l.Level == 1 ? 1f : l.Level == 2 ? 1.3f : 1.6f), dps = 5f * l.Level;
                 bool any = false;
                 foreach (var e in Enemies)
-                    if (!e.Hidden && e.Pos.DistanceTo(l.Pos) < rr) { e.Hp -= dps * dt * (e.IsBoss ? .3f : 1f); e.Flash = Mathf.Max(e.Flash, .04f); any = true; if (Has(Tech.FireLens)) e.Burn = 2f; }
+                    if (!e.Hidden && e.Pos.DistanceTo(l.Pos) < rr) { if (!NetClient) HurtTick(e, dps * dt * (e.IsBoss ? .3f : 1f), true); any = true; if (!NetClient && Has(Tech.FireLens)) e.Burn = 2f; }
                 if (rng.Randf() < dt * (any ? 12 : 4)) Parts.Add(new Particle { P = l.Pos + new Vector2(rng.RandfRange(-3, 3), -6), V = new Vector2(rng.RandfRange(-6, 6), -rng.RandfRange(8, 20)), Life = .6f, Max = .6f, C = new Color(1f, .55f, .2f), Size = 1.5f });
             }
         }
@@ -165,7 +165,7 @@ public partial class Game
                     if (DistToSeg(e.Pos, bp.Pts[i], bp.Pts[i + 1]) < e.Radius + 3)
                     {
                         if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source) && bp.C == Colors.White) { ReflectLight(e); continue; }
-                        e.Hp -= bp.Dps * dt * (e.IsBoss ? .35f : 1f); e.Flash = Mathf.Max(e.Flash, .05f);
+                        if (!NetClient) HurtTick(e, bp.Dps * dt * (e.IsBoss ? .35f : 1f), true);
                         if (rng.Randf() < dt * 15) Burst(e.Pos, bp.C, 1, 30);
                     }
                 }

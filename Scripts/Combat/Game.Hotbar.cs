@@ -103,14 +103,14 @@ public partial class Game
         HotSelect(((HotSel + d) % HotCount + HotCount) % HotCount); Sfx.Play("tick", -6, 1.4f);
     }
 
-    void EquipNone() { CurW = -1; MineProg = 0; RecomputeEffects(); }
+    void EquipNone() { CurW = -1; MineStop(); RecomputeEffects(); }
 
     void ApplyHot()
     {
         var r = Hot[HotSel]; if (!HotValid(r)) return;
         BareChosen = false;
         if (IsToolRef(r)) { CurTool = RefId(r); EquipNone(); }
-        else { int i = Owned.FindIndex(o => o.Id == RefId(r)); if (i >= 0) { CurW = i; MineProg = 0; RecomputeEffects(); } }
+        else { int i = Owned.FindIndex(o => o.Id == RefId(r)); if (i >= 0) { CurW = i; MineStop(); RecomputeEffects(); } }
         
     }
 

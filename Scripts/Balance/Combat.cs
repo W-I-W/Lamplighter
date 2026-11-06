@@ -6,7 +6,8 @@ namespace Lamplighter.Balance;
 
 public sealed class Foe
 {
-    public EnemyM Def; public BossM Boss; public string Kind; public float Hp, MaxHp, DmgScale = 1f, Arrive, AtkT, WindT, Burn, Slow, Freeze, Open, ShieldCycle, Speed;
+    public EnemyM Def; public BossM Boss; public string Kind; public float Hp, MaxHp, DmgScale = 1f, Arrive, Distance, AtkT, WindT, Burn, Slow, Freeze, Open, ShieldCycle, Speed;
+    public int PhaseIndex;
     public bool Elite; public int EMod; public float WardT = 3f; public float[] MoveCd; public int PendingMove = -1; public float PendingDmg, NextT = 2.5f, MeleeT = 1f, Hide;
     public bool Dead; public bool IsBoss => Boss != null; public bool Alive => !Dead && Hp > 0;
     public bool Soul => Def != null && Def.Soul; public bool Ranged => Def != null && Def.Ranged;
@@ -34,7 +35,7 @@ public sealed class CombatSim
         float hm = T.EnemyHp * T.At(T.BiomeHp, Region), dm = T.EnemyDamage * T.At(T.BiomeDamage, Region);
         var f = new Foe { Def = d, Kind = d.Kind, Hp = d.Hp * danger * hm, DmgScale = dm, Speed = d.Speed * T.EnemySpeed };
         f.MaxHp = f.Hp; if (distance < 0) distance = r.Range(130, 200);
-        float travel = d.Ranged ? Math.Max(0, distance - 100) : distance - 20; f.Arrive = travel / Math.Max(10f, f.Speed);
+        f.Distance = distance; float travel = d.Ranged ? Math.Max(0, distance - 100) : distance - 20; f.Arrive = travel / Math.Max(10f, f.Speed);
         f.AtkT = r.Range(.3f, 1.2f) + d.Period * .3f;
         if (allowElite && d.Kind != "Swarm" && d.Kind != "Bomber" && Elite(f, elitesNow)) { }
         return f;
@@ -54,7 +55,7 @@ public sealed class CombatSim
     public Foe MakeBoss(BossM b)
     {
         // b.Hp в модели — BaseHp; множитель босса применяется здесь (Game.EnemyMuls: BossHp[id−1] × Coop)
-        var f = new Foe { Boss = b, Kind = b.Kind, Hp = b.Hp * T.At(T.BossHp, b.Id - 1), DmgScale = T.At(T.BossDamage, b.Id - 1), Arrive = 0 };
+        var f = new Foe { Boss = b, Kind = b.Kind, Hp = b.Hp * T.At(T.BossHp, b.Id - 1), DmgScale = T.At(T.BossDamage, b.Id - 1), Arrive = 0, Distance = P.Cur != null && P.Cur.Cls != (int)WClass.Sword ? 80f : 24f };
         f.MaxHp = f.Hp; f.MoveCd = new float[b.Moves.Length]; f.NextT = 2.5f;                  // e.T1 = 2.5 в SpawnEnemy
         for (int i = 0; i < f.MoveCd.Length; i++) f.MoveCd[i] = b.Moves[i].Cooldown > 0 ? 4f + i : 0f;
         return f;
@@ -65,8 +66,8 @@ public sealed class CombatSim
     {
         float m = 1f; shielded = false;
         if (e.Hide > 0) { shielded = true; return 0f; }
-        if (e.IsBoss && e.Boss.NeedsLight && e.ShieldCycle > 0 && vulnT <= 0 && e.Hp < e.MaxHp * .66f) { shielded = true; m *= .06f; }
-        if (e.Kind == "Sentinel" && !light) m *= .3f;
+        if (e.IsBoss && e.Boss.NeedsLight && e.PhaseIndex > 0 && vulnT <= 0) { shielded = true; m *= .06f; }
+        if (e.Kind == "Sentinel" && !light) m *= .55f;
         if (e.Open > 0) m *= 1.4f;
         if (e.EMod == 3 && e.WardT > 0) m *= .35f;
         if (melee && P.Has(Tech.SilverEdge) && e.Soul) m *= 1f + P.Se(Tech.SilverEdge);
@@ -77,7 +78,8 @@ public sealed class CombatSim
     void Hurt(Foe e, float dmg, bool melee, bool light = false, int depth = 0)
     {
         if (!e.Alive) return;
-        float m = DamageMul(e, melee, light, out _); dmg *= m; e.Hp -= dmg; S.DamageDealt += dmg;
+        if (melee && e.Burn > 0 && P.Has(Tech.FlameEdge)) dmg *= 1f + .06f * P.Lv(Tech.FlameEdge);
+        float m = DamageMul(e, melee, light, out _); dmg *= m; ApplyDamage(e, dmg);
         // эффекты попадания (Game.Hurt + Game.OnHit)
         if (melee && P.Has(Tech.FlameEdge)) e.Burn = Math.Max(e.Burn, P.Se(Tech.FlameEdge));
         if (melee && P.Has(Tech.FrostEdge)) { e.Slow = Math.Max(e.Slow, P.Se(Tech.FrostEdge)); if (!e.IsBoss && P.Lv(Tech.FrostEdge) >= 3 && r.Chance(.05f * (P.Lv(Tech.FrostEdge) - 2))) e.Freeze = Math.Max(e.Freeze, 1f); }
@@ -93,6 +95,21 @@ public sealed class CombatSim
         }
         float sp = P.E(Fxk.Siphon); if (sp > 0) { P.FlareCd = Math.Max(0, P.FlareCd - .3f * sp); P.PulseCd = Math.Max(0, P.PulseCd - .3f * sp); P.DashCd = Math.Max(0, P.DashCd - .15f * sp); }
         if (e.Hp <= 0) Kill(e);
+    }
+
+    float PhaseFloor(Foe f) => !f.IsBoss || f.PhaseIndex >= 2 ? 0 : f.Kind == "Warden" ? (f.PhaseIndex == 0 ? .7f : .35f) : (f.PhaseIndex == 0 ? .66f : .33f);
+    void ApplyDamage(Foe f, float dmg)
+    {
+        float before = f.Hp;
+        float floor = PhaseFloor(f);
+        if (f.Kind == "Source" && f.PhaseIndex > 0 && vulnT <= 0) floor = Math.Max(floor, f.PhaseIndex == 1 ? .335f : .02f);
+        f.Hp = Math.Max(Math.Min(before, f.MaxHp * floor), f.Hp - Math.Max(0, dmg));
+        S.DamageDealt += Math.Max(0, before - f.Hp);
+    }
+    void TickDamage(Foe f, float dmg, bool light = false)
+    {
+        if (!f.Alive) return;
+        ApplyDamage(f, dmg * DamageMul(f, false, light, out _));
     }
 
     void Kill(Foe e)
@@ -129,8 +146,9 @@ public sealed class CombatSim
     void DamagePlayer(float dmg, bool fire, bool cold, Foe src = null)
     {
         if (invuln > 0) return;
+        dmg = Math.Max(dmg, T.EnemyMinHit);
         if (fire) { if (P.Has(Tech.Fireproof)) return; if (P.Has(Tech.HeatShield)) dmg *= P.HeatTaken; dmg *= 1f - P.N("HeatResist"); }
-        dmg = Math.Max(dmg, T.EnemyMinHit); dmg *= P.FearMul; P.Hp -= dmg; S.DamageTaken += dmg; S.Hits++; invuln = T.HitInvuln; noDmgT = 0;
+        dmg = Math.Max(0, dmg) * P.FearMul; P.Hp -= dmg; S.DamageTaken += dmg; S.Hits++; invuln = T.HitInvuln; noDmgT = 0;
         if (cold) chillT = Math.Max(chillT, 2.2f * (P.Has(Tech.FrostArmor) ? P.ColdTaken : 1f));
         if (P.Hp <= 0 && !S.Died) { S.Died = true; S.KilledBy = src?.Kind ?? "env"; }
     }
@@ -166,9 +184,10 @@ public sealed class CombatSim
         foreach (var f in Foes)
         {
             if (!f.Alive) continue;
-            if (f.Arrive > 0 && f.Freeze <= 0) f.Arrive -= dt * (f.Slow > 0 ? .5f : 1f);
+            if (f.IsBoss && f.PhaseIndex < 2 && f.Hp <= f.MaxHp * PhaseFloor(f)) { f.PhaseIndex++; if (f.Kind == "Warden") f.Hide = Game.GroveTransition; }
+            if (f.Arrive > 0 && f.Freeze <= 0) { float advance = dt * (f.Slow > 0 ? .5f : 1f); f.Arrive -= advance; f.Distance = Math.Max(f.Ranged ? 100 : 20, f.Distance - advance * f.Speed); }
             if (f.Arrive <= 0) { contact++; if (target == null || f.Hp < target.Hp * (pr.Uptime > .8f ? .8f : 1.2f)) target = f; if (f.WindT > 0 && !f.IsBoss && f.Def.Kind != "Swarm") busy++; }
-            if (f.Burn > 0) { f.Burn -= dt; float bd = 3f * dt * (f.IsBoss ? .3f : 1f); f.Hp -= bd; S.DamageDealt += bd; }
+            if (f.Burn > 0) { f.Burn -= dt; TickDamage(f, 3f * dt * (f.IsBoss ? .3f : 1f)); }
             f.Slow = Math.Max(0, f.Slow - dt); f.Freeze = Math.Max(0, f.Freeze - dt);
             if (f.EMod == 3) { f.WardT -= dt; if (f.WardT <= -4f) f.WardT = 3f; }
             if (f.IsBoss) BossShield(f, dt);
@@ -176,7 +195,7 @@ public sealed class CombatSim
         Reap();
         // свет героя (аура) и способности
         float aura = P.AuraDps;
-        if (aura > 0) foreach (var f in Foes) if (f.Alive && f.Arrive <= 0) { float share = f.Ranged ? Math.Clamp((P.LightR * (P.Has(Tech.HeroLamp) ? .55f : .6f) - 50f) / 55f, 0f, 1f) : 1f; f.Hp -= aura * dt * share * (f.IsBoss ? .3f : 1f); S.DamageDealt += aura * dt * share; }
+        if (aura > 0) foreach (var f in Foes) if (f.Alive && f.Arrive <= 0) { float share = f.Ranged ? Math.Clamp((P.LightR * (P.Has(Tech.HeroLamp) ? .55f : .6f) - 50f) / 55f, 0f, 1f) : 1f; TickDamage(f, aura * dt * share * (f.IsBoss ? .3f : 1f), true); }
         Abilities(contact, target);
         PlayerAttack(target, contact);
         for (int fi = 0, fn = Foes.Count; fi < fn; fi++) { var f = Foes[fi]; if (f.Alive && f.Arrive <= 0) { if (f.IsBoss) BossAct(f, dt); else EnemyAct(f, dt, ref busy); } }
@@ -192,10 +211,10 @@ public sealed class CombatSim
     void BossShield(Foe f, float dt)
     {
         if (!f.Boss.NeedsLight) return;
-        if (f.Hp >= f.MaxHp * .66f) { f.ShieldCycle = 0; return; }
+        if (f.PhaseIndex == 0) { f.ShieldCycle = 0; return; }
         if (f.ShieldCycle == 0) { f.ShieldCycle = 1; puzzleT = PuzzleTime; vulnT = 0; }
         if (vulnT > 0) { vulnT -= dt; if (vulnT <= 0) puzzleT = PuzzleTime; return; }
-        puzzleT -= dt; if (puzzleT <= 0) vulnT = f.Boss.Id == 4 ? 6f : 8f;
+        puzzleT -= dt; if (puzzleT <= 0) vulnT = f.Boss.Id == 4 ? T.WinterVuln : T.SourceVuln + (f.PhaseIndex == 2 ? 2f : 0f);
     }
     float PuzzleTime => pr.Name == "novice" ? 30f : pr.Name == "average" ? 16f : pr.Name == "expert" ? 10f : 8f;
 
@@ -214,7 +233,7 @@ public sealed class CombatSim
             P.PulseCd = P.PulseCooldown;
             foreach (var f in Foes) if (f.Alive && f.Arrive <= 0) { Hurt(f, 8f, false); if (!f.IsBoss) f.AtkT += 1f; if (f.Ranged) f.WindT = 0; }
         }
-        if (flareT > 0) { flareT -= Dt; foreach (var f in Foes) if (f.Alive && f.Arrive <= 0) { f.Hp -= 6f * Dt * (f.IsBoss ? .3f : 1f); S.DamageDealt += 6f * Dt; } }
+        if (flareT > 0) { flareT -= Dt; foreach (var f in Foes) if (f.Alive && f.Arrive <= 0) TickDamage(f, 6f * Dt * (f.IsBoss ? .3f : 1f), true); }
     }
     float flareT;
     /// <summary>Допущение: удары боссов по площади и с упреждением уклонить труднее обычных (доля успешных уклонений, прошедших проверку реакции).</summary>
@@ -223,7 +242,7 @@ public sealed class CombatSim
     void PlayerAttack(Foe target, int contact)
     {
         var w = P.Cur; bool ranged = w != null && w.Cls != (int)WClass.Sword;
-        float cd = w == null ? 1f : w.Cd;
+        float cd = w == null ? .42f : w.Cd;
         if (ranged) cd *= 1f - P.Se(Tech.QuickDraw);
         if (atkCd > 0) return;
         // дальнее оружие стреляет, пока враг ещё идёт
@@ -233,6 +252,8 @@ public sealed class CombatSim
             foreach (var f in Foes) if (f.Alive && f.Arrive > 0 && f.Arrive < range / Math.Max(10f, f.Speed)) { target = f; break; }
         }
         if (target == null) return;
+        float rangeNow = ranged ? (w.Cls == (int)WClass.Bow ? .75f : .9f) * w.Speed * MathF.Pow(1f + P.Se(Tech.Overcharge), 2) : float.MaxValue;
+        if (target.Distance > rangeNow) return;
         float pos = pr.Uptime * (chillT > 0 ? .8f : 1f);
         float ev = target.Def?.Evasive ?? 0f;
         if (!ranged) pos *= 1f - ev; else pos *= 1f - .25f * ev;
@@ -244,12 +265,12 @@ public sealed class CombatSim
         {
             float half = w.Tier == 1 ? .9f : w.Tier == 2 ? 1.2f : 1.6f; float arc = Math.Min(1f, half / MathF.PI);
             foreach (var f in Foes.ToArray()) if (f.Alive && f.Arrive <= 0 && (f == target || r.Chance(arc))) Hurt(f, dmg, true);
-            if (P.E(Fxk.Arc) > 0) for (int i = 0; i < (int)Math.Ceiling(P.E(Fxk.Arc)); i++) { Hurt(target, dmg * .55f, false, true); }
+            if (P.E(Fxk.Arc) > 0 && target.Distance <= 60) for (int i = 0; i < (int)Math.Ceiling(P.E(Fxk.Arc)); i++) { Hurt(target, dmg * .55f * Math.Min(1f, P.E(Fxk.Arc)), false, true); }
             for (int i = 0; i < (int)P.E(Fxk.Multi); i++) Hurt(target, dmg * .4f, false);
             return;
         }
         int n = 1 + (int)P.E(Fxk.Multi); int pierce = (w.Cls == (int)WClass.Bow ? w.Pierce : 0) + (int)P.E(Fxk.Pierce) + (P.Has(Tech.Piercing) ? 1 : 0);
-        float shot = dmg * (n > 1 ? .75f : 1f) * (1f + P.Se(Tech.Marksman));
+        float shot = dmg * (n > 1 ? .75f : 1f) * (1f + P.Se(Tech.Marksman)) * CombatMath.RangeFalloff(target.Distance / rangeNow);
         for (int i = 0; i < n; i++)
         {
             if (i > 0 && !r.Chance(Math.Min(1f, pos + .1f))) continue;
@@ -257,7 +278,7 @@ public sealed class CombatSim
             int left = pierce; foreach (var f in Foes.ToArray()) { if (left <= 0) break; if (f != target && f.Alive && f.Arrive <= 0 && r.Chance(.5f)) { Hurt(f, shot, false); left--; } }
             if (w.Cls == (int)WClass.Staff) foreach (var f in Foes.ToArray()) if (f != target && f.Alive && f.Arrive <= 0 && r.Chance(.35f)) Hurt(f, shot * .6f, false);
         }
-        if (P.E(Fxk.Arc) > 0) Hurt(target, dmg * .5f, false, true);
+        if (P.E(Fxk.Arc) > 0 && target.Distance <= 60) Hurt(target, dmg * .5f * Math.Min(1f, P.E(Fxk.Arc)), false, true);
     }
 
     // ───────────────────────── обычные враги ─────────────────────────
@@ -290,9 +311,9 @@ public sealed class CombatSim
     // ───────────────────────── боссы ─────────────────────────
     void BossAct(Foe f, float dt)
     {
-        var b = f.Boss; float hpf = f.Hp / f.MaxHp; int ph = hpf >= .66f ? 0 : hpf >= .33f ? 1 : 2; float mul = (ph == 2 ? b.RageMul : 1f) * T.BossTempo;
+        var b = f.Boss; float hpf = f.Hp / f.MaxHp; int ph = f.PhaseIndex; float mul = (ph == 2 ? b.RageMul : 1f) * T.BossTempo;
         bool kiter = P.Cur != null && P.Cur.Cls != (int)WClass.Sword;
-        if (f.Hide > 0) { f.Hide -= dt; if (f.Hide <= 0) { f.Hide = 0; f.PendingMove = Array.FindIndex(b.Moves, x => x.Name == "dive"); f.WindT = b.Moves[f.PendingMove].Windup; } return; }
+        if (f.Hide > 0) { f.Hide -= dt; if (f.Hide <= 0) { f.Hide = 0; f.PendingMove = Array.FindIndex(b.Moves, x => x.Name == "dive"); f.WindT = f.PendingMove >= 0 ? b.Moves[f.PendingMove].Windup : 0; } return; }
         if (f.Open > 0) { f.Open -= dt; return; }
         if (f.WindT > 0)
         {

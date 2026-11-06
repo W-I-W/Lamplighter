@@ -119,19 +119,20 @@ public partial class Game
         bool mineable = PPos.DistanceTo(TileCenter(tile.X, tile.Y)) <= 40f && Mineable(t);
         if (w.Cls == WClass.Sword)
         {
-            MineProg = 0; MineTile = new Vector2I(-1, -1);
+            MineStop();
             if (!SwordAttack(w, dir)) { if (mineable) MineDenied(tile); else if (AtkCd <= 0) { AtkCd = w.Cd; WhiffArc(dir, w.Reach, w.Tier == 1 ? .9f : w.Tier == 2 ? 1.2f : 1.6f); Sfx.Play("tick", -9, 1.2f); } }       // блоки — только инструментом; в пустоту меч просто взмахивает
             return;
         }
         bool enemyClose = false;
         foreach (var e in Enemies) if (!e.Hidden && e.Pos.DistanceTo(PPos) < 22) { enemyClose = true; break; }
-        MineProg = 0; MineTile = new Vector2I(-1, -1);
+        MineStop();
         FireRanged(w, dir);
     }
 
     public void HitEnemy(Enemy e, float dmg, Vector2 dir, bool melee, int depth = 0, bool light = false)
     {
         if (e.Hidden) return;
+        if (melee && e.Burn > 0 && Has(Tech.FlameEdge)) dmg *= 1f + .06f * Lv(Tech.FlameEdge);
         Hurt(e, dmg, dir, melee, light);
         OnHit(e, dmg, dir, depth);
     }
@@ -204,7 +205,7 @@ public partial class Game
         float dmg = WeaponDmg(w);
         foreach (var e in hits) HitEnemy(e, dmg, (e.Pos - PPos).Normalized(), true);
         Sfx.Play("hit");
-        if (E(Fxk.Arc) > 0) { for (int i = 0; i < (int)Mathf.Ceil(E(Fxk.Arc)); i++) FireProj(2, dir, dmg * .55f, 150f, 1 + (int)E(Fxk.Pierce), 70f); }
+        if (E(Fxk.Arc) > 0) { for (int i = 0; i < (int)Mathf.Ceil(E(Fxk.Arc)); i++) FireProj(2, dir, dmg * .55f * Mathf.Min(1f, E(Fxk.Arc)), 150f, 1 + (int)E(Fxk.Pierce), 70f); }
         if (E(Fxk.Multi) > 0) for (int i = 0; i < (int)E(Fxk.Multi); i++) FireProj(2, dir.Rotated((i % 2 == 0 ? 1 : -1) * (.35f + .2f * (i / 2))), dmg * .4f, 150f, 1 + (int)E(Fxk.Pierce), 60f);
         return true;
     }
@@ -230,7 +231,7 @@ public partial class Game
             if (w.Cls == WClass.Bow) FireProj(0, d, dmg, spd, w.Pierce + (int)E(Fxk.Pierce) + pe, .75f * lf);
             else FireProj(1, d, dmg, spd, (int)E(Fxk.Pierce) + pe, .9f * lf, 26f + 4f * E(Fxk.Blast));
         }
-        if (E(Fxk.Arc) > 0) FireProj(2, dir, WeaponDmg(w) * .5f, 150f, 3, 70f);
+        if (E(Fxk.Arc) > 0) FireProj(2, dir, WeaponDmg(w) * .5f * Mathf.Min(1f, E(Fxk.Arc)), 150f, 3, 70f);
         Sfx.Play(w.Cls == WClass.Bow ? "shoot" : "flare", -4, w.Cls == WClass.Bow ? 1.4f : 1.1f);
     }
 
@@ -267,7 +268,7 @@ public partial class Game
     public static float RangeFalloff(PProj p)
     {
         if (p.Kind == 2 || p.Life0 <= 0f) return 1f;
-        float t = 1f - Mathf.Clamp(p.Life / p.Life0, 0f, 1f); return t <= .3f ? 1f : Mathf.Lerp(1f, .4f, Mathf.Clamp((t - .3f) / .7f, 0f, 1f));
+        return CombatMath.RangeFalloff(1f - p.Life / p.Life0);
     }
 
     /// <summary>Дальность выстрела выбранного оружия в пикселях (0 — ближний бой).</summary>

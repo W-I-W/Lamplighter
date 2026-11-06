@@ -161,7 +161,7 @@ public sealed class Campaign
 
     void Rest()
     {
-        float t = M.A.RestTravel + Math.Max(0, p.MaxHp - p.Hp) / 4f; Tick(t, ref res.TRest); p.Hp = p.MaxHp;
+        float t = M.A.RestTravel + Math.Max(0, p.MaxHp - p.Hp) / 2f; Tick(t, ref res.TRest); p.Hp = p.MaxHp;
     }
 
     void Die(string killer, bool boss, int reg, int bossId)
@@ -169,10 +169,12 @@ public sealed class Campaign
         p.Deaths++; res.Deaths++; streak++;
         if (boss) res.DeathsBoss[bossId - 1]++; else res.DeathsRegion[Math.Clamp(reg, 0, 4)]++;
         res.Killers[killer ?? "env"] = res.Killers.GetValueOrDefault(killer ?? "env") + 1;
-        p.Inv[It.Shard] -= Math.Min(25, p.Inv[It.Shard] / 4);
+        var grave = p.Bury();
         string key = boss ? "boss" + bossId : "region" + reg; stageDeaths[key] = stageDeaths.GetValueOrDefault(key) + 1;
         if (stageDeaths[key] >= pr.QuitDeaths) throw new StuckException($"бросил игру: {stageDeaths[key]} смертей на этапе {key}");
-        Tick(M.A.RespawnTravel, ref res.TTravel); p.Hp = p.MaxHp;
+        p.Hp = p.MaxHp;
+        // Геометрии мира нет: путь к могиле считается временем, без моделирования засады на голого героя.
+        Tick(M.A.RespawnTravel, ref res.TTravel); p.Recover(grave);
     }
 
     // ───────────────────────── добыча, плавка, получение ─────────────────────────
@@ -275,6 +277,7 @@ public sealed class Campaign
             if (pc != null && region >= 0 && PickWorth() && (CostSeconds(pc) < 900f) && Obtainable(pc) && Need(pc)) { p.Pay(pc); p.Tier++; p.GiveXp(40 + 20 * p.Tier); MarkTier(); bought++; }
             // 2) оружие, вставки, реликвии
             if (CraftWeapons()) bought++;
+            if (pr.BuysMods && UpgradeCurrentWeapon()) bought++;
             if (pr.BuysMods && CraftMods()) bought++;
             if (pr.OptimizesRelics) OptimizeRelics();
             // 3) навыки
@@ -284,6 +287,14 @@ public sealed class Campaign
     }
 
     bool PickWorth() => p.Tier switch { 0 => true, 1 => p.Beacon >= 1 && p.LitCount >= 1 || pr.Skills == SkillPolicy.Greedy, 2 => p.Beacon >= 2, 3 => p.Beacon >= 3, _ => false };
+    bool UpgradeCurrentWeapon()
+    {
+        if (p.Cur == null || !NearForge()) return false;
+        var ow = p.Owned[p.CurW]; if (ow.Lv >= Game.WeaponMaxLv) return false;
+        var cost = Game.WeaponUpCost(p.Cur.Tier, ow.Lv + 1);
+        if (!Obtainable(cost) || CostSeconds(cost) > 180 || !Need(cost)) return false;
+        p.Pay(cost); ow.Lv++; p.GiveXp(25); Tick(5, ref res.TCraft); return true;
+    }
     void MarkTier() { if (p.Tier == 1) Mark(Ms.Tier1); if (p.Tier == 2) Mark(Ms.Tier2); if (p.Tier == 3) Mark(Ms.Tier3); }
 
     bool CraftWeapons()
@@ -405,17 +416,20 @@ public sealed class Campaign
         var costs = LampCosts(reg); if (k >= costs.Length || Over) return false;
         if (!ObtainShards(p.Inv[It.Shard] < costs[k] ? costs[k] : 0)) return false;
         Work(M.A.LampTravel, reg, ref res.TTravel);
-        if (r.Chance(M.A.GuardedLampChance)) Guards(reg);
+        if (r.Chance(M.A.GuardedLampChance))
+            while (!Over && !Guards(reg)) { Rest(); Spend(); }
+        if (Over) return false;
         p.Inv[It.Shard] -= costs[k]; p.Lit[reg]++; p.GiveXp(60); Tick(10, ref res.TCraft);
         return true;
     }
 
-    void Guards(int reg)
+    bool Guards(int reg)
     {
         var cs = new CombatSim(p, pr, r, reg, false);
         for (int i = 0; i < (int)M.A.GuardCount; i++) cs.Foes.Add(cs.MakeFoe(Pick(reg), p.DangerScale, 0, false, r.Range(60, 120)));
         while (cs.AnyAlive && !cs.S.Died && !Over) { cs.Step(); res.TFight += cs.Dt; StageClock(cs.Dt); }
-        if (cs.S.Died) Die(cs.S.KilledBy, false, reg, 0);
+        if (cs.S.Died) { Die(cs.S.KilledBy, false, reg, 0); return false; }
+        return !cs.AnyAlive;
     }
 
     void Explore(float minutes, int reg)

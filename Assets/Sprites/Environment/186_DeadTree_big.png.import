@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://da45pu3m514kn"
-path="res://.godot/imported/079_DeadTree.png-f3e4a8b4624ba053195a9687ee058e10.ctex"
+uid="uid://1pdvmb65dnat"
+path="res://.godot/imported/186_DeadTree_big.png-d2f2f5be7c4bc6205e8a0214d080e446.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Environment/079_DeadTree.png"
-dest_files=["res://.godot/imported/079_DeadTree.png-f3e4a8b4624ba053195a9687ee058e10.ctex"]
+source_file="res://Assets/Sprites/Environment/186_DeadTree_big.png"
+dest_files=["res://.godot/imported/186_DeadTree_big.png-d2f2f5be7c4bc6205e8a0214d080e446.ctex"]
 
 [params]
 

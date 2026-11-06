@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dxqpcakv5b8nx"
-path="res://.godot/imported/164_DeadTop.png-e030f5146d7870f1325e3ef5fb41a771.ctex"
+uid="uid://d3wqmi00pn3np"
+path="res://.godot/imported/182_Tree_big.png-f33c1b944e8ea3e553826fd0f170b7fc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Environment/164_DeadTop.png"
-dest_files=["res://.godot/imported/164_DeadTop.png-e030f5146d7870f1325e3ef5fb41a771.ctex"]
+source_file="res://Assets/Sprites/Environment/182_Tree_big.png"
+dest_files=["res://.godot/imported/182_Tree_big.png-f33c1b944e8ea3e553826fd0f170b7fc.ctex"]
 
 [params]
 

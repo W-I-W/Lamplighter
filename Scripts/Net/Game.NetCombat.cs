@@ -124,21 +124,37 @@ public partial class Game
             if (e.SeenT > .7f) { proxies.Remove(e.NetId); Enemies.RemoveAt(i); continue; }
             var d = e.NetPos - e.Pos; if (d.Length() > 120) e.Pos = e.NetPos; else e.Pos = e.Pos.Lerp(e.NetPos, 1f - Mathf.Exp(-14f * dt));
             if (e.IsBoss && e.Pos.DistanceTo(PPos) < Tune.T.BossLeashTiles * TS) Boss ??= e;
+            float auraR = PlayerLightR * (Has(Tech.HeroLamp) ? .55f : .6f);
+            if (AuraDps > 0 && e.Pos.DistanceTo(PPos) < auraR) HurtTick(e, AuraDps * dt * (e.IsBoss ? .3f : 1f), true);
         }
         GroveTick(dt);
     }
 
     // ───────────────────────── урон ─────────────────────────
     /// <summary>Хост: участник попал по врагу. Урон ограничен и считается на хосте.</summary>
-    public void NetEnemyHit(long sender, int id, float dmg, Vector2 dir, bool melee, bool light)
+    public void NetEnemyHit(long sender, int id, float dmg, Vector2 dir, bool melee, bool light, bool periodic = false)
     {
         if (!float.IsFinite(dmg) || dmg <= 0 || !float.IsFinite(dir.X) || !float.IsFinite(dir.Y)) return; dmg = Mathf.Min(dmg, 400f);                // запас под поздние оружия и криты: раньше 60 срезало урон гостя
         foreach (var e in Enemies) if (e.NetId == id)
         {
             if (PosOf(sender) is not Vector2 sp || sp.DistanceTo(e.Pos) > HitReach) return;
-            hitSrc = sender; try { Hurt(e, dmg, dir.LengthSquared() > .01f ? dir.Normalized() : Vector2.Right, melee, light); } finally { hitSrc = 0; }
+            hitSrc = sender; try { if (periodic) HurtTick(e, Mathf.Min(dmg, 40f), light); else Hurt(e, dmg, dir.LengthSquared() > .01f ? dir.Normalized() : Vector2.Right, melee, light); } finally { hitSrc = 0; }
             return;
         }
+    }
+
+    readonly Dictionary<(int id, bool light), float> pendingDots = new();
+    float dotSendT;
+    void QueueEnemyDot(Enemy e, float dmg, bool light)
+    {
+        if (e.NetId > 0) { var key = (e.NetId, light); pendingDots[key] = pendingDots.GetValueOrDefault(key) + dmg; }
+    }
+    void FlushEnemyDots(float dt)
+    {
+        if (!NetClient) { pendingDots.Clear(); return; }
+        dotSendT -= dt; if (dotSendT > 0) return; dotSendT = .2f;
+        foreach (var kv in pendingDots) Net?.SendEnemyDot(kv.Key.id, kv.Value, kv.Key.light);
+        pendingDots.Clear();
     }
 
     /// <summary>Хост: поджог, замедление и заморозка от умений гостя (длительности ограничены).</summary>

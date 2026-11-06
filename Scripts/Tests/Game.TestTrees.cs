@@ -11,9 +11,8 @@ public partial class Game
     {
         int fails = 0; Vector2I tree = default; Vector2I bush = new(-1, -1);
         void Check(bool ok, string what) { if (!ok) fails++; GD.Print($"[check] {(ok ? "PASS" : "FAIL")} {what}"); }
-        int CrownAt(int x, int y) { var ch = ChunkAt(x, y); if (ch == null) return -2; var lc = new Vector2I(x % CS, y % CS); if (ch.B.GetCellSourceId(lc) >= 0) return ch.B.GetCellAtlasCoords(lc).X; return ch.T.GetCellSourceId(lc) < 0 ? -1 : ch.T.GetCellAtlasCoords(lc).X; }
-        char CrownLayer(int x, int y) { var ch = ChunkAt(x, y); if (ch == null) return '?'; var lc = new Vector2I(x % CS, y % CS); return ch.B.GetCellSourceId(lc) >= 0 ? 'B' : ch.T.GetCellSourceId(lc) >= 0 ? 'T' : '-'; }
-        bool TrunkCopyAt(int x, int y) { var ch = ChunkAt(x, y); return ch != null && ch.K.GetCellSourceId(new Vector2I(x % CS, y % CS)) >= 0; }
+        int TreeIdAt(int x, int y) { var ch = ChunkAt(x, y); if (ch == null) return -2; var lc = new Vector2I(x % CS, y % CS); int id = ch.R.GetCellSourceId(lc) >= 0 ? ch.R.GetCellAtlasCoords(lc).X : ch.T.GetCellSourceId(lc) < 0 ? -1 : ch.T.GetCellAtlasCoords(lc).X; return id < 0 ? id : Art.TreeFamily(id) == 1 ? Art.BigPine : Art.TreeFamily(id) == 2 ? Art.BigDead : Art.BigTree; }      // семейство дерева: форма (дуб, тополь...) зависит от координат
+        char TreeLayer(int x, int y) { var ch = ChunkAt(x, y); if (ch == null) return '?'; var lc = new Vector2I(x % CS, y % CS); return ch.R.GetCellSourceId(lc) >= 0 ? 'R' : ch.T.GetCellSourceId(lc) >= 0 ? 'T' : '-'; }
         float TimeToBreak(Vector2I t, string tool)
         {
             OwnedTools.Add(tool); CurTool = tool; EquipNone(); PPos = TileCenter(t.X, t.Y - 1); Aim = TileCenter(t.X, t.Y); AtkCd = 0;
@@ -39,27 +38,29 @@ public partial class Game
         });
         S(.5f, () =>
         {
-            Check(CrownAt(tree.X, tree.Y - 1) == Art.TreeTop, "trees: the crown tile sits in the cell above the trunk");
+            Check(TreeIdAt(tree.X, tree.Y) == Art.BigTree && TreeIdAt(tree.X, tree.Y - 1) == -1, "trees: the tree is one 32x32 tile at the trunk cell (no separate crown tile)");
+            { var seen = new HashSet<int>(); for (int i = 0; i < 300; i++) seen.Add(Art.TreeKinds[TreeKind(i * 7, i * 3)]); bool allDone = seen.Count == 3; foreach (var col in AllTreeCols) allDone &= SpriteLibrary.TileFrames[col] == 4; Check(allDone, "trees: three shapes per family (9 kinds), each with 4 sway frames, picked by coordinates"); Check(Art.TreeCut.Length == 9 && Art.TreeKinds.Length == 3 && Art.PineKinds.Length == 3 && Art.DeadKinds.Length == 3, "trees: every kind has a trunk cut row for the shader"); }
             Check(!World.Blocks(W.Get(tree.X, tree.Y - 1)), "trees: the crown cell has no collider");
+            { var tsrc = (TileSetAtlasSource)chunkSet.GetSource(srcId); var bc0 = new Vector2I(Art.BigTree, 0); Check(SpriteLibrary.TileFrames[Art.BigTree] == 4 && tsrc.GetTileAnimationFramesCount(bc0) == 4 && tsrc.GetTileSizeInAtlas(bc0) == new Vector2I(2, 2), "trees: the tree is a 32x32 tile with 4 hand-drawn sway frames (frame-by-frame animation)"); }
             Check(World.Blocks(W.Get(tree.X, tree.Y)), "trees: the trunk cell is solid");
             PPos = TileCenter(tree.X, tree.Y - 3); for (int i = 0; i < 80; i++) PPos = Move(PPos, new Vector2(0, 2), 5f, false);
             Check(PPos.Y > (tree.Y - 1) * TS && PPos.Y < tree.Y * TS, $"trees: the player walks into the crown cell and is stopped by the trunk (y={PPos.Y:0} trunk top={tree.Y * TS})");
-            UpdateTreeOcclusion(); Check(TrunkCopyAt(tree.X, tree.Y), "trees: standing behind the tree puts a trunk copy above the player");
-            Check(CrownLayer(tree.X, tree.Y - 1) == 'T', "trees: standing behind the tree puts the crown above the player");
-            PPos = TileCenter(tree.X, tree.Y + 2); UpdateTreeOcclusion(); Check(!TrunkCopyAt(tree.X, tree.Y), "trees: standing in front of the tree removes the trunk copy");
-            Check(CrownLayer(tree.X, tree.Y - 1) == 'B', "trees: standing in front keeps the crown under the player (the tool is not covered)");
-            PPos = TileCenter(tree.X, tree.Y + 1) + new Vector2(5, -2); UpdateTreeOcclusion(); Check(CrownLayer(tree.X, tree.Y - 1) == 'B' && !TrunkCopyAt(tree.X, tree.Y), "trees: standing slightly below the trunk, off to the side, is still in front");
-            PPos = TileCenter(tree.X - 1, tree.Y + 1); UpdateTreeOcclusion(); Check(CrownLayer(tree.X, tree.Y - 1) == 'B', "trees: standing diagonally below is in front");
-            PPos = TileCenter(tree.X + 1, tree.Y); UpdateTreeOcclusion(); Check(!TrunkCopyAt(tree.X, tree.Y), "trees: standing beside the trunk does not cover the player");
-            PPos = TileCenter(tree.X - 1, tree.Y - 2); UpdateTreeOcclusion(); Check(TrunkCopyAt(tree.X, tree.Y), "trees: standing behind and to the side still shows the trunk copy");
-            // камень над стволом не съедает крону: она рисуется поверх камня
-            { int cx = tree.X, cy = tree.Y - 1; var keep = W.Get(cx, cy); SetObj(cx, cy, Tl.Stone); Check(CrownAt(cx, cy) == Art.TreeTop, "trees: a rock in the crown cell does not remove the crown"); Check(CrownLayer(cx, cy) == 'T', "trees: the crown is drawn above the rock"); SetObj(cx, cy, keep); }
+            UpdateTreeOcclusion(); Check(TreeLayer(tree.X, tree.Y) == 'T', "trees: standing behind the tree puts the whole tree above the player");
+            Check(ChunkAt(tree.X, tree.Y).T.Modulate.A < 1f, "trees: the layer above the player is semi-transparent, so the whole tree fades together");
+            PPos = TileCenter(tree.X, tree.Y + 2); UpdateTreeOcclusion(); Check(TreeLayer(tree.X, tree.Y) == 'R', "trees: standing in front of the tree puts it back under the player");
+            Check(TreeLayer(tree.X, tree.Y) == 'R', "trees: standing in front keeps the tree under the player (the tool is not covered)");
+            PPos = TileCenter(tree.X, tree.Y + 1) + new Vector2(5, -2); UpdateTreeOcclusion(); Check(TreeLayer(tree.X, tree.Y) == 'R', "trees: standing slightly below the trunk, off to the side, is still in front");
+            PPos = TileCenter(tree.X - 1, tree.Y + 1); UpdateTreeOcclusion(); Check(TreeLayer(tree.X, tree.Y) == 'R', "trees: standing diagonally below is in front");
+            PPos = TileCenter(tree.X + 1, tree.Y); UpdateTreeOcclusion(); Check(TreeLayer(tree.X, tree.Y) == 'R', "trees: standing beside the trunk does not cover the player");
+            PPos = TileCenter(tree.X - 1, tree.Y - 2); UpdateTreeOcclusion(); Check(TreeLayer(tree.X, tree.Y) == 'T', "trees: standing behind and to the side still puts the tree above the player");
+            // камень в клетке кроны: дерево остаётся и рисуется поверх камня (слой деревьев выше слоя объектов)
+            { int cx = tree.X, cy = tree.Y - 1; var keep = W.Get(cx, cy); SetObj(cx, cy, Tl.Stone); Check(TreeIdAt(tree.X, tree.Y) == Art.BigTree, "trees: a rock in the crown cell does not remove the tree"); Check(objRoot.GetIndex() < treeRoot.GetIndex(), "trees: the tree layer is drawn above objects, so the crown covers the rock"); SetObj(cx, cy, keep); }
             // рубка: клик по кроне бьёт ствол; кирка заметно медленнее топора
             int wood0 = Inv[It.Wood]; Check(true, "trees: setup chopping");
             float tp = TimeToBreak(tree, "pickaxe");
-            Check(W.Get(tree.X, tree.Y) == Tl.None && CrownAt(tree.X, tree.Y - 1) == -1, "trees: a chopped tree loses its trunk and crown");
+            Check(W.Get(tree.X, tree.Y) == Tl.None && TreeIdAt(tree.X, tree.Y) == -1, "trees: a chopped tree disappears entirely");
             Check(Inv[It.Wood] - wood0 >= 1 && Inv[It.Wood] - wood0 <= 2, $"trees: a tree gives 1-2 wood after the yield tuning (got {Inv[It.Wood] - wood0})");
-            SetObj(tree.X, tree.Y, Tl.Tree); Check(CrownAt(tree.X, tree.Y - 1) == Art.TreeTop, "trees: a regrown tree gets its crown back");
+            SetObj(tree.X, tree.Y, Tl.Tree); Check(TreeIdAt(tree.X, tree.Y) == Art.BigTree, "trees: a regrown tree is drawn again");
             float ta = TimeToBreak(tree, "axe");
             GD.Print($"[trees] chop time pickaxe={tp:0.00}s axe={ta:0.00}s");
             Check(tp >= 2.5f && tp <= 6f, $"trees: the pickaxe needs a few seconds per tree ({tp:0.0}s)");
@@ -71,15 +72,15 @@ public partial class Game
             Check(MineTile == tree, "trees: aiming at the crown mines the trunk below it");
             // соседние деревья: вертикально, рядом и на границе чанков
             SetObj(tree.X, tree.Y - 1, Tl.Tree);
-            Check(CrownAt(tree.X, tree.Y - 1) == Art.TreeTop && CrownAt(tree.X, tree.Y - 2) == Art.TreeTop, "trees: two trees in a column both keep their crowns");
+            Check(TreeIdAt(tree.X, tree.Y) == Art.BigTree && TreeIdAt(tree.X, tree.Y - 1) == Art.BigTree, "trees: two trees in a column are both drawn");
             SetObj(tree.X, tree.Y - 1, Tl.None);
-            Check(CrownAt(tree.X, tree.Y - 1) == Art.TreeTop && CrownAt(tree.X, tree.Y - 2) == -1, "trees: removing the upper tree removes only its own crown");
-            SetObj(tree.X + 1, tree.Y, Tl.Pine); Check(CrownAt(tree.X + 1, tree.Y - 1) == Art.PineTop && CrownAt(tree.X, tree.Y - 1) == Art.TreeTop, "trees: neighbouring trees keep separate crowns");
+            Check(TreeIdAt(tree.X, tree.Y) == Art.BigTree && TreeIdAt(tree.X, tree.Y - 1) == -1, "trees: removing the upper tree removes only that tree");
+            SetObj(tree.X + 1, tree.Y, Tl.Pine); Check(TreeIdAt(tree.X + 1, tree.Y) == Art.BigPine && TreeIdAt(tree.X, tree.Y) == Art.BigTree, "trees: neighbouring trees keep their own sprites");
             SetObj(tree.X + 1, tree.Y, Tl.None);
-            SetObj(tree.X, tree.Y + 1, Tl.Stone); Check(CrownAt(tree.X, tree.Y) == -1, "trees: a stone below a tree does not get a crown");
+            SetObj(tree.X, tree.Y + 1, Tl.Stone); Check(TreeIdAt(tree.X, tree.Y + 1) == -1, "trees: a stone below a tree does not become a tree");
             SetObj(tree.X, tree.Y + 1, Tl.None);
             int yb = (tree.Y / CS + 1) * CS; var prev = W.Get(tree.X, yb);
-            if (prev == Tl.None) { SetObj(tree.X, yb, Tl.Tree); Check(CrownAt(tree.X, yb - 1) == Art.TreeTop, "trees: the crown of a tree on a chunk border is drawn in the neighbouring chunk"); SetObj(tree.X, yb, Tl.None); Check(CrownAt(tree.X, yb - 1) == -1, "trees: and removed with it"); }
+            if (prev == Tl.None) { SetObj(tree.X, yb, Tl.Tree); Check(TreeIdAt(tree.X, yb) == Art.BigTree, "trees: a tree on a chunk border is drawn"); SetObj(tree.X, yb, Tl.None); Check(TreeIdAt(tree.X, yb) == -1, "trees: and removed with it"); }
             // кусты: ломаются с одного удара и дают 1 дерево
             for (int r = 2; r < 40 && bush.X < 0; r++) for (int dy = -r; dy <= r && bush.X < 0; dy++) for (int dx = -r; dx <= r && bush.X < 0; dx++)
                 { if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue; int x = tree.X + dx, y = tree.Y + dy; if (World.In(x, y) && ChunkAt(x, y) != null && IsBushAt(x, y) && ForageIdAt(new Vector2I(x, y)) == FoliageBush) bush = new Vector2I(x, y); }
@@ -120,7 +121,7 @@ public partial class Game
         S(.3f, () => { Swing = .2f; Shot("trees_beside_up"); });
         // два дерева друг над другом: крона нижнего закрывает ствол верхнего, а не наоборот; область ломания поверх обоих
         S(.15f, () => { SetObj(tree.X, tree.Y - 1, Tl.Tree); Tp(TileCenter(tree.X, tree.Y - 4)); Aim = TileCenter(tree.X, tree.Y - 1); MineTile = new Vector2I(tree.X, tree.Y - 1); MineNeed = 2.2f; MineProg = 1.1f; Swing = .2f; Invuln = 0; UpdateTreeOcclusion(); });
-        S(.3f, () => { MineProg = 1.1f; Swing = .2f; Shot("trees_column_behind"); Check(CrownLayer(tree.X, tree.Y - 1) == 'T' || !TrunkCopyAt(tree.X, tree.Y - 1), "trees: a crown that covers another tree's trunk copy is drawn above it"); Check(breakArea.GetIndex() < crownRoot.GetIndex() && crownRoot.GetIndex() < ents.GetIndex() && ents.GetIndex() < trunkRoot.GetIndex() && trunkRoot.GetIndex() < topRoot.GetIndex() && topRoot.GetIndex() < overlay.GetIndex(), "trees: layer order is trunks, break area, front crowns, player, trunk copies, back crowns, progress bar"); });
+        S(.3f, () => { MineProg = 1.1f; Swing = .2f; Shot("trees_column_behind"); Check(TreeIdAt(tree.X, tree.Y - 1) == Art.BigTree, "trees: the upper tree of a column is drawn"); Check(objRoot.GetIndex() < treeRoot.GetIndex() && treeRoot.GetIndex() < breakArea.GetIndex() && breakArea.GetIndex() < ents.GetIndex() && ents.GetIndex() < topRoot.GetIndex() && topRoot.GetIndex() < overlay.GetIndex(), "trees: layer order is objects, trees, break area, player, trees behind the player, progress bar"); });
         S(.15f, () => { Tp(TileCenter(tree.X, tree.Y + 2)); Aim = TileCenter(tree.X, tree.Y); MineTile = tree; MineProg = 1.1f; Swing = .2f; UpdateTreeOcclusion(); });
         S(.3f, () => { MineProg = 1.1f; Swing = .2f; Shot("trees_column_front"); SetObj(tree.X, tree.Y - 1, Tl.None); });
         S(.2f, () => { TestKeepMine = false; GD.Print("[check] TREES DONE"); });

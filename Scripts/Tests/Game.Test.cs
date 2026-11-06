@@ -14,6 +14,7 @@ public partial class Game
 
     void Shot(string name)
     {
+        if (DisplayServer.GetName() == "headless") return;
         var img = GetViewport().GetTexture().GetImage();
         img.SavePng(Path.Combine(testDir, name + ".png"));
         GD.Print($"[test] shot {name}");
@@ -61,6 +62,7 @@ public partial class Game
 
     void BuildScript()
     {
+        if (OS.GetEnvironment("LAMP_STAGE") == "balanceaudit") { BuildBalanceAuditScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "ash") { BuildAshScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "s4") { BuildS4Script(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "s4b") { BuildS4bScript(); return; }

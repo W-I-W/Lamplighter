@@ -69,8 +69,8 @@ public static class SpriteLibrary
         var icons = ScanIndexed(IconFolder, "icon_");
         bool entsOk = cat != null;
         if (entsOk) foreach (var s in Sheets) if (cat.Entity(s.id)?.Sheet == null) { entsOk = false; break; }
-        int tileFiles = 0; foreach (var kv in tiles) tileFiles += kv.Value.Contains(PosesTag) ? 4 : 1;
-        if (tileFiles < Art.TileCount || icons.Count < Art.IconCount || !entsOk) GD.PushError($"Не хватает PNG: тайлы {tileFiles}/{Art.TileCount}, иконки {icons.Count}/{Art.IconCount}, листы существ {(entsOk ? "ok" : "нет")} (см. Assets/Sprites/README.md)");
+        int tileFiles = 0; foreach (var kv in tiles) tileFiles += kv.Value.Contains(PosesTag) ? 4 : kv.Value.EndsWith(BigTag) ? 2 : 1;
+        if (tileFiles < Art.TileCount - OldTreeCols || icons.Count < Art.IconCount || !entsOk) GD.PushError($"Не хватает PNG: тайлы {tileFiles}/{Art.TileCount}, иконки {icons.Count}/{Art.IconCount}, листы существ {(entsOk ? "ok" : "нет")} (см. Assets/Sprites/README.md)");
         TileFrames = new int[Art.TileCount]; IconFrames = new int[Art.IconCount];
         Art.TileTex = ImageTexture.CreateFromImage(Compose(tiles, Art.TileCount, TileFrames));
         Art.IconTex = ImageTexture.CreateFromImage(Compose(icons, Art.IconCount, IconFrames));
@@ -82,22 +82,27 @@ public static class SpriteLibrary
     public const int MaxFrames = 4;
 
     /// <summary>Файл NNN_имя_poses.png — лента из 4 поз покачивания (N×16): занимает 4 подряд идущих индекса NNN..NNN+3.</summary>
+    const int OldTreeCols = 30;        // столбцы старых 16×16 деревьев (стволы, кроны, позы): файлов нет, деревья теперь широкие тайлы
     public const string PosesTag = "_poses.png";
+    /// <summary>Файл NNN_имя_big.png — один большой тайл 32×32 (дерево целиком); лента кадров качания N×32 по ширине (до 4 кадров) кладётся в атлас столбиком по 2 ряда на кадр. Занимает два индекса NNN, NNN+1.</summary>
+    public const string BigTag = "_big.png";
 
     static Image Compose(Dictionary<int, string> files, int count, int[] frames)
     {
-        var imgs = new Dictionary<int, Image>(); var poses = new List<(int idx, Image im)>(); int rows = 1;
+        var imgs = new Dictionary<int, Image>(); var poses = new List<(int idx, Image im)>(); var wides = new List<(int idx, Image im)>(); int rows = 1;
         foreach (var kv in files)
         {
             if (kv.Key < 0 || kv.Key >= count) continue;
             var t = LoadImage(kv.Value); if (t == null) continue;
             if (kv.Value.EndsWith(PosesTag)) { poses.Add((kv.Key, t)); continue; }
+            if (kv.Value.EndsWith(BigTag)) { wides.Add((kv.Key, t)); int bn = Math.Clamp(t.GetWidth() / 32, 1, MaxFrames); frames[kv.Key] = bn; rows = Math.Max(rows, 2 * bn); continue; }
             int n = t.GetHeight() == 16 && t.GetWidth() % 16 == 0 ? Math.Clamp(t.GetWidth() / 16, 1, MaxFrames) : 1;
             if (n == 1 && (t.GetWidth() != 16 || t.GetHeight() != 16)) t.Resize(16, 16, Image.Interpolation.Nearest);
             imgs[kv.Key] = t; frames[kv.Key] = n; rows = Math.Max(rows, n);
         }
         var img = Image.CreateEmpty(16 * count, 16 * rows, false, Image.Format.Rgba8);
         foreach (var (idx, im) in poses) for (int k = 0; k < 4 && idx + k < count; k++) img.BlitRect(im, new Rect2I(k * 16, 0, 16, 16), new Vector2I((idx + k) * 16, 0));
+        foreach (var (idx, im) in wides) for (int k = 0; k < frames[idx]; k++) img.BlitRect(im, new Rect2I(k * 32, 0, 32, Math.Min(32, im.GetHeight())), new Vector2I(idx * 16, k * 32));
         foreach (var kv in imgs) for (int k = 0; k < frames[kv.Key]; k++) img.BlitRect(kv.Value, new Rect2I(k * 16, 0, 16, 16), new Vector2I(kv.Key * 16, k * 16));
         return img;
     }

@@ -93,8 +93,9 @@ public partial class Game
         S(.1f, () => { TestSwingHold = 0; TestPunchHold = false; BareChosen = false; HotSelect(0); });
         Vector2I shakeTile = default;
         S(.1f, () => { Vector2I tt = new(-1, -1); for (int r = 1; r < 40 && tt.X < 0; r++) for (int dy = -r; dy <= r && tt.X < 0; dy++) for (int dx = -r; dx <= r; dx++) { var q = ToTile(PPos) + new Vector2I(dx, dy); if (W.Get(q.X, q.Y) == Tl.Tree && W.Get(q.X, q.Y - 1) == Tl.None) { tt = q; break; } } if (tt.X >= 0) { PPos = TileCenter(tt.X, tt.Y) + new Vector2(0, 40); cam.ResetSmoothing(); shakeTile = tt; } });
-        S(.15f, () => { Shot("tree_rest"); TileShake(shakeTile.X, shakeTile.Y, 3f); });
-        S(.07f, () => Shot("tree_shake"));
+        S(.8f, () => { Shot("tree_rest"); TileShake(shakeTile.X, shakeTile.Y, 3f); });
+
+        S(.03f, () => Shot("tree_shake"));
         S(.1f, () => { PlayerLook.Species = 1; PlayerLook.Skin = 0; Check(Look.FromInts(PlayerLook.ToInts()).Species == 1, "look: the species survives the network form"); });
         S(.4f, () => Shot("look_cat"));
         S(.1f, () => { PlayerLook.Species = 2; PlayerLook.Skin = 4; });

@@ -23,8 +23,8 @@ public partial class Game
         swayMat = GD.Load<ShaderMaterial>("res://Assets/Materials/sway.tres");
         var cfg = VisualFxConfig.Get();
         // таблица по колонкам атласа: размах качания, верхний непрозрачный ряд спрайта, свечение (текстура-данные, а не массивы uniform)
-        var data = Image.CreateEmpty(192, 1, false, Image.Format.Rgbaf); var tex = Art.TileTex?.GetImage();
-        for (int c = 0; c < 192; c++)
+        var data = Image.CreateEmpty(256, 1, false, Image.Format.Rgbaf); var tex = Art.TileTex?.GetImage();
+        for (int c = 0; c < 256; c++)
         {
             float amp = 0, top = 0, glow = 0, pose = 0;
             for (int i = 0; i < cfg.SwayTiles.Length && i < cfg.SwayAmp.Length; i++) if (cfg.SwayTiles[i] == c) { amp = cfg.SwayAmp[i]; if (cfg.UsePoses && i < cfg.PoseBase.Length) pose = cfg.PoseBase[i]; }
@@ -34,6 +34,7 @@ public partial class Game
             data.SetPixel(c, 0, new Color(amp, top, glow, pose));
         }
         swayMat.SetShaderParameter("tile_data", ImageTexture.CreateFromImage(data));
+        swayMat.SetShaderParameter("tree_cut", Art.TreeCut);
         waterMat = GD.Load<ShaderMaterial>("res://Assets/Materials/water.tres"); waterMat.SetShaderParameter("water_col", Art.WaterG);
     }
 
@@ -41,8 +42,7 @@ public partial class Game
     public void TileShake(int x, int y, float mul = 1f)
     {
         var tt = W.Get(x, y); if (!TileSways(tt)) return; float amt = (TileIsPlant(tt) ? 1f : .8f) * mul;
-        AddShake(new Vector2I(x, y), amt, TileIsPlant(tt) ? 2 : 0);                                      // ствол (или блок) качается сам
-        if (TileIsPlant(tt)) AddShake(new Vector2I(x, y - 1), amt, 1);              // у дерева вместе со стволом качается его крона; чужой ствол в клетке кроны не затрагивается
+        AddShake(new Vector2I(x, y), amt, TileIsPlant(tt) ? 2 : 0);                    // дерево качается целиком (один тайл), блок — сам
     }
 
     void AddShake(Vector2I t, float amt, int kind)
@@ -67,7 +67,7 @@ public partial class Game
             tileShakes[i] = (t, age, am, kd);
             float k = 1f - age / cfg.HitShakeTime; arr[n++] = new Vector4(t.X, t.Y, cfg.HitShakePx * am * k * k * Settings.Fx, (t.X * 1.7f) % 50f + kd * 100f);
         }
-        swayMat.SetShaderParameter("shakes", arr); swayMat.SetShaderParameter("crown_cols", new Vector3(Art.TreeTop, Art.PineTop, Art.DeadTop));
+        swayMat.SetShaderParameter("shakes", arr);
         swayMat.SetShaderParameter("time_s", Time);
         swayMat.SetShaderParameter("wind", cfg.Wind * Settings.Wind);
         swayMat.SetShaderParameter("player", PPos);

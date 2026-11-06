@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://6otnr6foh81l"
-path="res://.godot/imported/134_Tree_poses.png-537947b2cdad8cefed23739a2b4254be.ctex"
+uid="uid://cdsyulu5kuvol"
+path="res://.godot/imported/188_Oak_big.png-2955e86ae2b21c51b5bf6f112e4e6526.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Environment/134_Tree_poses.png"
-dest_files=["res://.godot/imported/134_Tree_poses.png-537947b2cdad8cefed23739a2b4254be.ctex"]
+source_file="res://Assets/Sprites/Environment/188_Oak_big.png"
+dest_files=["res://.godot/imported/188_Oak_big.png-2955e86ae2b21c51b5bf6f112e4e6526.ctex"]
 
 [params]
 

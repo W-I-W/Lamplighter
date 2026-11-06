@@ -11,9 +11,9 @@ public partial class Game
 {
     const int CS = 32;
     const int ChunksX = World.Wd / CS, ChunksY = World.Ht / CS;
-    sealed class Chunk { public TileMapLayer G, F, O, B, T, K, X1, X2, D; }
+    sealed class Chunk { public TileMapLayer G, F, O, R, T, X1, X2, D; }       // R — деревья под игроком, T — деревья над игроком (полупрозрачные: игрок стоит за ними)
     readonly Chunk[] chunks = new Chunk[ChunksX * ChunksY];
-    ColorRect backdrop; Node2D groundRoot, objRoot, crownRoot, trunkRoot, topRoot; BreakAreaLayer breakArea; TileSet chunkSet;
+    ColorRect backdrop; Node2D groundRoot, objRoot, treeRoot, topRoot; BreakAreaLayer breakArea; TileSet chunkSet;
     public int LoadedChunks; public float LastChunkMs;
     float chunkT;
     const int LoadR = 1, KeepR = 2;
@@ -24,14 +24,17 @@ public partial class Game
         var src = new TileSetAtlasSource { Texture = Art.TileTex, TextureRegionSize = new Vector2I(TS, TS), UseTexturePadding = false };   // без внутренних полей: шейдеры растительности читают атлас по колонкам 16 px
         for (int i = 0; i < Art.TileCount; i++)
         {
+            if (Art.IsBig(i)) { if (Art.IsBigAnchor(i)) { var bc = new Vector2I(i, 0); src.CreateTile(bc, new Vector2I(2, 2)); int bf = SpriteLibrary.TileFrames[i];
+                if (bf > 1) { src.SetTileAnimationColumns(bc, 1); src.SetTileAnimationFramesCount(bc, bf); for (int k = 0; k < bf; k++) src.SetTileAnimationFrameDuration(bc, k, .5f); src.SetTileAnimationMode(bc, TileSetAtlasSource.TileAnimationMode.RandomStartTimes); }       // покадровое качание; у каждого дерева своя фаза
+                src.GetTileData(bc, 0).TextureOrigin = new Vector2I(0, 8); } continue; }       // дерево: один тайл 32×32 по центру клетки ствола, сдвинут вверх на 8 px (крона в клетке выше); кадры качания — столбиком в атласе
             var at = new Vector2I(i, 0); src.CreateTile(at); int fr = i < SpriteLibrary.TileFrames.Length ? SpriteLibrary.TileFrames[i] : 1;
             if (fr > 1) { src.SetTileAnimationColumns(at, 1); src.SetTileAnimationFramesCount(at, fr); for (int k = 0; k < fr; k++) src.SetTileAnimationFrameDuration(at, k, .22f); }          // кадры лежат столбиком под тайлом атласа
         }
-        foreach (int c in TreeCols) for (int v = 1; v < TreeVariants; v++) { src.CreateAlternativeTile(new Vector2I(c, 0), v); src.GetTileData(new Vector2I(c, 0), v).Modulate = TreeTint(c, v); }      // разновидности деревьев: оттенок листвы и коры
+        foreach (int c in AllTreeCols) for (int v = 1; v < TreeVariants; v++) { src.CreateAlternativeTile(new Vector2I(c, 0), v); { var td = src.GetTileData(new Vector2I(c, 0), v); td.Modulate = TreeTint(c, v); td.TextureOrigin = new Vector2I(0, 8); } }      // разновидности деревьев: оттенок листвы и коры
         srcId = chunkSet.AddSource(src);
-        groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); crownRoot = new Node2D(); trunkRoot = new Node2D(); topRoot = new Node2D();
+        groundRoot = new Node2D(); foliageRoot = new Node2D(); objRoot = new Node2D(); treeRoot = new Node2D(); topRoot = new Node2D();
         blendRoot = new Node2D(); decorRoot = new Node2D(); InitBlend();
-        AddChild(groundRoot); AddChild(blendRoot); AddChild(decorRoot); backdrop = new ColorRect { Color = new Color(.35f, .55f, .26f), MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = -1 }; groundRoot.AddChild(backdrop); AddChild(foliageRoot); AddChild(objRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); AddChild(crownRoot); InitVegetation();
+        AddChild(groundRoot); AddChild(blendRoot); AddChild(decorRoot); backdrop = new ColorRect { Color = new Color(.35f, .55f, .26f), MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = -1 }; groundRoot.AddChild(backdrop); AddChild(foliageRoot); AddChild(objRoot); AddChild(treeRoot); breakArea = new BreakAreaLayer { G = this }; AddChild(breakArea); InitVegetation();
     }
 
     Chunk ChunkAt(int x, int y)
@@ -52,9 +55,8 @@ public partial class Game
             D = new TileMapLayer { TileSet = blendSet, Position = new Vector2(cx * CS * TS, cy * CS * TS) },      // декор: травинки, камешки, пятна
             F = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
             O = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },
-            B = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat },     // кроны деревьев под игроком (игрок спереди дерева)
-            T = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat, Modulate = new Color(1, 1, 1, TreeFadeAlpha) },     // кроны деревьев: выше игрока, без коллизии; полупрозрачны, чтобы видеть игрока/постройку за деревом
-            K = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Modulate = new Color(1, 1, 1, TreeFadeAlpha) }                         // стволы, закрывающие игрока, когда он стоит позади дерева
+            R = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat, YSortEnabled = true },     // деревья целиком под игроком (игрок спереди дерева); нижнее дерево рисуется поверх верхнего
+            T = new TileMapLayer { TileSet = chunkSet, Position = new Vector2(cx * CS * TS, cy * CS * TS), Material = swayMat, YSortEnabled = true, Modulate = new Color(1, 1, 1, TreeFadeAlpha) }     // деревья целиком выше игрока, когда он стоит за ними: всё дерево полупрозрачно, чтобы видеть игрока/постройку
         };
         FillFoliage(c.F, cx, cy); FillBlend(c, cx, cy);
         for (int y = 0; y < CS; y++)
@@ -63,17 +65,17 @@ public partial class Game
                 int wx = cx * CS + x, wy = cy * CS + y, k = wy * World.Wd + wx;
                 c.G.SetCell(new Vector2I(x, y), srcId, new Vector2I(W.Ground[k], 0));
                 var t = (Tl)W.Obj[k];
-                if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0), IsPlantTile(t) ? TreeAlt(wx, wy) : 0);
-                int crown = CrownId(wx, wy); if (crown >= 0) c.B.SetCell(new Vector2I(x, y), srcId, new Vector2I(crown, 0), TreeAlt(wx, wy + 1));
+                if (IsPlantTile(t)) c.R.SetCell(new Vector2I(x, y), srcId, new Vector2I(TreeAtlas(t, wx, wy), 0), TreeAlt(wx, wy));
+                else if (t != Tl.None && t != Tl.SecretCache) c.O.SetCell(new Vector2I(x, y), srcId, new Vector2I(AtlasX(t, LevelAt(wx, wy)), 0));
             }
-        groundRoot.AddChild(c.G); blendRoot.AddChild(c.X1); blendRoot.AddChild(c.X2); decorRoot.AddChild(c.D); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); crownRoot.AddChild(c.B); topRoot.AddChild(c.T); trunkRoot.AddChild(c.K); chunks[ci] = c; LoadedChunks++;
+        groundRoot.AddChild(c.G); blendRoot.AddChild(c.X1); blendRoot.AddChild(c.X2); decorRoot.AddChild(c.D); foliageRoot.AddChild(c.F); objRoot.AddChild(c.O); treeRoot.AddChild(c.R); topRoot.AddChild(c.T); chunks[ci] = c; LoadedChunks++;
         LastChunkMs = (float)sw.Elapsed.TotalMilliseconds;
     }
 
     void UnloadChunk(int ci)
     {
         var c = chunks[ci]; if (c == null) return;
-        c.G.QueueFree(); c.X1.QueueFree(); c.X2.QueueFree(); c.D.QueueFree(); c.F.QueueFree(); c.O.QueueFree(); c.B.QueueFree(); c.T.QueueFree(); c.K.QueueFree(); chunks[ci] = null; LoadedChunks--;
+        c.G.QueueFree(); c.X1.QueueFree(); c.X2.QueueFree(); c.D.QueueFree(); c.F.QueueFree(); c.O.QueueFree(); c.R.QueueFree(); c.T.QueueFree(); chunks[ci] = null; LoadedChunks--;
     }
 
     /// <summary>Загружает/выгружает чанки вокруг камеры. force — загрузить всё нужное сразу (старт, телепорт).</summary>

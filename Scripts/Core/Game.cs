@@ -130,7 +130,7 @@ public partial class Game : Node2D
 
         BuildTileMaps();
         ents = new EntityLayer { G = this };
-        AddChild(ents); AddChild(trunkRoot); AddChild(topRoot);                 // порядок: игрок → копии стволов → кроны (крона дерева спереди закрывает ствол дерева позади)
+        AddChild(ents); AddChild(topRoot);                 // порядок: игрок → копии стволов → кроны (крона дерева спереди закрывает ствол дерева позади)
         overlay = new OverlayLayer { G = this }; AddChild(overlay); InitEnemyFx(); InitAmbient();
 
         cam = new Camera2D { Zoom = new Vector2(Zoom, Zoom), PositionSmoothingEnabled = false, PositionSmoothingSpeed = 9f, Position = PPos };
@@ -182,7 +182,7 @@ public partial class Game : Node2D
 
     static int AtlasX(Tl t, int lv = 1) => t switch
     {
-        Tl.Tree => Art.Tree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
+        Tl.Tree => Art.BigTree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
         Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
         Tl.Chest => Art.Chest, Tl.ChestOpen => Art.ChestOpen, Tl.Ruin => Art.Ruin, Tl.House => Art.House, Tl.Tent => Art.Tent,
         Tl.Shrine => Art.Shrine, Tl.ShrineUsed => Art.ShrineUsed, Tl.Aether => Art.AetherOre, Tl.Cage => Art.Cage,
@@ -194,9 +194,9 @@ public partial class Game : Node2D
         Tl.Mirror1 => Art.Mirror1, Tl.Mirror2 => Art.Mirror2, Tl.Receiver => Art.Receiver, Tl.ReceiverOn => Art.ReceiverOn, Tl.Emitter => Art.Emitter,
         Tl.CrystalLantern => Art.CrystalLantern, Tl.CombatLantern => Art.CombatLantern, Tl.Rubble => Art.Rubble,
         Tl.BridgeBroken => Art.BridgeBroken, Tl.Bridge => Art.Bridge, Tl.Deep => Art.Deep, Tl.Seal => Art.Seal, Tl.SecretDoor => Art.SecretDoor,
-        Tl.DeadTree => Art.DeadTree, Tl.Obsidian => Art.Obsidian, Tl.Ember => Art.Ember, Tl.AshRuin => Art.AshRuin, Tl.Vent => Art.Vent,
+        Tl.DeadTree => Art.BigDead, Tl.Obsidian => Art.Obsidian, Tl.Ember => Art.Ember, Tl.AshRuin => Art.AshRuin, Tl.Vent => Art.Vent,
         Tl.TechCache => Art.TechCache, Tl.Spire => Art.Spire, Tl.Altar => Art.Altar, Tl.AltarOn => Art.AltarOn, Tl.AmpCrystal => Art.AmpCrystal, Tl.BarrierPost => Art.BarrierPost, Tl.MeteorOre => Art.MeteorOre,
-        Tl.FrostOre => Art.FrostOre, Tl.Pine => Art.Pine, Tl.IceRuin => Art.IceRuin, Tl.IceBlock => Art.IceBlock, Tl.Void => Art.VoidObj, Tl.Monolith => Art.Monolith,
+        Tl.FrostOre => Art.FrostOre, Tl.Pine => Art.BigPine, Tl.IceRuin => Art.IceRuin, Tl.IceBlock => Art.IceBlock, Tl.Void => Art.VoidObj, Tl.Monolith => Art.Monolith,
         Tl.Grave => Art.Grave, Tl.Tablet => Art.Tablet, Tl.FalseLantern => Art.FalseLantern, Tl.Pylon => Art.Pylon, Tl.PylonOn => Art.PylonOn, Tl.ShadowPillar => Art.ShadowPillar, Tl.Fragment => Art.Fragment,
         Tl.RiftGate => Art.RiftGate, Tl.Statue => Art.Statue, Tl.Fountain => Art.Fountain, Tl.Banner => Art.Banner, Tl.Cryo => Art.Cryo + Math.Min(lv, 3) - 1, Tl.LightBridge => Art.LightBridge,
         Tl.BossTotem => Art.BossTotem, Tl.BossGate => Art.BossGate, Tl.Stall => Art.Stall + Math.Min(lv, 3) - 1, Tl.Hub => Art.Hub + Math.Min(lv, 3) - 1, Tl.Refinery => Art.Refinery + Math.Min(lv, 3) - 1,
@@ -214,9 +214,9 @@ public partial class Game : Node2D
         {
             var lc = new Vector2I(x % CS, y % CS);
             if (t != Tl.None) ch.F.EraseCell(lc);
-            if (t == Tl.None || t == Tl.SecretCache) ch.O.EraseCell(lc); else ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0), IsPlantTile(t) ? TreeAlt(x, y) : 0);
+            if (t == Tl.None || t == Tl.SecretCache || IsPlantTile(t)) ch.O.EraseCell(lc); else ch.O.SetCell(lc, srcId, new Vector2I(AtlasX(t, LevelAt(x, y)), 0));
         }
-        RefreshCrown(x, y); RefreshCrown(x, y - 1);
+        SetTreeCell(x, y);
     }
 
     // ───────────────────────── сохранение ─────────────────────────
@@ -506,7 +506,7 @@ public partial class Game : Node2D
         if (!melee) best = null;
         if (best != null)
         {
-            MineProg = 0; MineTile = new Vector2I(-1, -1);
+            MineStop();
             if (AtkCd <= 0) { AtkCd = .42f * td.AttackInterval; Swing = .22f; bool fist = CurW < 0 && !OwnedTools.Contains(CurTool); if (fist) Punch(dir, true); Hurt(best, PlayerDamage * td.CombatDamage * ToolDmgMul(td.Id) * (fist ? Tune.T.BareHandMul : 1f), dir, true); Sfx.Play("hit"); Diag.Count("attack_melee"); }
             return;
         }
@@ -644,10 +644,11 @@ public partial class Game : Node2D
 
     public void GiveXp(float x, bool raw = false)
     {
+        if (placingStock) return;                            // установка уже созданного предмета не создаёт новый опыт
         Xp += raw ? x : x * Tune.T.XpMul;
         while (Xp >= XpNeed)
         {
-            Xp -= XpNeed; Level++; MaxHp += 10; Hp = MaxHp;
+            Xp -= XpNeed; Level++; MaxHp += 10; ApplyRelicHp(); Hp = MaxHp;
             Toast($"Уровень {Level}! Здоровье +10, добыча и урон выросли", MsgTone.Gold);
             Texts.Add(new FText { P = PPos + new Vector2(0, -16), S = "УРОВЕНЬ!", Life = 1.6f, C = new Color("#ffe27a") });
             Fx("level_up", PPos);

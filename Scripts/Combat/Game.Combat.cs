@@ -101,7 +101,7 @@ public partial class Game
             if (b.T >= b.Dur) { Beacons.RemoveAt(i); continue; }
             if (b.Burn > 0)
                 foreach (var e in Enemies)
-                    if (!e.Hidden && e.Pos.DistanceTo(b.Pos) < BeaconR(b) * .85f) { e.Hp -= b.Burn * dt * (e.IsBoss ? .3f : 1f); e.Flash = Mathf.Max(e.Flash, .04f); }
+                    if (!e.Hidden && e.Pos.DistanceTo(b.Pos) < BeaconR(b) * .85f) HurtTick(e, b.Burn * dt * (e.IsBoss ? .3f : 1f), true);
         }
     }
 
@@ -267,28 +267,53 @@ public partial class Game
         e.LastHitBy = hitSrc != 0 ? hitSrc : LocalPeer;                                 // последний удар определяет, кому достанется награда
         bool remote = hitSrc != 0; var from = remote ? PosOf(hitSrc) ?? PPos : PPos;      // удар гостя: умения и позиция хоста в расчёте не участвуют
         if (e.Kind == EK.Decoy) { e.Hp = 0; Burst(e.Pos, new Color("#c080ff"), 8, 60); return; }
-        float m = 1f;
-        if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) { m *= .06f; if (rng.Randf() < .5f) Burst(e.Pos + (PPos - e.Pos).Normalized() * 14, new Color("#ffffff"), 3, 70); }
-        if (e.Kind == EK.Sentinel && !light) { m *= .3f; Burst(e.Pos, new Color("#e8faff"), 3, 60); }
-        if (e.Over > 0) { m *= 1.4f; if (rng.Randf() < .5f) Burst(e.Pos, new Color("#ffe27a"), 2, 45); }          // босс открыт после мощной способности
-        if (e.Kind == EK.Warden) m *= GroveDamageMul(e, from);
-        if (e.EMod == EWarded && e.WardT > 0) { m *= .35f; if (rng.Randf() < .5f) Burst(e.Pos, new Color("#9fe8ff"), 2, 50); }
+        float m = EnemyDefenseMul(e, from, light);
         if (melee && !remote && Has(Tech.SilverEdge) && SoulKind(e.Kind)) m *= 1f + E(Tech.SilverEdge);
         if (melee && e.Kind == EK.Beetle)
         {
             float cosA = e.Face.Normalized().Dot((from - e.Pos).Normalized());
             if (cosA > .35f) { m *= .2f + .08f * (remote ? 0 : Lv(Tech.SilverEdge)); Burst(e.Pos + e.Face * 6, new Color("#e4f4ff"), 4, 60); Sfx.Play("tick", -2, .6f); }
         }
-        dmg *= m; float hp0 = e.Hp;
-        e.Hp -= dmg;
-        if (e.IsBoss) { float floor = e.MaxHp * PhaseOf(e).FloorFrac; if (hp0 > floor && e.Hp < floor) e.Hp = floor; }      // фаза не проскакивает: лишний урон до перехода теряется
-        if (e.Kind == EK.Warden) GroveAfterHurt(e, hp0 - e.Hp); e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f);
+        dmg *= m; ApplyEnemyDamage(e, dmg);
+        e.Flash = .15f; e.Kb += dir * (e.IsBoss ? 14f : e.Kind == EK.Wraith ? 160f : e.Kind == EK.Golem || e.Kind == EK.Beetle ? 50f : 120f);
         if (e.Kind == EK.Golem && rng.Randf() < .6f) AddZone(e.Pos, 40, 0, 3.5f, 0f, true);
         if (melee && !remote && Has(Tech.FlameEdge)) e.Burn = Mathf.Max(e.Burn, E(Tech.FlameEdge));
         if (melee && !remote && Has(Tech.FrostEdge)) { e.Slow = Mathf.Max(e.Slow, E(Tech.FrostEdge)); if (!e.IsBoss && Lv(Tech.FrostEdge) >= 3 && rng.Randf() < .05f * (Lv(Tech.FrostEdge) - 2)) e.Freeze = Mathf.Max(e.Freeze, 1f); }
         if (melee && !remote && Tier >= 4) e.Burn = Mathf.Max(e.Burn, 2f);
         Fx("enemy_hit", e.Pos); OnEnemyHit(e, dmg, dir);
         Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), S = ((int)Mathf.Round(dmg)).ToString(), Life = .6f, C = m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
+    }
+
+    float EnemyDefenseMul(Enemy e, Vector2 from, bool light)
+    {
+        float m = 1f;
+        if (e.Shield && (e.Kind == EK.WinterWarden || e.Kind == EK.Source)) m *= .06f;
+        if (e.Kind == EK.Sentinel && !light) m *= .55f;       // свет выгоден, но обычное оружие не упирается в стену
+        if (e.Over > 0) m *= 1.4f;
+        if (e.Kind == EK.Warden) m *= GroveDamageMul(e, from);
+        if (e.EMod == EWarded && e.WardT > 0) m *= .35f;
+        return m;
+    }
+
+    void ApplyEnemyDamage(Enemy e, float dmg)
+    {
+        float hp0 = e.Hp;
+        e.Hp -= Mathf.Max(0, dmg);
+        if (e.IsBoss) e.Hp = Mathf.Max(e.Hp, Mathf.Min(hp0, e.MaxHp * PhaseOf(e).FloorFrac));
+        if (e.Kind == EK.Warden) GroveAfterHurt(e, hp0 - e.Hp);
+    }
+
+    /// <summary>Тот же щит и границы фаз, без отбрасывания и эффектов попадания на каждом кадре.</summary>
+    public void HurtTick(Enemy e, float dmg, bool light = false)
+        => HurtTickAt(e, dmg, light, hitSrc != 0 ? PosOf(hitSrc) ?? PPos : PPos);
+
+    void HurtTickAt(Enemy e, float dmg, bool light, Vector2 from, bool credit = true)
+    {
+        if (e.Hidden || e.Hp <= 0 || !float.IsFinite(dmg) || dmg <= 0) return;
+        if (NetClient) { QueueEnemyDot(e, dmg, light); return; }
+        if (credit) e.LastHitBy = hitSrc != 0 ? hitSrc : LocalPeer;
+        ApplyEnemyDamage(e, dmg * EnemyDefenseMul(e, from, light));
+        e.Flash = Mathf.Max(e.Flash, .04f);
     }
 
     /// <summary>Свет жжёт врагов (освещённая земля, аура героя), поэтому пока игрок стоит в свете, обычные враги держатся от света дальше его удара: останавливаются у границы, а оказавшись близко (свет вырос) отходят. Когда игрок выходит в тьму, враг нападает, даже если зайдёт на свет.</summary>
@@ -354,9 +379,10 @@ public partial class Game
         if (aiRemote != 0) { Net?.SendHurt(aiRemote, dmg * ctxDmg, kb, fire); return; }                  // враг выбрал другого игрока: урон решает хост и шлёт ему
         if (Invuln > 0) return;
         if (fire && Has(Tech.Fireproof)) return;
+        dmg = Mathf.Max(dmg * ctxDmg, Tune.T.EnemyMinHit);
         if (fire && Has(Tech.HeatShield)) dmg *= HeatTaken;
         if (fire) dmg *= 1f - N("HeatResist");
-        dmg = Mathf.Max(dmg * ctxDmg, Tune.T.EnemyMinHit) * FearMul; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
+        dmg = Mathf.Max(0, dmg) * FearMul; Hp -= dmg; Invuln = Tune.T.HitInvuln; regenDelay = Tune.T.RegenDelay; Shake = 3f;
         pVel += kb * 120f; Sfx.Play("hurt");
         Fx("player_hurt", PPos, fire ? new Color("#ff9a2e") : null);
         Texts.Add(new FText { P = PPos + new Vector2(0, -12), S = "-" + (int)Mathf.Round(dmg), Life = .8f, C = new Color("#ff6060") });
@@ -368,7 +394,7 @@ public partial class Game
     void Die()
     {
         EventsOnDeath(); RiftOnDeath();
-        if (!NetService.Active) { Enemies.Clear(); Projs.Clear(); Boss = null; }        // в сети враги принадлежат хосту и смерть одного игрока их не стирает
+        if (!NetService.Active) { ResetGuardFights(); Enemies.Clear(); Projs.Clear(); Boss = null; }        // в сети враги принадлежат хосту
         LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
         int lost = BuryPlayer();                                                   // все ресурсы, инструменты и оружие остаются в могиле там, где игрок пал
@@ -450,7 +476,7 @@ public partial class Game
             e.Age += dt; e.Flash = Mathf.Max(0, e.Flash - dt); e.Atk = Mathf.Max(0, e.Atk - (e.IsBoss ? dt : dt / Tune.T.EnemyAtkPause));
             e.Kb *= Mathf.Max(0, 1 - 9 * dt);
             e.Slow = Mathf.Max(0, e.Slow - dt); e.Freeze = Mathf.Max(0, e.Freeze - dt);
-            if (e.Burn > 0) { e.Burn -= dt; e.Hp -= 3f * dt * (e.IsBoss ? .3f : 1f); if (rng.Randf() < dt * 12) Burst(e.Pos, new Color("#ff9a2e"), 1, 25); }
+            if (e.Burn > 0) { e.Burn -= dt; HurtTickAt(e, 3f * dt * (e.IsBoss ? .3f : 1f), false, PosOf(e.LastHitBy) ?? realP, false); if (rng.Randf() < dt * 12) Burst(e.Pos, new Color("#ff9a2e"), 1, 25); }
             if (e.IsBoss) BossPhaseTick(e);
             var to = PPos - e.Pos; float dist = to.Length(); var dir = dist > .01f ? to / dist : Vector2.Zero;
             var perp = new Vector2(-dir.Y, dir.X);
@@ -465,9 +491,9 @@ public partial class Game
                 if (e.Hp <= 0) { Burst(e.Pos, new Color("#ffe9a0"), 10, 60); Enemies.RemoveAt(i); continue; }
             }
             float auraR = PlayerLightR * (Has(Tech.HeroLamp) ? .55f : .6f);
-            if (AuraDps > 0 && dist < auraR && !e.Hidden)
+            if (AuraDps > 0 && e.Pos.DistanceTo(realP) < auraR && !e.Hidden)
             {
-                e.Hp -= AuraDps * dt * (e.IsBoss ? .3f : 1f); e.Flash = Mathf.Max(e.Flash, .04f);
+                HurtTickAt(e, AuraDps * dt * (e.IsBoss ? .3f : 1f), true, realP);
                 if (rng.Randf() < dt * 10) Burst(e.Pos, new Color("#ffe27a"), 1, 25);
             }
             float k = lit ? .5f : 1f;

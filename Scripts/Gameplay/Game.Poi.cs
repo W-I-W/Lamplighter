@@ -38,6 +38,15 @@ public partial class Game
         PK.Grove => new Color("#d58cff"), PK.Workshop => new Color("#8ff0ff"), PK.Puzzle => new Color("#ffe27a"), PK.BridgeSite => new Color("#d9b27c"), PK.TechCache => new Color("#8ff0ff"), PK.Spire => new Color("#ffb0ff"), PK.Altar => new Color("#ffe27a"), PK.Secret => new Color("#ffd86b"), _ => new Color("#ffd86b")
     };
 
+    void ResetGuardFights()
+    {
+        foreach (var p in W.Pois)
+            if (p.State == 1 && Enemies.Exists(e => e.Guard == p && e.Hp > 0)) p.State = 0;
+        foreach (var a in W.Ancients)
+            if (a.Kind == LampKind.Guarded && !a.Done && a.Phase == 1 && Enemies.Exists(e => e.Guard == a.GuardPoi && e.Hp > 0))
+            { a.Phase = 0; a.GuardPoi.State = 0; }
+    }
+
     void UpdatePois(float dt)
     {
         poiT -= dt; if (poiT > 0) return; poiT = .4f;

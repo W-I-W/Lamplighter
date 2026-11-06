@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b4n3ad03ms1ip"
-path="res://.godot/imported/169_PineTop_poses.png-c9a7110f0bc473ce60a000db04e209c4.ctex"
+uid="uid://7e2mx7yiac4k"
+path="res://.godot/imported/194_TallPine_big.png-542091535efac48d39300c9b973b568f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Sprites/Environment/169_PineTop_poses.png"
-dest_files=["res://.godot/imported/169_PineTop_poses.png-c9a7110f0bc473ce60a000db04e209c4.ctex"]
+source_file="res://Assets/Sprites/Environment/194_TallPine_big.png"
+dest_files=["res://.godot/imported/194_TallPine_big.png-542091535efac48d39300c9b973b568f.ctex"]
 
 [params]
 
