@@ -46,7 +46,7 @@ public partial class Game
     void GiveTo(long peer, int item, int n)
     {
         if (n <= 0 || !Movable(item)) return;
-        if (peer == LocalPeer) { Inv[item] += n; return; }
+        if (peer == LocalPeer) { AddInv(item, n, PPos); return; }
         if (Net == null) return; var g = new int[It.Count]; g[item] = Math.Min(n, MaxMove); Net.RpcId(peer, nameof(NetNode.RpcGrant), g);
     }
 
@@ -160,6 +160,11 @@ public partial class Game
                         Drops.RemoveAt(i); dropsDirty = true;
                         if (peer == LocalPeer) GiveRelic(rd.Id); else Net?.RpcId(peer, nameof(NetNode.RpcGrantRelic), d.Item - RelicBase);
                         Sfx.Play("pickup", -4); break;
+                    }
+                    if (peer == LocalPeer)                                                   // в инвентаре нет места: стопка остаётся лежать (частично — берётся сколько влезает)
+                    {
+                        int room = Room(d.Item); if (room <= 0) { FullMsg(); continue; }
+                        if (room < d.Count) { d.Count -= room; dropsDirty = true; Inv[d.Item] += room; Sfx.Play("pickup", -6, 1f + .04f * (d.Item % 6)); break; }
                     }
                     Drops.RemoveAt(i); dropsDirty = true;                                    // стопка убрана до выдачи: второй раз её не подобрать
                     GiveTo(peer, d.Item, d.Count); if (peer != LocalPeer) NoteTo(peer, string.Format(Loc.T("Подобрано: {0} ×{1}"), Loc.T(It.Names[d.Item]), d.Count), MsgTone.Good); Sfx.Play("pickup", -6, 1f + .04f * (d.Item % 6));          // у себя без надписи: видно по значку

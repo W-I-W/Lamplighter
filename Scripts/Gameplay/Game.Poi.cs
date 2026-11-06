@@ -262,18 +262,18 @@ public partial class Game
         bool pickOwned = OwnedTools.Contains("pickaxe") || Tier >= 1 || Graves.Count > 0;          // после смерти кирка ждёт в могиле
         Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
         Add("Построить печь [B]", HasFurnace, NeedShort(CostFurnace));
-        Add("Создать кирку у печи [E]", pickOwned, NeedShort(CostPickaxe));
+        Add("Создать кирку в кузне [U у печи]", pickOwned, NeedShort(CostPickaxe));
         Add("Изучить навык света [T]", spark, "Первый свет: [T] → Искра света. " + NeedShort(sparkCost));
         Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
-        Add("Создать оружие у печи [E]", Owned.Count > 0, "Меч, лук и посох — вкладка «Создание»");
-        Add("Медная кирка у печи [E]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
+        Add("Создать оружие в кузне [U у печи]", Owned.Count > 0, "Меч, лук и посох — окно кузни");
+        Add("Медная кирка в кузне [U у печи]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи], затем кузня [U]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
         var techP = NearestPoi(PK.TechCache, false);                 // указатель на постамент есть, даже если он ещё не найден: игроку не нужно искать первый вслепую
         var cap = NearestPoi(PK.Captive, false);                      // метка на ближайшую клетку даже неоткрытую: игрок не ищет вслепую
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
         Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedShort(BCost(8, 1)));
-        Add("Железная кирка у печи [E]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
+        Add("Железная кирка в кузне [U у печи]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
         Add("Построить кузницу [B]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)", NearestExplorePoi()?.Pos);
         Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
@@ -286,7 +286,7 @@ public partial class Game
             var nm = NearestUnlit(1);
             Add("Зажечь фонари шахт", LitIn(1) >= 3 || nm == null, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
             Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник", NearestPoi(PK.Puzzle, false)?.Pos);
-            Add("Кристальная кирка у печи [E]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
+            Add("Кристальная кирка в кузне [U у печи]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
             Add("Изучить «Кристальную оптику» [T]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
             Add("Победить Хранителя глубин", BossDown(2), "В глубоком озере шахт. Награда: Прожектор [R], ядро", BossLantern(2)?.Pos);
             Add("Улучшить маяк: путь в пустоши", BeaconLevel >= 3, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
@@ -296,7 +296,7 @@ public partial class Game
             var na = NearestUnlit(2);
             Add("Зажечь фонари пустошей", LitIn(2) >= 3 || na == null, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
             Add("Теплозащита или огненное лезвие [T]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
-            Add("Обсидиановая кирка у печи [E]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
+            Add("Обсидиановая кирка в кузне [U у печи]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }

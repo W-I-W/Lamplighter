@@ -17,6 +17,7 @@ public partial class Hud
             case Win.Equip: break;   // окно экипировки — сцена EquipWindowUI
             case Win.Journal: DrawJournal(vs); break;
             case Win.Trade: DrawTrade(vs); break;
+            case Win.Chest: DrawChest(vs); break;
             case Win.Story: DrawStory(vs); break;
             case Win.Talk: DrawTalk(vs); break;
             case Win.Rift: DrawRiftWin(vs); break;
@@ -90,14 +91,14 @@ public partial class Hud
     void DrawTrade(Vector2 vs)
     {
         bool w = G.TradeEv != null;
-        wv.Begin(vs, w ? "Странствующий торговец" : $"Торговая лавка · ур.{G.StallLevel}", w ? Good : new Color("#e0c080"), "←/→ купить/продать · ↑/↓ · Enter сделка (Shift ×10) · Esc", new Vector2(420, 320));
-        wv.SetTabs(new[] { "Купить", "Продать" }, G.TradeTab); wv.Chip(Icon(It.Coins), $"{G.Inv[It.Coins]}", new Color("#ffd86b"));
+        wv.Begin(vs, w ? "Странствующий торговец" : $"Торговая лавка · ур.{G.StallLevel}", w ? Good : new Color("#e0c080"), "←/→ купить/продать · ↑/↓ · [+]/[-] количество · Enter сделка (Shift — максимум) · Esc", new Vector2(420, 320));
+        wv.SetTabs(new[] { "Купить", "Продать" }, G.TradeTab); wv.Chip(Icon(It.Coins), $"{G.Inv[It.Coins]}", new Color("#ffd86b")); wv.Chip(null, $"×{G.TradeQty}", Hint);
         int vis = wv.Fit(11, 36);
         if (G.TradeTab == 0)
         {
             if (G.CurOffers.Count == 0) wv.Text(false, "Товаров нет. Улучшайте лавку", Dim);
             int sc = Scroll(G.WinCur, vis);
-            for (int i = sc; i < G.CurOffers.Count && i < sc + vis; i++) { var o = G.CurOffers[i]; bool bought = G.OfferBought(o); wv.Row(i, Sel(i), (bought ? "✓ " : "") + o.Title, bought ? "куплено" : $"{o.Price}", bought ? Dim : G.Inv[It.Coins] >= o.Price ? Db.RarCol[(int)o.Rar] : Warn); }
+            for (int i = sc; i < G.CurOffers.Count && i < sc + vis; i++) { var o = G.CurOffers[i]; bool bought = G.OfferBought(o); bool itm = o.Kind == "item"; int price = itm ? o.Price * G.TradeQty : o.Price; wv.Row(i, Sel(i), (bought ? "✓ " : "") + o.Title + (itm ? $" ×{G.TradeQty}" : ""), bought ? "куплено" : $"{price}", bought ? Dim : G.Inv[It.Coins] >= price ? Db.RarCol[(int)o.Rar] : Warn); }
             if (G.WinCur < G.CurOffers.Count) wv.Text(false, G.CurOffers[G.WinCur].Desc, Hint, true, 2);
         }
         else
@@ -109,6 +110,20 @@ public partial class Hud
             wv.Text(false, Loc.T("Спрос: ") + d, Dim, true, 2);
         }
         if (G.TradeMsg != "") wv.Text(false, G.TradeMsg, Good, false);
+    }
+
+    // ───────────────────────── сундук ─────────────────────────
+    void DrawChest(Vector2 vs)
+    {
+        var c = G.Chests.TryGetValue(World.Key(G.ChestAt.X, G.ChestAt.Y), out var a) ? a : new int[It.Count];
+        wv.Begin(vs, "Сундук", new Color("#c9a070"), "←/→ положить/забрать · ↑/↓ · [+]/[-] количество · Enter перенос (Shift — всё) · Esc", new Vector2(420, 320));
+        wv.SetTabs(new[] { "Положить", "Забрать" }, G.WinTab);
+        wv.Chip(null, string.Format(Loc.T("Сундук {0}/{1}"), Game.SlotsOfPublic(a), Game.ChestSlots), Hint); wv.Chip(null, string.Format(Loc.T("Инвентарь {0}/{1}"), G.SlotsUsed(), G.SlotCap), Hint); wv.Chip(null, $"×{G.ChestQty}", Hint);
+        int vis = wv.Fit(11, 36); var rows = G.ChestRows();
+        if (rows.Count == 0) wv.Text(false, G.WinTab == 0 ? "В инвентаре нечего класть." : "Сундук пуст.", Dim, false);
+        int sc = Scroll(G.WinCur, vis);
+        for (int i = sc; i < rows.Count && i < sc + vis; i++) { int it = rows[i]; int n = G.WinTab == 0 ? G.Inv[it] : a[it]; wv.Row(i, Sel(i), $"{It.Ic(it)}{Loc.T(It.Names[it])}", $"×{n}", It.Col[it]); }
+        if (G.ChestMsg != "") wv.Text(false, G.ChestMsg, Good, false);
     }
 
     // ───────────────────────── карта ─────────────────────────

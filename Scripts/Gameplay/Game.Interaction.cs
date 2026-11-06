@@ -58,7 +58,8 @@ public partial class Game
             for (int x = c.X - 3; x <= c.X + 3; x++)
             {
                 var t = W.Get(x, y); int tx = x, ty = y;
-                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Открыть: плавка и крафт"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
+                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Печь: плавка руды"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); ix.Action("U", "Кузня: создание и улучшение"); ix.U = () => OpenStation("forge"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
+                if (t == Tl.StorageChest) { Add($"t:{x}:{y}", "Сундук", TileRect(x, y), 5, ix => { ix.Action("E", "Открыть сундук"); ix.Gives("Хранит", "20 слотов по 99", TipRole.Resource); ix.E = () => OpenChest(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t != Tl.Mirror1 && t != Tl.Mirror2 && IsPlacedTile(x, y)) { Add($"t:{x}:{y}", PlacedTitle(t), TileRect(x, y), 1, ix => AddDemolishTile(tx, ty, ix)); continue; }
                 if (!IsTileInteractable(t)) continue;
                 Add($"t:{x}:{y}", TileTitle(t), TileRect(x, y), 1, ix => { TileIx(tx, ty, W.Get(tx, ty), ix); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); });
@@ -91,7 +92,7 @@ public partial class Game
         return list;
     }
 
-    static string PlacedTitle(Tl t) => TileStockKey(t) switch { "amp" => "Светокристалл", "barrier" => "Столб-барьер", "decor0" => "Статуя Фонарщика", "decor1" => "Фонтан света", "decor2" => "Знамя маяка", _ => "Постройка" };
+    static string PlacedTitle(Tl t) => TileStockKey(t) switch { "amp" => "Светокристалл", "barrier" => "Столб-барьер", "decor0" => "Статуя Фонарщика", "decor1" => "Фонтан света", "decor2" => "Знамя маяка", "chest" => "Сундук", _ => "Постройка" };
 
     static bool IsTileInteractable(Tl t) => t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
         || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn

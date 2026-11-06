@@ -23,7 +23,7 @@ public partial class Game
         S(.6f, () => { Shot("res1_start_dark"); Check(Goals.Count > 0 && Goals[0].Title == "Собрать ресурсы на печь", $"tutorial: the first goal is collecting resources ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); });
         S(2.5f, () => { OwnedTools.Remove("pickaxe"); CurTool = ""; foreach (var c in CostFurnace) Inv[c[0]] = c[1]; });
         S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Построить печь [B]", $"tutorial: next goal is building the furnace ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); HasFurnace = true; Inv[It.Wood] = 0; Inv[It.Stone] = 0; });
-        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Создать кирку у печи [E]", $"tutorial: next goal is crafting the pickaxe ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OwnedTools.Add("pickaxe"); CurTool = "pickaxe"; foreach (var c in LevelCost((int)Tech.Spark, 1)) Inv[c[0]] = c[1]; });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Создать кирку в кузне [U у печи]", $"tutorial: next goal is crafting the pickaxe ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OwnedTools.Add("pickaxe"); CurTool = "pickaxe"; foreach (var c in LevelCost((int)Tech.Spark, 1)) Inv[c[0]] = c[1]; });
         S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Изучить навык света [T]", $"tutorial: next goal is learning the light skill ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); Check(LearnTech((int)Tech.Spark), "spark: learned for wood and stone only"); });
         S(2.5f, () => Shot("res2_spark_start"));
         S(2.5f, () =>

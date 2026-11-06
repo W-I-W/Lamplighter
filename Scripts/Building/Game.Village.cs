@@ -191,6 +191,7 @@ public partial class Game
             foreach (var hv in Villagers) if (hv.Home == BKey(b)) ix.Info($"{hv.Name} · {ProfTitle(hv)}");
         }
         if (b.Type == Tl.Stall) { ix.Action("E", "Торговать"); ix.E = () => OpenTrade(null); }
+        else if (b.Type == Tl.Forge) { ix.Action("E", "Кузня: создание и улучшение"); ix.E = () => OpenStation("forge"); }
         else
         {
             int tot = StockTotal + LocalTotal(b);
@@ -251,7 +252,7 @@ public partial class Game
     float unlockT;
     public List<Goal> Goals = new();
     public const long TutTechOpened = 1L << 60, TutExplored = 1L << 61;       // признаки героя: открывал дерево навыков, выходил в Тьму со светом
-    static readonly string[] TutorialTitles = { "Собрать ресурсы на печь", "Построить печь [B]", "Создать кирку у печи [E]", "Изучить навык света [T]", "Исследовать Тьму" };
+    static readonly string[] TutorialTitles = { "Собрать ресурсы на печь", "Построить печь [B]", "Создать кирку в кузне [U у печи]", "Изучить навык света [T]", "Исследовать Тьму" };
 
     void UpdateUnlocks(float dt)
     {

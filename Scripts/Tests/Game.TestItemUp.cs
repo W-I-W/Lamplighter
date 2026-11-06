@@ -18,8 +18,8 @@ public partial class Game
             Check(!near && r0, "itemup: without a furnace or forge nearby nothing is upgraded");
             SetObj(t.X, t.Y, Tl.Furnace); HasFurnace = true;
             Check(NearUpgrade(), "itemup: a furnace next to the hero allows upgrades");
-            Check(RecipesOf("furnace").Exists(r => r.Id == "w_sword1_furnace" && r.IsUpgrade) && RecipesOf("furnace").Exists(r => r.Id == "tool_axe" && r.IsUpgrade), "itemup: owned weapons and the axe offer an upgrade instead of crafting");
-            OpenStation("furnace"); equipWindow.Force(); int wi = CraftRows().FindIndex(x => x.r.Id == "w_sword1_furnace"); equipWindow.ClickRecipe(wi, false); equipWindow.Force();
+            Check(RecipesOf("forge").Exists(r => r.Id == "w_sword1_forge" && r.IsUpgrade) && RecipesOf("forge").Exists(r => r.Id == "tool_axe" && r.IsUpgrade), "itemup: owned weapons and the axe offer an upgrade instead of crafting");
+            OpenStation("forge"); equipWindow.Force(); int wi = CraftRows().FindIndex(x => x.r.Id == "w_sword1_forge"); equipWindow.ClickRecipe(wi, false); equipWindow.Force();
             Check(wi >= 0 && equipWindow.HasButton("Улучшить", true) && !equipWindow.HasButton("Создать", true), "itemup: the button of an owned weapon says Upgrade, not Create"); CloseWindows(); StationOpened = false;
             int cu = Inv[It.Copper]; var cost = WeaponUpCost(1, 1);
             Check(UpgradeWeapon(0) && Owned[0].Lv == 1 && Inv[It.Copper] == cu - cost[0][1], $"itemup: sword +1 is paid and applied");

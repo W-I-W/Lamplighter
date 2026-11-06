@@ -75,8 +75,9 @@ public partial class Game
 
     void DemolishTile(int x, int y, string key, string name)
     {
+        if (key == "chest" && !ChestEmpty(x, y)) { Fail("Сначала заберите вещи из сундука"); return; }
         if (!ConfirmDemolish($"t{x}:{y}", name)) return;
-        SetObj(x, y, Tl.None); Placed.Remove(World.Key(x, y));
+        SetObj(x, y, Tl.None); Placed.Remove(World.Key(x, y)); if (key == "chest") Chests.Remove(World.Key(x, y));
         var t = key; if (t == "amp" || t == "barrier") { Posts.RemoveAll(p => p.X == x && p.Y == y); RecomputeLightTech(); }
         if (t.StartsWith("decor")) RecountDecor();
         if (t == "mirror") { }
@@ -103,7 +104,7 @@ public partial class Game
 
     static string TileStockKey(Tl t) => t switch
     {
-        Tl.Furnace => "furnace", Tl.AmpCrystal => "amp", Tl.BarrierPost => "barrier", Tl.Statue => "decor0", Tl.Fountain => "decor1", Tl.Banner => "decor2",
+        Tl.Furnace => "furnace", Tl.StorageChest => "chest", Tl.AmpCrystal => "amp", Tl.BarrierPost => "barrier", Tl.Statue => "decor0", Tl.Fountain => "decor1", Tl.Banner => "decor2",
         Tl.Mirror1 or Tl.Mirror2 => "mirror", _ => null
     };
 

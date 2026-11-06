@@ -49,7 +49,7 @@ public partial class Game
         {
             Check(Ids() == "basic,depths,ash,ice" && fired == 3, $"upgrades: all four categories are open in the data order ({Ids()})");
             // состояния улучшений
-            var basic = PageList(0); Check(basic.Count == 18, $"upgrades: a category shows all of its upgrades, even unavailable ones ({basic.Count})");
+            var basic = PageList(0); Check(basic.Count == 19, $"upgrades: a category shows all of its upgrades, even unavailable ones ({basic.Count})");
             int lens = (int)Tech.Lens; HasFurnace = false; Check(StateOfTech(lens) == TechState.Locked, "upgrades: unmet condition → Locked");
             HasFurnace = true; SetSkillLevel((int)Tech.Spark, 1); for (int i = 0; i < It.Count; i++) Inv[i] = 0; Check(StateOfTech(lens) == TechState.Missing, "upgrades: condition met, no materials → Missing (still visible)");
             foreach (var cc in LevelCost(lens, 1)) Inv[cc[0]] = cc[1]; Check(StateOfTech(lens) == TechState.Available, "upgrades: condition met and materials in place → Available");

@@ -78,7 +78,7 @@ public partial class Game
         d.Vills = SaveVillagers(); d.ManualB = SaveManual(); d.VillEvents = VillEvents; d.ForgeMade = forgeMade; d.NextVillId = NextVillagerId;
         d.BossMask = BossMask; d.Beacon = BeaconLevel; d.TradeEpoch = TradeEpoch; d.ExtraV = ExtraVillagers; d.Bought = Bought.ToArray(); d.Demand = Demand; d.EvNext = evNext;
         d.Finished = Finished; d.LoreMask = LoreMask; d.RiftUnlocked = RiftUnlocked; d.RiftFirst = RiftFirst; d.RiftClears = RiftClears;
-        d.UpCats = Upgrades?.SaveUnlocked(); d.UpNew = Upgrades?.SaveUnseen(); d.CutB = CutBush.ToArray(); d.PlacedK = Placed.ToArray();
+        d.UpCats = Upgrades?.SaveUnlocked(); d.UpNew = Upgrades?.SaveUnseen(); d.CutB = CutBush.ToArray(); d.PlacedK = Placed.ToArray(); SaveChests(d);
         d.BT = Buildings.ConvertAll(b => (int)b.Type).ToArray(); d.BX = Buildings.ConvertAll(b => b.X).ToArray(); d.BY = Buildings.ConvertAll(b => b.Y).ToArray(); d.BL = Buildings.ConvertAll(b => b.Level).ToArray();
         d.BPrio = Buildings.ConvertAll(b => b.Prio).ToArray(); d.BMode = Buildings.ConvertAll(b => b.Mode).ToArray(); d.BOff = Buildings.ConvertAll(b => b.Off).ToArray(); d.BForced = Buildings.ConvertAll(b => b.Forced).ToArray(); d.BLocal = Flat(Buildings);
         d.LX = Lamps.ConvertAll(l => l.X).ToArray(); d.LY = Lamps.ConvertAll(l => l.Y).ToArray(); d.LK = Lamps.ConvertAll(l => l.Kind).ToArray(); d.LL = Lamps.ConvertAll(l => l.Level).ToArray(); d.LD = Lamps.ConvertAll(l => l.Dir).ToArray();
@@ -150,6 +150,7 @@ public partial class Game
             if (d.LX != null) for (int i = 0; i < d.LX.Length; i++) Lamps.Add(new Lamp { X = d.LX[i], Y = d.LY[i], Kind = d.LK[i], Level = d.LL[i], Dir = d.LD[i], Anim = 1 });
             if (d.CutB != null) foreach (var cb in d.CutB) CutBush.Add(cb);
             if (d.PlacedK != null) foreach (var pk in d.PlacedK) Placed.Add(pk); else InitPlaced();
+            LoadChests(d);
             Finished = d.Finished; LoreMask = d.LoreMask; if (Finished) Dawn = 1;
             RiftUnlocked = Math.Max(1, d.RiftUnlocked); RiftFirst = d.RiftFirst; RiftClears = d.RiftClears;
             if (d.Explored != null) { var e = Convert.FromBase64String(d.Explored); if (e.Length == Expl.Length) Expl = e; }

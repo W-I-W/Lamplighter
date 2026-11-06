@@ -420,6 +420,7 @@ public partial class Game
         if (Window == Win.Trade) Window = Win.None;
         if (aiRemote != 0) { Net?.SendHurt(aiRemote, dmg * ctxDmg, kb, fire); return; }                  // враг выбрал другого игрока: урон решает хост и шлёт ему
         if (Invuln > 0) return;
+        if (DebugGod) return;
         if (fire && Has(Tech.Fireproof)) return;
         dmg = Mathf.Max(dmg * ctxDmg, Tune.T.EnemyMinHit);
         if (Flags.Contains("Greed")) dmg *= 1.2f;                                      // «Печать жадности»
@@ -437,7 +438,7 @@ public partial class Game
     void Die()
     {
         Diag.Mark("first_death"); EventsOnDeath(); RiftOnDeath();
-        if (!NetService.Active) { ResetGuardFights(); Enemies.Clear(); Projs.Clear(); Boss = null; }        // в сети враги принадлежат хосту
+        if (!NetService.Active) { ResetGuardFights(); var bs = Boss; Enemies.RemoveAll(e => e.Guard != null || e.Ev != null || e == bs); Projs.Clear(); Boss = null; }        // обычные враги остаются в мире; уходят только бои со стражей, события и босс. В сети враги принадлежат хосту
         LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
         int lost = BuryPlayer();                                                   // все ресурсы, инструменты и оружие остаются в могиле там, где игрок пал
@@ -445,7 +446,7 @@ public partial class Game
         bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта
         if (lvLoss) { float lostHealth = CombatMath.BaseHealth(Level) - CombatMath.BaseHealth(Level - 1); Level--; MaxHp = Mathf.Max(60f, MaxHp - lostHealth); ApplyRelicHp(); Xp = 0; }
         else if (xpLoss) Xp = 0;
-        PPos = RespawnPos(); aiRespawn = PPos; Hp = MaxHp; Invuln = 2f; Save();
+        PPos = RespawnPos(); aiRespawn = PPos; Hp = MaxHp; Invuln = 2f; if (!NetService.Active) Enemies.RemoveAll(e => e.Pos.DistanceTo(PPos) < 90f); Save();          // у точки возрождения врагов нет: игрок не умирает сразу снова
         if (lost > 0 && (lvLoss || xpLoss)) Toast("Ресурсы, инструменты и оружие остались в могиле: разбейте её");
         Toast(lvLoss ? $"Тьма поглотила вас. Уровень потерян: {Level}" : xpLoss ? "Тьма поглотила вас. Опыт уровня потерян" : lost > 0 ? "Тьма поглотила вас. Ресурсы, инструменты и оружие остались в могиле: разбейте её" : "Тьма поглотила вас. Прогресс сохранён");
         cam.ResetSmoothing();

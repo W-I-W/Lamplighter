@@ -148,7 +148,7 @@ public partial class Game : Node2D
         var hl = new CanvasLayer { Layer = 10 }; AddChild(hl);
         uiRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore }; hl.AddChild(uiRoot);
         hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore }; uiRoot.AddChild(hud);
-        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode); Chat = new ChatHud { G = this }; uiRoot.AddChild(Chat); RegionTitle = new RegionTitleHud { G = this }; uiRoot.AddChild(RegionTitle); ResUi = new ResourceActionUI { G = this }; uiRoot.AddChild(ResUi);
+        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode); Chat = new ChatHud { G = this }; uiRoot.AddChild(Chat); RegionTitle = new RegionTitleHud { G = this }; uiRoot.AddChild(RegionTitle); ResUi = new ResourceActionUI { G = this }; uiRoot.AddChild(ResUi); DebugInit();
         buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildWindowUI>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
         invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
         upgradeWindow = GD.Load<PackedScene>("res://Scenes/UI/UpgradeWindow.tscn").Instantiate<UpgradeWindowUI>(); upgradeWindow.G = this; uiRoot.AddChild(upgradeWindow);
@@ -191,7 +191,7 @@ public partial class Game : Node2D
     static int AtlasX(Tl t, int lv = 1) => t switch
     {
         Tl.Tree => Art.BigTree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
-        Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
+        Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.StorageChest => Art.StorageChest, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
         Tl.Chest => Art.Chest, Tl.ChestOpen => Art.ChestOpen, Tl.Ruin => Art.Ruin, Tl.House => Art.House, Tl.Tent => Art.Tent,
         Tl.Shrine => Art.Shrine, Tl.ShrineUsed => Art.ShrineUsed, Tl.Aether => Art.AetherOre, Tl.Cage => Art.Cage,
         Tl.BossOff => Art.BossOff, Tl.BossOn => Art.BossOn, Tl.Obelisk => Art.Obelisk, Tl.ObeliskUsed => Art.ObeliskUsed,
@@ -242,6 +242,7 @@ public partial class Game : Node2D
         if (Menu == Mn.Flow) return;                                          // экран выбора героя и мира обрабатывает ввод сам
         if (Menu == Mn.NetJoin && e is InputEventKey nk && nk.Pressed) { NetJoinKey(nk); return; }
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
+        if (DebugInput(e)) return;                                            // отладочная панель F10
         if (ChatOpen) { if (e is InputEventKey ck && ck.Pressed && ck.Keycode == Key.Escape) { Chat.CloseChat(); GetViewport().SetInputAsHandled(); } return; }      // чат открыт: ввод идёт в поле, игровые клавиши и мышь отключены
         if (e is InputEventKey ek && ek.Pressed && !ek.Echo && (ek.Keycode == Key.Enter || ek.Keycode == Key.KpEnter) && Window == Win.None && !TechOpen && !MapOpen && FinStage == 0 && Chat != null) { Chat.OpenChat(); GetViewport().SetInputAsHandled(); return; }
         if (HotDragInput(e)) return;
@@ -338,7 +339,7 @@ public partial class Game : Node2D
         UpdateDesign(dt);
         UpdateChunks(dt);
         UpdateEvents(dt);
-        UpdateTrade(dt);
+        UpdateTrade(dt); UpdateChest();
         UpdateLightTech(dt);
         UpdateRelics(dt);
         UpdateEnemies(dt);
@@ -445,7 +446,7 @@ public partial class Game : Node2D
             if (KeyMap.Held("Left") || (arrows && Input.IsKeyPressed(Key.Left))) dir.X -= 1;
             if (KeyMap.Held("Right") || (arrows && Input.IsKeyPressed(Key.Right))) dir.X += 1;
         }
-        bool uiOpen = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None || FinStage != 0 || ChatOpen;
+        bool uiOpen = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None || FinStage != 0 || ChatOpen || DebugTyping;
         if (uiOpen) dir = Vector2.Zero;                                  // пока открыто окно или меню, персонаж стоит на месте
         dir = dir.Normalized(); LastMoveDir = dir;
         bool water = WaterAt(PPos);
@@ -648,7 +649,8 @@ public partial class Game : Node2D
     {
         if (inBreak) n = Yield(item, n);
         if ((inBreak || inLoot) && SpawnLoot(item, n, at)) { Diag.Count("give_" + item); Diag.Mark("first_gather"); if (IsRareItem(item)) RareGiveFx(item, at); return; }          // добыча падает на землю: игрок подбирает её сам
-        Inv[item] += n; Diag.Count("give_" + item); Diag.Mark("first_gather");
+        n = AddInv(item, n, at); if (n <= 0) return;
+        Diag.Count("give_" + item); Diag.Mark("first_gather");
         if (!inBreak || Settings.Fx <= 0f) Texts.Add(new FText { P = at, S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.1f, C = It.Col[item] });          // при добыче вместо надписи «+N» летят значки ресурсов
         if (IsRareItem(item)) RareGiveFx(item, at);
         if (inBreak && Settings.Fx > 0f) SpawnFlies(item, n, at);                      // добыча: звук подбора играет, когда значок долетит
@@ -773,6 +775,7 @@ public partial class Game : Node2D
         if (Time % .12f < dt) Burst(SmeltAt + new Vector2(rng.RandfRange(-3, 3), -6), new Color("#ff9a2e"), 1, 18);
         if (smeltT >= SmeltTime)
         {
+            int ingot0 = It.IngotOf(SmeltQ[0]); if (Room(ingot0) <= 0) { smeltT = SmeltTime; FullMsg(); return; }          // слитку некуда лечь: плавка ждёт, пока освободится слот
             smeltT = 0; int ore = SmeltQ[0]; SmeltQ.RemoveAt(0);
             int ingot = It.IngotOf(ore);
             Inv[ingot]++; GiveXp(2); Sfx.Play("tick");

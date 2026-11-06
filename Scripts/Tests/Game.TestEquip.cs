@@ -125,7 +125,8 @@ public partial class Game
         S(.3f, () => Shot("equip_craft_furnace"));
         S(.2f, () =>
         {
-            Check(CraftRows().Exists(x => x.r.Id == "tool_axe"), "equip: the axe is a furnace recipe");
+            Check(!CraftRows().Exists(x => x.r.Id == "tool_axe") && CraftRows().TrueForAll(x => x.r.Id.StartsWith("smelt_")), "equip: the furnace window only smelts");
+            OpenStation("forge"); equipWindow.Force(); Check(CraftGroup() == "forge" && CraftRows().Exists(x => x.r.Id == "tool_axe") && !CraftRows().Exists(x => x.r.Id.StartsWith("smelt_")), "equip: the forge window (U at a furnace) crafts and upgrades, no smelting");
             PPos += new Vector2(300, 0); equipWindow.Force(); Check(ActiveStation() == null && CraftGroups().Count == 0 && !CraftTabAvail, "equip: leaving the furnace hides its recipes");
             CloseWindows(); StationOpened = false;
         });

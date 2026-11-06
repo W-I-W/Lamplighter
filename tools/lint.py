@@ -117,7 +117,7 @@ def convert(s):
 def code_strings():
     out = {}
     for p in walk('.cs'):
-        if p.startswith('Scripts/Tests/') or p.startswith('Scripts/Balance/') or p.endswith('Loc.cs'): continue
+        if p.startswith('Scripts/Tests/') or p.startswith('Scripts/Balance/') or p.startswith('Scripts/Debug/') or p.endswith('Loc.cs'): continue
         for ln, line in enumerate(read(p).split('\n'), 1):
             s = line.strip()
             if s.startswith('//') or s.startswith('///'): continue

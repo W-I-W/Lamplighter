@@ -13,7 +13,7 @@ public partial class Game
     public int TradeTab, TradeCur; public GEvent TradeEv; public List<Offer> CurOffers = new(); public string TradeMsg = "";
     public static readonly string[] CatNames = { "Простые", "Руда", "Слитки и детали", "Редкое", "Свет" };
 
-    static readonly int[] BasePrice = { 2, 2, 4, 6, 7, 10, 16, 40, 45, 10, 28, 30, 26, 24, 0, 90, 0, 60, 85, 34, 0 };
+    static readonly int[] BasePrice = { 2, 2, 4, 6, 7, 10, 16, 40, 45, 10, 28, 30, 26, 24, 150, 90, 0, 60, 85, 34, 120 };
     static int Cat(int item) => item switch
     {
         It.Wood or It.Stone => 0, It.CopperOre or It.IronOre or It.SilverOre => 1, It.Copper or It.Iron or It.Silver or It.Gear or It.Lens => 2,
@@ -55,7 +55,7 @@ public partial class Game
         float mult = ev == null ? 1f : 1.3f;
         var r = new Random(ev != null ? ev.Seed : W.Seed * 13 + TradeEpoch * 977 + lvl * 31);
         var l = new List<Offer>();
-        void Item(int item, int n) => l.Add(new Offer { Key = $"i{item}x{n}", Kind = "item", Item = item, N = n, Price = (int)(BuyPrice(item) * n * mult), Title = $"{It.Ic(item)}{It.Names[item]} ×{n}", Desc = "Материалы без добычи", Rar = Rar.Common });
+        void Item(int item, int n) => l.Add(new Offer { Key = $"i{item}", Kind = "item", Item = item, N = n, Price = (int)(BuyPrice(item) * n * mult), Title = $"{It.Ic(item)}{It.Names[item]}", Desc = "Любое количество: [+]/[-] меняют число, Enter покупает, Shift+Enter — сколько хватит денег и места", Rar = Rar.Common });
         void Frag(string bp, int price, Rar rar = Rar.Uncommon)
         {
             var d = Db.Bp(bp); if (d == null || BpDone.Contains(bp)) return;
@@ -67,28 +67,24 @@ public partial class Game
             var d = Db.Relic(id); if (d == null || OwnedRelics.Contains(id)) return;
             l.Add(new Offer { Key = "r" + id, Kind = "relic", Id = id, Price = (int)((400 + 250 * d.Rarity) * mult), Title = "Реликвия: " + d.Title, Desc = d.Desc, Rar = (Rar)d.Rarity });
         }
+        for (int it = 0; it < It.Count; it++) if (it != It.Coins) Item(it, 1);          // любой ресурс в любом количестве: без лимитов и без обновления ассортимента
         if (ev == null)
         {
-            Item(It.Wood, 10); Item(It.Stone, 10); Item(It.Copper, 3); Item(It.Iron, 2); Item(It.Shard, 4);
-            Frag("bp_hub", 140); Frag("bp_refinery", 130); Frag("bp_mod_multi", 120); Frag("bp_amp", 150);
+                        Frag("bp_hub", 140); Frag("bp_refinery", 130); Frag("bp_mod_multi", 120); Frag("bp_amp", 150);
             Mod(3, 160); Mod(4, 160);
         }
         if (lvl >= 2)
         {
-            Item(It.Crystal, 2); Item(It.Silver, 2); Item(It.Aether, 1);
-            foreach (var bp in new[] { "bp_sword2", "bp_bow2", "bp_staff2" }) Frag(bp, 180);
+                        foreach (var bp in new[] { "bp_sword2", "bp_bow2", "bp_staff2" }) Frag(bp, 180);
             var adv = new List<string>(); foreach (var b in new[] { "bp_mod_ignite", "bp_mod_frost", "bp_mod_shock", "bp_mod_siphon", "bp_barrier" }) if (!BpDone.Contains(b)) adv.Add(b);
             for (int i = 0; i < 2 && adv.Count > 0; i++) { int k = (ev != null ? r.Next(adv.Count) : (TradeEpoch + i) % adv.Count); Frag(adv[k], 230, Rar.Rare); adv.RemoveAt(k); }
             Mod(r.Next(3), 230); Mod(5, 260);
-            l.Add(new Offer { Key = "anc", Kind = "item", Item = It.AncCrystal, N = 1, Price = (int)(BuyPrice(It.AncCrystal) * 1.1f * mult), Title = "Древний кристалл ×1", Desc = "Для улучшений света и зданий", Rar = Rar.Rare });
         }
         if (lvl >= 3)
         {
             var pool = new List<string>(); foreach (var id in CommonRelics) if (!OwnedRelics.Contains(id)) pool.Add(id); foreach (var id in RareRelics) if (!OwnedRelics.Contains(id)) pool.Add(id);
             for (int i = 0; i < 2 && pool.Count > 0; i++) { int k = r.Next(pool.Count); Relic(pool[k]); pool.RemoveAt(k); }
-            Item(It.Gear, 2); Item(It.Lens, 2);
-            if (BeaconLevel >= 3) { Item(It.Obsidian, 2); Item(It.Ember, 2); }
-            if (BeaconLevel >= 4) { Item(It.Frost, 2); Frag("bp_cryo", 260, Rar.Rare); }
+            if (BeaconLevel >= 4) Frag("bp_cryo", 260, Rar.Rare);
             foreach (var bp in new[] { "bp_sword3", "bp_bow3", "bp_staff3", "bp_herolamp" }) Frag(bp, 300, Rar.Rare);
         }
         if (ev != null) { Mod(6, 280); Mod(0, 240); }
@@ -97,15 +93,30 @@ public partial class Game
 
     int Frag_Count(string bp) => Frag.GetValueOrDefault(bp);
 
-    public void BuyOffer(Offer o)
+    public static readonly int[] TradeQtySteps = { 1, 5, 10, 25, 50, 99 };
+    public int TradeQty = 1;
+    public void TradeQtyStep(int d) { int i = Array.IndexOf(TradeQtySteps, TradeQty); if (i < 0) i = 0; TradeQty = TradeQtySteps[Math.Clamp(i + d, 0, TradeQtySteps.Length - 1)]; Sfx.Play("tick", -6, 1.4f); }
+
+    /// <summary>Купить ресурс: любое количество и сколько угодно раз. qty ≤ 0 — максимум, на который хватит монет и места в инвентаре.</summary>
+    public int BuyItems(Offer o, int qty)
     {
+        int unit = Math.Max(1, o.Price / Math.Max(1, o.N)), afford = Inv[It.Coins] / unit, room = Room(o.Item);
+        int n = qty <= 0 ? Math.Min(afford, room) : Math.Min(qty, int.MaxValue);
+        if (n > afford) n = afford; if (n > room) n = room;
+        if (n <= 0) { if (afford <= 0) Fail($"Не хватает монет: нужно {unit}"); else FullMsg(); return 0; }
+        Inv[It.Coins] -= unit * n; Inv[o.Item] += n; Sfx.Play("pickup"); TradeMsg = $"Куплено: {It.Names[o.Item]} ×{n} за {unit * n}";
+        return n;
+    }
+
+    public void BuyOffer(Offer o, int qty = 1)
+    {
+        if (o.Kind == "item") { BuyItems(o, qty); return; }
         if (OfferBought(o)) { TradeMsg = "Уже куплено"; return; }
         if ((o.Kind == "frag" && BpDone.Contains(o.Id)) || (o.Kind == "relic" && OwnedRelics.Contains(o.Id))) { TradeMsg = "Это у вас уже есть"; CurOffers = BuildOffers(TradeEv); return; }          // предложение устарело (получено в игре, пока окно было открыто): деньги не списываем
         if (Inv[It.Coins] < o.Price) { Fail($"Не хватает монет: нужно {o.Price}"); return; }
         Inv[It.Coins] -= o.Price; Bought.Add(BKey(o.Key));
         switch (o.Kind)
         {
-            case "item": Inv[o.Item] += o.N; break;
             case "frag": AddFragment(o.Id); break;
             case "mod": ModInv[o.Item]++; Toast("Куплена вставка: " + Db.Mods[o.Item].Name); break;
             case "relic": GiveRelic(o.Id); break;

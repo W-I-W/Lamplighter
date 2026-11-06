@@ -269,7 +269,7 @@ public partial class Game
             Lamps.Add(new Lamp { X = p.Tile.X + 1, Y = p.Tile.Y, Level = 1 }); RevealSecrets(); Lamps.RemoveAt(Lamps.Count - 1);
             Check(W.Get(p.Tile.X, p.Tile.Y) == Tl.Chest && p.Seen, "hidden cache: a lamp reveals it");
             var ix = new Ix(); PoiIx(p, ix); ix.E?.Invoke(); Check(p.State == 3 && W.Get(p.Tile.X, p.Tile.Y) == Tl.ChestOpen, "hidden cache: can be opened");
-            { int w0 = Inv[It.Wood]; Check(Mineable(Tl.ChestOpen) && WeaponCanBreak(Tl.ChestOpen), "opened chest: can be mined"); BreakTile(p.Tile, Tl.ChestOpen, false); Check(W.Get(p.Tile.X, p.Tile.Y) == Tl.None && Inv[It.Wood] >= w0 + 2, "opened chest: breaks into planks (wood)"); }
+            { int w0 = Inv[It.Wood]; Check(Mineable(Tl.ChestOpen) && WeaponCanBreak(Tl.ChestOpen), "opened chest: can be mined"); BreakTile(p.Tile, Tl.ChestOpen, false); Check(W.Get(p.Tile.X, p.Tile.Y) == Tl.None && Inv[It.Wood] >= w0 + 2, $"opened chest: breaks into planks (wood {w0}->{Inv[It.Wood]}, tile {W.Get(p.Tile.X, p.Tile.Y)}, drops {Drops.Count})"); }
         });
 
         // ── пробуждение теней

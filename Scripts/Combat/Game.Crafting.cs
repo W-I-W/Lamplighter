@@ -30,13 +30,14 @@ public partial class Game
     public float StationFlashT; string lastStation;
     public static readonly int[] QtySteps = { 1, 5, 10, int.MaxValue };
 
-    public static string GroupName(string g) => g == "furnace" ? "Печь" : "Кузница";
+    public static string GroupName(string g) => g == "furnace" ? "Печь: плавка" : "Кузня: создание и улучшение";
 
     /// <summary>Ближайшая станция в радиусе взаимодействия.</summary>
     public string StationNear()
     {
         bool f = FurnaceNear(56, out var fa); var b = BuildingNear(PPos, 56); bool forge = b != null && b.Type == Tl.Forge;
-        if (f && forge) return CraftStation == "forge" ? "forge" : "furnace";
+        if (CraftStation == "forge" && (f || forge)) return "forge";                // кузня работает и у печи (там [U]), и у кузницы деревни
+        if (CraftStation == "furnace" && f) return "furnace";
         return f ? "furnace" : forge ? "forge" : null;
     }
 
@@ -57,11 +58,11 @@ public partial class Game
     {
         recipes = new();
         int[][] C(params int[] a) { var l = new int[a.Length / 2][]; for (int i = 0; i < l.Length; i++) l[i] = new[] { a[i * 2], a[i * 2 + 1] }; return l; }
-        // печь: кирка (герой начинает без неё и после смерти теряет её) и топор
+        // кузня: кирка (герой начинает без неё и после смерти теряет её) и топор. Печь только плавит
         foreach (var (id, cost) in new[] { ("pickaxe", CostPickaxe), ("axe", C(It.Wood, 5, It.Stone, 3)) })
         {
             var td = ToolDef.Get(id); string tid = id; var tc = cost;
-            recipes.Add(new Recipe { Id = "tool_" + id, Group = "furnace", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
+            recipes.Add(new Recipe { Id = "tool_" + id, Group = "forge", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
                 NameFn = tid == "axe" ? () => td.Name + (AxeLv > 0 ? $" +{AxeLv}" : "") : null, UpCost = tid == "axe" ? () => NextAxeUpCost : null, Upgrade = tid == "axe" ? UpgradeAxe : null, UpDesc = "+30% к добыче и +10% к урону за уровень" });
         }
         // печь: плавка слитков (очередь общая и работает после закрытия окна)
@@ -77,8 +78,8 @@ public partial class Game
             int it = item; var unit = cost;
             recipes.Add(new Recipe { Id = "make_" + it, Group = "forge", Name = It.Names[it], Desc = desc, Icon = it, Cost = unit, Multi = true, Known = () => true, Done = () => false, Craft = n => CraftItem(it, unit, n) });
         }
-        // печь и кузница: улучшение кирки, оружие, модификаторы (как раньше требовали печь или кузницу рядом)
-        foreach (var g in new[] { "furnace", "forge" })
+        // кузня: улучшение кирки, оружие, модификаторы (кузня — у печи по [U] или у кузницы деревни)
+        foreach (var g in new[] { "forge" })
         {
             string grp = g;
             recipes.Add(new Recipe { Id = "pick_" + g, Group = g, Name = "Улучшение кирки", Desc = "Новая кирка добывает быстрее и бьёт сильнее", Icon = UiIcons.Pickaxe, Improves = true, Known = () => Tier < 4 && OwnedTools.Contains("pickaxe"), Done = () => false,
@@ -157,10 +158,13 @@ public partial class Game
         r.Craft(qty);
     }
 
+    /// <summary>Создание освободит слот, если стоимость забирает ресурс из последней стопки.</summary>
+    bool PayFreesRoom(int[][] unit, int item) { var snap = (int[])Inv.Clone(); Pay(unit); bool ok = Room(item) > 0; Array.Copy(snap, Inv, snap.Length); return ok; }
+
     void CraftItem(int item, int[][] unit, int qty)
     {
         int made = 0;
-        for (int i = 0; i < qty && Can(unit); i++) { Pay(unit); Inv[item]++; made++; }
+        for (int i = 0; i < qty && Can(unit); i++) { if (Room(item) <= 0 && !PayFreesRoom(unit, item)) { FullMsg(); break; } Pay(unit); Inv[item]++; made++; }
         if (made > 0) { GiveXp(made); Sfx.Play("build", -4); Toast($"Создано: {It.Names[item]} ×{made}"); }
     }
 

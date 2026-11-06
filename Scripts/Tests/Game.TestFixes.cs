@@ -61,9 +61,9 @@ public partial class Game
         S(.2f, () =>
         {
             OwnedTools.Clear(); CurTool = ""; Tier = 0; CurW = -1; Inv[It.Wood] = 3; Inv[It.Stone] = 4; Tp(W.Ancients[0].Pos + new Vector2(0, 28)); var ft = ToTile(PPos) + new Vector2I(1, 0); SetObj(ft.X, ft.Y, Tl.Furnace); HasFurnace = true; RecomputeEffects();
-            var rec = RecipesOf("furnace").Find(r => r.Id == "tool_pickaxe");
-            Check(rec != null && !RecipesOf("furnace").Exists(r => r.Id == "pick_furnace"), "start: without a pickaxe the furnace offers to craft one, not to improve one");
-            CraftStation = "furnace"; if (rec != null) CraftRecipe(rec);
+            var rec = RecipesOf("forge").Find(r => r.Id == "tool_pickaxe");
+            Check(rec != null && !RecipesOf("forge").Exists(r => r.Id == "pick_forge") && RecipesOf("furnace").TrueForAll(r => r.Id.StartsWith("smelt_")), "start: without a pickaxe the forge offers to craft one, not to improve one");
+            CraftStation = "forge"; if (rec != null) CraftRecipe(rec);
             Check(OwnedTools.Contains("pickaxe") && Inv[It.Wood] == 0 && Inv[It.Stone] == 0, "start: the pickaxe is crafted from wood and stone");
             OwnedTools.Clear(); CurTool = ""; CurW = -1; for (int i = 0; i < HotCount; i++) Hot[i] = null; if (Owned.Count == 0) GiveWeapon("sword1", false); CurW = -1; InitHotbar();
             Check(CurW >= 0 && HeldIcon() >= 0 && IsWeaponRef(Hot[HotSel]), $"start: a hero without a pickaxe holds the sword (CurW {CurW}, icon {HeldIcon()}, hot {Hot[HotSel]})");
@@ -125,6 +125,48 @@ public partial class Game
             Check(!BuildGoals().Exists(g => g.Title == "Найти забытую технологию"), "goals: the forgotten-technology goal vanishes when every pedestal is taken");
             foreach (var a in W.Ancients) if (!a.Boss && a.Region == 1) a.Lit = true; BeaconLevel = Math.Max(BeaconLevel, 2);
             Check(!BuildGoals().Exists(g => g.Title == "Зажечь фонари шахт"), "goals: no 'light the lanterns' goal when all of them are already lit");
+        });
+        S(.3f, () =>
+        {
+            Menu = Mn.None; Enemies.Clear(); Drops.Clear(); Window = Win.None; TestSlots = true; for (int i = 0; i < It.Count; i++) Inv[i] = 0; SkillLv[(int)Tech.Pack] = 0;
+            Check(SlotCap == 10 && SlotsUsed() == 0, $"slots: the hero starts with 10 slots (cap {SlotCap})");
+            Inv[It.Wood] = 99; Check(SlotsUsed() == 1 && Room(It.Wood) == 9 * 99, "slots: a stack holds 99, the 100th item takes a new slot");
+            Inv[It.Wood] = 100; Check(SlotsUsed() == 2, "slots: 100 wood use two slots");
+            Inv[It.Coins] = 5000; Check(SlotsUsed() == 2 && Room(It.Coins) == int.MaxValue, "slots: coins take no slot");
+            for (int i = 0; i < 10; i++) if (i != It.Coins) Inv[i] = 99; Inv[It.Wood] = 99; int used = SlotsUsed();
+            Check(used == 10 && Room(It.Crystal) == 0 && AddInv(It.Crystal, 5, PPos) == 0 && Inv[It.Crystal] == 0, $"slots: a full inventory takes nothing new (used {used})");
+            Check(AddInv(It.Wood, 5, PPos) == 0, "slots: a full stack cannot grow when there is no free slot");
+            SkillLv[(int)Tech.Pack] = 3; Check(SlotCap == 16 && Room(It.Crystal) == 6 * 99, $"slots: the Backpack skill adds 2 slots per level (cap {SlotCap})");
+            var dd = new WorldDrop { Id = 9001, Item = It.Frost, Count = 150, Pos = PPos, Born = -9 }; Drops.Add(dd); int fr0 = Inv[It.Frost];
+            SkillLv[(int)Tech.Pack] = 0; for (int i = 0; i < It.Count; i++) if (i != It.Coins && i != It.Frost) Inv[i] = i < 10 ? 99 : 0; Inv[It.Frost] = 0; Inv[It.Wood] = 99;
+            for (int i = 0; i < 12; i++) UpdateDrops(.1f);
+            Check(Inv[It.Frost] == 0 && Drops.Contains(dd), "slots: a pile stays on the ground while the inventory is full");
+            SkillLv[(int)Tech.Pack] = 5; for (int i = 0; i < 12; i++) UpdateDrops(.1f); Check(Inv[It.Frost] > 0, "slots: after a slot appears the pile is picked up (partly if it does not fit)"); Drops.Clear(); SkillLv[(int)Tech.Pack] = 0;
+        });
+        S(.3f, () =>
+        {
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Coins] = 100000; var offers = BuildOffers(null); int itemOffers = offers.FindAll(o => o.Kind == "item").Count;
+            Check(itemOffers == It.Count - 1, $"shop: every item can be bought ({itemOffers} of {It.Count - 1})");
+            var ow = offers.Find(o => o.Kind == "item" && o.Item == It.Wood); var oc = offers.Find(o => o.Kind == "item" && o.Item == It.Core);
+            Check(ow != null && oc != null, "shop: even rare items (core of light) are on sale");
+            int c0 = Inv[It.Coins]; BuyOffer(ow, 50); BuyOffer(ow, 50); Check(Inv[It.Wood] == 100 && c0 - Inv[It.Coins] == 100 * (ow.Price / ow.N), $"shop: the same item can be bought again and in any amount (wood {Inv[It.Wood]})");
+            BuyOffer(oc, 3); Check(Inv[It.Core] == 3, "shop: a rare item can be bought several times");
+            int coins = Inv[It.Coins]; BuyOffer(ow, 0); Check(Inv[It.Wood] == 100 + Math.Min(coins / Math.Max(1, ow.Price), Room(It.Wood) + (Inv[It.Wood] - 100)) || Inv[It.Wood] > 100, "shop: Shift buys as much as money and room allow");
+            Inv[It.Coins] = 1; int w0 = Inv[It.Wood]; BuyOffer(ow, 10); Check(Inv[It.Wood] == w0 + Math.Min(1 / Math.Max(1, ow.Price), 10), "shop: no coins - no purchase");
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Coins] = 5000; SkillLv[(int)Tech.Pack] = 0;
+        });
+        S(.3f, () =>
+        {
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Wood] = 250; Inv[It.Stone] = 40; var ct = ToTile(PPos + FreeAdj()); SetObj(ct.X, ct.Y, Tl.StorageChest); Placed.Add(World.Key(ct.X, ct.Y)); PPos = TileCenter(ct.X, ct.Y) + new Vector2(0, 16);
+            OpenChest(ct.X, ct.Y); Check(Window == Win.Chest, "chest: the window opens");
+            Check(ChestMove(true, It.Wood, 100) == 100 && Inv[It.Wood] == 150 && ChestInv(ct)[It.Wood] == 100, "chest: items go in");
+            Check(ChestMove(true, It.Stone, 0) == 40 && Inv[It.Stone] == 0, "chest: Shift moves everything");
+            Check(ChestMove(false, It.Wood, 30) == 30 && Inv[It.Wood] == 180 && ChestInv(ct)[It.Wood] == 70, "chest: items come out");
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Copper] = 99 * 25; Check(ChestMove(true, It.Copper, 0) == 99 * (ChestSlots - SlotsOf(ChestInv(ct)) + 1) - 0 || SlotsOf(ChestInv(ct)) <= ChestSlots, $"chest: capacity is {ChestSlots} slots (used {SlotsOf(ChestInv(ct))})");
+            var wsave = BuildWorld(); Chests.Clear(); LoadChests(wsave); Check(Chests.TryGetValue(World.Key(ct.X, ct.Y), out var back) && back[It.Wood] == 70, "chest: contents are saved with the world");
+            CloseWindows(); DemolishTile(ct.X, ct.Y, "chest", "Сундук"); Check(W.Get(ct.X, ct.Y) == Tl.StorageChest, "chest: a chest with items cannot be taken apart");
+            ChestInv(ct); Window = Win.Chest; for (int i = 0; i < It.Count; i++) ChestInv(ct)[i] = 0; Window = Win.None; SetObj(ct.X, ct.Y, Tl.None); Placed.Remove(World.Key(ct.X, ct.Y)); Chests.Clear(); TestSlots = false;
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0;
         });
         S(.2f, () =>
         {

@@ -78,7 +78,7 @@ public partial class Game
             Enemies.Clear(); Hot[0] = "tool:pickaxe";
             StationOpened = false; Check(CraftGroups().Count == 0 && CraftRows().Count == 0, "crafting: no recipes at all without a station");
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
-            var axe = RecipesOf("furnace").Find(r => r.Id == "tool_axe");
+            var axe = RecipesOf("forge").Find(r => r.Id == "tool_axe");
             Check(axe != null && axe.Done() && (StateOf(axe) == RecState.Owned || axe.IsUpgrade), "crafting: owned tools are marked as owned (or offer an upgrade)");
             // печь рядом
             var tile = ToTile(PPos + FreeAdj());

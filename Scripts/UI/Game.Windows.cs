@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Win { None, Equip, Journal, Build, Trade, Story, Rift, Inventory, Talk }
+public enum Win { None, Equip, Journal, Build, Trade, Story, Rift, Inventory, Talk, Chest }
 
 public sealed class BuildEntry { public string Key, Name, Cost, Lock, Hint = ""; public bool Unlocked, Affordable; public Action Do; public int Cat, Tile = -1, Stock; public int[][] CostArr, Raw; }
 
@@ -35,6 +35,7 @@ public partial class Game
         var l = new List<BuildEntry>();
         void E(string key, int cat, int tile, string n, int[][] cost, bool unl, string lk, Action a, string hint = "", int[][] raw = null) => l.Add(new BuildEntry { Key = key, Stock = StockOf(key), Raw = raw ?? cost, Cat = cat, Tile = tile, Name = n, Hint = hint, CostArr = cost, Cost = cost == null ? "" : CostStr(cost), Unlocked = unl, Lock = lk, Affordable = cost == null || Can(cost), Do = a });
         E("furnace", 1, Art.Furnace, "Печь", CostFurnace, true, "", BuildFurnace, "Плавит руду в слитки, улучшает кирку");
+        E("chest", 1, Art.StorageChest, "Сундук", CostChest, true, "", BuildChest, "Хранит вещи: 20 слотов по 99");
         E("lamp0", 1, Art.Lantern, "Фонарь", CostLantern, true, "", () => BuildLamp(0), "Постоянный свет на клетке");
         E("lamp1", 1, Art.CombatLantern, "Боевой фонарь", LampCost[1], Has(Tech.CombatLamp), "улучшение [T] «Боевой фонарь»", () => BuildLamp(1), "Жжёт врагов рядом");
         E("lamp2", 1, Art.CrystalLantern, "Кристальный фонарь", LampCost[2], Has(Tech.Optics), "улучшение [T] «Оптика»", () => BuildLamp(2), "Пускает луч света");
@@ -76,8 +77,9 @@ public partial class Game
             case Win.Equip: return WinTab == 0 ? ToolList().Count + Owned.Count : WinTab == 1 ? OwnedRelics.Count : WinTab == 2 ? CraftRows().Count : 1;
             case Win.Journal: return WinTab == 0 ? Db.Bps.Length : WinTab == 2 ? Goals.Count : Found.Count;
             case Win.Build: return BuildEntriesFiltered().Count;
-            case Win.Inventory: return InvVisible().Count;
+            case Win.Inventory: return InvStacks().Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
+            case Win.Chest: return ChestRows().Count;
             case Win.Talk: return 2;
         }
         return 0;
@@ -153,6 +155,7 @@ public partial class Game
             case Win.Journal: if (k == Key.Left) { WinTab = (WinTab + 2) % 3; WinCur = 0; } else if (k == Key.Right) { WinTab = (WinTab + 1) % 3; WinCur = 0; } break;
             case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
+            case Win.Chest: ChestKey(k, shift); break;
             case Win.Talk: TalkKey(k); break;
             case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) { if (!hud.StorySkip()) CloseWindows(); } break;
         }
@@ -224,8 +227,10 @@ public partial class Game
     void TradeKey(Key k, bool shift)
     {
         if (k == Key.Left || k == Key.Right) { TradeTab = 1 - TradeTab; WinCur = 0; return; }
+        if (k == Key.Equal || k == Key.Plus || k == Key.KpAdd) { TradeQtyStep(1); return; }
+        if (k == Key.Minus || k == Key.KpSubtract) { TradeQtyStep(-1); return; }
         if (k != Key.Enter && k != Key.KpEnter) return;
-        if (TradeTab == 0) { if (WinCur < CurOffers.Count) BuyOffer(CurOffers[WinCur]); }
-        else { var l = SellList(); if (WinCur < l.Count) SellItem(l[WinCur], shift ? 10 : 1); }
+        if (TradeTab == 0) { if (WinCur < CurOffers.Count) BuyOffer(CurOffers[WinCur], shift ? 0 : TradeQty); }
+        else { var l = SellList(); if (WinCur < l.Count) SellItem(l[WinCur], shift ? Inv[l[WinCur]] : TradeQty); }
     }
 }

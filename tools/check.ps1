@@ -40,10 +40,10 @@ if ((Step 'dotnet build' { dotnet build Lamplighter.csproj --nologo -v q }) -ne 
 if ((Step 'balance: parity with the real Game' { powershell -NoProfile -ExecutionPolicy Bypass -File tools\balance.ps1 -SkipCompilation validate --game }) -ne 0) { Finish }
 
 if ($Mode -eq 'balance') {
-    $name = 'gate'
-    Step "balance check (n=$N, seed=$Seed)" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\balance.ps1 -SkipCompilation check --n $N --bench-k $N --validation-n 4 --seed $Seed --threads 6 --name $name } | Out-Null
+    $runName = 'gate'
+    Step "balance check (n=$N, seed=$Seed)" { powershell -NoProfile -ExecutionPolicy Bypass -File tools\balance.ps1 -SkipCompilation check --n $N --bench-k $N --validation-n 4 --seed $Seed --threads 6 --name $runName } | Out-Null
     if (Test-Path 'balance\baseline.json') {
-        Step 'balance gate vs baseline' { python tools\balance_gate.py diff --run "balance/out/$name" } | Out-Null
+        Step 'balance gate vs baseline' { python tools\balance_gate.py diff --run "balance/out/$runName" } | Out-Null
     } else {
         Write-Host 'Нет balance\baseline.json — шлюз пропущен. Создайте: tools\check.ps1 baseline'
     }

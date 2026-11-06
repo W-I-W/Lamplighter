@@ -70,6 +70,7 @@ public sealed class WorldSave
     public string[] UpCats, UpNew, Bought; public int[] CutB, PlacedK; public float[] Demand; public float EvNext;
     public string[] EvK; public float[] EvX, EvY, EvT, EvL, EvV; public int[] EvS, EvW, EvSeed;
     public VillSave[] Vills; public int[] ManualB;
+    public int[] ChestK; public int[][] ChestV;                   // содержимое поставленных сундуков (ключ клетки → количество ресурсов)
 }
 
 public sealed class VillSave { public int Id, Work = -1, Home = -1, Talk; public string Name = "", Prof = "", Src = ""; public float X, Y; }
