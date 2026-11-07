@@ -539,6 +539,7 @@ theme_override_constants/separation = 3
 
 [node name="Head" type="HBoxContainer" parent="Panel/V"]
 layout_mode = 2
+visible = false
 
 [node name="Title" type="Label" parent="Panel/V/Head"]
 layout_mode = 2

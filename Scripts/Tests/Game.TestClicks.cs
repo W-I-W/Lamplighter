@@ -45,14 +45,17 @@ public partial class Game
         S(.6f, () => { Check(RealClick(buildMenu.TestChip(1), false), "clicks: the Production chip exists"); });
         S(.5f, () => { Check(BuildCat == 1, $"clicks: the build category changes with a still cursor ({BuildCat})"); CloseWindows(); OpenWin(Win.Inventory); });
         Vector2 pointer = Vector2.Zero;
+        UiSlot sourceSlot = null;
+        int sourceCount = 0;
         S(.3f, () =>
         {
             var stacks = InventorySlots();
             int wood = Enumerable.Range(0, stacks.Count).FirstOrDefault(i => stacks[i].item == It.Wood && stacks[i].n > 0, -1);
             Check(wood >= 0, "clicks: a resource stack is available to drag");
             if (wood < 0) return;
-            var slot = invWindow.GetNode<GridContainer>("%Grid").GetChild<UiSlot>(wood);
-            var start = slot.GetGlobalTransformWithCanvas() * (slot.Size * .5f);
+            sourceCount = stacks[wood].n;
+            sourceSlot = invWindow.GetNode<GridContainer>("%Grid").GetChild<UiSlot>(wood);
+            var start = sourceSlot.GetGlobalTransformWithCanvas() * (sourceSlot.Size * .5f);
             var toWindow = GetViewport().GetFinalTransform();
             var startInWindow = toWindow * start;
             Input.ParseInputEvent(new InputEventMouseMotion { Position = startInWindow, GlobalPosition = startInWindow });
@@ -73,6 +76,25 @@ public partial class Game
             var worldItems = GetNode<CanvasLayer>("WorldItemsLayer");
             var ui = GetNode<CanvasLayer>("Interface");
             Check(worldItems.Layer < ui.Layer, "clicks: world items are rendered behind the interface");
+            Check(sourceSlot != null && sourceSlot.GetNode<TextureRect>("%Icon").Texture == null &&
+                sourceSlot.GetNode<Label>("%Count").Text == "", "clicks: a fully carried stack leaves its slot blank");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Escape, Pressed = true });
+        });
+        S(.3f, () =>
+        {
+            var point = GetViewport().GetFinalTransform() * pointer;
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left });
+            Check(sourceSlot != null && sourceSlot.GetNode<TextureRect>("%Icon").Texture != null &&
+                sourceSlot.GetNode<Label>("%Count").Text == sourceCount.ToString(), "clicks: cancelling a drag restores the stack");
+            if (sourceSlot == null) return;
+            var start = GetViewport().GetFinalTransform() * (sourceSlot.GetGlobalTransformWithCanvas() * (sourceSlot.Size * .5f));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = start, GlobalPosition = start, ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = start, GlobalPosition = start, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () =>
+        {
+            Check(sourceSlot != null && sourceSlot.GetNode<TextureRect>("%Icon").Texture != null &&
+                sourceSlot.GetNode<Label>("%Count").Text == (sourceCount / 2).ToString(), "clicks: carrying half leaves the remainder in the slot");
             CloseWindows();
             Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
         });

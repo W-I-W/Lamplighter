@@ -41,10 +41,12 @@ public partial class InventoryWindow : Control
 
     void CancelCarry()
     {
+        int previousSource = source;
         source = -1;
         carriedCount = 0;
         leftHeld = false;
         if (preview != null) preview.Hide();
+        if (previousSource >= 0 && previousSource < shown.Count) UpdateSlot(previousSource);
     }
 
     void PositionCarry(Vector2 viewportPosition)
@@ -59,6 +61,18 @@ public partial class InventoryWindow : Control
         preview.Set(ItemTexture(carriedItem), carriedCount.ToString(), "", SlotState.Normal);
         preview.Show();
         PositionCarry(viewportPosition);
+        UpdateSlot(source);
+    }
+
+    void UpdateSlot(int index)
+    {
+        var (item, count) = shown[index];
+        if (preview.Visible && index == source && item == carriedItem)
+            count = Mathf.Max(0, count - carriedCount);
+        var slot = Slot(index);
+        slot.Visible = true;
+        slot.Set(count > 0 ? ItemTexture(item) : null, count > 0 ? count.ToString() : "", "",
+            index == G.WinCur ? SlotState.Selected : SlotState.Normal);
     }
 
     void PlaceCarry(int target, Vector2 position)
@@ -97,7 +111,12 @@ public partial class InventoryWindow : Control
         if (source >= 0 && e is InputEventMouseMotion motion)
         {
             var pos = motion.Position / G.UiScaleVp;
-            if (!leftHeld || pos.DistanceTo(pressPosition) > 5 || preview.Visible) ShowCarry(motion.Position);
+            if (preview.Visible)
+            {
+                carryPointer = motion.Position;
+                PositionCarry(carryPointer);
+            }
+            else if (!leftHeld || pos.DistanceTo(pressPosition) > 5) ShowCarry(motion.Position);
             return;
         }
         if (e is not InputEventMouseButton button || (button.ButtonIndex != MouseButton.Left && button.ButtonIndex != MouseButton.Right)) return;
@@ -155,10 +174,9 @@ public partial class InventoryWindow : Control
         if (listChanged) { shown.Clear(); shown.AddRange(vis); shownSel = -1; for (int i = total; i < slots.Count; i++) slots[i].Visible = false; }
         for (int i = 0; i < total; i++)
         {
-            var (it, n) = vis[i]; bool sel = i == G.WinCur;
+            bool sel = i == G.WinCur;
             if (!listChanged && !(sel != (i == shownSel))) continue;       // ячейка не изменилась
-            var s = Slot(i); s.Visible = true;
-            s.Set(ItemTexture(it), n <= 0 ? "" : n.ToString(), "", sel ? SlotState.Selected : SlotState.Normal, 0, "", n > 0 ? 1f : .45f);
+            UpdateSlot(i);
         }
         shownSel = G.WinCur;
         string su = string.Format(Loc.T("Слоты {0}/{1}"), G.SlotsUsed(), G.SlotCap); if (slotsL.Text != su) slotsL.Text = su;
