@@ -36,7 +36,15 @@ public partial class Game
     {
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
         if (StockOf(e.Key) <= 0) { Fail("Нет в запасе: создайте в меню [B]"); Placing = null; return false; }
-        if (e == inventoryPlacement) SyncInventorySlots();
+        if (e == inventoryPlacement)
+        {
+            SyncInventorySlots();
+            if (inventoryPlacementSlot <= -2 && quickItems[-2 - inventoryPlacementSlot] != InventoryItemId(e.Key))
+            {
+                Placing = null;
+                return false;
+            }
+        }
         var raw = e.Raw; var snap = (int[])Inv.Clone(); var tile = ToTile(Aim);
         bool ok;
         placingStock = true;
@@ -69,8 +77,8 @@ public partial class Game
 
     void DemolishTile(int x, int y, string key, string name)
     {
-        if (key == "chest" && !ChestEmpty(x, y)) { Fail("Сначала заберите вещи из сундука"); return; }
-        if (!ConfirmDemolish($"t{x}:{y}", name)) return;
+        if (!ConfirmDemolish($"t{x}:{y}", name, key == "chest" && !ChestEmpty(x, y) ? "Вещи выпадут." : null)) return;
+        if (key == "chest") SpillChest(new Vector2I(x, y));
         SetObj(x, y, Tl.None); Placed.Remove(World.Key(x, y)); if (key == "chest") Chests.Remove(World.Key(x, y));
         var t = key; if (t == "amp" || t == "barrier") { Posts.RemoveAll(p => p.X == x && p.Y == y); RecomputeLightTech(); }
         if (t.StartsWith("decor")) RecountDecor();

@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" path="res://Scenes/UI/EquipWindow.tscn" id="EquipWindow"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/ChatHud.tscn" id="ChatHud"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/RegionTitle.tscn" id="RegionTitle"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/ResourceActions.tscn" id="ResourceActions"]
 [ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
 [ext_resource type="Script" path="res://Scripts/UI/Hud.cs" id="hud"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/Window.tscn" id="window"]
@@ -66,8 +65,6 @@ z_index = 4060
 [node name="UpgradeWindow" parent="Interface/UI" instance=ExtResource("UpgradeWindow")]
 
 [node name="EquipWindow" parent="Interface/UI" instance=ExtResource("EquipWindow")]
-
-[node name="ResourceActions" parent="Interface/UI" instance=ExtResource("ResourceActions")]
 
 [node name="DebugInterface" type="CanvasLayer" parent="."]
 layer = 30

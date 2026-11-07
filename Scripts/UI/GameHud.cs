@@ -32,19 +32,70 @@ public partial class GameHud : Control
     static float Bottom(Control c) { if (c == null) return 4f; float b = c.Position.Y; foreach (var k in c.GetChildren()) if (k is Control ch && ch.Visible) b = Mathf.Max(b, c.Position.Y + ch.Position.Y + ch.Size.Y); return b; }
 
     readonly UiSlot[] quickSlots = new UiSlot[Game.QuickSlotCount];
+    Control quickWheel;
+    float quickWheelTime;
+    int wheelHover = -1;
+    public bool QuickWheelHeld { get; private set; }
 
     Control BindQuickSlots()
     {
-        var row = GetNode<HBoxContainer>("QuickSlots");
+        var row = GetNode<Control>("QuickSlots");
+        quickWheel = row;
         for (int i = 0; i < quickSlots.Length; i++)
         {
             var slot = row.GetNode<UiSlot>($"Quick{i + 1}");
             slot.Index = i;
-            slot.Clicked += index => { if (G.Window == Win.None || G.Window == Win.Inventory) G.UseQuickSlot(index); };
+            slot.Clicked += index => { if (G.Window == Win.None) G.UseQuickSlot(index); };
             slot.RightClicked += index => G.ClearQuickSlot(index);
             quickSlots[i] = slot;
         }
         return row;
+    }
+
+    public void BeginQuickWheel()
+    {
+        QuickWheelHeld = true;
+        wheelHover = -1;
+        quickWheel.Show();
+    }
+
+    public void EndQuickWheel()
+    {
+        if (!QuickWheelHeld) return;
+        QuickWheelHeld = false;
+        if (wheelHover >= 0) G.SelectQuickSlot(wheelHover);
+        wheelHover = -1;
+        quickWheelTime = 0;
+        quickWheel.Hide();
+    }
+
+    public bool ConfirmQuickWheel(Vector2 viewportPosition)
+    {
+        if (!quickWheel.IsVisibleInTree()) return false;
+        int slot = QuickSlotAt(viewportPosition);
+        if (slot < 0) slot = wheelHover;
+        if (slot >= 0) G.SelectQuickSlot(slot);
+        QuickWheelHeld = false;
+        wheelHover = -1;
+        quickWheelTime = 0;
+        quickWheel.Hide();
+        return true;
+    }
+
+    public void ShowQuickWheel()
+    {
+        wheelHover = -1;
+        quickWheelTime = 1.2f;
+        quickWheel.Show();
+    }
+
+    public void PointQuickWheel(Vector2 viewportPosition)
+    {
+        var point = quickWheel.GetGlobalTransformWithCanvas().AffineInverse() * viewportPosition;
+        var direction = point - quickWheel.Size * .5f;
+        if (direction.Length() < 16f) { wheelHover = -1; return; }
+        float angle = Mathf.PosMod(direction.Angle() + Mathf.Pi / 2f + Mathf.Pi / Game.QuickSlotCount, Mathf.Tau);
+        wheelHover = Mathf.FloorToInt(angle / Mathf.Tau * Game.QuickSlotCount);
     }
 
     internal int QuickSlotAt(Vector2 viewportPosition)
@@ -63,9 +114,10 @@ public partial class GameHud : Control
         for (int i = 0; i < quickSlots.Length; i++)
         {
             var (item, n) = G.QuickStack(i);
+            n -= G.InventoryUi.CarriedCount(true, false, i);
             var slot = quickSlots[i];
             slot.Set(n > 0 ? G.InventoryItemTexture(item) : null, n > 1 ? n.ToString() : "", ((i + 1) % 10).ToString(),
-                n > 0 ? SlotState.Normal : SlotState.Disabled);
+                i == (wheelHover >= 0 && QuickWheelHeld ? wheelHover : G.SelectedQuickSlot) ? SlotState.Selected : n > 0 ? SlotState.Normal : SlotState.Disabled);
             slot.TooltipText = n > 0 ? Loc.T(G.InventoryItemName(item)) : "";
         }
     }
@@ -121,9 +173,21 @@ public partial class GameHud : Control
     public override void _Process(double delta)
     {
         if (G == null || G.W == null) return;
+        if (G.Menu != Mn.None || G.Window != Win.None || G.TechOpen || G.MapOpen || G.ChatOpen)
+        {
+            QuickWheelHeld = false;
+            wheelHover = -1;
+            quickWheelTime = 0;
+            quickWheel.Hide();
+        }
+        else if (!QuickWheelHeld && quickWheelTime > 0)
+        {
+            quickWheelTime -= (float)delta;
+            if (quickWheelTime <= 0) quickWheel.Hide();
+        }
         float dt = (float)delta; flashT = Mathf.Max(0, flashT - dt);
         bool menu = G.Menu == Mn.Main || G.Menu == Mn.Flow;
-        Visible = !menu && (G.Window == Win.None || G.Window == Win.Build || G.Window == Win.Inventory) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
+        Visible = !menu && (G.Window == Win.None || G.Window == Win.Build || G.Window == Win.Inventory || G.Window == Win.Chest) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
         UpdateStatus(); UpdateGoal(dt); UpdateWorld(dt); UpdateAbilities(); UpdateQuickSlots(); UpdateDebug();
     }
 

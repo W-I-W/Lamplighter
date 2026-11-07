@@ -57,7 +57,7 @@ public partial class Game
         c.HealthModel = CombatMath.HealthModel;
         c.Look = PlayerLook; c.PlaySecs = PlaySecs; c.Hp = Hp; c.MaxHp = MaxHp - relicHp; c.Xp = Xp; c.Level = Level; c.Tier = Tier; c.Kills = Kills; c.HeroLamp = HeroLampLv; c.Ann = Ann;
         c.Inv = (int[])Inv.Clone(); c.ModInv = (int[])ModInv.Clone(); c.SkK = sk.k; c.SkV = sk.v;
-        c.Hot = (string[])Hot.Clone(); c.Quick = SaveQuickSlots(); c.HotSel = HotSel; c.Tools = OwnedTools.ToArray(); c.CurTool = CurTool;
+        c.Hot = (string[])Hot.Clone(); c.Quick = SaveQuickSlots(); c.QuickCounts = SaveQuickCounts(); c.HotSel = HotSel; c.Tools = OwnedTools.ToArray(); c.CurTool = CurTool;
         c.Graves = Graves.ToArray(); c.BuildingUp = MyBuildingUp; c.WId = Owned.ConvertAll(o => o.Id).ToArray(); c.WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(); c.CurW = CurW; c.WLv = Owned.ConvertAll(o => o.Lv).ToArray(); c.AxeLv = AxeLv;
         c.Relics = OwnedRelics.ToArray(); c.Equipped = EquippedRelics.ToArray(); c.BpDone = BpDone.ToArray();
         c.FragK = Frag.Keys.ToArray(); c.FragV = Frag.Values.ToArray(); c.BsK = BuildStock.Keys.ToArray(); c.BsV = BuildStock.Values.ToArray();
@@ -178,7 +178,7 @@ public partial class Game
         if (c.Hot != null) for (int i = 0; i < HotCount && i < c.Hot.Length; i++) Hot[i] = c.Hot[i];
         HotSel = Math.Clamp(c.HotSel, 0, HotCount - 1);
         if (c.Relics != null) OwnedRelics.AddRange(c.Relics); if (c.Equipped != null) EquippedRelics.AddRange(c.Equipped);
-        LoadQuickSlots(c.Quick);
+        LoadQuickSlots(c.Quick, c.QuickCounts);
         if (c.BpDone != null) foreach (var b in c.BpDone) BpDone.Add(b);
         if (c.FragK != null && c.FragV != null) for (int i = 0; i < c.FragK.Length && i < c.FragV.Length; i++) Frag[c.FragK[i]] = c.FragV[i];
         if (c.Found != null) Found.AddRange(c.Found);

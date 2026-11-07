@@ -59,9 +59,7 @@ public partial class Game
         });
         // меню по ПКМ
         S(.2f, () => { OpenWin(Win.Inventory); });
-        S(.5f, () => { Check(ResUi.HasActions(It.Wood), "menu: the resource has actions"); ResUi.Open(It.Wood); });
-        S(.4f, () => { Check(ResUi.Active, "menu: opens on a resource"); Shot("res4_menu"); ResUi.DialogForTest(1); });
-        S(.4f, () => { Shot("res5_drop_dialog"); ResUi.Close(); CloseWindows(); Check(!ResUi.Active, "menu: closes"); { string rid = Db.Relics[0].Id; OwnedRelics.Remove(rid); OwnedRelics.Add(rid); Drops.Clear(); Check(TryDropRelic(rid) && !OwnedRelics.Contains(rid) && Drops.Count == 1 && IsRelicDrop(Drops[0].Item), "relic: dropping puts it on the ground"); Drops[0].Born = -9; dropClock = 0; Drops[0].Pos = PPos; UpdateDrops(.1f); Check(Drops.Count == 0 && OwnedRelics.Contains(rid), "relic: picking it up returns it"); } Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
+        S(.4f, () => { CloseWindows(); { string rid = Db.Relics[0].Id; OwnedRelics.Remove(rid); OwnedRelics.Add(rid); Drops.Clear(); Check(TryDropRelic(rid) && !OwnedRelics.Contains(rid) && Drops.Count == 1 && IsRelicDrop(Drops[0].Item), "relic: dropping puts it on the ground"); Drops[0].Born = -9; dropClock = 0; Drops[0].Pos = PPos; UpdateDrops(.1f); Check(Drops.Count == 0 && OwnedRelics.Contains(rid), "relic: picking it up returns it"); } Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
         // анимация добычи: замах вверх, удар вниз, возврат (три фазы цикла)
         foreach (var (name, ph) in new[] { ("res6_swing_windup", .27f), ("res6_swing_strike", .49f), ("res6_swing_return", .85f), ("res6_swing_left_strike", -.49f) })
         {

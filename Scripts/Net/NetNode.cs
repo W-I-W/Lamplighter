@@ -40,7 +40,7 @@ public partial class NetNode : Node
         }
     }
 
-    public void DetachPeer() { try { Multiplayer.MultiplayerPeer = new OfflineMultiplayerPeer(); } catch { } }
+    public void DetachPeer() { pendingPickups.Clear(); try { Multiplayer.MultiplayerPeer = new OfflineMultiplayerPeer(); } catch { } }
 
     // ───────────────────────── события сети ─────────────────────────
     void OnPeerConnected(long id)
@@ -51,6 +51,7 @@ public partial class NetNode : Node
 
     void OnPeerDisconnected(long id)
     {
+        pendingPickups.Remove(id);
         if (!Multiplayer.IsServer()) return;
         rate.Remove(id);
         if (NetService.Players.Remove(id, out var p)) { if (p.Handshaken) { chatRate.Remove(id); G.Notify.Post(MsgKind.World, MsgTone.Info, string.Format(Loc.T("{0} покинул игру"), p.Name), null, 0, null, true); NetService.RaiseLeft(p); BroadcastRoster(); } }

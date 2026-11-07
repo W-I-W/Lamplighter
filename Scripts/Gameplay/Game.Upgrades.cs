@@ -91,7 +91,7 @@ public partial class Game
         return LearnTech(TechSel);
     }
 
-    /// <summary>Клавиши окна: стрелки — по дереву, Tab/PgUp/PgDn — категории, Enter/E/Space — улучшить на один уровень, Home — к выбранному.</summary>
+    /// <summary>Клавиши окна: стрелки — по дереву, Tab/PgUp/PgDn — категории, Enter/Space — улучшить, E — закрыть стол на один уровень, Home — к выбранному.</summary>
     bool TechKey(Key k)
     {
         EnsureTechSel();
@@ -103,7 +103,8 @@ public partial class Game
             case Key.Left: case Key.Right: case Key.Up: case Key.Down:
                 { var dir = k == Key.Left ? Vector2.Left : k == Key.Right ? Vector2.Right : k == Key.Up ? Vector2.Up : Vector2.Down; int n = TechSel < 0 ? -1 : TechNeighbour(TechSel, dir); if (n >= 0) { TechSel = n; Sfx.Play("tick", -8, 1.5f); } return true; }
             case Key.Home: TechView.Remove(TechPage); return true;
-            case Key.Enter: case Key.KpEnter: case Key.E: case Key.Space: LearnSelected(); return true;
+            case Key.E: if (TechAtTable) { CloseWindows(); Sfx.Play("tick"); return true; } break;     // стол открыт клавишей E — ею же закрывается
+            case Key.Enter: case Key.KpEnter: case Key.Space: LearnSelected(); return true;
         }
         return false;
     }

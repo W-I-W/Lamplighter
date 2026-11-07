@@ -52,7 +52,7 @@ public sealed class CharacterSave
     public int Version = 1; public string Id = "", Name = "", Stamp = ""; public long Created; public Look Look = new();
     public float PlaySecs, Hp = 60, MaxHp = 60, Xp; public int Level = 1, Tier, Kills, HeroLamp;
     public long Ann; public int[] Inv, ModInv; public string[] SkK; public int[] SkV;
-    public string[] Hot, Quick, Tools, WId, Relics, Equipped, BpDone, FragK, BsK, Hints, Found; public int HotSel, CurW; public string CurTool; public int[][] WMods; public int[] WLv; public int AxeLv; public int[] FragV, BsV;
+    public string[] Hot, Quick, Tools, WId, Relics, Equipped, BpDone, FragK, BsK, Hints, Found; public int HotSel, CurW; public string CurTool; public int[][] WMods; public int[] WLv; public int AxeLv; public int[] FragV, BsV, QuickCounts;
     public int LegendMask, CosmMask = 1, CosmSel;
     public Dictionary<string, PerWorld> Worlds = new();
     public bool BuildingUp;                                     // герой сам улучшил здание (личное задание: у каждого игрока своё)
@@ -70,7 +70,15 @@ public sealed class WorldSave
     public string[] UpCats, UpNew, Bought; public int[] CutB, PlacedK; public float[] Demand; public float EvNext;
     public string[] EvK; public float[] EvX, EvY, EvT, EvL, EvV; public int[] EvS, EvW, EvSeed;
     public VillSave[] Vills; public int[] ManualB;
-    public int[] ChestK; public int[][] ChestV;                   // содержимое поставленных сундуков (ключ клетки → количество ресурсов)
+    public int[] ChestK; public int[][] ChestV;                   // ChestV — старый формат с суммами по ресурсам
+    public ChestCell[][] ChestCells;
+}
+
+public sealed class ChestCell
+{
+    public string Key;
+    public int Count, Level;
+    public int[] Mods;
 }
 
 public sealed class VillSave { public int Id, Work = -1, Home = -1, Talk; public string Name = "", Prof = "", Src = ""; public float X, Y; }

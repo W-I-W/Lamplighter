@@ -27,16 +27,7 @@ public partial class Game
     {
         int fails = 0; void Check(bool ok, string what) { if (!ok) fails++; GD.Print($"[check] {(ok ? "PASS" : "FAIL")} {what}"); }
         S(.3f, () => { Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); TestNoSpawn = true; for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Wood] = 40; Drops.Clear(); OpenWin(Win.Inventory); });
-        S(.6f, () => { ResUi.Open(It.Wood); });
-        S(.6f, () => { Check(RealClick(FindButton(ResUi, "Выбросить"), false), "clicks: the Drop button exists in the menu"); });
-        S(.6f, () => { Check(ResUi.IsDialog, "clicks: a click without any mouse movement opens the amount dialog"); });
-        S(.3f, () => { Check(RealClick(FindButton(ResUi, "Половина"), false), "clicks: the Half button exists"); });
-        S(.6f, () => { Check(ResUi.ForTestAmount == 20, $"clicks: Half without mouse movement sets half ({ResUi.ForTestAmount})"); });
-        S(.3f, () => { ResUi.TypeForTest("7a"); });
-        S(.3f, () => { Check(ResUi.ForTestAmount == 7, $"clicks: a typed number sets the amount, letters are ignored ({ResUi.ForTestAmount})"); ResUi.TypeForTest("999"); });
-        S(.3f, () => { Check(ResUi.ForTestAmount == 40, $"clicks: a too large number is limited to what you have ({ResUi.ForTestAmount})"); ResUi.TypeForTest("7"); });
-        S(.3f, () => { RealClick(FindButton(ResUi, "Выбросить"), false); });
-        S(.6f, () => { Check(Inv[It.Wood] == 33 && Drops.Count == 1 && Drops[0].Count == 7, $"clicks: the confirm button drops the chosen amount on the ground ({Inv[It.Wood]} left, {Drops.Count} stacks)"); CloseWindows(); GiveWeapon("sword1", false); GiveWeapon("bow1", false); OpenWin(Win.Equip); });
+        S(.6f, () => { CloseWindows(); GiveWeapon("sword1", false); GiveWeapon("bow1", false); OpenWin(Win.Equip); });
         S(.6f, () => { Check(RealClick(FindButton(equipWindow, "Реликвии"), false), "clicks: the Relics tab button exists"); });
         S(.6f, () => { Check(WinTab == 1, $"clicks: the tab switches with a still cursor ({WinTab})"); EqTab(0); WinCur = 0; });
         S(.6f, () => { HoldEquipRow(ToolList().Count); WinCur = ToolList().Count + 1; equipWindow.Force(); });
@@ -49,6 +40,7 @@ public partial class Game
         int sourceCount = 0;
         S(.3f, () =>
         {
+            Check(invWindow.Columns == 10, "clicks: inventory rows contain ten cells");
             var stacks = InventorySlots();
             int wood = Enumerable.Range(0, stacks.Count).FirstOrDefault(i => stacks[i].item == It.Wood && stacks[i].n > 0, -1);
             Check(wood >= 0, "clicks: a resource stack is available to drag");
@@ -73,6 +65,7 @@ public partial class Game
             var icon = preview.GetNode<TextureRect>("%Icon");
             var center = icon.GetGlobalTransformWithCanvas() * (icon.Size * .5f);
             Check(preview.IsVisibleInTree() && center.DistanceTo(pointer) <= 1f, $"clicks: dragged icon is centered on the pointer ({center}, expected {pointer})");
+            Check(preview.GetThemeStylebox("panel") is StyleBoxEmpty, "clicks: the dragged item has no slot frame or background");
             var worldItems = GetNode<CanvasLayer>("WorldItemsLayer");
             var ui = GetNode<CanvasLayer>("Interface");
             Check(worldItems.Layer < ui.Layer, "clicks: world items are rendered behind the interface");
@@ -95,6 +88,182 @@ public partial class Game
         {
             Check(sourceSlot != null && sourceSlot.GetNode<TextureRect>("%Icon").Texture != null &&
                 sourceSlot.GetNode<Label>("%Count").Text == (sourceCount / 2).ToString(), "clicks: carrying half leaves the remainder in the slot");
+            RealClick(InventoryUi.HotbarSlot(0), true);
+        });
+        S(.3f, () =>
+        {
+            Check(QuickStack(0) == (It.Wood, (sourceCount + 1) / 2) &&
+                sourceSlot?.GetNode<Label>("%Count").Text == (sourceCount / 2).ToString(),
+                "clicks: placing the carried half in the quick bar keeps only the remainder in the bag");
+            Check(InventoryUi.HotbarSlot(0).ThemeTypeVariation == "SlotSelected",
+                "clicks: the destination quick slot is highlighted");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Key2, Pressed = true });
+        });
+        S(.3f, () =>
+        {
+            Check(InventoryUi.HotbarSlot(0).ThemeTypeVariation == "Slot" &&
+                InventoryUi.HotbarSlot(1).ThemeTypeVariation == "SlotSelected",
+                "clicks: a number key moves the highlight to an empty quick slot");
+            RealClick(InventoryUi.HotbarSlot(0), true);
+        });
+        S(.3f, () =>
+        {
+            if (sourceSlot != null) RealClick(sourceSlot, true);
+        });
+        Vector2I testChest = default;
+        S(.3f, () =>
+        {
+            Check(QuickStack(0).n == 0 && sourceSlot?.GetNode<Label>("%Count").Text == sourceCount.ToString(),
+                "clicks: picking up a quick stack and clicking the bag returns it");
+            CloseWindows();
+            testChest = ToTile(PPos + FreeAdj());
+            SetObj(testChest.X, testChest.Y, Tl.StorageChest);
+            OpenChest(testChest.X, testChest.Y);
+        });
+        UiSlot chestCell = null;
+        S(.3f, () =>
+        {
+            var grids = ChestUi.FindChildren("*", "GridContainer", true, false);
+            var chestGrid = (GridContainer)grids[0];
+            var bagGrid = (GridContainer)grids[1];
+            var bag = InventorySlots();
+            int wood = Enumerable.Range(0, bag.Count).FirstOrDefault(i => bag[i].item == It.Wood && bag[i].n > 0, -1);
+            chestCell = chestGrid.GetChild<UiSlot>(13);
+            if (wood >= 0) RealClick(bagGrid.GetChild<UiSlot>(wood), true);
+        });
+        S(.3f, () => { if (chestCell != null) RealClick(chestCell, true); });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[13] == (It.Wood, sourceCount) && ChestStacks()[0].n == 0 && Inv[It.Wood] == 0,
+                "clicks: the stack stays in the chosen chest cell");
+            if (chestCell != null)
+            {
+                var p = GetViewport().GetFinalTransform() * (chestCell.GetGlobalTransformWithCanvas() * (chestCell.Size / 2));
+                Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p });
+                Input.ParseInputEvent(new InputEventKey { Keycode = Key.Key1, Pressed = true });
+            }
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[13].n == 0 && QuickStack(0) == (It.Wood, sourceCount),
+                "clicks: a number key moves the hovered chest stack to the quick bar");
+            CloseWindows();
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.WheelUp, Pressed = true });
+        });
+        S(.3f, () =>
+        {
+            Check(SelectedQuickSlot == 9, "clicks: the wheel wraps from the first to the last quick slot");
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Pressed = true });
+        });
+        S(.3f, () =>
+        {
+            Check(SelectedQuickSlot == 0 && Window == Win.None,
+                "clicks: scrolling onto a resource selects the slot without opening its menu");
+            var wheel = GameHudNode.GetNode<Control>("QuickSlots");
+            Check(wheel.Visible, "clicks: scrolling shows the quick wheel");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Ctrl, Pressed = true });
+            var point = GetViewport().GetFinalTransform() * (wheel.GetGlobalTransformWithCanvas() * (wheel.Size / 2 + new Vector2(0, -60)));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point });
+        });
+        S(.3f, () =>
+        {
+            Check(GameHudNode.QuickWheelHeld, "clicks: holding Ctrl opens the quick wheel");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Ctrl, Pressed = false });
+        });
+        S(.3f, () =>
+        {
+            Check(SelectedQuickSlot == 0 && !GameHudNode.GetNode<Control>("QuickSlots").Visible,
+                "clicks: releasing Ctrl selects the pointed slot and closes the wheel");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Ctrl, Pressed = true });
+            var wheel = GameHudNode.GetNode<Control>("QuickSlots");
+            var point = GetViewport().GetFinalTransform() * (wheel.GetGlobalTransformWithCanvas() * (wheel.Size / 2 + new Vector2(0, 35)));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(SelectedQuickSlot == 5 && !GameHudNode.GetNode<Control>("QuickSlots").Visible,
+                "clicks: clicking the highlighted direction selects it and closes the wheel");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Ctrl, Pressed = false });
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.WheelDown, Pressed = true });
+        });
+        S(.3f, () =>
+        {
+            RealClick(GameHudNode.GetNode<UiSlot>("QuickSlots/Quick3"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(SelectedQuickSlot == 2 && !GameHudNode.GetNode<Control>("QuickSlots").Visible,
+                "clicks: clicking a quick-wheel cell selects that cell and closes the wheel");
+            OpenWin(Win.Inventory);
+        });
+        UiSlot first = null, second = null;
+        int beforeDistribution = 0;
+        S(.3f, () =>
+        {
+            var bag = InventorySlots();
+            int empty = Enumerable.Range(0, bag.Count).First(i => bag[i].n == 0);
+            MoveQuickToBag(0, empty, 1);
+            beforeDistribution = QuickStack(0).n;
+        });
+        S(.3f, () =>
+        {
+            var bag = InventorySlots();
+            int existing = Enumerable.Range(0, bag.Count).First(i => bag[i].item == It.Wood && bag[i].n == 1);
+            int empty = Enumerable.Range(0, bag.Count).First(i => bag[i].n == 0);
+            var grid = invWindow.GetNode<GridContainer>("%Grid");
+            first = grid.GetChild<UiSlot>(existing);
+            second = grid.GetChild<UiSlot>(empty);
+            RealClick(invWindow.HotbarSlot(0), true);
+        });
+        S(.3f, () =>
+        {
+            Vector2 Point(Control cell) => GetViewport().GetFinalTransform() * (cell.GetGlobalTransformWithCanvas() * (cell.Size / 2));
+            var a = Point(first);
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = a, GlobalPosition = a });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = a, GlobalPosition = a, ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+        });
+        S(.3f, () =>
+        {
+            Vector2 Point(Control cell) => GetViewport().GetFinalTransform() * (cell.GetGlobalTransformWithCanvas() * (cell.Size / 2));
+            var b = Point(second);
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = b, GlobalPosition = b, ButtonMask = MouseButtonMask.Right });
+        });
+        S(.3f, () =>
+        {
+            var a = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = a, GlobalPosition = a, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = a, GlobalPosition = a, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () =>
+        {
+            Check(first.GetNode<Label>("%Count").Text == "2" && second.GetNode<Label>("%Count").Text == "1" &&
+                QuickStack(0).n == beforeDistribution - 2,
+                $"clicks: dragging right deposits one per cell, including existing stacks ({first.GetNode<Label>("%Count").Text}, {second.GetNode<Label>("%Count").Text}, {QuickStack(0).n}/{beforeDistribution})");
+            CloseWindows();
+            OpenChest(testChest.X, testChest.Y);
+        });
+        S(.3f, () => RealClick(invWindow.HotbarSlot(0), true));
+        S(.3f, () =>
+        {
+            var grid = (GridContainer)ChestUi.FindChildren("*", "GridContainer", true, false)[0];
+            first = grid.GetChild<UiSlot>(13);
+            second = grid.GetChild<UiSlot>(14);
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+        });
+        S(.3f, () =>
+        {
+            var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[13] == (It.Wood, 1) && ChestStacks()[14] == (It.Wood, 1),
+                "clicks: right-drag places one item in each chest cell");
             CloseWindows();
             Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
         });

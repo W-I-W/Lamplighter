@@ -17,7 +17,7 @@ public partial class Game
     public const float MagnetRange = 19f, MagnetMin = 30f, MagnetMax = 85f, MagnetDelay = .45f;                  // слабый магнит: тянет только совсем рядом и медленно, после «выпрыгивания»
     public const int MaxMove = 999, MaxStack = 999;
     public readonly List<WorldDrop> Drops = new();
-    int nextDropId = 1; bool dropsDirty; float dropSyncT; double dropClock;
+    int nextDropId = 1; bool dropsDirty; float dropSyncT, pickupRequestT; double dropClock;
 
     bool Authority => !NetClient;                                                    // одиночная игра или хост
     public long LocalPeer => NetService.Active ? NetService.LocalId : 1;
@@ -132,11 +132,65 @@ public partial class Game
 
     public float DropAge(WorldDrop d) => (float)(dropClock - d.Born);
 
+    void RequestNearbyDrop(float dt)
+    {
+        pickupRequestT -= dt;
+        if (pickupRequestT > 0 || Net == null) return;
+        pickupRequestT = .15f;
+        foreach (var drop in Drops)
+        {
+            if (!Movable(drop.Item) || drop.Pos.DistanceTo(PPos) > PickupRange) continue;
+            int count = Math.Min(drop.Count, Room(drop.Item));
+            if (count == 0) { FullMsg(); continue; }
+            Net.RequestPickup(drop.Id, count);
+            break;
+        }
+    }
+
+    internal WorldDrop TakeGuestPickup(long peer, int id, int requested)
+    {
+        var drop = Drops.Find(d => d.Id == id);
+        if (drop == null || !Movable(drop.Item) || requested <= 0 ||
+            PosOf(peer) is not Vector2 pos || pos.DistanceTo(drop.Pos) > PickupRange ||
+            (peer == drop.Owner && DropAge(drop) < DropProtect)) return null;
+
+        int count = Math.Min(requested, drop.Count);
+        var taken = new WorldDrop { Id = drop.Id, Item = drop.Item, Count = count, Pos = drop.Pos, Owner = drop.Owner, Born = drop.Born };
+        drop.Count -= count;
+        if (drop.Count == 0) Drops.Remove(drop);
+        dropsDirty = true;
+        return taken;
+    }
+
+    internal int ReceiveGuestPickup(int item, int count)
+    {
+        int accepted = Math.Min(count, Room(item));
+        Inv[item] += accepted;
+        if (accepted < count) FullMsg();
+        if (accepted > 0) Sfx.Play("pickup", -6, 1f + .04f * (item % 6));
+        return count - accepted;
+    }
+
+    internal void RestoreGuestPickup(WorldDrop taken, int remainder)
+    {
+        var drop = Drops.Find(d => d.Id == taken.Id);
+        if (drop != null)
+        {
+            int restored = Math.Min(remainder, MaxStack - drop.Count);
+            drop.Count += restored;
+            remainder -= restored;
+            taken.Id = nextDropId++;
+        }
+        if (remainder > 0) { taken.Count = remainder; Drops.Add(taken); }
+        dropsDirty = true;
+    }
+
     /// <summary>Каждый кадр на хосте и в одиночной игре: подбор стопок игроками рядом и рассылка списка клиентам.</summary>
     void UpdateDrops(float dt)
     {
         dropClock += dt;
-        if (Authority && Drops.Count > 0)
+        if (!Authority) { RequestNearbyDrop(dt); return; }
+        if (Drops.Count > 0)
         {
             var peers = new List<long> { LocalPeer }; if (NetService.Active) foreach (var p in NetService.Players.Values) if (p.Handshaken && p.PeerId != LocalPeer) peers.Add(p.PeerId);
             for (int i = Drops.Count - 1; i >= 0; i--)
@@ -146,7 +200,7 @@ public partial class Game
                 else if (!IsRelicDrop(d.Item) && dropClock - d.Born > MagnetDelay)
                 {
                     d.Vel = Vector2.Zero; Vector2? to = null; float bd = MagnetRange;
-                    foreach (var peer in peers) { if (peer == d.Owner && dropClock - d.Born < DropProtect) continue; if (PosOf(peer) is Vector2 mp) { float md = mp.DistanceTo(d.Pos); if (md < bd) { bd = md; to = mp; } } }
+                    foreach (var peer in peers) { if (peer == d.Owner && dropClock - d.Born < DropProtect) continue; if (PosOf(peer) is Vector2 mp) { float md = mp.DistanceTo(d.Pos); if (md < bd && (peer != LocalPeer || Room(d.Item) > 0)) { bd = md; to = mp; } } }
                     if (to is Vector2 tp && bd > PickupRange * .5f) { float sp = MagnetMin + (MagnetMax - MagnetMin) * (1f - bd / MagnetRange); d.Pos += (tp - d.Pos).Normalized() * Math.Min(sp * dt, bd); dropsDirty = true; }
                 }
                 foreach (var peer in peers)
@@ -161,13 +215,12 @@ public partial class Game
                         if (peer == LocalPeer) GiveRelic(rd.Id); else Net?.RpcId(peer, nameof(NetNode.RpcGrantRelic), d.Item - RelicBase);
                         Sfx.Play("pickup", -4); break;
                     }
-                    if (peer == LocalPeer)                                                   // в инвентаре нет места: стопка остаётся лежать (частично — берётся сколько влезает)
-                    {
-                        int room = Room(d.Item); if (room <= 0) { FullMsg(); continue; }
-                        if (room < d.Count) { d.Count -= room; dropsDirty = true; Inv[d.Item] += room; Sfx.Play("pickup", -6, 1f + .04f * (d.Item % 6)); break; }
-                    }
+                    if (peer != LocalPeer) continue;                                         // гость запрашивает только то количество, которое помещается у него
+                    // В инвентаре нет места: стопка остаётся лежать (частично — берётся сколько влезает).
+                    int room = Room(d.Item); if (room <= 0) { FullMsg(); continue; }
+                    if (room < d.Count) { d.Count -= room; dropsDirty = true; Inv[d.Item] += room; Sfx.Play("pickup", -6, 1f + .04f * (d.Item % 6)); break; }
                     Drops.RemoveAt(i); dropsDirty = true;                                    // стопка убрана до выдачи: второй раз её не подобрать
-                    GiveTo(peer, d.Item, d.Count); if (peer != LocalPeer) NoteTo(peer, string.Format(Loc.T("Подобрано: {0} ×{1}"), Loc.T(It.Names[d.Item]), d.Count), MsgTone.Good); Sfx.Play("pickup", -6, 1f + .04f * (d.Item % 6));          // у себя без надписи: видно по значку
+                    GiveTo(peer, d.Item, d.Count); Sfx.Play("pickup", -6, 1f + .04f * (d.Item % 6));
                     break;
                 }
             }

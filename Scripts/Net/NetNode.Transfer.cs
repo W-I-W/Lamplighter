@@ -9,6 +9,43 @@ namespace Lamplighter;
 public partial class NetNode
 {
     readonly Dictionary<long, (double last, double winStart, int n)> moveRate = new();
+    readonly Dictionary<long, WorldDrop> pendingPickups = new();
+
+    public void RequestPickup(int id, int count)
+    {
+        if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcRequestPickup), id, count);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcRequestPickup(int id, int count)
+    {
+        long peer = Multiplayer.GetRemoteSenderId();
+        if (!Multiplayer.IsServer() || pendingPickups.ContainsKey(peer) ||
+            !NetService.Players.TryGetValue(peer, out var player) || !player.Handshaken ||
+            count <= 0 || count > Game.MaxStack) return;
+        var taken = G.TakeGuestPickup(peer, id, count);
+        if (taken == null) return;
+        pendingPickups.Add(peer, taken);
+        RpcId(peer, nameof(RpcPickupGrant), taken.Id, taken.Item, taken.Count);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcPickupGrant(int id, int item, int count)
+    {
+        if (Multiplayer.GetRemoteSenderId() != 1 || !Game.Movable(item) || count <= 0 || count > Game.MaxStack) return;
+        int remainder = G.ReceiveGuestPickup(item, count);
+        RpcId(1, nameof(RpcPickupReceipt), id, remainder);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    public void RpcPickupReceipt(int id, int remainder)
+    {
+        long peer = Multiplayer.GetRemoteSenderId();
+        if (!Multiplayer.IsServer() || !pendingPickups.TryGetValue(peer, out var taken) ||
+            taken.Id != id || remainder < 0 || remainder > taken.Count) return;
+        pendingPickups.Remove(peer);
+        if (remainder > 0) G.RestoreGuestPickup(taken, remainder);
+    }
 
     bool MoveRateOk(long id)
     {

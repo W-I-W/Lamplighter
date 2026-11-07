@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace Lamplighter;
 
@@ -32,12 +33,14 @@ public partial class Game
             Check(toolSlot >= 0, "inventory: owned tools are visible in the backpack");
             if (toolSlot >= 0)
             {
-                BindQuickSlot(9, resourceSlots[toolSlot].item);
+                int tool = resourceSlots[toolSlot].item;
+                MoveToQuickSlot(toolSlot, 9, tool, 1);
                 Check(QuickStack(9).n == 1, "inventory: a tool can be linked to the tenth quick slot");
                 var quickSave = SaveQuickSlots();
+                var quickCountsSave = SaveQuickCounts();
                 ClearQuickSlot(9);
-                LoadQuickSlots(quickSave);
-                Check(QuickStack(9).n == 1, "inventory: quick slot bindings round-trip by item identity");
+                LoadQuickSlots(quickSave, quickCountsSave);
+                Check(QuickStack(9).n == 1, "inventory: quick slots round-trip by item identity and count");
                 ClearQuickSlot(9);
             }
             Check(MoveInventoryStack(woodSlot, freeSlot, It.Wood, 2) && SlotsUsed() == 2 &&
@@ -48,6 +51,12 @@ public partial class Game
                 "inventory: dropping removes items from the selected stack");
             Check(MoveInventoryStack(freeSlot, woodSlot, It.Wood, 2) && SlotsUsed() == 1 &&
                 InventorySlots()[woodSlot] == (It.Wood, 4), "inventory: merging frees a slot");
+            Check(MoveToQuickSlot(woodSlot, 0, It.Wood, 2) && QuickStack(0) == (It.Wood, 2) &&
+                InventorySlots()[woodSlot] == (It.Wood, 2) && Inv[It.Wood] == 4, "inventory: moving half a stack to the quick bar leaves only the remainder in the bag");
+            Check(MoveToQuickSlot(woodSlot, 0, It.Wood, 2) && QuickStack(0) == (It.Wood, 4) &&
+                SlotsUsed() == 0, "inventory: moving the remainder to the quick bar frees the bag cell");
+            ClearQuickSlot(0);
+            Check(QuickStack(0).n == 0 && InventorySlots().Any(stack => stack == (It.Wood, 4)), "inventory: clearing a quick slot returns the stack to the bag");
             Inv[It.Core] = 9999; Check(InvVisible().Contains(It.Core), "inventory: large quantities allowed (no cap)");
             // хотбар: можно только инструменты и оружие
             Check(HotValid("tool:pickaxe"), "hotbar: pickaxe is valid");

@@ -1,4 +1,5 @@
 using Godot;
+using System.Linq;
 using System;
 using System.Collections.Generic;
 
@@ -128,7 +129,7 @@ public partial class Game
         });
         S(.3f, () =>
         {
-            Menu = Mn.None; Enemies.Clear(); Drops.Clear(); Window = Win.None; TestSlots = true; for (int i = 0; i < It.Count; i++) Inv[i] = 0; SkillLv[(int)Tech.Pack] = 0;
+            Menu = Mn.None; Enemies.Clear(); Drops.Clear(); BuildStock.Clear(); Window = Win.None; TestSlots = true; for (int i = 0; i < It.Count; i++) Inv[i] = 0; SkillLv[(int)Tech.Pack] = 0;
             Check(SlotCap == 10 && SlotsUsed() == 0, $"slots: the hero starts with 10 slots (cap {SlotCap})");
             Inv[It.Wood] = 99; Check(SlotsUsed() == 1 && Room(It.Wood) == 9 * 99, "slots: a stack holds 99, the 100th item takes a new slot");
             Inv[It.Wood] = 100; Check(SlotsUsed() == 2, "slots: 100 wood use two slots");
@@ -140,7 +141,11 @@ public partial class Game
             var dd = new WorldDrop { Id = 9001, Item = It.Frost, Count = 150, Pos = PPos, Born = -9 }; Drops.Add(dd); int fr0 = Inv[It.Frost];
             SkillLv[(int)Tech.Pack] = 0; for (int i = 0; i < It.Count; i++) if (i != It.Coins && i != It.Frost) Inv[i] = i < 10 ? 99 : 0; Inv[It.Frost] = 0; Inv[It.Wood] = 99;
             for (int i = 0; i < 12; i++) UpdateDrops(.1f);
-            Check(Inv[It.Frost] == 0 && Drops.Contains(dd), "slots: a pile stays on the ground while the inventory is full");
+            Check(Inv[It.Frost] == 0 && Drops.Contains(dd) && dd.Count == 150, "slots: the entire pile stays on the ground while the inventory is full");
+            var taken = TakeGuestPickup(LocalPeer, dd.Id, 10);
+            int remainder = taken == null ? -1 : ReceiveGuestPickup(taken.Item, taken.Count);
+            if (remainder > 0) RestoreGuestPickup(taken, remainder);
+            Check(remainder == 10 && Inv[It.Frost] == 0 && dd.Count == 150, "slots: a guest whose bag filled in transit returns the unaccepted pickup");
             SkillLv[(int)Tech.Pack] = 5; for (int i = 0; i < 12; i++) UpdateDrops(.1f); Check(Inv[It.Frost] > 0, "slots: after a slot appears the pile is picked up (partly if it does not fit)"); Drops.Clear(); SkillLv[(int)Tech.Pack] = 0;
         });
         S(.3f, () =>
@@ -159,13 +164,38 @@ public partial class Game
         {
             for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Wood] = 250; Inv[It.Stone] = 40; var ct = ToTile(PPos + FreeAdj()); SetObj(ct.X, ct.Y, Tl.StorageChest); Placed.Add(World.Key(ct.X, ct.Y)); PPos = TileCenter(ct.X, ct.Y) + new Vector2(0, 16);
             OpenChest(ct.X, ct.Y); Check(Window == Win.Chest, "chest: the window opens");
-            Check(ChestMove(true, It.Wood, 100) == 100 && Inv[It.Wood] == 150 && ChestInv(ct)[It.Wood] == 100, "chest: items go in");
+            int Stored(int item) => ChestStacks().Where(stack => stack.item == item).Sum(stack => stack.n);
+            Check(ChestMove(true, It.Wood, 100) == 100 && Inv[It.Wood] == 150 && Stored(It.Wood) == 100, "chest: items go in");
             Check(ChestMove(true, It.Stone, 0) == 40 && Inv[It.Stone] == 0, "chest: Shift moves everything");
-            Check(ChestMove(false, It.Wood, 30) == 30 && Inv[It.Wood] == 180 && ChestInv(ct)[It.Wood] == 70, "chest: items come out");
-            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Copper] = 99 * 25; Check(ChestMove(true, It.Copper, 0) == 99 * (ChestSlots - SlotsOf(ChestInv(ct)) + 1) - 0 || SlotsOf(ChestInv(ct)) <= ChestSlots, $"chest: capacity is {ChestSlots} slots (used {SlotsOf(ChestInv(ct))})");
-            var wsave = BuildWorld(); Chests.Clear(); LoadChests(wsave); Check(Chests.TryGetValue(World.Key(ct.X, ct.Y), out var back) && back[It.Wood] == 70, "chest: contents are saved with the world");
+            Check(ChestMove(false, It.Wood, 30) == 30 && Inv[It.Wood] == 180 && Stored(It.Wood) == 70, "chest: items come out");
+            MoveChestStack(0, 13, 69);
+            Check(ChestStacks()[0].n == 0 && ChestStacks()[13] == (It.Wood, 69), "chest: dragging within a chest preserves empty cells");
+            GiveWeapon("sword1", false);
+            var sword = Owned.Find(w => w.Id == "sword1"); sword.Lv = 2; sword.Mods.Clear(); sword.Mods.Add(0);
+            int weapon = InventoryItemId(RefWeapon("sword1"));
+            int weaponSlot = InventorySlots().ToList().FindIndex(stack => stack.item == weapon);
+            DepositChestSlot(weaponSlot, false, weapon, 1, 15);
+            Check(!HasWeapon("sword1") && ChestStacks()[15] == (weapon, 1), "chest: a weapon moves to the chosen cell");
+            var wsave = BuildWorld();
+            Check(SaveManager.SaveWorld(wsave), "chest: the world file can be written");
+            Chests.Clear();
+            LoadChests(SaveManager.LoadWorld(wsave.Id) ?? new WorldSave());
+            Check(Stored(It.Wood) == 70 && ChestStacks()[13] == (It.Wood, 69) &&
+                ChestStacks()[15] == (weapon, 1), "chest: saving preserves exact cells and gear");
+            WithdrawChestToBag(15, -1, weapon, 1);
+            var restored = Owned.Find(w => w.Id == "sword1");
+            Check(restored != null && restored.Lv == 2 && restored.Mods.SequenceEqual(new[] { 0 }),
+                "chest: taking a saved weapon restores its level and mods");
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Copper] = 99 * 25;
+            int freeChestSlots = ChestStacks().Count(stack => stack.n == 0);
+            Check(ChestMove(true, It.Copper, 0) == StackMax * freeChestSlots &&
+                ChestStacks().All(stack => stack.n > 0), "chest: capacity counts the actual cells");
             CloseWindows(); DemolishTile(ct.X, ct.Y, "chest", "Сундук"); Check(W.Get(ct.X, ct.Y) == Tl.StorageChest, "chest: a chest with items cannot be taken apart");
-            ChestInv(ct); Window = Win.Chest; for (int i = 0; i < It.Count; i++) ChestInv(ct)[i] = 0; Window = Win.None; SetObj(ct.X, ct.Y, Tl.None); Placed.Remove(World.Key(ct.X, ct.Y)); Chests.Clear(); TestSlots = false;
+            var legacy = new int[It.Count]; legacy[It.Wood] = 120;
+            LoadChests(new WorldSave { ChestK = new[] { World.Key(ct.X, ct.Y) }, ChestV = new[] { legacy } });
+            Check(ChestStacks()[0] == (It.Wood, 99) && ChestStacks()[1] == (It.Wood, 21),
+                "chest: legacy resource totals load as stacks");
+            SetObj(ct.X, ct.Y, Tl.None); Placed.Remove(World.Key(ct.X, ct.Y)); Chests.Clear(); TestSlots = false;
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
         });
         S(.2f, () =>

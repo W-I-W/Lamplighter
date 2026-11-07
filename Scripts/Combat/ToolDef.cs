@@ -32,7 +32,7 @@ public partial class ToolDef : Resource
     /// <summary>Эффективность инструмента для типа тайла (0 — этим инструментом не добывается).</summary>
     public float Efficiency(Tl t) => t switch
     {
-        Tl.Tree or Tl.DeadTree or Tl.Pine or Tl.ChestOpen => EffWood,
+        Tl.Tree or Tl.DeadTree or Tl.Pine or Tl.ChestOpen or Tl.StorageChest => EffWood,
         Tl.Rubble => EffRubble,
         Tl.Stone or Tl.Ruin or Tl.IceBlock or Tl.IceRuin => EffStone,
         _ => EffOre

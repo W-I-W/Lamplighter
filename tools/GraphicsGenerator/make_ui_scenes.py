@@ -394,6 +394,7 @@ w('Scenes/UI/BuildMenu.tscn', f'''[gd_scene load_steps=4 format=3]
 [ext_resource type="PackedScene" path="res://Scenes/UI/Slot.tscn" id="slot"]
 
 [node name="BuildMenu" type="Control"]
+z_index = 4030
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -509,6 +510,7 @@ w('Scenes/UI/InventoryWindow.tscn', f'''[gd_scene load_steps=4 format=3]
 [ext_resource type="PackedScene" path="res://Scenes/UI/Slot.tscn" id="slot"]
 
 [node name="InventoryWindow" type="Control"]
+z_index = 4030
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -560,7 +562,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/h_separation = 1
 theme_override_constants/v_separation = 1
-columns = 5
+columns = 10
 
 [node name="Info" type="PanelContainer" parent="Panel/V"]
 layout_mode = 2

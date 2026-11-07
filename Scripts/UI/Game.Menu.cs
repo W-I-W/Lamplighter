@@ -19,7 +19,7 @@ public partial class Game
     public float UiTime, PlaySecs;
 
     public static readonly string[] MainItems = { "Играть", "Мультиплеер", "Настройки", "Достижения", "Титры", "Выход" };
-    public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Настройки", "Достижения", "Сеть", "Титры", "В главное меню", "Выход" };
+    public static readonly string[] PauseItems = { "Продолжить", "Сохранить игру", "Настройки", "Достижения", "Сеть", "В главное меню", "Выход" };
     public static readonly string[] SettingsItems = { "Громкость музыки", "Громкость звуков", "Масштаб интерфейса", "Тряска экрана", "Ветер", "Частицы", "Вспышки", "Доп. эффекты", "Полный экран", "Разрешение окна", "Язык", "Диагностика (локальная)", "Чат и уведомления", "Управление", "Назад" };
     public static readonly string[] ChatItems = { "Показывать уведомления игры", "Показывать сообщения чата", "Размер текста чата", "Прозрачность подложки", "Время показа сообщений", "Назад" };
 
@@ -133,9 +133,8 @@ public partial class Game
             case 2: MenuBack = Mn.Pause; OpenMenu(Mn.Settings); break;
             case 3: MenuBack = Mn.Pause; OpenMenu(Mn.Achv); break;
             case 4: MenuBack = Mn.Pause; OpenMenu(Mn.NetInfo); break;
-            case 5: MenuBack = Mn.Pause; OpenMenu(Mn.Credits); break;
-            case 6: SaveAll(true); LeaveToMenu(); break;
-            case 7: SaveAll(true); NetService.Leave(false); GetTree().Quit(); break;
+            case 5: SaveAll(true); LeaveToMenu(); break;
+            case 6: SaveAll(true); NetService.Leave(false); GetTree().Quit(); break;
         }
     }
 

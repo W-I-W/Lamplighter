@@ -372,48 +372,100 @@ custom_minimum_size = Vector2(152, 0)
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="QuickSlots" type="HBoxContainer" parent="."]
+[node name="QuickSlots" type="Control" parent="."]
+visible = false
 layout_mode = 1
 anchor_left = 0.5
-anchor_top = 1.0
+anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 1.0
-offset_top = -28.0
-offset_bottom = -4.0
+anchor_bottom = 0.5
+offset_left = -80.0
+offset_top = -80.0
+offset_right = 80.0
+offset_bottom = 80.0
 grow_horizontal = 2
-grow_vertical = 0
+grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/separation = 2
 
 [node name="Quick1" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 68.0
+offset_top = 6.0
+offset_right = 92.0
+offset_bottom = 30.0
+mouse_filter = 2
 
 [node name="Quick2" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 104.0
+offset_top = 18.0
+offset_right = 128.0
+offset_bottom = 42.0
+mouse_filter = 2
 
 [node name="Quick3" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 127.0
+offset_top = 49.0
+offset_right = 151.0
+offset_bottom = 73.0
+mouse_filter = 2
 
 [node name="Quick4" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 127.0
+offset_top = 87.0
+offset_right = 151.0
+offset_bottom = 111.0
+mouse_filter = 2
 
 [node name="Quick5" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 104.0
+offset_top = 118.0
+offset_right = 128.0
+offset_bottom = 142.0
+mouse_filter = 2
 
 [node name="Quick6" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 68.0
+offset_top = 130.0
+offset_right = 92.0
+offset_bottom = 154.0
+mouse_filter = 2
 
 [node name="Quick7" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 32.0
+offset_top = 118.0
+offset_right = 56.0
+offset_bottom = 142.0
+mouse_filter = 2
 
 [node name="Quick8" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 9.0
+offset_top = 87.0
+offset_right = 33.0
+offset_bottom = 111.0
+mouse_filter = 2
 
 [node name="Quick9" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 9.0
+offset_top = 49.0
+offset_right = 33.0
+offset_bottom = 73.0
+mouse_filter = 2
 
 [node name="Quick10" parent="QuickSlots" instance=ExtResource("slot")]
-layout_mode = 2
+layout_mode = 0
+offset_left = 32.0
+offset_top = 18.0
+offset_right = 56.0
+offset_bottom = 42.0
+mouse_filter = 2
 
 [node name="DebugText" type="Label" parent="."]
 visible = false

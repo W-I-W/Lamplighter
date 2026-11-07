@@ -105,6 +105,40 @@ public partial class Game
         expectedClient = NearestFree(expectedClient, 5f, false) ?? expectedClient; expectedHost = NearestFree(expectedHost, 5f, false) ?? expectedHost;      // оба процесса считают одно и то же: точки не внутри камня (иначе игрок выталкивается)
         NetPlayer Other() => NetService.Players.Values.FirstOrDefault(p => p.PeerId != NetService.LocalId && p.Handshaken);
         S(.3f, () => { Menu = Mn.None; noHeal = true; MaxHp = 5000f; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); EventsEnabled = false; TestNoSpawn = true; });
+        if (expect == "pickup")
+        {
+            bool PilePresent() => Drops.Any(d => d.Item == It.Frost && d.Count == 17);
+            if (host)
+            {
+                WaitStep(15f, () => Other()?.Pos.DistanceTo(expectedClient) < 3f, ok => Check(ok, "net host: the guest reached the pickup site"));
+                S(.3f, () => { Tp(expectedHost); HostDropAt(-1, It.Frost, 17, expectedClient, Vector2.Zero); });
+                WaitStep(10f, () => !PilePresent(), ok => Check(ok, "net host: the guest picks up the pile after freeing a slot"));
+                WaitStep(10f, () => NetService.Count == 1, ok => Check(ok, "net host: the guest finished the test"));
+            }
+            else
+            {
+                WaitStep(15f, () => NetService.Online && !NetService.WorldPending, ok => Check(ok, "net client: joined for the pickup test"));
+                S(.3f, () =>
+                {
+                    TestSlots = true;
+                    Array.Clear(Inv);
+                    BuildStock.Clear();
+                    Inv[It.Wood] = StackMax * SlotCap;
+                    Tp(expectedClient);
+                });
+                WaitStep(5f, PilePresent, ok => Check(ok, "net client: the host's pile is visible"));
+                S(.3f, () => { });
+                S(.3f, () =>
+                {
+                    Check(PilePresent() && Inv[It.Frost] == 0, "net client: a full bag leaves the pile on the ground");
+                    Inv[It.Wood] -= StackMax;
+                });
+                WaitStep(5f, () => Inv[It.Frost] == 17, ok => Check(ok, "net client: freeing a slot allows pickup"));
+                S(.3f, () => NetService.Leave(false));
+            }
+            S(.3f, () => { GD.Print($"[check] SUMMARY failures={fails}"); GD.Print("[check] NET DONE"); });
+            return;
+        }
         var chests = W.Pois.Where(p => p.Kind == PK.Chest).Take(3).ToList();
         void Open(Poi p) { p.State = 3; SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); }
         bool IsOpen(Poi p) => p.State == 3 && W.Get(p.Tile.X, p.Tile.Y) == Tl.ChestOpen;

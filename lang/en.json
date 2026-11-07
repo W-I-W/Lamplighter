@@ -543,6 +543,7 @@
   "Настройки": "Settings",
   "Достижения": "Achievements",
   "Титры": "Credits",
+  "Базовый урон": "Base damage",
   "Выход": "Exit",
   "Сохранить игру": "Save Game",
   "В главное меню": "To Main Menu",
@@ -2335,5 +2336,8 @@
   "ЛКМ выбрать · тащить/СКМ двигать · колесо масштаб · Enter улучшить · Tab категория · Esc закрыть": "LMB select · drag/MMB pan · wheel zoom · Enter upgrade · Tab category · Esc close",
   "ЛКМ выбрать · колесо масштаб · Tab категория · изучение — у Стола · T/Esc закрыть": "LMB select · wheel zoom · Tab category · learn at the Table · T/Esc close",
   "Навыки: просмотр": "Skills: view only",
-  "ур.": "lv."
+  "ур.": "lv.",
+  "ЛКМ — стопка · ПКМ — половина · Shift+ЛКМ — всё · Esc — закрыть": "LMB — stack · RMB — half · Shift+LMB — all · Esc — close",
+  "ЛКМ — взять или положить · ПКМ — половина · Shift+ЛКМ — быстрый перенос (в хотбар) · Ctrl+Shift — один · 1–0 — обмен · Esc — закрыть": "LMB — pick up or place · RMB — half · Shift+LMB — quick move (to hotbar) · Ctrl+Shift — one · 1–0 — swap · Esc — close",
+  "Shift+ЛКМ — быстрый перенос · 1–0 — обмен\nПКМ — половина · Ctrl+клик — по 1 · Q — выбросить": "Shift+LMB — quick move · 1–0 — swap\nRMB — half · Ctrl+click — one · Q — drop"
 }

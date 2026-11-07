@@ -47,8 +47,10 @@ public partial class Game : Node2D
     public World W;
     int srcId;
     const int LightLimit = 96;                       // должен совпадать с размером массива lights в Assets/Shaders/Lighting/lights_common.gdshaderinc
-    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; Control uiRoot; public GameHud GameHudNode; BuildWindowUI buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
+    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; ChestWindow chestWindow; Control uiRoot; public GameHud GameHudNode; BuildWindowUI buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
     public float UiScaleVp = 2f;
+    internal InventoryWindow InventoryUi => invWindow;
+    internal ChestWindow ChestUi => chestWindow;
     public readonly RandomNumberGenerator rng = new();
 
     // игрок
@@ -69,7 +71,7 @@ public partial class Game : Node2D
     public List<Particle> Parts = new();
     public List<FText> Texts = new();
     public readonly GameNotificationService Notify = new();     // единый журнал: все уведомления игры и чат
-    public ChatHud Chat; public RegionTitleHud RegionTitle; public ResourceActionUI ResUi; public bool ChatOpen => Chat != null && Chat.IsOpen;
+    public ChatHud Chat; public RegionTitleHud RegionTitle; public bool ChatOpen => Chat != null && Chat.IsOpen;
     float saveT, regionT; int lastRegion = -1;
     public int Kills;
     Vector3 tint = new(.012f, .016f, .045f);
@@ -97,7 +99,7 @@ public partial class Game : Node2D
     {
         float wh = testing ? ViewSize.Y : DisplayServer.WindowGetSize().Y; int si = Settings.UiInt(wh);
         UiScaleVp = si * ViewSize.Y / Mathf.Max(1f, wh);
-        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (RegionTitle != null) RegionTitle.Size = uiRoot.Size; if (ResUi != null) ResUi.Size = uiRoot.Size;
+        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (RegionTitle != null) RegionTitle.Size = uiRoot.Size;
     }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
@@ -153,9 +155,10 @@ public partial class Game : Node2D
         RegionTitle = uiRoot.GetNode<RegionTitleHud>("RegionTitle"); RegionTitle.G = this;
         buildMenu = uiRoot.GetNode<BuildWindowUI>("BuildMenu"); buildMenu.G = this;
         invWindow = uiRoot.GetNode<InventoryWindow>("InventoryWindow"); invWindow.G = this;
+        var dim = new WindowDim { G = this }; uiRoot.AddChild(dim); uiRoot.MoveChild(dim, GameHudNode.GetIndex() + 1);   // выбор мышью идёт по порядку узлов: затемнение перекрывает HUD, но не окна после него
+        chestWindow = new ChestWindow { Name = "ChestWindow", G = this }; uiRoot.AddChild(chestWindow); uiRoot.MoveChild(chestWindow, invWindow.GetIndex() + 1);
         upgradeWindow = uiRoot.GetNode<UpgradeWindowUI>("UpgradeWindow"); upgradeWindow.G = this;
         equipWindow = uiRoot.GetNode<EquipWindowUI>("EquipWindow"); equipWindow.G = this;
-        ResUi = uiRoot.GetNode<ResourceActionUI>("ResourceActions"); ResUi.G = this;
         DebugInit();
 
         if (CarryMsg != null) { pendingMsg ??= CarryMsg; CarryMsg = null; }
@@ -195,7 +198,7 @@ public partial class Game : Node2D
     {
         Tl.Tree => Art.BigTree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
         Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.StorageChest => Art.StorageChest, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
-        Tl.Chest => Art.Chest, Tl.ChestOpen => Art.ChestOpen, Tl.Ruin => Art.Ruin, Tl.House => Art.House, Tl.Tent => Art.Tent,
+        Tl.Chest => Art.StorageChest, Tl.ChestOpen => Art.ChestOpen, Tl.Ruin => Art.Ruin, Tl.House => Art.House, Tl.Tent => Art.Tent,
         Tl.Shrine => Art.Shrine, Tl.ShrineUsed => Art.ShrineUsed, Tl.Aether => Art.AetherOre, Tl.Cage => Art.Cage,
         Tl.BossOff => Art.BossOff, Tl.BossOn => Art.BossOn, Tl.Obelisk => Art.Obelisk, Tl.ObeliskUsed => Art.ObeliskUsed,
         Tl.Warehouse => lv >= 4 ? Art.Wh4 : Art.Warehouse + lv - 1, Tl.Sawmill => lv >= 4 ? Art.Saw4 : Art.Sawmill + lv - 1,
@@ -240,15 +243,54 @@ public partial class Game : Node2D
     }
 
     // ───────────────────────── ввод ─────────────────────────
+    bool quickWheelClickHeld;
     public override void _Input(InputEvent e)
     {
+        if (e is InputEventMouseButton release && release.ButtonIndex == MouseButton.Left &&
+            !release.Pressed && quickWheelClickHeld)
+        {
+            quickWheelClickHeld = false;
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (Menu == Mn.Flow) return;                                          // экран выбора героя и мира обрабатывает ввод сам
         if (Menu == Mn.NetJoin && e is InputEventKey nk && nk.Pressed) { NetJoinKey(nk); return; }
         if (Menu != Mn.None) { if (e is InputEventKey mk && mk.Pressed && !mk.Echo) MenuKey(mk.Keycode); else if (e is InputEventMouse me) MenuMouse(me); return; }
         if (DebugInput(e)) return;                                            // отладочная панель F10
         if (ChatOpen) { if (e is InputEventKey ck && ck.Pressed && ck.Keycode == Key.Escape) { Chat.CloseChat(); GetViewport().SetInputAsHandled(); } return; }      // чат открыт: ввод идёт в поле, игровые клавиши и мышь отключены
+        if (e is InputEventKey controlKey && controlKey.Keycode == Key.Ctrl && !controlKey.Echo)
+        {
+            if (!controlKey.Pressed) GameHudNode.EndQuickWheel();
+            else if (Window == Win.None && !TechOpen && !MapOpen && FinStage == 0) GameHudNode.BeginQuickWheel();
+        }
+        if (GameHudNode.QuickWheelHeld && e is InputEventMouseMotion motion)
+            GameHudNode.PointQuickWheel(motion.Position);
+        if (Window == Win.None && !TechOpen && !MapOpen && FinStage == 0 &&
+            e is InputEventMouseButton click && click.Pressed && click.ButtonIndex == MouseButton.Left &&
+            GameHudNode.ConfirmQuickWheel(click.Position))
+        {
+            quickWheelClickHeld = true;
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (GameHudNode.QuickWheelHeld && e is InputEventMouseButton wheelClick &&
+            (wheelClick.ButtonIndex is MouseButton.Left or MouseButton.Right))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (FinStage == 0 && !TechOpen && !MapOpen &&
+            (Window is Win.None or Win.Inventory or Win.Chest) &&
+            e is InputEventMouseButton wheel && wheel.Pressed &&
+            (wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown))
+        {
+            CycleQuickSlot(wheel.ButtonIndex == MouseButton.WheelDown ? 1 : -1);
+            if (Window == Win.None) GameHudNode.ShowQuickWheel();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (e is InputEventKey ek && ek.Pressed && !ek.Echo && (ek.Keycode == Key.Enter || ek.Keycode == Key.KpEnter) && Window == Win.None && !TechOpen && !MapOpen && FinStage == 0 && Chat != null) { Chat.OpenChat(); GetViewport().SetInputAsHandled(); return; }
-        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory && Window != Win.Equip ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
+        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory && Window != Win.Equip && Window != Win.Chest ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
         if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0)
         {
             OverUi = UiOver(cb.Position / UiScaleVp);
@@ -288,7 +330,7 @@ public partial class Game : Node2D
                 case Key.C: OpenWin(Win.Equip); break;
                 case Key.J: OpenWin(Win.Journal); break;
                 case Key.B: OpenWin(Win.Build); break;
-                case Key.I: OpenWin(Win.Inventory); break;
+                case Key.I: case Key.Tab: OpenWin(Win.Inventory); break;
                 case Key.G: if (GameHudNode != null) GameHudNode.GoalsOpen = !GameHudNode.GoalsOpen; break;
                 case Key.H: Toast(HudDensity.Names[(int)HudDensity.Next()]); break;
                 case Key.F: TryPulse(); break;
@@ -475,7 +517,7 @@ public partial class Game : Node2D
 
         bool act = Input.IsMouseButtonPressed(MouseButton.Left) || KeyMap.Held("Attack");
         if (testing && aimOverride != null) act = false;
-        if (Placing != null || OverUi || ChatOpen) act = false;                       // режим строительства и клики по интерфейсу не бьют и не добывают
+        if (Placing != null || OverUi || ChatOpen || GameHudNode.QuickWheelHeld || quickWheelClickHeld) act = false;                       // режим строительства и клики по интерфейсу не бьют и не добывают
         if (act) Act(dt); else if (!TestKeepMine) MineStop();
     }
 
@@ -483,10 +525,10 @@ public partial class Game : Node2D
     public float PlayerDamage => (2f + 2f * Tier + CombatMath.LevelDamageBonus(Level)) * (1f + N("Dmg")) * Tune.T.FistDamageMul;
 
     static bool Mineable(Tl t) => t == Tl.Tree || t == Tl.Stone || t == Tl.Copper || t == Tl.Iron || t == Tl.Lumen || t == Tl.Aether || t == Tl.Ruin
-        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen;
+        || t == Tl.CrystalOre || t == Tl.SilverOre || t == Tl.Rubble || t == Tl.DeadTree || t == Tl.Obsidian || t == Tl.Ember || t == Tl.MeteorOre || t == Tl.FrostOre || t == Tl.Pine || t == Tl.IceBlock || t == Tl.ShadowPillar || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen || t == Tl.StorageChest;
 
     /// <summary>Что можно ломать оружием в руках (очень медленно): мягкие блоки. Руда и кристаллы только инструментом.</summary>
-    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen;
+    static bool WeaponCanBreak(Tl t) => t == Tl.Tree || t == Tl.DeadTree || t == Tl.Pine || t == Tl.Stone || t == Tl.Ruin || t == Tl.Rubble || t == Tl.IceBlock || t == Tl.IceRuin || t == Tl.Grave || t == Tl.BossTotem || t == Tl.ChestOpen || t == Tl.StorageChest;
 
     static int TierNeed(Tl t) => t switch
     {
@@ -565,7 +607,7 @@ public partial class Game : Node2D
             MineProg = 0; MineTile = new Vector2I(-1, -1); return;
         }
         if (tile != MineTile) { MineStop(); MineTile = tile; MineProg = MineRecall(tile); }
-        MineNeed = t switch { Tl.BossTotem => 2.5f, Tl.Grave => 1.4f, Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.ChestOpen => 1.0f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
+        MineNeed = t switch { Tl.BossTotem => 2.5f, Tl.Grave => 1.4f, Tl.Tree => 2.2f, Tl.DeadTree => 1.6f, Tl.Stone => 1.5f, Tl.Ruin => 1.8f, Tl.Rubble => 1.2f, Tl.ChestOpen => 1.0f, Tl.StorageChest => 1.2f, Tl.Copper => 1.8f, Tl.Iron => 2.6f, Tl.SilverOre => 3f, Tl.Lumen => 3.2f, Tl.CrystalOre => 3.6f, Tl.Obsidian => 4.2f, Tl.Ember => 4f, Tl.MeteorOre => 3f, Tl.FrostOre => 4f, Tl.Pine => 2.2f, Tl.IceBlock => 1.1f, Tl.ShadowPillar => 1.8f, _ => 4f };
         MineNeed *= Tune.T.MineTimeMul;                                    // начало игры: добыча медленнее, чтобы сырьё не набиралось слишком легко
         Swing = .2f; Diag.Add("mine_secs", dt);
         if (MineStrike(dt))
@@ -603,7 +645,8 @@ public partial class Game : Node2D
             case Tl.Stone: Give(It.Stone, rng.RandiRange(1, 2), c); GiveXp(4); break;
             case Tl.Ruin: Give(It.Stone, 2, c); GiveXp(2); break;
             case Tl.Rubble: Give(It.Stone, 1, c); GiveXp(1); break;
-            case Tl.ChestOpen: Give(It.Wood, rng.RandiRange(2, 3), c); GiveXp(1); break;           // пустой сундук разбирается на доски
+            case Tl.ChestOpen: Give(It.Wood, rng.RandiRange(2, 3), c); GiveXp(1); break;
+            case Tl.StorageChest: BreakStorageChest(tile, c); break;           // пустой сундук разбирается на доски
             case Tl.Copper: Give(It.CopperOre, rng.RandiRange(1, 2), c); GiveXp(6); break;
             case Tl.Iron: Give(It.IronOre, rng.RandiRange(1, 2), c); GiveXp(10); break;
             case Tl.Lumen: Give(It.Shard, rng.RandiRange(1, 2), c); GiveXp(15); break;

@@ -157,16 +157,22 @@ public partial class Game
         var parts = new List<string>(); int k = 0;
         if (p.Tag != null) foreach (var tg in p.Tag.Split(';')) GrantTag(tg, p.Pos);
         { var rr = new Random(W.Seed * 61 + p.Tile.X * 7 + p.Tile.Y); float chance = p.Variant == 3 || p.Variant == 8 ? 1f : p.Variant == 1 || p.Variant == 7 ? .7f : p.Kind == PK.Camp ? .5f : .15f + Luck; if (rr.NextDouble() < chance) GrantTag(RollTag(rr, big ? tier + 1 : tier, p.Variant == 7 ? .4f : big ? .3f : 0), p.Pos); }
+        // найденный сундук — обычный сундук: добыча лежит внутри, её забирают в окне; гость (не хост) берёт добычу сразу, как раньше
+        bool store = !NetClient;
         foreach (var (item, n) in got)
         {
-            Inv[item] += n; parts.Add($"{n} {It.Ab[item]}");
+            parts.Add($"{n} {It.Ab[item]}");
+            if (store) continue;
+            Inv[item] += n;
             Texts.Add(new FText { P = p.Pos + new Vector2(0, -10 - k * 13), S = $"{It.Ic(item)}+{n} {It.Names[item]}", Life = 1.6f, C = It.Col[item] }); k++;
         }
-        SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); p.State = 3; GiveXp(15 + tier * 5);
+        if (store) FillChest(p.Tile, got);
+        SetObj(p.Tile.X, p.Tile.Y, store ? Tl.StorageChest : Tl.ChestOpen); p.State = 3; GiveXp(15 + tier * 5);
         Burst(p.Pos, new Color("#ffe27a"), 18, 80);
         Burst(p.Pos, new Color("#fff2b0"), 26, 110);
         Announce(p.Variant == 1 ? "Тайник вскрыт!" : p.Variant == 7 || p.Kind == PK.Vault ? "Сокровищница открыта!" : p.Variant == 8 ? "Тёмный лагерь разорён!" : p.Kind == PK.Tower ? "Находка из башни!" : "Сундук открыт!", string.Join(", ", parts), new Color("#ffd86b"), "chest");
         Save();
+        if (store) OpenChest(p.Tile.X, p.Tile.Y);
     }
 
     void UseShrine(Poi p)

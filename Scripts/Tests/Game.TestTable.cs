@@ -135,7 +135,7 @@ public partial class Game
         S(.4f, () =>
         {
             // окно у стола закрывается, когда герой уходит
-            Tp(Table().Pos + new Vector2(0, 14)); Upgrades.Update(false); OpenTech(true, true); Check(TechOpen && TechAtTable, "ui: the research window opens at the table");
+            Tp(Table().Pos + new Vector2(0, 14)); Upgrades.Update(false); OpenTech(true, true); Check(TechOpen && TechAtTable, "ui: the research window opens at the table"); Check(TechKey(Key.E) && !TechOpen, "ui: E closes the research window opened by E"); OpenTech(true, true);
         });
         S(.9f, () =>
         {
@@ -143,6 +143,35 @@ public partial class Game
             Tp(Table().Pos + new Vector2(0, 14)); OpenTech(true);
         });
         S(.9f, () => { Shot("table_02_view"); });
+        S(.4f, () =>
+        {
+            // окно сундука из ячеек: сундук сверху, инвентарь снизу, щелчок переносит стопку
+            Clean(); StrictResearch = false; var ct = W.Spawn + new Vector2I(-3, 2); for (int r = 0; r < 8 && W.Get(ct.X, ct.Y) != Tl.None; r++) ct += new Vector2I(-1, 0);
+            SetObj(ct.X, ct.Y, Tl.StorageChest); Tp(TileCenter(ct.X, ct.Y) + new Vector2(0, 20)); for (int i = 0; i < It.Count; i++) Inv[i] = 0; Inv[It.Wood] = 150; Inv[It.Stone] = 30;
+            OpenChest(ct.X, ct.Y); Check(Window == Win.Chest && ChestStacks().Count == ChestSlots && ChestStacks().TrueForAll(x => x.item < 0), "chest window: an empty chest is twenty empty cells");
+            ChestClick(false, 0, false, false); var st = ChestStacks(); Check(st[0].item >= 0 && st[0].n > 0 && Inv[st[0].item] < (st[0].item == It.Wood ? 150 : 30), "chest window: a click on an inventory cell moves that stack into the chest");
+            int firstCount = st[0].n; ChestClick(true, 0, true, false);
+            Check(ChestStacks()[0].n == firstCount / 2, "chest window: right click takes half back");
+            WinTab = 0; WinCur = 0; Check(ChestNav(Key.Up, false) && WinTab == 1, "chest window: Up from the top inventory row enters the chest grid"); Check(ChestNav(Key.Down, false) && WinTab == 0, "chest window: Down from the chest grid returns to the inventory");
+            Inv[It.Wood] = 120; ChestMove(true, It.Wood, 120);
+            for (int qi = 0; qi < QuickSlotCount; qi++) ClearQuickSlot(qi);
+            { int wc = ChestStacks().FindIndex(x => x.item == It.Wood); Check(wc >= 0, "chest window: wood is in the chest");
+              ShiftChestOut(wc, 1); Check(QuickStack(0) == (It.Wood, 1), "chest window: Ctrl+Shift moves one item into the hotbar");
+              ShiftChestOut(wc, 5); Check(QuickStack(0) == (It.Wood, 6), "chest window: Shift moves the stack into the hotbar first, adding to the same stack"); }
+        });
+        S(.9f, () => { Shot("table_03_chest"); Check(chestWindow.Visible, "chest window: the cell window is visible"); Check(WindowKey(Key.E, false) && Window == Win.None, "chest window: E closes the window opened by E"); CloseWindows(); });
+        S(.3f, () =>
+        {
+            // найденный в мире сундук — обычный: добыча внутри, при поломке всё выпадает
+            var poi = W.Pois.Find(q => q.Kind == PK.Chest && q.Variant == 0 && W.Get(q.Tile.X, q.Tile.Y) == Tl.Chest);
+            Check(poi != null, "world chest: the world has a found chest"); if (poi == null) return;
+            for (int i = 0; i < It.Count; i++) Inv[i] = 0;
+            Tp(poi.Pos + new Vector2(0, 14)); OpenChest(poi);
+            Check(W.Get(poi.Tile.X, poi.Tile.Y) == Tl.StorageChest && Window == Win.Chest && !ChestEmpty(poi.Tile.X, poi.Tile.Y), "world chest: opening a found chest turns it into an ordinary chest with the loot inside");
+            Check(Inv[It.Wood] == 0 && Inv[It.Copper] == 0, "world chest: the loot is not given automatically");
+            var tile = poi.Tile; CloseWindows(); BreakTile(tile, Tl.StorageChest, false);
+            Check(W.Get(tile.X, tile.Y) != Tl.StorageChest && ChestEmpty(tile.X, tile.Y) && Inv[It.Wood] > 0, "world chest: a broken chest drops everything it held");
+        });
         S(.5f, () =>
         {
             Check(!upgradeWindow.Details.LearnEnabled, "view: the character-menu tree shows no Learn button");

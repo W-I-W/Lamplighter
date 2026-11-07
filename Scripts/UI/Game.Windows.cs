@@ -79,7 +79,7 @@ public partial class Game
             case Win.Build: return BuildEntriesFiltered().Count;
             case Win.Inventory: return InventorySlots().Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
-            case Win.Chest: return ChestRows().Count;
+            case Win.Chest: return WinTab == 1 ? ChestSlots : InventorySlots().Count;
             case Win.Talk: return 2;
         }
         return 0;
@@ -96,6 +96,8 @@ public partial class Game
     // ───────────────────────── ввод ─────────────────────────
     bool WindowKey(Key k, bool shift)
     {
+        if (k == Key.E && (Window is Win.Chest or Win.Trade or Win.Equip || Window == Win.Rift && RiftState == 0)) { CloseWindows(); return true; }      // окно, открытое клавишей E, закрывается ею же
+        if (Window == Win.Chest && ChestNav(k, shift)) return true;
         if (Window == Win.Equip && WinTab == 2)
         {
             // сетка рецептов: стрелки двигают выбор, Tab переключает ручной крафт и станцию
@@ -116,7 +118,7 @@ public partial class Game
         }
         if (Window == Win.Build || Window == Win.Inventory)
         {
-            int cols = 5, wlen = WinLen();
+            int cols = Window == Win.Inventory ? invWindow.Columns : 5, wlen = WinLen();
             switch (k)
             {
                 case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;
@@ -124,7 +126,7 @@ public partial class Game
                 case Key.Up: WinCur = Math.Max(0, WinCur - cols); return true;
                 case Key.Down: WinCur = Math.Min(Math.Max(0, wlen - 1), WinCur + cols); return true;
                 case Key.Q: if (Window == Win.Build) { var ql = BuildEntriesFiltered(); if (WinCur < ql.Count) CraftBuild(ql[WinCur]); return true; } break;
-                case Key.Tab: if (Window == Win.Build) { BuildCat = (BuildCat + 1) % BuildCatNames.Length; WinCur = 0; Sfx.Play("tick", -6, 1.3f); } return true;
+                case Key.Tab: if (Window == Win.Build) { BuildCat = (BuildCat + 1) % BuildCatNames.Length; WinCur = 0; Sfx.Play("tick", -6, 1.3f); } else CloseWindows(); return true;
                 case Key.Enter: case Key.KpEnter:
                     if (Window == Win.Build) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else if (e.Stock > 0) { Placing = e; Window = Win.None; } else CraftBuild(e); } }
                     return true;
@@ -160,7 +162,6 @@ public partial class Game
             case Win.Journal: if (k == Key.Left) { WinTab = (WinTab + 2) % 3; WinCur = 0; } else if (k == Key.Right) { WinTab = (WinTab + 1) % 3; WinCur = 0; } break;
             case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
-            case Win.Chest: ChestKey(k, shift); break;
             case Win.Talk: TalkKey(k); break;
             case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) { if (!hud.StorySkip()) CloseWindows(); } break;
         }

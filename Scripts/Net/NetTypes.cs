@@ -17,7 +17,7 @@ public static class NetConst
     public const int MaxPlayers = 4;                       // включая хоста
     public const int DefaultPort = 24865;
     public const string DevAppId = "5523470";               // AppID игры в Steam; подставляется при запуске не из Steam, если нет steam_appid.txt и переменных SteamAppId
-    public const string Protocol = "lanther-net-8";        // отдельный пакет периодического урона с проверкой щитов на хосте
+    public const string Protocol = "lanther-net-9";        // подбор ресурсов гостем с учётом места в инвентаре
     public const int GenVersion = 6;                       // версия алгоритма генерации мира: клиент обязан генерировать тот же мир
     public const float StateHz = 15f;                      // частота отправки позиции
     public const float HandshakeTimeout = 6f;
