@@ -187,10 +187,10 @@ public partial class InventoryWindow : Control
             else if (sourceChest) G.WithdrawChestToBag(source, target, carriedItem, carriedCount);
             else G.MoveInventoryStack(source, target, carriedItem, carriedCount);
         }
-        else if (!ChestOpen && !sourceQuick && !sourceChest && !IsOver(position))
+        else if (!ChestOpen && !sourceChest && !IsOver(position))
         {
-            if (G.BeginInventoryPlacement(carriedItem, source) ||
-                G.DropInventoryStack(source, carriedItem, carriedCount)) CancelCarry();
+            if (G.BeginInventoryPlacement(carriedItem, sourceQuick ? -2 - source : source) ||
+                (sourceQuick ? G.DropQuickStack(source, carriedItem, carriedCount) : G.DropInventoryStack(source, carriedItem, carriedCount))) CancelCarry();
             return;
         }
         if (!targetCell) return;
@@ -474,8 +474,13 @@ public partial class InventoryWindow : Control
             else if (!ChestOpen && key.Keycode == Key.Q)
             {
                 var current = G.InventorySlots();
-                if (sourceQuick && source >= 0) { CancelCarry(); }
+                if (sourceQuick && source >= 0) { G.DropQuickStack(source, carriedItem, carriedCount); CancelCarry(); }
                 else if (source >= 0) { G.DropInventoryStack(source, carriedItem, carriedCount); CancelCarry(); }
+                else if (QuickAt(pointer) is int hq && hq >= 0)
+                {
+                    var (qi, qn) = G.QuickStack(hq);
+                    if (qn > 0) G.DropQuickStack(hq, qi, key.CtrlPressed ? 1 : qn);
+                }
                 else if (BagAt(pointer) is int hovered && hovered >= 0 && hovered < current.Count && current[hovered].n > 0)
                 {
                     var stack = current[hovered];

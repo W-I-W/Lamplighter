@@ -510,6 +510,15 @@ public partial class Game
         return true;
     }
 
+    /// <summary>Выбросить стопку прямо из слота хотбара.</summary>
+    internal bool DropQuickStack(int slot, int item, int count)
+    {
+        var (have, n) = QuickStack(slot);
+        if (have != item || item < 0 || count <= 0 || count > n || !TryDrop(item, count)) return false;
+        RemoveQuickCount(slot, count);
+        return true;
+    }
+
     internal bool DropInventoryStack(int source, int item, int count)
     {
         var slots = InventorySlots();
