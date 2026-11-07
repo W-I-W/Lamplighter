@@ -326,6 +326,7 @@ public partial class InventoryWindow : Control
         distributionMoved = false;
         distributionButton = MouseButton.None;
         distributing = false;
+        leftHeld = false;
         distributed.Clear();
         distributionOrder.Clear();
         repaintSlots = true;
@@ -435,6 +436,18 @@ public partial class InventoryWindow : Control
             return;
         }
         if (source >= 0 && carryWindow != G.Window) CancelCarry();
+        if (source >= 0 && leftHeld && e is InputEventKey shiftKey &&
+            shiftKey.Keycode == Key.Shift && shiftKey.Pressed && !shiftKey.Echo)
+        {
+            Vector2 start = pressPosition * G.UiScaleVp;
+            CancelCarry();
+            shiftTransfer = true;
+            shiftVisited.Clear();
+            ShiftTransferAt(start, shiftKey.CtrlPressed);
+            shiftPosition = pointer;
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (e is InputEventKey key && key.Pressed && !key.Echo)
         {
             if (key.Keycode == Key.Escape && source >= 0) CancelCarry();
@@ -472,6 +485,18 @@ public partial class InventoryWindow : Control
         }
         if (source >= 0 && e is InputEventMouseMotion motion)
         {
+            if (leftHeld && motion.ShiftPressed)
+            {
+                Vector2 start = pressPosition * G.UiScaleVp;
+                CancelCarry();
+                shiftTransfer = true;
+                shiftVisited.Clear();
+                ShiftTransferAt(start, motion.CtrlPressed);
+                ShiftTransferPath(start, motion.Position, motion.CtrlPressed);
+                shiftPosition = motion.Position;
+                GetViewport().SetInputAsHandled();
+                return;
+            }
             var pos = motion.Position / G.UiScaleVp;
             Vector2 previous = carryPointer;
             if (preview.Visible)

@@ -502,6 +502,40 @@ public partial class Game
             Check(ChestStacks()[17] == (It.Wood, beforeDistribution) &&
                 !invWindow.GetNode<UiSlot>("CarryPreview").Visible,
                 "clicks: the remaining stack can be placed in its original cell");
+            var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var grid = (GridContainer)ChestUi.FindChildren("*", "GridContainer", true, false)[0];
+            first = grid.GetChild<UiSlot>(16);
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Shift, Pressed = true });
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point,
+                ShiftPressed = true, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ShiftPressed = true, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[17].n == 0 && !invWindow.GetNode<UiSlot>("CarryPreview").Visible,
+                "clicks: pressing Shift after holding left transfers the original chest stack");
+            var bag = InventorySlots();
+            int stone = Enumerable.Range(0, bag.Count).First(i => bag[i].item == It.Stone && bag[i].n > 0);
+            beforeDistribution = bag[stone].n;
+            var bagGrid = (GridContainer)ChestUi.FindChildren("*", "GridContainer", true, false)[1];
+            first = bagGrid.GetChild<UiSlot>(stone);
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ShiftPressed = true, ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ShiftPressed = true, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks().Any(stack => stack.item == It.Stone && stack.n == beforeDistribution),
+                "clicks: Shift-click transfers a bag stack into the chest");
             CloseWindows();
             Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
         });
