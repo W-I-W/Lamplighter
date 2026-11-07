@@ -91,7 +91,7 @@ public partial class Game
         RecomputeEffects();
     }
 
-    bool CanTakeChestItem(int item) => !IsUniqueChestItem(item) || InventoryCount(item) == 0;
+    internal bool CanTakeChestItem(int item) => !IsUniqueChestItem(item) || InventoryCount(item) == 0;
 
     bool IsUniqueChestItem(int item)
     {

@@ -3,8 +3,7 @@ using System;
 
 namespace Lamplighter;
 
-/// <summary>Ячейка вставки оружия: пустая рамка или иконка установленной вставки. Выбранная — в золотой рамке; при наведении показывает название и эффект (подсказка).
-/// Сцена — Scenes/UI/EquipSocket.tscn, стили слотов — LanternTheme (Slot, SlotSelected, SlotOk).</summary>
+/// <summary>Ячейка вставки оружия с иконкой и подсказкой о её эффекте.</summary>
 public partial class EquipSocketUI : PanelContainer
 {
     public int Index = -1;
@@ -24,7 +23,7 @@ public partial class EquipSocketUI : PanelContainer
     public void Bind(int index, Texture2D ic, Color tint, bool selected, string tip)
     {
         Index = index; icon.Texture = ic; icon.Visible = ic != null; icon.Modulate = tint; TooltipText = tip ?? "";
-        ThemeTypeVariation = selected ? "SlotSelected" : ic != null ? "SlotOk" : "Slot"; Tint();
+        ThemeTypeVariation = ic != null ? "SlotOk" : "Slot"; Tint();
     }
 
     void Tint() { tw?.Kill(); tw = CreateTween(); tw.TweenProperty(this, "modulate", hover ? new Color(1.25f, 1.25f, 1.25f) : Colors.White, .08f); }

@@ -39,8 +39,17 @@ public partial class InventoryWindow : Control
 
     int source = -1, carriedItem = -1, carriedCount;
     bool leftHeld, sourceQuick, sourceChest;
+    MouseButton distributionButton;
     bool distributing;
+    bool initialRightGrab;
+    Vector2 distributionStart;
     readonly HashSet<(int area, int index)> distributed = new();
+    readonly List<(int area, int index)> distributionOrder = new();
+    bool shiftTransfer;
+    bool shiftCollect;
+    bool repaintSlots;
+    Vector2 shiftPosition;
+    readonly HashSet<(int area, int index)> shiftVisited = new();
     Win carryWindow, pointerWindow;
     Vector2 pressPosition, carryPointer, pointer;
     UiSlot preview;
@@ -51,7 +60,29 @@ public partial class InventoryWindow : Control
     internal int CarriedCount(bool quick, bool chest, int index) =>
         preview.Visible && source == index && sourceQuick == quick && sourceChest == chest ? carriedCount : 0;
 
-    internal string CarrySignature => preview.Visible ? $"{source}:{sourceQuick}:{sourceChest}:{carriedCount}" : "";
+    internal string CarrySignature => preview.Visible ? $"{source}:{sourceQuick}:{sourceChest}:{carriedCount}:{distributionButton}:{distributing}:{distributionOrder.Count}" : "";
+
+    internal (int item, int n) DisplayStack(int area, int index, int item, int count)
+    {
+        count -= CarriedCount(area == 0, area == 1, index);
+        if (distributing && distributionButton == MouseButton.Right && distributionOrder.Count > 0 &&
+            distributed.Contains((area, index)))
+        {
+            int share = Mathf.Min(carriedCount / distributionOrder.Count, Game.StackMax - count);
+            if (share > 0) { item = carriedItem; count += share; }
+        }
+        return (item, Mathf.Max(0, count));
+    }
+
+    int PreviewRemaining()
+    {
+        if (!distributing || distributionButton != MouseButton.Right || distributionOrder.Count == 0) return carriedCount;
+        int share = carriedCount / distributionOrder.Count;
+        int assigned = 0;
+        foreach (var (area, index) in distributionOrder)
+            assigned += Mathf.Min(share, Game.StackMax - CellStack(area, index).n);
+        return carriedCount - assigned;
+    }
 
     internal UiSlot HotbarSlot(int i) => ChestOpen ? G.ChestUi.HotbarSlot(i) : hotbar.Slot(i);
 
@@ -82,7 +113,12 @@ public partial class InventoryWindow : Control
         carriedCount = 0;
         leftHeld = false;
         distributing = false;
+        shiftCollect = false;
+        initialRightGrab = false;
+        distributionButton = MouseButton.None;
         distributed.Clear();
+        distributionOrder.Clear();
+        repaintSlots = true;
         if (preview != null) preview.Hide();
         if (!sourceQuick && !sourceChest && carryWindow == Win.Inventory &&
             previousSource >= 0 && previousSource < shown.Count) UpdateSlot(previousSource);
@@ -97,7 +133,8 @@ public partial class InventoryWindow : Control
     void ShowCarry(Vector2 viewportPosition)
     {
         carryPointer = viewportPosition;
-        preview.Set(ItemTexture(carriedItem), carriedCount > 1 ? carriedCount.ToString() : "", "", SlotState.Normal);
+        int remaining = PreviewRemaining();
+        preview.Set(ItemTexture(carriedItem), remaining > 1 ? remaining.ToString() : "", "", SlotState.Normal);
         preview.Show();
         PositionCarry(viewportPosition);
         if (!sourceQuick && !sourceChest && !ChestOpen) UpdateSlot(source);
@@ -106,11 +143,10 @@ public partial class InventoryWindow : Control
     void UpdateSlot(int index)
     {
         var (item, count) = shown[index];
-        count = Mathf.Max(0, count - CarriedCount(false, false, index));
+        (item, count) = DisplayStack(2, index, item, count);
         var slot = Slot(index);
         slot.Visible = true;
-        slot.Set(count > 0 ? ItemTexture(item) : null, count > 0 ? count.ToString() : "", "",
-            index == G.WinCur ? SlotState.Selected : SlotState.Normal);
+        slot.Set(count > 0 ? ItemTexture(item) : null, count > 0 ? count.ToString() : "", "", SlotState.Normal);
     }
 
     void PlaceCarry(int target, int chest, int quick, Vector2 position)
@@ -145,45 +181,161 @@ public partial class InventoryWindow : Control
         CancelCarry();
     }
 
-    void DistributeOne(Vector2 position)
+    (int area, int index) CellAt(Vector2 position)
     {
         int quick = QuickAt(position), chest = ChestAt(position), bag = BagAt(position);
         int area = quick >= 0 ? 0 : chest >= 0 ? 1 : bag >= 0 ? 2 : -1;
         int target = area == 0 ? quick : area == 1 ? chest : bag;
-        if (area < 0 || !distributed.Add((area, target))) return;
+        return (area, target);
+    }
+
+    (int item, int n) CellStack(int area, int target) => area == 0 ? G.QuickStack(target) :
+        area == 1 ? G.ChestStacks()[target] : G.InventorySlots()[target];
+
+    bool CanDistribute(int area, int target)
+    {
+        if (area < 0) return false;
         if ((area == 0 && sourceQuick || area == 1 && sourceChest ||
-             area == 2 && !sourceQuick && !sourceChest) && target == source) return;
+             area == 2 && !sourceQuick && !sourceChest) && target == source) return false;
+        if (sourceChest && area != 1 && !G.CanTakeChestItem(carriedItem)) return false;
+        var destination = CellStack(area, target);
+        if (area == 2 && destination.n == 0 && (sourceQuick || sourceChest) &&
+            !G.CanFillEmptyInventorySlot(carriedItem)) return false;
+        return destination.n < Game.StackMax && (destination.n == 0 || destination.item == carriedItem);
+    }
 
-        var destination = area == 0 ? G.QuickStack(target) :
-            area == 1 ? G.ChestStacks()[target] : G.InventorySlots()[target];
-        if (destination.n >= Game.StackMax || destination.n > 0 && destination.item != carriedItem) return;
-
+    int MoveCarried(int area, int target, int amount)
+    {
+        if (!CanDistribute(area, target)) return 0;
+        var destination = CellStack(area, target);
         var origin = SourceStack();
-        if (origin.item != carriedItem || origin.n < carriedCount) { CancelCarry(); return; }
+        if (origin.item != carriedItem || origin.n < carriedCount) return 0;
+        amount = Mathf.Min(amount, Mathf.Min(carriedCount, Game.StackMax - destination.n));
+        if (amount <= 0) return 0;
         if (area == 0)
         {
-            if (sourceQuick) G.MoveQuickStack(source, target, 1);
-            else if (sourceChest) G.MoveChestToQuick(source, target, 1, false);
-            else G.MoveToQuickSlot(source, target, carriedItem, 1);
+            if (sourceQuick) G.MoveQuickStack(source, target, amount);
+            else if (sourceChest) G.MoveChestToQuick(source, target, amount, false);
+            else G.MoveToQuickSlot(source, target, carriedItem, amount);
         }
         else if (area == 1)
         {
-            if (sourceChest) G.MoveChestStack(source, target, 1);
-            else G.DepositChestSlot(source, sourceQuick, carriedItem, 1, target);
+            if (sourceChest) G.MoveChestStack(source, target, amount);
+            else G.DepositChestSlot(source, sourceQuick, carriedItem, amount, target);
         }
         else
         {
-            if (sourceQuick) G.MoveQuickToBag(source, target, 1);
-            else if (sourceChest) G.WithdrawChestToBag(source, target, carriedItem, 1);
-            else G.MoveInventoryStack(source, target, carriedItem, 1);
+            if (sourceQuick) G.MoveQuickToBag(source, target, amount);
+            else if (sourceChest) G.WithdrawChestToBag(source, target, carriedItem, amount);
+            else G.MoveInventoryStack(source, target, carriedItem, amount);
         }
+        var result = CellStack(area, target);
+        int moved = result.item == carriedItem ? Mathf.Max(0, result.n - destination.n) : 0;
+        carriedCount -= moved;
+        return moved;
+    }
 
-        var result = area == 0 ? G.QuickStack(target) :
-            area == 1 ? G.ChestStacks()[target] : G.InventorySlots()[target];
-        if (result.item != carriedItem || result.n != destination.n + 1) return;
-        carriedCount--;
-        if (carriedCount == 0) CancelCarry();
-        else ShowCarry(position);
+    void VisitDistributionCell(Vector2 position)
+    {
+        var (area, target) = CellAt(position);
+        if (!CanDistribute(area, target) || !distributed.Add((area, target))) return;
+        distributionOrder.Add((area, target));
+        repaintSlots = true;
+        if (distributionButton == MouseButton.Left && MoveCarried(area, target, 1) > 0)
+        {
+            if (carriedCount == 0) CancelCarry();
+            else ShowCarry(position);
+        }
+        else if (distributionButton == MouseButton.Right)
+            ShowCarry(position);
+    }
+
+    void VisitDistributionPath(Vector2 from, Vector2 to)
+    {
+        float distance = from.DistanceTo(to);
+        int steps = Mathf.Max(1, Mathf.CeilToInt(distance / (8f * G.UiScaleVp)));
+        for (int i = 1; i <= steps && source >= 0; i++)
+            VisitDistributionCell(from.Lerp(to, (float)i / steps));
+    }
+
+    void FinishDistribution(Vector2 position)
+    {
+        if (distributing && distributionButton == MouseButton.Right && distributionOrder.Count > 0)
+        {
+            distributing = false;
+            int share = carriedCount / distributionOrder.Count;
+            foreach (var (area, index) in distributionOrder)
+                if (share > 0) MoveCarried(area, index, share);
+            if (carriedCount == 0) { CancelCarry(); return; }
+            ShowCarry(position);
+        }
+        else if (!distributing && !initialRightGrab)
+            PlaceCarry(BagAt(position), ChestAt(position), QuickAt(position), position / G.UiScaleVp);
+        initialRightGrab = false;
+        distributionButton = MouseButton.None;
+        distributing = false;
+        distributed.Clear();
+        distributionOrder.Clear();
+        repaintSlots = true;
+    }
+
+    void ShiftTransferAt(Vector2 position, bool single)
+    {
+        var (area, index) = CellAt(position);
+        if (area < 0 || !shiftVisited.Add((area, index))) return;
+        var (item, count) = CellStack(area, index);
+        if (count <= 0) return;
+        int amount = single ? 1 : count;
+        if (ChestOpen)
+        {
+            if (area == 1) G.ShiftChestOut(index, amount);
+            else G.DepositChestSlot(index, area == 0, item, amount);
+        }
+        else if (area == 0) G.ClearQuickSlot(index);
+        else if (area == 2) G.ShiftBagToQuick(index);
+    }
+
+    void ShiftTransferPath(Vector2 from, Vector2 to, bool single)
+    {
+        int steps = Mathf.Max(1, Mathf.CeilToInt(from.DistanceTo(to) / (8f * G.UiScaleVp)));
+        for (int i = 1; i <= steps; i++) ShiftTransferAt(from.Lerp(to, (float)i / steps), single);
+    }
+
+    void CollectAt(Vector2 position)
+    {
+        var (area, index) = CellAt(position);
+        if (area < 0 || !shiftVisited.Add((area, index)) ||
+            (area == 0 && sourceQuick || area == 1 && sourceChest ||
+             area == 2 && !sourceQuick && !sourceChest) && index == source) return;
+        var donor = CellStack(area, index);
+        var origin = SourceStack();
+        if (donor.item != carriedItem || donor.n <= 0 || origin.item != carriedItem) return;
+        int amount = Mathf.Min(donor.n, Mathf.Min(Game.StackMax - carriedCount, Game.StackMax - origin.n));
+        if (amount <= 0) return;
+
+        if (sourceQuick)
+        {
+            if (area == 0) G.MoveQuickStack(index, source, amount);
+            else if (area == 1) G.MoveChestToQuick(index, source, amount, false);
+            else G.MoveToQuickSlot(index, source, carriedItem, amount);
+        }
+        else if (sourceChest)
+        {
+            if (area == 0) G.DepositChestSlot(index, true, carriedItem, amount, source);
+            else if (area == 1) G.MoveChestStack(index, source, amount);
+            else G.DepositChestSlot(index, false, carriedItem, amount, source);
+        }
+        else
+        {
+            if (area == 0) G.MoveQuickToBag(index, source, amount);
+            else if (area == 1) G.WithdrawChestToBag(index, source, carriedItem, amount);
+            else G.MoveInventoryStack(index, source, carriedItem, amount);
+        }
+        var result = SourceStack();
+        if (result.item != carriedItem || result.n <= origin.n) return;
+        carriedCount += result.n - origin.n;
+        repaintSlots = true;
+        ShowCarry(position);
     }
 
     public override void _Input(InputEvent e)
@@ -195,6 +347,41 @@ public partial class InventoryWindow : Control
             pointer = GetViewport().GetMousePosition();
         }
         if (e is InputEventMouse mouse) pointer = mouse.Position;
+        if (shiftCollect && e is InputEventMouseMotion collectMotion)
+        {
+            if (!collectMotion.ShiftPressed) { shiftCollect = false; shiftVisited.Clear(); return; }
+            int steps = Mathf.Max(1, Mathf.CeilToInt(shiftPosition.DistanceTo(collectMotion.Position) / (8f * G.UiScaleVp)));
+            for (int i = 1; i <= steps; i++) CollectAt(shiftPosition.Lerp(collectMotion.Position, (float)i / steps));
+            shiftPosition = collectMotion.Position;
+            carryPointer = collectMotion.Position;
+            PositionCarry(carryPointer);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (shiftCollect && e is InputEventMouseButton collectRelease &&
+            collectRelease.ButtonIndex == MouseButton.Left && !collectRelease.Pressed)
+        {
+            shiftCollect = false;
+            shiftVisited.Clear();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (shiftTransfer && e is InputEventMouseMotion shiftMotion)
+        {
+            if (!shiftMotion.ShiftPressed) { shiftTransfer = false; shiftVisited.Clear(); return; }
+            ShiftTransferPath(shiftPosition, shiftMotion.Position, shiftMotion.CtrlPressed);
+            shiftPosition = shiftMotion.Position;
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (shiftTransfer && e is InputEventMouseButton shiftRelease &&
+            shiftRelease.ButtonIndex == MouseButton.Left && !shiftRelease.Pressed)
+        {
+            shiftTransfer = false;
+            shiftVisited.Clear();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (source >= 0 && carryWindow != G.Window) CancelCarry();
         if (e is InputEventKey key && key.Pressed && !key.Echo)
         {
@@ -230,13 +417,32 @@ public partial class InventoryWindow : Control
         if (source >= 0 && e is InputEventMouseMotion motion)
         {
             var pos = motion.Position / G.UiScaleVp;
+            Vector2 previous = carryPointer;
             if (preview.Visible)
             {
                 carryPointer = motion.Position;
                 PositionCarry(carryPointer);
             }
-            else if (!leftHeld || pos.DistanceTo(pressPosition) > 5) ShowCarry(motion.Position);
-            if (distributing) DistributeOne(motion.Position);
+            else if (!leftHeld || pos.DistanceTo(pressPosition) > 5)
+            {
+                ShowCarry(motion.Position);
+                if (leftHeld)
+                {
+                    distributionButton = MouseButton.Left;
+                    distributionStart = pressPosition * G.UiScaleVp;
+                    distributing = true;
+                    previous = distributionStart;
+                }
+            }
+            if (distributionButton != MouseButton.None)
+            {
+                if (!distributing && motion.Position.DistanceTo(distributionStart) > 5 * G.UiScaleVp)
+                {
+                    distributing = true;
+                    VisitDistributionCell(distributionStart);
+                }
+                if (distributing && source >= 0) VisitDistributionPath(previous, motion.Position);
+            }
             return;
         }
         if (e is not InputEventMouseButton button || (button.ButtonIndex != MouseButton.Left && button.ButtonIndex != MouseButton.Right)) return;
@@ -246,10 +452,9 @@ public partial class InventoryWindow : Control
         int quick = QuickAt(pointer);
         if (!button.Pressed)
         {
-            if (button.ButtonIndex == MouseButton.Right && distributing)
+            if (button.ButtonIndex == distributionButton && distributionButton != MouseButton.None)
             {
-                distributing = false;
-                distributed.Clear();
+                FinishDistribution(button.Position);
                 GetViewport().SetInputAsHandled();
                 return;
             }
@@ -259,18 +464,28 @@ public partial class InventoryWindow : Control
         }
         else if (source >= 0)
         {
-            if (button.ButtonIndex == MouseButton.Right && preview.Visible)
+            if (button.ShiftPressed && button.ButtonIndex == MouseButton.Left && preview.Visible)
             {
-                distributing = true;
-                distributed.Clear();
-                DistributeOne(button.Position);
+                shiftCollect = true;
+                shiftPosition = button.Position;
+                shiftVisited.Clear();
+                CollectAt(button.Position);
             }
-            else if (button.CtrlPressed && !sourceQuick && !sourceChest && target == source && SourceStack() is var stack && stack.item == carriedItem)
+            else if (button.CtrlPressed && button.ButtonIndex == MouseButton.Left &&
+                !sourceQuick && !sourceChest && target == source && SourceStack() is var stack && stack.item == carriedItem)
             {
                 carriedCount = Mathf.Min(carriedCount + 1, stack.n);
                 ShowCarry(button.Position);
             }
-            else if (button.ButtonIndex == MouseButton.Left) PlaceCarry(target, chest, quick, position);
+            else if (preview.Visible && button.ButtonIndex is MouseButton.Left or MouseButton.Right)
+            {
+                distributionButton = button.ButtonIndex;
+                distributionStart = button.Position;
+                distributing = button.ButtonIndex == MouseButton.Right;
+                distributed.Clear();
+                distributionOrder.Clear();
+                if (distributing) VisitDistributionCell(button.Position);
+            }
             else return;
         }
         else
@@ -282,13 +497,10 @@ public partial class InventoryWindow : Control
             var (item, count) = quick >= 0 ? G.QuickStack(quick) : index < cells.Count ? cells[index] : (-1, 0);
             if (button.ButtonIndex == MouseButton.Left && button.ShiftPressed)
             {
-                if (ChestOpen)
-                {
-                    if (chest >= 0 && count > 0) G.ShiftChestOut(chest, button.CtrlPressed ? 1 : count);
-                    else if (count > 0) G.DepositChestSlot(quick >= 0 ? quick : target, quick >= 0, item, button.CtrlPressed ? 1 : count);
-                }
-                else if (quick >= 0) G.ClearQuickSlot(quick);
-                else G.ShiftBagToQuick(target);
+                shiftTransfer = true;
+                shiftPosition = button.Position;
+                shiftVisited.Clear();
+                ShiftTransferAt(button.Position, button.CtrlPressed);
             }
             else if (!ChestOpen && button.ButtonIndex == MouseButton.Left && button.DoubleClick && target >= 0 && G.UseInventoryItem(item, target)) { }
             else if (count > 0 && Game.UsesSlot(item))
@@ -301,7 +513,13 @@ public partial class InventoryWindow : Control
                 carriedCount = button.CtrlPressed ? 1 : button.ButtonIndex == MouseButton.Right ? (count + 1) / 2 : count;
                 leftHeld = button.ButtonIndex == MouseButton.Left;
                 pressPosition = position;
-                if (!leftHeld) ShowCarry(button.Position);
+                if (!leftHeld)
+                {
+                    ShowCarry(button.Position);
+                    distributionButton = MouseButton.Right;
+                    distributionStart = button.Position;
+                    initialRightGrab = true;
+                }
             }
         }
         GetViewport().SetInputAsHandled();
@@ -313,7 +531,7 @@ public partial class InventoryWindow : Control
         if (G == null || G.W == null) return;
         bool show = G.Window == Win.Inventory;
         Visible = show || ChestOpen;
-        if (!Visible) pointerWindow = Win.None;
+        if (!Visible || G.Menu != Mn.None) { pointerWindow = Win.None; shiftTransfer = false; shiftCollect = false; shiftVisited.Clear(); }
         panel.Visible = show;
         if (source >= 0)
         {
@@ -332,9 +550,10 @@ public partial class InventoryWindow : Control
         for (int i = 0; i < total; i++)
         {
             bool sel = i == G.WinCur;
-            if (!listChanged && !(sel != (i == shownSel))) continue;       // ячейка не изменилась
+            if (!listChanged && !(sel != (i == shownSel)) && !distributing && !repaintSlots) continue;
             UpdateSlot(i);
         }
+        repaintSlots = false;
         shownSel = G.WinCur;
         string su = string.Format(Loc.T("Слоты {0}/{1}"), G.SlotsUsed(), G.SlotCap); if (slotsL.Text != su) slotsL.Text = su;
         hotbar.Refresh(G);

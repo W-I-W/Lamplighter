@@ -38,9 +38,10 @@ public partial class HotbarRow : GridContainer
     {
         for (int i = 0; i < slots.Length; i++)
         {
-            var (item, n) = g.QuickStack(i); n -= g.InventoryUi.CarriedCount(true, false, i);
+            var (item, n) = g.QuickStack(i);
+            (item, n) = g.InventoryUi.DisplayStack(0, i, item, n);
             slots[i].Set(n > 0 ? g.InventoryItemTexture(item) : null, n > 1 ? n.ToString() : "", "",
-                i == g.SelectedQuickSlot ? SlotState.Selected : n > 0 ? SlotState.Normal : SlotState.Disabled);
+                n > 0 ? SlotState.Normal : SlotState.Disabled);
         }
     }
 }

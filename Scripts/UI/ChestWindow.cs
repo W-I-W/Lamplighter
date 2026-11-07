@@ -72,8 +72,8 @@ public partial class ChestWindow : Control
         {
             sig = sg;
             chestTitle.Text = Loc.T("Сундук"); invTitle.Text = Loc.T("Инвентарь");
-            Fill(chestSlots, chestGrid, true, chest, chestFocus, sel);
-            Fill(invSlots, invGrid, false, bag, !chestFocus, sel);
+            Fill(chestSlots, chestGrid, true, chest);
+            Fill(invSlots, invGrid, false, bag);
             hotbar.Refresh(G);
         }
         UpdateTip(chest, bag);
@@ -98,14 +98,14 @@ public partial class ChestWindow : Control
         info.Position = at; info.Visible = true;
     }
 
-    void Fill(List<UiSlot> list, GridContainer grid, bool chestSide, IReadOnlyList<(int item, int n)> stacks, bool focused, int sel)
+    void Fill(List<UiSlot> list, GridContainer grid, bool chestSide, IReadOnlyList<(int item, int n)> stacks)
     {
         for (int i = 0; i < stacks.Count; i++)
         {
             var (it, n) = stacks[i]; var s = Slot(list, grid, chestSide, i); s.Visible = true;
-            n -= G.InventoryUi.CarriedCount(false, chestSide, i);
+            (it, n) = G.InventoryUi.DisplayStack(chestSide ? 1 : 2, i, it, n);
             bool has = n > 0 && it != -1;
-            s.Set(has ? G.InventoryItemTexture(it) : null, has ? n.ToString() : "", "", focused && i == sel ? SlotState.Selected : SlotState.Normal);
+            s.Set(has ? G.InventoryItemTexture(it) : null, has ? n.ToString() : "", "", SlotState.Normal);
         }
         for (int i = stacks.Count; i < list.Count; i++) list[i].Visible = false;
     }

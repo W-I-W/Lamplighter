@@ -42,6 +42,7 @@ public partial class Game
     string InventoryKey(int item) => item <= -2 && -2 - item < inventoryItemKeys.Count ? inventoryItemKeys[-2 - item] : "";
     static bool IsInventoryGear(string key) => key.Contains(':');
     bool IsInventoryGear(int item) => IsInventoryGear(InventoryKey(item));
+    internal bool CanFillEmptyInventorySlot(int item) => IsInventoryGear(item) || SlotsUsed() < SlotCap;
 
     internal BuildEntry InventoryBuild(int item)
     {
