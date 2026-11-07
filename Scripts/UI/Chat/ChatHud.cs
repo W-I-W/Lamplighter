@@ -18,22 +18,19 @@ public partial class ChatHud : Control
 
     public override void _Ready()
     {
-        Theme = GD.Load<Theme>(Hud.ThemePath); MouseFilter = MouseFilterEnum.Ignore; TextureFilter = TextureFilterEnum.Nearest; ZIndex = 3000;
-        back = new ColorRect { MouseFilter = MouseFilterEnum.Ignore, Visible = false }; AddChild(back);
-        mini = Rich(false); AddChild(mini);
-        panel = new PanelContainer { ThemeTypeVariation = "PanelDark", MouseFilter = MouseFilterEnum.Stop, Visible = false }; AddChild(panel);
-        var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 3); panel.AddChild(v);
-        full = Rich(true); full.CustomMinimumSize = new Vector2(100, 104); full.MouseFilter = MouseFilterEnum.Stop; v.AddChild(full);
-        input = new LineEdit { MaxLength = GameNotificationService.MaxLen, PlaceholderText = Loc.T("Сообщение…"), CustomMinimumSize = new Vector2(0, 16), CaretBlink = true };
-        Modal.Style(input); v.AddChild(input); input.TextSubmitted += Submit;
-        count = new Label { ThemeTypeVariation = "PlainLabel", Modulate = new Color(.55f, .62f, .75f), MouseFilter = MouseFilterEnum.Ignore, HorizontalAlignment = HorizontalAlignment.Right, Visible = false }; AddChild(count);
+        back = GetNode<ColorRect>("Backdrop");
+        mini = GetNode<RichTextLabel>("Recent");
+        panel = GetNode<PanelContainer>("History");
+        full = panel.GetNode<RichTextLabel>("Content/Messages");
+        input = panel.GetNode<LineEdit>("Content/Input");
+        input.TextSubmitted += Submit;
+        count = GetNode<Label>("Counter");
     }
 
-    RichTextLabel Rich(bool scroll)
+    public void Bind(Game game)
     {
-        var r = new RichTextLabel { BbcodeEnabled = true, FitContent = !scroll, ScrollActive = scroll, ScrollFollowing = scroll, AutowrapMode = TextServer.AutowrapMode.WordSmart, MouseFilter = MouseFilterEnum.Ignore, TextureFilter = TextureFilterEnum.Nearest, ShortcutKeysEnabled = false };
-        r.AddThemeConstantOverride("line_separation", 0); r.AddThemeColorOverride("font_shadow_color", new Color(0, 0, .04f, .9f)); r.AddThemeConstantOverride("shadow_offset_x", 1); r.AddThemeConstantOverride("shadow_offset_y", 1);
-        return r;
+        G = game;
+        input.PlaceholderText = Loc.T(input.PlaceholderText);
     }
 
     float ChatW => Mathf.Clamp(Size.X * .5f - 130f, 170f, 260f);

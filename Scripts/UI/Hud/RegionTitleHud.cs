@@ -6,13 +6,14 @@ namespace Lamplighter;
 public partial class RegionTitleHud : Control
 {
     public Game G;
+    Vector2 restPosition;
     Label label; int shown = -1, cand = -1; float candT, age = 99f, fadeOut = 1f;
     const float FadeIn = .5f, Hold = 2.6f, FadeOut = 1.6f, Settle = .6f;
 
     public override void _Ready()
     {
-        Theme = GD.Load<Theme>(Hud.ThemePath); MouseFilter = MouseFilterEnum.Ignore; TextureFilter = TextureFilterEnum.Nearest; ZIndex = 2900;
-        label = new Label { ThemeTypeVariation = "PlainLabel", HorizontalAlignment = HorizontalAlignment.Center, MouseFilter = MouseFilterEnum.Ignore, Visible = false }; AddChild(label);
+        label = GetNode<Label>("Title");
+        restPosition = label.Position;
     }
 
     public bool Showing => label != null && label.Visible && label.Modulate.A > .02f;
@@ -30,6 +31,6 @@ public partial class RegionTitleHud : Control
         label.Visible = ui && a > .01f && shown >= 0;
         if (!label.Visible) return;
         var c = Game.RegionCol(shown); label.Modulate = new Color(c.R, c.G, c.B, a);
-        label.Size = new Vector2(Size.X, 12); label.Position = new Vector2(0, 14 - 3 * (1f - Mathf.Min(1f, age / FadeIn)));
+        label.Position = restPosition - new Vector2(0, 3 * (1f - Mathf.Min(1f, age / FadeIn)));
     }
 }

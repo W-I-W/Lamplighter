@@ -16,22 +16,33 @@ public partial class FlowUI : Control
 
     public static FlowUI Open(Game g, Control parent, FlowKind kind, string transport, string target)
     {
-        var f = new FlowUI { G = g, Kind = kind, Transport = transport ?? "", Target = target ?? "", FriendsOnly = g.NetFriendsOnly };
-        f.Size = parent.Size; parent.AddChild(f); f.ZIndex = 4090; f.ShowCharacters(null); return f;
+        var flow = GD.Load<PackedScene>("res://Scenes/UI/Flow.tscn").Instantiate<FlowUI>();
+        flow.G = g;
+        flow.Kind = kind;
+        flow.Transport = transport ?? "";
+        flow.Target = target ?? "";
+        flow.FriendsOnly = g.NetFriendsOnly;
+        parent.AddChild(flow);
+        flow.ShowCharacters(null);
+        return flow;
     }
 
     public override void _Ready()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect); MouseFilter = MouseFilterEnum.Stop; TextureFilter = TextureFilterEnum.Nearest; Theme = Px.Theme;
-        var bg = new TextureRect { Texture = GD.Load<Texture2D>("res://Assets/UI/Flow/flow_bg.png"), StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, MouseFilter = MouseFilterEnum.Ignore };
-        bg.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(bg);
-        var dim = new ColorRect { Color = new Color(.02f, .03f, .07f, .35f), MouseFilter = MouseFilterEnum.Ignore }; dim.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(dim);
-        box = new Control { Size = new Vector2(BoxW, BoxH), MouseFilter = MouseFilterEnum.Ignore }; AddChild(box);
-        fade = new ColorRect { Color = new Color(0, 0, 0, 0), MouseFilter = MouseFilterEnum.Ignore, ZIndex = 50 }; fade.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(fade);
-        Resized += Layout; Layout();
+        box = GetNode<Control>("Screen");
+        fade = GetNode<ColorRect>("Fade");
+        Resized += FitScreen;
+        box.Resized += FitScreen;
+        FitScreen();
     }
 
-    void Layout() { if (box != null) box.Position = ((Size - box.Size) / 2).Floor(); }
+    void FitScreen()
+    {
+        if (box.Size.X <= 0 || box.Size.Y <= 0) return;
+        float fit = Mathf.Min(1f, Mathf.Min(Size.X / box.Size.X, Size.Y / box.Size.Y));
+        box.PivotOffset = box.Size * .5f;
+        box.Scale = Vector2.One * fit;
+    }
 
     public string ModeLine => Kind switch
     {
@@ -43,13 +54,28 @@ public partial class FlowUI : Control
     public void Go(FlowScreen s)
     {
         G?.PokeHover();
-        cur?.QueueFree(); cur = s; s.Flow = this; box.AddChild(s); s.Size = new Vector2(BoxW, BoxH); Px.FadeIn(s, .2f, 6);
+        cur?.QueueFree(); cur = s; s.Flow = this; box.AddChild(s); s.Size = box.Size; Px.FadeIn(s, .2f, 6);
     }
 
-    public void ShowCharacters(string select) => Go(new CharacterSelectionUI { SelectId = select ?? CharId });
-    public void ShowCreateCharacter(bool first) => Go(new CharacterCreationUI { First = first });
-    public void ShowWorlds(string select) => Go(new WorldSelectionUI { SelectId = select ?? WorldId });
-    public void ShowCreateWorld() => Go(new WorldCreationUI());
+    public void ShowCharacters(string select)
+    {
+        var screen = GD.Load<PackedScene>("res://Scenes/UI/CharacterSelection.tscn").Instantiate<CharacterSelectionUI>();
+        screen.SelectId = select ?? CharId;
+        Go(screen);
+    }
+    public void ShowCreateCharacter(bool first)
+    {
+        var screen = GD.Load<PackedScene>("res://Scenes/UI/CharacterCreation.tscn").Instantiate<CharacterCreationUI>();
+        screen.First = first;
+        Go(screen);
+    }
+    public void ShowWorlds(string select)
+    {
+        var screen = GD.Load<PackedScene>("res://Scenes/UI/WorldSelection.tscn").Instantiate<WorldSelectionUI>();
+        screen.SelectId = select ?? WorldId;
+        Go(screen);
+    }
+    public void ShowCreateWorld() => Go(GD.Load<PackedScene>("res://Scenes/UI/WorldCreation.tscn").Instantiate<WorldCreationUI>());
 
     /// <summary>Выход из экрана выбора обратно в меню, из которого он был открыт.</summary>
     public void Leave()
@@ -109,12 +135,27 @@ public abstract partial class FlowScreen : Control
     public override void _Ready() { MouseFilter = MouseFilterEnum.Ignore; }
     public virtual bool OnKey(Key k) => false;
 
-    protected void Header(string title, string sub)
+    protected void BindSelectionLayout(string subtitle, out VBoxContainer cards, out Control details, out Label empty)
     {
-        var t = Px.Label(title, Px.Gold, true, HorizontalAlignment.Center); t.Position = new Vector2(0, 0); t.Size = new Vector2(FlowUI.BoxW, 20); AddChild(t);
-        var s = Px.Label(sub, Px.Dim, false, HorizontalAlignment.Center); s.Position = new Vector2(0, 21); s.Size = new Vector2(FlowUI.BoxW, 12); AddChild(s);
-        note = Px.Label("", Px.Warn, false, HorizontalAlignment.Center); note.Position = new Vector2(0, 325); note.Size = new Vector2(FlowUI.BoxW, 12); AddChild(note);
+        var title = GetNode<Label>("Title");
+        title.Text = Loc.T(title.Text);
+        GetNode<Label>("Subtitle").Text = subtitle;
+        BindNotice(GetNode<Label>("Notice"));
+        cards = GetNode<VBoxContainer>("List/Content/Scroll/Cards");
+        details = GetNode<Control>("Details/Content");
+        empty = GetNode<Label>("List/Empty");
+        empty.Text = Loc.T(empty.Text);
     }
+
+    protected Button BindButton(string path, Action action)
+    {
+        var button = GetNode<Button>(path);
+        button.Text = Loc.T(button.Text);
+        button.Pressed += () => { Sfx.Play("tick", -3, 1.3f); action(); };
+        return button;
+    }
+
+    protected void BindNotice(Label notice) => note = notice;
 
     public void Toast(string msg, bool good = false)
     {

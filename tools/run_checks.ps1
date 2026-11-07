@@ -106,6 +106,7 @@ Run-Stage 'clicks: real mouse clicks without cursor movement (resource menu, equ
 Run-Stage 'hud: density modes, collapsing hint, one event line, temporary resources, notifications' 'hud' @('HUD DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'equip: equipment window, cards, sockets, hotbar, relics, lantern, crafting, resolutions' 'equip' @('EQUIP DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'skills: multi-level tree, costs, bonuses (+30% light), migration, icons, window' 'skills' @('SKILLS DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
+Run-Stage 'research table: skills only at the table, levels open research, forge teaches nothing, rewards free, coop commands' 'table' @('SUMMARY failures=0') @{} @('\[check\] FAIL', 'SCRIPT ERROR')
 Run-Stage 'debug panel: F10, stage jumps without duplicates, live tuning, god mode, input capture (screenshots)' 'debug' @('DEBUG DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException', 'SCRIPT ERROR')
 Run-Stage 'balance simulator parity: formulas, costs, skill unlocks, effects, enemy stats and hits-to-kill match the real Game' 'balance' @('BALANCE DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'ArgumentException')
 Run-Stage 'balance model contract: encounter budgets, boss warnings, healing and outcome semantics' 'balancecontract' @('MODEL CONTRACT DONE', 'SUMMARY failures=0') @{} @('\[check\] FAIL', 'EXCEPTION')

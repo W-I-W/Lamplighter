@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Script" path="res://Scripts/UI/Hud/RegionTitleHud.cs" id="script"]
+
+[node name="RegionTitle" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture_filter = 1
+theme = ExtResource("theme")
+script = ExtResource("script")
+z_index = 2900
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="."]
+visible = false
+anchor_right = 1.0
+offset_top = 14.0
+offset_bottom = 26.0
+theme_type_variation = &"PlainLabel"
+horizontal_alignment = 1
+mouse_filter = 2
+text = "Название региона"

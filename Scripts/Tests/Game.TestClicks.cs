@@ -43,6 +43,38 @@ public partial class Game
         S(.4f, () => { Check(RealClick(FindButton(equipWindow, "Взять в руки"), false), "clicks: the Equip main button exists"); });
         S(.6f, () => { Check(CurW >= 0 || CurTool != "pickaxe" || true, "clicks: equip click done"); Check(EqIsHeld(ToolList().Count + 1), "clicks: the main action puts the weapon in hand with a still cursor"); CloseWindows(); OpenWin(Win.Build); });
         S(.6f, () => { Check(RealClick(buildMenu.TestChip(1), false), "clicks: the Production chip exists"); });
-        S(.5f, () => { Check(BuildCat == 1, $"clicks: the build category changes with a still cursor ({BuildCat})"); CloseWindows(); Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE"); });
+        S(.5f, () => { Check(BuildCat == 1, $"clicks: the build category changes with a still cursor ({BuildCat})"); CloseWindows(); OpenWin(Win.Inventory); });
+        Vector2 pointer = Vector2.Zero;
+        S(.3f, () =>
+        {
+            var stacks = InventorySlots();
+            int wood = Enumerable.Range(0, stacks.Count).FirstOrDefault(i => stacks[i].item == It.Wood && stacks[i].n > 0, -1);
+            Check(wood >= 0, "clicks: a resource stack is available to drag");
+            if (wood < 0) return;
+            var slot = invWindow.GetNode<GridContainer>("%Grid").GetChild<UiSlot>(wood);
+            var start = slot.GetGlobalTransformWithCanvas() * (slot.Size * .5f);
+            var toWindow = GetViewport().GetFinalTransform();
+            var startInWindow = toWindow * start;
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = startInWindow, GlobalPosition = startInWindow });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = startInWindow, GlobalPosition = startInWindow, ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+            pointer = start + new Vector2(32, 16) * UiScaleVp;
+        });
+        S(.3f, () =>
+        {
+            var pointInWindow = GetViewport().GetFinalTransform() * pointer;
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = pointInWindow, GlobalPosition = pointInWindow, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var preview = invWindow.GetNode<UiSlot>("CarryPreview");
+            var icon = preview.GetNode<TextureRect>("%Icon");
+            var center = icon.GetGlobalTransformWithCanvas() * (icon.Size * .5f);
+            Check(preview.IsVisibleInTree() && center.DistanceTo(pointer) <= 1f, $"clicks: dragged icon is centered on the pointer ({center}, expected {pointer})");
+            var worldItems = GetNode<CanvasLayer>("WorldItemsLayer");
+            var ui = GetNode<CanvasLayer>("Interface");
+            Check(worldItems.Layer < ui.Layer, "clicks: world items are rendered behind the interface");
+            CloseWindows();
+            Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
+        });
     }
 }

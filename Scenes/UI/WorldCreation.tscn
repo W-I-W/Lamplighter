@@ -1,0 +1,167 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/Flow/WorldCreationUI.cs" id="script"]
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_shield.png" id="shield"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_skull.png" id="skull"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_dice.png" id="dice"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_check.png" id="check"]
+
+[node name="WorldCreation" type="Control"]
+offset_right = 620.0
+offset_bottom = 340.0
+mouse_filter = 2
+theme = ExtResource("theme")
+script = ExtResource("script")
+
+[node name="Notice" type="Label" parent="."]
+mouse_filter = 2
+text = ""
+horizontal_alignment = 1
+theme_type_variation = &"PlainLabel"
+anchor_top = 1.0
+anchor_bottom = 1.0
+anchor_right = 1.0
+offset_top = -15.0
+offset_bottom = -3.0
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_right = 150.0
+offset_top = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+custom_minimum_size = Vector2(300, 0)
+theme_type_variation = &"PanelGold"
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Content" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Panel/Margin/Content"]
+mouse_filter = 2
+text = "Новый мир"
+horizontal_alignment = 1
+theme_type_variation = &"BigLabel"
+layout_mode = 2
+modulate = Color(1, 0.824, 0.247, 1)
+
+[node name="Name" type="LineEdit" parent="Panel/Margin/Content"]
+layout_mode = 2
+max_length = 20
+custom_minimum_size = Vector2(0, 20)
+placeholder_text = "Название мира"
+theme_type_variation = &"ChatInput"
+
+
+[node name="Difficulty" type="HBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+
+[node name="Normal" type="Button" parent="Panel/Margin/Content/Difficulty"]
+layout_mode = 2
+focus_mode = 0
+text = "Обычная"
+custom_minimum_size = Vector2(0, 26)
+size_flags_horizontal = 3
+tooltip_text = "Сбалансированное приключение"
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Difficulty/Normal"]
+offset_left = 5.0
+offset_top = 6.0
+offset_right = 21.0
+offset_bottom = 22.0
+mouse_filter = 2
+texture = ExtResource("shield")
+
+[node name="Hard" type="Button" parent="Panel/Margin/Content/Difficulty"]
+layout_mode = 2
+focus_mode = 0
+text = "Сложная"
+custom_minimum_size = Vector2(0, 26)
+size_flags_horizontal = 3
+tooltip_text = "Более опасные враги и боссы"
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Difficulty/Hard"]
+offset_left = 5.0
+offset_top = 6.0
+offset_right = 21.0
+offset_bottom = 22.0
+mouse_filter = 2
+texture = ExtResource("skull")
+
+[node name="More" type="Button" parent="Panel/Margin/Content"]
+layout_mode = 2
+focus_mode = 0
+text = "+ Дополнительные настройки"
+custom_minimum_size = Vector2(0, 18)
+size_flags_horizontal = 3
+
+[node name="Advanced" type="HBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+visible = false
+
+[node name="Seed" type="LineEdit" parent="Panel/Margin/Content/Advanced"]
+layout_mode = 2
+max_length = 18
+custom_minimum_size = Vector2(0, 20)
+placeholder_text = "Seed: случайный"
+theme_type_variation = &"ChatInput"
+size_flags_horizontal = 3
+
+[node name="Roll" type="Button" parent="Panel/Margin/Content/Advanced"]
+layout_mode = 2
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Advanced/Roll"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("dice")
+
+[node name="Actions" type="HBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Back" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+text = "Назад"
+custom_minimum_size = Vector2(80, 24)
+
+
+[node name="Create" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+text = "Создать мир"
+custom_minimum_size = Vector2(150, 24)
+theme_override_colors/font_color = Color(1, 0.824, 0.247, 1)
+theme_override_colors/font_hover_color = Color(1, 0.949, 0.69, 1)
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Actions/Create"]
+offset_left = 5.0
+offset_top = 5.0
+offset_right = 21.0
+offset_bottom = 21.0
+mouse_filter = 2
+texture = ExtResource("check")

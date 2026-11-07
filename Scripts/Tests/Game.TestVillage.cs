@@ -79,7 +79,7 @@ public partial class Game
         {
             Villagers.Clear(); NextVillagerId = 5000; Inv[It.Wood] = 500; Inv[It.Stone] = 500; Inv[It.Copper] = 500; Inv[It.Iron] = 500; Inv[It.Silver] = 500; Inv[It.Crystal] = 50;
             int active = 0; for (int bk = 0; bk < BCount; bk++) if (BActive(bk)) active++;
-            Check(active == 4 && BActive(0) && BActive(3) && BActive(8) && BActive(10), "buildings: only the warehouse, forge, stall and house remain");
+            Check(active == 5 && BActive(0) && BActive(3) && BActive(8) && BActive(10) && BActive(ResearchBk), "buildings: only the warehouse, forge, stall, house and research table remain");
             Check(!BUnlocked(1) && !BUnlocked(2) && !BUnlocked(4) && !BUnlocked(5) && !BUnlocked(6) && !BUnlocked(7) && !BUnlocked(9), "buildings: producers, workshop, hub and extractors are never unlocked");
             Check(!IsProducer(Tl.Sawmill) && !IsProducer(Tl.Mine) && !IsProducer(Tl.Forge), "buildings: nothing produces by itself");
             var b0 = CreateBuilding(0, sites[0]); var b3 = CreateBuilding(3, sites[3]); b0.Forced = b3.Forced = true;

@@ -260,11 +260,14 @@ public partial class Game
         // начало игры: ресурсы на печь → печь → кирка → навык света; показывается по одной цели, опытному герою не повторяется
         var sparkCost = LevelCost((int)Tech.Spark, 1); bool spark = Has(Tech.Spark);
         bool pickOwned = OwnedTools.Contains("pickaxe") || Tier >= 1 || Graves.Count > 0;          // после смерти кирка ждёт в могиле
+        var tableCost = BCost(ResearchBk, 1); bool tableBuilt = HasBuilding(Tl.ResearchTable);
+        Add("Собрать дерево и камень", tableBuilt || spark || Can(tableCost), NeedShort(tableCost));
+        Add("Построить Стол исследований [B]", tableBuilt || spark, NeedShort(tableCost));
+        Add("Изучить Искру света у стола [E]", spark, "Первый свет: Стол исследований → Искра света. " + NeedShort(sparkCost));
+        Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
         Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
         Add("Построить печь [B]", HasFurnace, NeedShort(CostFurnace));
         Add("Создать кирку в кузне [U у печи]", pickOwned, NeedShort(CostPickaxe));
-        Add("Изучить навык света [T]", spark, "Первый свет: [T] → Искра света. " + NeedShort(sparkCost));
-        Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
         Add("Создать оружие в кузне [U у печи]", Owned.Count > 0, "Меч, лук и посох — окно кузни");
         Add("Медная кирка в кузне [U у печи]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи], затем кузня [U]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
@@ -277,7 +280,8 @@ public partial class Game
         Add("Построить кузницу [B]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)", NearestExplorePoi()?.Pos);
         Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
-        Add("Изучить 3 улучшения [T]", TechCount >= 3, $"Изучено {TechCount}/3");
+        Add("Улучшить Стол исследований до ур.2 [U]", !tableBuilt || TableLevel >= 2, NeedShort(BCost(ResearchBk, 2)));
+        Add("Изучить 3 навыка у Стола исследований [E]", TechCount >= 3, $"Изучено {TechCount}/3");
         Add("Победить Пожирателя Рощи", BossDown(1), "Заражённое дерево в роще на краю леса. Награда: первое ядро", boss1?.Pos);
         Add("Экипировать реликвию [C]", EquippedRelics.Count > 0, "Реликвии усиливают оружие и свет");
         Add("Улучшить Центральный маяк", BeaconLevel >= 2, $"{It.Ic(It.Core)}Ядро света {Math.Min(Inv[It.Core], 1)}/1: к маяку, [E]", W.Ancients[0].Pos);
@@ -287,7 +291,8 @@ public partial class Game
             Add("Зажечь фонари шахт", LitIn(1) >= 3 || nm == null, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
             Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник", NearestPoi(PK.Puzzle, false)?.Pos);
             Add("Кристальная кирка в кузне [U у печи]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
-            Add("Изучить «Кристальную оптику» [T]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
+            Add("Улучшить Стол исследований до ур.3 [U]", !tableBuilt || TableLevel >= 3, BuildUpBlock(Buildings.Find(q => q.Type == Tl.ResearchTable)) ?? NeedShort(BCost(ResearchBk, 3)));
+            Add("Изучить «Кристальную оптику» у Стола [E]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
             Add("Победить Хранителя глубин", BossDown(2), "В глубоком озере шахт. Награда: Прожектор [R], ядро", BossLantern(2)?.Pos);
             Add("Улучшить маяк: путь в пустоши", BeaconLevel >= 3, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }
@@ -295,7 +300,8 @@ public partial class Game
         {
             var na = NearestUnlit(2);
             Add("Зажечь фонари пустошей", LitIn(2) >= 3 || na == null, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
-            Add("Теплозащита или огненное лезвие [T]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
+            Add("Улучшить Стол исследований до ур.4 [U]", !tableBuilt || TableLevel >= 4, BuildUpBlock(Buildings.Find(q => q.Type == Tl.ResearchTable)) ?? NeedShort(BCost(ResearchBk, 4)));
+            Add("Теплозащита или огненное лезвие у Стола [E]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
             Add("Обсидиановая кирка в кузне [U у печи]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
@@ -304,7 +310,8 @@ public partial class Game
         {
             var ni = NearestUnlit(3);
             Add("Зажечь фонари монастыря", LitIn(3) >= 3 || ni == null, $"Зажжено {LitIn(3)}/3 — осколки света {Inv[It.Shard]}", ni?.Pos);
-            Add("Ледяные шипы или тёплые меха [T]", Has(Tech.SpikeBoots) || Has(Tech.FrostArmor), "Вкладка «Лёд»: нужны ледяные кристаллы");
+            Add("Улучшить Стол исследований до ур.5 [U]", !tableBuilt || TableLevel >= 5, BuildUpBlock(Buildings.Find(q => q.Type == Tl.ResearchTable)) ?? NeedShort(BCost(ResearchBk, 5)));
+            Add("Ледяные шипы или тёплые меха у Стола [E]", Has(Tech.SpikeBoots) || Has(Tech.FrostArmor), "Вкладка «Лёд»: нужны ледяные кристаллы");
             Add("Победить Хранителя Зимы", BossDown(4), "На озере монастыря. Награда: кристаллы, 4-е ядро", BossLantern(4)?.Pos);
             Add("Улучшить маяк: путь в Сердце Тьмы", BeaconLevel >= 5, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }

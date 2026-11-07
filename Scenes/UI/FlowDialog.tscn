@@ -1,0 +1,103 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/Flow/Modal.cs" id="script"]
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_check.png" id="check"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_trash.png" id="trash"]
+
+[node name="FlowDialog" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("theme")
+script = ExtResource("script")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.02, 0.03, 0.06, 0.72)
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_right = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"PanelGold"
+custom_minimum_size = Vector2(300, 0)
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="Content" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Panel/Margin/Content"]
+layout_mode = 2
+mouse_filter = 2
+text = "Подтверждение"
+horizontal_alignment = 1
+theme_type_variation = &"BigLabel"
+
+
+[node name="Message" type="Label" parent="Panel/Margin/Content"]
+layout_mode = 2
+mouse_filter = 2
+text = "Подтвердить действие?"
+horizontal_alignment = 1
+theme_type_variation = &"PlainLabel"
+custom_minimum_size = Vector2(288, 0)
+autowrap_mode = 3
+
+[node name="Input" type="LineEdit" parent="Panel/Margin/Content"]
+layout_mode = 2
+visible = false
+max_length = 20
+custom_minimum_size = Vector2(0, 20)
+select_all_on_focus = true
+theme_type_variation = &"ChatInput"
+
+[node name="Actions" type="HBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Confirm" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+text = "Подтвердить"
+custom_minimum_size = Vector2(100, 22)
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Actions/Confirm"]
+visible = true
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("check")
+
+[node name="DangerIcon" type="TextureRect" parent="Panel/Margin/Content/Actions/Confirm"]
+visible = false
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("trash")
+
+[node name="Cancel" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+text = "Отмена"
+custom_minimum_size = Vector2(80, 22)

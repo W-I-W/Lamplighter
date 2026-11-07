@@ -40,8 +40,8 @@ public partial class Game
     // ───────────────────────── строительство фонарей ─────────────────────────
     void BuildLamp(int kind)
     {
-        if (kind == 1 && !Has(Tech.CombatLamp)) { Fail("Боевой фонарь нужно изучить [T] — вкладка «Глубины»"); return; }
-        if (kind == 2 && !Has(Tech.Optics)) { Fail("Кристальный фонарь нужно изучить [T] — «Кристальная оптика»"); return; }
+        if (kind == 1 && !Has(Tech.CombatLamp)) { Fail("Боевой фонарь изучается у Стола исследований — вкладка «Глубины»"); return; }
+        if (kind == 2 && !Has(Tech.Optics)) { Fail("Кристальный фонарь изучается у Стола исследований — «Кристальная оптика»"); return; }
         var cost = LampCost[kind];
         if (!Can(cost)) { Fail($"{LampNames[kind]}: нужно {CostStr(cost)}"); return; }
         if (Lamps.Count >= MaxLamps) { Fail("Достигнут предел фонарей"); return; }
@@ -56,7 +56,7 @@ public partial class Game
 
     void BuildMirror()
     {
-        if (!Has(Tech.Optics)) { Fail("Зеркала нужно изучить [T] — «Кристальная оптика»"); return; }
+        if (!Has(Tech.Optics)) { Fail("Зеркала изучаются у Стола исследований — «Кристальная оптика»"); return; }
         if (!Can(MirrorCost)) { Fail($"Зеркало: нужно {CostStr(MirrorCost)}"); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(MirrorCost); SetObj(t.Value.X, t.Value.Y, Tl.Mirror1);

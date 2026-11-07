@@ -4,6 +4,7 @@
 [ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="2"]
 
 [node name="EquipWindow" type="Control"]
+z_index = 4040
 visible = false
 layout_mode = 3
 anchors_preset = 15

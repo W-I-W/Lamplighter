@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/Debug/DebugPanel.cs" id="script"]
+
+[sub_resource type="StyleBoxFlat" id="panel"]
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+bg_color = Color(0.05, 0.06, 0.09, 0.93)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.784, 0.659, 0.29, 1)
+
+[node name="DebugPanel" type="PanelContainer"]
+visible = false
+z_index = 100
+offset_left = 8.0
+offset_top = 40.0
+offset_right = 428.0
+offset_bottom = 400.0
+theme_override_styles/panel = SubResource("panel")
+script = ExtResource("script")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+
+[node name="Title" type="Label" parent="Content/Header"]
+layout_mode = 2
+text = "ОТЛАДКА · F10 закрыть · Esc — в игру"
+clip_text = true
+custom_minimum_size = Vector2(1, 0)
+size_flags_horizontal = 3
+
+[node name="Move" type="Button" parent="Content/Header"]
+layout_mode = 2
+focus_mode = 0
+text = "⇄"
+
+[node name="Close" type="Button" parent="Content/Header"]
+layout_mode = 2
+focus_mode = 0
+text = "✕"
+
+[node name="Tabs" type="TabContainer" parent="Content"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Status" type="Label" parent="Content"]
+layout_mode = 2
+autowrap_mode = 3
+custom_minimum_size = Vector2(0, 38)
+theme_override_colors/font_color = Color(0.624, 0.847, 0.624, 1)

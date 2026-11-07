@@ -91,7 +91,7 @@ public partial class Game
     public TechState StateOfTech(int i)
     {
         int lv = SkillLv[i], mx = SkillMax(i); if (lv >= mx) return TechState.Owned;
-        if (lv == 0 && (Techs[i].Reward || !ParentsOwned(i) || !Techs[i].Ok(this))) return TechState.Locked;
+        if (lv == 0 && (Techs[i].Reward || !ParentsOwned(i) || !Techs[i].Ok(this) || TableReason(i) != null)) return TechState.Locked;
         return Can(LevelCost(i, lv + 1)) ? TechState.Available : TechState.Missing;
     }
 
@@ -101,6 +101,8 @@ public partial class Game
         var t = Techs[i]; int lv = SkillLv[i], mx = SkillMax(i);
         if (lv >= mx) { Toast("Максимальный уровень"); return false; }
         if (lv == 0 && t.Reward) { Fail("Это награда: её даёт победа над стражем"); return false; }
+        if (!NearTable()) { Fail(TableLevel == 0 ? "Навыки изучаются у Стола исследований: постройте его [B]" : "Навыки изучаются у Стола исследований: подойдите к нему"); return false; }
+        var tableWhy = TableReason(i); if (tableWhy != null) { Fail(tableWhy); return false; }
         if (!ParentsOwned(i)) { Fail("Сначала изучите: " + MissingParents(i)); return false; }
         if (lv == 0 && !t.Ok(this)) { Fail("Пока недоступно: " + t.Req); return false; }
         var cost = LevelCost(i, lv + 1); if (!Can(cost)) { Fail("Не хватает: " + NeedStr(cost)); return false; }

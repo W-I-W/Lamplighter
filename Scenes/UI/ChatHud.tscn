@@ -1,0 +1,71 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Script" path="res://Scripts/UI/Chat/ChatHud.cs" id="script"]
+
+[node name="ChatHud" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture_filter = 1
+theme = ExtResource("theme")
+script = ExtResource("script")
+z_index = 3000
+mouse_filter = 2
+
+[node name="Backdrop" type="ColorRect" parent="."]
+visible = false
+mouse_filter = 2
+
+[node name="Recent" type="RichTextLabel" parent="."]
+bbcode_enabled = true
+shortcut_keys_enabled = false
+theme_override_constants/line_separation = 0
+theme_override_colors/font_shadow_color = Color(0, 0, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+fit_content = true
+scroll_active = false
+mouse_filter = 2
+
+[node name="History" type="PanelContainer" parent="."]
+theme_type_variation = &"PanelDark"
+visible = false
+offset_left = 4.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -140.0
+offset_bottom = -4.0
+offset_right = 174.0
+
+[node name="Content" type="VBoxContainer" parent="History"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Messages" type="RichTextLabel" parent="History/Content"]
+layout_mode = 2
+bbcode_enabled = true
+shortcut_keys_enabled = false
+theme_override_constants/line_separation = 0
+theme_override_colors/font_shadow_color = Color(0, 0, 0.04, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+custom_minimum_size = Vector2(100, 104)
+scroll_following = true
+mouse_filter = 0
+
+[node name="Input" type="LineEdit" parent="History/Content"]
+layout_mode = 2
+max_length = 200
+placeholder_text = "Сообщение…"
+custom_minimum_size = Vector2(0, 16)
+caret_blink = true
+theme_type_variation = &"ChatInput"
+
+[node name="Counter" type="Label" parent="."]
+visible = false
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.55, 0.62, 0.75, 1)
+horizontal_alignment = 2

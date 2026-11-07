@@ -32,6 +32,7 @@ public partial class Game
         if (a1 != null && !a1.Lit && Inv[It.Shard] >= a1.Cost && a1.Cost > 0) Hint("shards", $"Осколков хватает ({a1.Cost})! К древнему фонарю, [E]");
         if (LitCount >= 1) Hint("lit1", "Территория освобождена: строить можно [B]");
         if (HasFurnace && Tier < 1 && OwnedTools.Contains("pickaxe") && Inv[It.Copper] >= 5) Hint("pick", "Меди хватает: улучшите кирку в кузне [U у печи]");
+        if (!HasBuilding(Tl.ResearchTable) && !Has(Tech.Spark) && Can(BCost(ResearchBk, 1))) Hint("table", "Хватает на Стол исследований: создайте его в меню [B]");
         if (!HasFurnace && Inv[It.Stone] >= 10 && Inv[It.Wood] >= 5) Hint("furnace", "Хватает на печь: создайте её в меню [B]");
         if (Inv[It.Core] > 0 && BeaconLevel < 6) Hint("core", It.Ic(It.Core) + "Ядро света! Отнесите к маяку, [E]");
         if (TotalLit >= 3 && BossDown(1) == false) Hint("boss1", "Страж леса у особого фонаря. Готовьте оружие [C]");

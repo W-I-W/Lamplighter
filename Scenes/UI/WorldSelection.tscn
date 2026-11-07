@@ -1,0 +1,178 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/Flow/WorldSelectionUI.cs" id="script"]
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_edit.png" id="edit"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_lobby.png" id="lobby"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_trash.png" id="trash"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_plus.png" id="plus"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_play.png" id="play"]
+
+[node name="WorldSelection" type="Control"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 620.0
+offset_bottom = 340.0
+mouse_filter = 2
+theme = ExtResource("theme")
+script = ExtResource("script")
+
+[node name="Title" type="Label" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 620.0
+offset_bottom = 20.0
+mouse_filter = 2
+theme_type_variation = &"BigLabel"
+modulate = Color(1, 0.824, 0.247, 1)
+horizontal_alignment = 1
+text = "Выбор мира"
+
+[node name="Subtitle" type="Label" parent="."]
+offset_left = 0.0
+offset_top = 21.0
+offset_right = 620.0
+offset_bottom = 33.0
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 1
+text = ""
+
+[node name="Notice" type="Label" parent="."]
+offset_left = 0.0
+offset_top = 325.0
+offset_right = 620.0
+offset_bottom = 337.0
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(1, 0.702, 0.42, 1)
+horizontal_alignment = 1
+text = ""
+
+[node name="List" type="PanelContainer" parent="."]
+offset_left = 0.0
+offset_top = 38.0
+offset_right = 270.0
+offset_bottom = 284.0
+theme_type_variation = &"PanelDark"
+
+[node name="Content" type="Control" parent="List"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="List/Content"]
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 264.0
+offset_bottom = 240.0
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="Cards" type="VBoxContainer" parent="List/Content/Scroll"]
+layout_mode = 2
+custom_minimum_size = Vector2(250, 0)
+theme_override_constants/separation = 4
+
+[node name="Empty" type="Label" parent="List"]
+offset_left = 14.0
+offset_top = 90.0
+offset_right = 254.0
+offset_bottom = 150.0
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 1
+text = "Миров пока нет.\nСоздайте первый мир: он сохранит постройки, фонари и жителей независимо от героев."
+autowrap_mode = 3
+
+[node name="Details" type="PanelContainer" parent="."]
+offset_left = 280.0
+offset_top = 38.0
+offset_right = 620.0
+offset_bottom = 284.0
+theme_type_variation = &"PanelDark"
+
+[node name="Content" type="Control" parent="Details"]
+layout_mode = 2
+
+[node name="Back" type="Button" parent="."]
+offset_left = 0.0
+offset_top = 294.0
+offset_right = 90.0
+offset_bottom = 316.0
+focus_mode = 0
+custom_minimum_size = Vector2(90, 22)
+text = "Назад"
+
+[node name="Actions" type="HBoxContainer" parent="."]
+offset_left = 100.0
+offset_top = 294.0
+offset_right = 620.0
+offset_bottom = 318.0
+alignment = 2
+theme_override_constants/separation = 6
+
+[node name="Rename" type="Button" parent="Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(130, 22)
+text = "Переименовать"
+
+[node name="Icon" type="TextureRect" parent="Actions/Rename"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("edit")
+
+[node name="Delete" type="Button" parent="Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(92, 22)
+text = "Удалить"
+
+[node name="Icon" type="TextureRect" parent="Actions/Delete"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("trash")
+
+[node name="Create" type="Button" parent="Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(120, 22)
+text = "Создать мир"
+
+[node name="Icon" type="TextureRect" parent="Actions/Create"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("plus")
+
+[node name="Play" type="Button" parent="Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(130, 22)
+text = "Играть"
+
+[node name="Icon" type="TextureRect" parent="Actions/Play"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("play")
+
+[node name="LobbyIcon" type="TextureRect" parent="Actions/Play"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+visible = false
+mouse_filter = 2
+texture = ExtResource("lobby")

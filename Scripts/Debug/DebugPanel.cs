@@ -9,7 +9,7 @@ using System.Text;
 namespace Lamplighter;
 
 /// <summary>Окно отладки (F10). Вкладки: Состояние, Развитие (смена этапа), Баланс (числа CombatTuning на лету), Утилиты.
-/// Собирается кодом из стандартных Control; правки чисел действуют сразу на расчёты и новых врагов. Только для разработки.</summary>
+/// Разметка панели задана сценой, содержимое вкладок создаётся в коде. Правки чисел действуют сразу на расчёты и новых врагов. Только для разработки.</summary>
 public partial class DebugPanel : PanelContainer
 {
     public Game G;
@@ -19,18 +19,15 @@ public partial class DebugPanel : PanelContainer
 
     sealed class TuneRow { public FieldInfo F; public LineEdit Edit; public Label Name; public string Original; public HBoxContainer Box; }
 
-    public override void _Ready()
+    public void Bind(Game game)
     {
-        ZIndex = 100; MouseFilter = MouseFilterEnum.Stop; FocusMode = FocusModeEnum.None;
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color(.05f, .06f, .09f, .93f), BorderColor = new Color("#c8a84a"), BorderWidthBottom = 2, BorderWidthTop = 2, BorderWidthLeft = 2, BorderWidthRight = 2, ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 6, ContentMarginBottom = 6 });
-        var root = new VBoxContainer(); AddChild(root);
-        var head = new HBoxContainer(); root.AddChild(head);
-        head.AddChild(new Label { Text = "ОТЛАДКА · F10 закрыть · Esc — в игру", ClipText = true, CustomMinimumSize = new Vector2(1, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        head.AddChild(Btn("⇄", () => { right = !right; Layout(); }));
-        head.AddChild(Btn("✕", () => Toggle()));
-        tabs = new TabContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; root.AddChild(tabs);
+        G = game;
+        var content = GetNode<VBoxContainer>("Content");
+        content.GetNode<Button>("Header/Move").Pressed += () => { right = !right; Layout(); };
+        content.GetNode<Button>("Header/Close").Pressed += Toggle;
+        tabs = content.GetNode<TabContainer>("Tabs");
+        status = content.GetNode<Label>("Status");
         BuildInfoTab(); BuildStageTab(); BuildTuneTab(); BuildToolsTab();
-        status = new Label { Text = "", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(0, 38) }; status.AddThemeColorOverride("font_color", new Color("#9fd89f")); root.AddChild(status);
         Layout();
     }
 

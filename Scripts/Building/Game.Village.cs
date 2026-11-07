@@ -11,11 +11,11 @@ public partial class Game
     public int[] Stock = new int[It.Count];
     public int PoisDone { get { int n = 0; foreach (var p in W.Pois) if (p.State == 3) n++; return n; } }
 
-    public static readonly string[] BNames = { "Склад", "Лесопилка", "Шахта", "Кузница", "Автобур", "Коллектор пепла", "Перерабатывающий цех", "Узел снабжения", "Торговая лавка", "Криоэкстрактор", "Жилой дом" };
-    public static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall, Tl.Cryo, Tl.House };
-    public const int BCount = 11;
-    /// <summary>Остались только постройки с понятной ролью: склад (общий сундук), кузница (станция крафта), лавка (торговля), дом (жильё). Остальные индексы зарезервированы под старые сохранения и сеть.</summary>
-    public static bool BActive(int bk) => bk == 0 || bk == 3 || bk == 8 || bk == 10;
+    public static readonly string[] BNames = { "Склад", "Лесопилка", "Шахта", "Кузница", "Автобур", "Коллектор пепла", "Перерабатывающий цех", "Узел снабжения", "Торговая лавка", "Криоэкстрактор", "Жилой дом", "Стол исследований" };
+    public static readonly Tl[] BTypes = { Tl.Warehouse, Tl.Sawmill, Tl.Mine, Tl.Forge, Tl.Drill, Tl.Collector, Tl.Refinery, Tl.Hub, Tl.Stall, Tl.Cryo, Tl.House, Tl.ResearchTable };
+    public const int BCount = 12;
+    /// <summary>Остались только постройки с понятной ролью: склад (общий сундук), кузница (станция крафта), лавка (торговля), дом (жильё), стол исследований (изучение навыков). Остальные индексы зарезервированы под старые сохранения и сеть.</summary>
+    public static bool BActive(int bk) => bk == 0 || bk == 3 || bk == 8 || bk == 10 || bk == ResearchBk;
     static readonly int[][][][] BCosts =
     {
         new[] { C(It.Wood, 15, It.Stone, 10), C(It.Wood, 20, It.Stone, 20, It.Copper, 4), C(It.Iron, 6, It.Relic, 1), C(It.Silver, 6, It.Crystal, 3), C(It.Gear, 4, It.Lens, 2, It.Crystal, 4) },
@@ -29,6 +29,7 @@ public partial class Game
         new[] { C(It.Wood, 20, It.Stone, 15, It.Copper, 6), C(It.Silver, 4, It.Coins, 100), C(It.Crystal, 4, It.Coins, 300) },
         new[] { C(It.Frost, 4, It.Silver, 4, It.Crystal, 3), C(It.Frost, 4, It.Gear, 2), C(It.Frost, 6, It.Lens, 2), C(It.Frost, 8, It.Lens, 3, It.Crystal, 4), C(It.Gear, 4, It.Lens, 4, It.AncCrystal, 1) },
         new[] { C(It.Wood, 20, It.Stone, 8), C(It.Wood, 24, It.Stone, 14, It.Copper, 4), C(It.Wood, 30, It.Stone, 20, It.Iron, 4) },
+        new[] { C(It.Wood, 8, It.Stone, 5), C(It.Wood, 10, It.Iron, 6, It.Gear, 2), C(It.Silver, 8, It.Crystal, 5, It.Lens, 2), C(It.Obsidian, 5, It.Ember, 5, It.Crystal, 3, It.Lens, 2), C(It.Frost, 6, It.Obsidian, 2, It.Crystal, 4, It.Lens, 3) },
     };
     static readonly string[][] BDesc =
     {
@@ -43,6 +44,7 @@ public partial class Game
         new[] { "торговля: базовые товары, чертежи", "торговля: редкие материалы и вставки", "торговля: реликвии и снаряжение" },
         new[] { "ледяной кристалл и серебро / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "2 места для жителей", "3 места, цветы у входа", "4 места, скамейка и фонарь" },
+        new[] { "навыки: основы, первый свет [E]", "ремесленные исследования: бой, добыча, свет", "кристальные исследования: оптика и бой Глубин", "исследования пепла: огонь и защита", "исследования мороза: лёд" },
     };
     static readonly int[] WhCap = { 20, 60, 120, 250, 500, 800 };
     public static int MaxLv(int bk) => bk == 3 ? 1 : bk == 7 || bk == 8 || bk == 10 ? 3 : 5;
@@ -51,12 +53,12 @@ public partial class Game
     public bool BUnlocked(int bk) => BActive(bk) && bk switch
     {
         0 => HasFurnace, 1 => HasBuilding(Tl.Warehouse), 2 => LitCount >= 1, 3 => Villagers.Count >= 1, 4 => Has(Tech.AutoDrill), 5 => Has(Tech.Collector),
-        6 => BpDone.Contains("bp_refinery"), 7 => BpDone.Contains("bp_hub"), 8 => BpDone.Contains("bp_stall"), 10 => Villagers.Count >= 1, _ => BpDone.Contains("bp_cryo")
+        6 => BpDone.Contains("bp_refinery"), 7 => BpDone.Contains("bp_hub"), 8 => BpDone.Contains("bp_stall"), 10 => Villagers.Count >= 1, ResearchBk => true, _ => BpDone.Contains("bp_cryo")
     };
     public static string BLock(int bk) => bk switch
     {
-        0 => "Постройте печь", 1 => "Постройте склад", 2 => "Зажгите древний фонарь", 3 => "Спасите жителя", 4 => "Изучите «Автобур» [T]", 5 => "Изучите «Коллектор» [T]",
-        6 => "Чертёж «Цех» [J]", 7 => "Чертёж «Логистика» [J]", 8 => "Чертёж «Лавка» (даёт житель)", 10 => "Спасите жителя", _ => "Чертёж «Криоэкстрактор» [J]"
+        0 => "Постройте печь", 1 => "Постройте склад", 2 => "Зажгите древний фонарь", 3 => "Спасите жителя", 4 => "Автобур больше недоступен", 5 => "Коллектор больше недоступен",
+        6 => "Чертёж «Цех» [J]", 7 => "Чертёж «Логистика» [J]", 8 => "Чертёж «Лавка» (даёт житель)", 10 => "Спасите жителя", ResearchBk => "", _ => "Чертёж «Криоэкстрактор» [J]"
     };
 
     public bool HasBuilding(Tl t) { foreach (var b in Buildings) if (b.Type == t) return true; return false; }
@@ -162,6 +164,7 @@ public partial class Game
         int bk = BIndex(b.Type);
         if (b.Level >= MaxLv(bk)) { Fail("Здание уже улучшено до максимума"); return; }
         var cost = BCost(bk, b.Level + 1);
+        var upBlock = BuildUpBlock(b); if (upBlock != null) { Fail(upBlock); return; }
         if (!Can(cost)) { Fail($"Улучшение: нужно {CostStr(cost)}"); return; }
         Pay(cost); MyBuildingUp = true;
         if (NetClient) { Net?.SendBuildCmd(2, BKey(b), b.Level, bk); Sfx.Play("build"); Toast("Улучшение отправлено хосту"); return; }
@@ -191,7 +194,8 @@ public partial class Game
             foreach (var hv in Villagers) if (hv.Home == BKey(b)) ix.Info($"{hv.Name} · {ProfTitle(hv)}");
         }
         if (b.Type == Tl.Stall) { ix.Action("E", "Торговать"); ix.E = () => OpenTrade(null); }
-        else if (b.Type == Tl.Forge) { ix.Action("E", "Кузня: создание и улучшение"); ix.E = () => OpenStation("forge"); }
+        else if (b.Type == Tl.Forge) { ix.Action("E", "Кузня: создание и улучшение предметов"); ix.E = () => OpenStation("forge"); }
+        else if (b.Type == Tl.ResearchTable) { ix.Action("E", "Исследования: изучить навыки"); ix.E = () => OpenTech(true, true); ResearchIx(b, ix); }
         else
         {
             int tot = StockTotal + LocalTotal(b);
@@ -205,7 +209,7 @@ public partial class Game
         if (b.Level < MaxLv(bk))
         {
             var cost = BCost(bk, b.Level + 1);
-            ix.Action("U", $"Улучшить до ур.{b.Level + 1}"); NeedCost(ix, cost); ix.U = () => UpgradeBuilding(b);
+            ix.Action("U", $"Улучшить до ур.{b.Level + 1}"); NeedCost(ix, cost); var upBlock = BuildUpBlock(b); if (upBlock != null) ix.Info(upBlock, TipRole.Text); ix.U = () => UpgradeBuilding(b);
             if (b.Level < BDesc[bk].Length) ix.Gives("Новое", BDesc[bk][b.Level], TipRole.Zone);
         }
         else ix.Info("Максимальный уровень");
@@ -236,6 +240,7 @@ public partial class Game
 
     void UpdateVillage(float dt)
     {
+        TickResearch();
         netT -= dt; if (netT <= 0) { netT = 1f; RecomputeNetwork(); }
         if (NetClient) { UpdateVillagers(dt); return; }              // клиент: производство считает хост
         var wh = Buildings.Find(x => x.Type == Tl.Warehouse);
@@ -252,13 +257,13 @@ public partial class Game
     float unlockT;
     public List<Goal> Goals = new();
     public const long TutTechOpened = 1L << 60, TutExplored = 1L << 61;       // признаки героя: открывал дерево навыков, выходил в Тьму со светом
-    static readonly string[] TutorialTitles = { "Собрать ресурсы на печь", "Построить печь [B]", "Создать кирку в кузне [U у печи]", "Изучить навык света [T]", "Исследовать Тьму" };
+    static readonly string[] TutorialTitles = { "Собрать дерево и камень", "Построить Стол исследований [B]", "Изучить Искру света у стола [E]", "Исследовать Тьму" };
 
     void UpdateUnlocks(float dt)
     {
         unlockT -= dt; if (unlockT > 0) return; unlockT = .4f;
         string[] hint = { "Хранилище и центр производства", "Производит дерево само", "Добывает руду сама", "Плавит руду со склада", "Добывает серебро и кристаллы", "Добывает обсидиан и уголь пепла",
-            "Шестерни и линзы из слитков [B]", "Подключает здания к складу [B]", "Торговля и покупка чертежей [B]", "Добывает ледяной кристалл [B]", "Жильё для жителей [B]" };
+            "Шестерни и линзы из слитков [B]", "Подключает здания к складу [B]", "Торговля и покупка чертежей [B]", "Добывает ледяной кристалл [B]", "Жильё для жителей [B]", "Здесь изучаются навыки [E]" };
         for (int bk = 0; bk < BCount; bk++)
             if ((Ann & (1L << bk)) == 0 && BUnlocked(bk))
             {

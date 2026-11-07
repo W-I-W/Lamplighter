@@ -1,4 +1,4 @@
-"""Генератор исходных сцен интерфейса (.tscn). После генерации сцены правятся в редакторе Godot вручную; повторный запуск перезапишет правки!
+"""Генератор исходных сцен интерфейса (.tscn). Генерирует только отсутствующие файлы. Существующие сцены редактируются в Godot.
 Запуск из корня проекта: python Tools/GraphicsGenerator/make_ui_scenes.py"""
 import os
 
@@ -6,7 +6,11 @@ THEME = '[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" 
 
 def w(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    open(path, 'w', encoding='utf-8', newline='\n').write(text)
+    if os.path.exists(path):
+        print(f'Skipping existing scene: {path}')
+        return
+    with open(path, 'x', encoding='utf-8', newline='\n') as scene:
+        scene.write(text)
 
 # ───────────── Slot ─────────────
 w('Scenes/UI/Slot.tscn', '''[gd_scene load_steps=2 format=3]
@@ -31,9 +35,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -8.0
-offset_top = -8.0
+offset_top = -11.0
 offset_right = 8.0
-offset_bottom = 8.0
+offset_bottom = 5.0
 mouse_filter = 2
 expand_mode = 1
 
@@ -71,10 +75,10 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -22.0
-offset_top = -10.0
-offset_right = 1.0
-offset_bottom = 1.0
+offset_left = -17.0
+offset_top = -6.0
+offset_right = 3.0
+offset_bottom = 4.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_type_variation = &"CountLabel"
@@ -83,15 +87,18 @@ horizontal_alignment = 2
 [node name="Key" type="Label" parent="Overlay"]
 unique_name_in_owner = true
 layout_mode = 1
-offset_left = 0.0
-offset_top = -3.0
-offset_right = 14.0
-offset_bottom = 8.0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = -3.0
+offset_top = -6.0
+offset_right = 17.0
+offset_bottom = 4.0
+grow_vertical = 0
 theme_type_variation = &"GoldLabel"
 ''')
 
 # ───────────── GameHud ─────────────
-slots = ''.join(f'\n[node name="Slot{i}" parent="Bottom/Row/Hotbar/Slots" instance=ExtResource("slot")]\nlayout_mode = 2\n' for i in range(3))
 abil = ''.join(f'\n[node name="Ability{i}" parent="Abilities" instance=ExtResource("slot")]\nlayout_mode = 2\n' for i in range(5))
 chips = ''.join(f'''
 [node name="Chip{i}" type="HBoxContainer" parent="TopRight/World/V/Res"]
@@ -323,49 +330,6 @@ theme_type_variation = &"DimLabel"
 layout_mode = 2
 theme_override_constants/separation = 4
 {chips}
-[node name="Bottom" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -120.0
-offset_top = -60.0
-offset_right = 120.0
-offset_bottom = -4.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-alignment = 2
-
-[node name="Hint" type="PanelContainer" parent="Bottom"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-theme_type_variation = &"PanelDark"
-
-[node name="HintLabel" type="Label" parent="Bottom/Hint"]
-unique_name_in_owner = true
-layout_mode = 2
-horizontal_alignment = 1
-
-[node name="Row" type="HBoxContainer" parent="Bottom"]
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_constants/separation = 3
-
-[node name="Weapon" parent="Bottom/Row" instance=ExtResource("slot")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="Hotbar" type="PanelContainer" parent="Bottom/Row"]
-layout_mode = 2
-
-[node name="Slots" type="HBoxContainer" parent="Bottom/Row/Hotbar"]
-layout_mode = 2
-theme_override_constants/separation = 1
-{slots}
 [node name="Abilities" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
@@ -595,7 +559,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/h_separation = 1
 theme_override_constants/v_separation = 1
-columns = 7
+columns = 5
 
 [node name="Info" type="PanelContainer" parent="Panel/V"]
 layout_mode = 2

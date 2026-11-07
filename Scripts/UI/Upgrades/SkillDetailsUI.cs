@@ -27,7 +27,8 @@ public partial class SkillDetailsUI : PanelContainer
 
     public void Show(Game g, int tech)
     {
-        var sb = new StringBuilder(); sb.Append(tech).Append('|').Append(tech >= 0 ? g.SkillLv[tech] : 0).Append('|').Append(Loc.Lang);
+        var sb = new StringBuilder(); sb.Append(tech).Append('|').Append(tech >= 0 ? g.SkillLv[tech] : 0).Append('|').Append(Loc.Lang).Append('|').Append(g.TechAtTable || g.FreeResearch).Append(g.TableLevel);
+        if (tech >= 0) sb.Append(g.TableReason(tech));
         if (tech >= 0) { sb.Append('|').Append((int)g.StateOfTech(tech)).Append('|').Append(g.MissingParents(tech)); var c = Game.LevelCost(tech, g.SkillLv[tech] + 1); foreach (var x in c) sb.Append('|').Append(g.HaveAny(x[0]) >= x[1]).Append(x[1]); if (Game.Techs[tech].Ok != null) sb.Append(Game.Techs[tech].Ok(g)); }
         if (sb.ToString() == sig) return; sig = sb.ToString();
         foreach (var n in box.GetChildren()) { box.RemoveChild(n); n.QueueFree(); } foreach (var n in foot.GetChildren()) { foot.RemoveChild(n); n.QueueFree(); } LearnButton = null;
@@ -55,12 +56,14 @@ public partial class SkillDetailsUI : PanelContainer
             var cost = Game.LevelCost(tech, lv + 1);
             if (cost.Length > 0) { box.AddChild(L("Стоимость следующего уровня", Grey, true, "DimLabel")); var wrapRow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore }; wrapRow.AddThemeConstantOverride("h_separation", 6); box.AddChild(wrapRow); foreach (var c in cost) { bool ok = g.HaveAny(c[0]) >= c[1]; wrapRow.AddChild(Chip(c[0], $"{g.HaveAny(c[0])}/{c[1]}", ok ? Green : Red)); } }
             if (st == TechState.Missing && cost.Length > 0) box.AddChild(L(Loc.T("Не хватает") + ": " + g.MissingPlain(cost), Red, true, null, true));
+            string tableWhy = g.TableReason(tech); if (tableWhy != null) box.AddChild(L(tableWhy, Red));
             string miss = g.MissingParents(tech);
             if (miss != "") { box.AddChild(L("Требуется", Grey, true, "DimLabel")); box.AddChild(L(miss, Red, true, null, true)); }
             if (lv == 0 && !string.IsNullOrEmpty(t.Req)) { bool ok = t.Ok != null && t.Ok(g); box.AddChild(L((ok ? "✓ " : "") + Loc.T(t.Req), ok ? Green : Grey, true, null, true)); }
             if (lv == 0 && t.Reward) box.AddChild(L("Это награда: её даёт победа над стражем", Grey));
+            if (!(g.TechAtTable || g.FreeResearch)) { foot.AddChild(L("Изучается у Стола исследований", Cyan, true, "DimLabel")); return; }          // вне стола дерево только для просмотра
             string label = Loc.T("Улучшить до") + $" {lv + 1}/{mx}"; if (lv == 0 && mx == 1) label = Loc.T("Изучить");
-            LearnButton = new Button { Text = label, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 22), Disabled = st != TechState.Available };
+            LearnButton = new Button { Text = label, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 22), Disabled = st != TechState.Available || tableWhy != null };
             if (st == TechState.Available) LearnButton.AddThemeColorOverride("font_color", Gold); LearnButton.Pressed += () => LearnPressed?.Invoke(); foot.AddChild(LearnButton);
         }
     }

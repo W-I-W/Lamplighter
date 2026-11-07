@@ -1,0 +1,229 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Script" path="res://Scripts/UI/Resources/ResourceActionUI.cs" id="script"]
+
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_left.png" id="left"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_right.png" id="right"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_check.png" id="check"]
+
+[node name="ResourceActions" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture_filter = 1
+theme = ExtResource("theme")
+script = ExtResource("script")
+z_index = 4070
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0.03, 0.35)
+
+[node name="Panel" type="PanelContainer" parent="."]
+theme_type_variation = &"PanelGold"
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Content" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Head" type="HBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="IconMargin" type="MarginContainer" parent="Panel/Margin/Content/Head"]
+layout_mode = 2
+mouse_filter = 2
+size_flags_vertical = 4
+theme_override_constants/margin_bottom = 2
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Head/IconMargin"]
+layout_mode = 2
+custom_minimum_size = Vector2(16, 16)
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Item" type="Label" parent="Panel/Margin/Content/Head"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(1, 0.824, 0.247, 1)
+text = "Дерево ×25"
+
+
+[node name="Actions" type="VBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Drop" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(150, 18)
+text = "Выбросить"
+
+[node name="Deposit" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(150, 18)
+text = "Положить на склад"
+
+[node name="Withdraw" type="Button" parent="Panel/Margin/Content/Actions"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(150, 18)
+text = "Взять со склада"
+
+[node name="Quantity" type="VBoxContainer" parent="Panel/Margin/Content"]
+layout_mode = 2
+visible = false
+theme_override_constants/separation = 4
+
+[node name="Recipient" type="HBoxContainer" parent="Panel/Margin/Content/Quantity"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="Previous" type="Button" parent="Panel/Margin/Content/Quantity/Recipient"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(20, 18)
+text = ""
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Quantity/Recipient/Previous"]
+offset_left = 5.0
+offset_top = 2.0
+offset_right = 21.0
+offset_bottom = 18.0
+mouse_filter = 2
+texture = ExtResource("left")
+
+[node name="Name" type="Label" parent="Panel/Margin/Content/Quantity/Recipient"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+text = "Получатель"
+
+
+[node name="Next" type="Button" parent="Panel/Margin/Content/Quantity/Recipient"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(20, 18)
+text = ""
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Quantity/Recipient/Next"]
+offset_left = 5.0
+offset_top = 2.0
+offset_right = 21.0
+offset_bottom = 18.0
+mouse_filter = 2
+texture = ExtResource("right")
+
+[node name="Prompt" type="Label" parent="Panel/Margin/Content/Quantity"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+text = "Сколько выбросить?"
+horizontal_alignment = 1
+
+[node name="Presets" type="HBoxContainer" parent="Panel/Margin/Content/Quantity"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 3
+
+[node name="One" type="Button" parent="Panel/Margin/Content/Quantity/Presets"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(26, 18)
+text = "1"
+
+[node name="Half" type="Button" parent="Panel/Margin/Content/Quantity/Presets"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(62, 18)
+text = "Половина"
+
+[node name="All" type="Button" parent="Panel/Margin/Content/Quantity/Presets"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(36, 18)
+text = "Всё"
+
+[node name="Amount" type="HBoxContainer" parent="Panel/Margin/Content/Quantity"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="Less" type="Button" parent="Panel/Margin/Content/Quantity/Amount"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(20, 18)
+text = "-"
+
+[node name="Input" type="LineEdit" parent="Panel/Margin/Content/Quantity/Amount"]
+layout_mode = 2
+custom_minimum_size = Vector2(46, 18)
+theme_type_variation = &"ChatInput"
+max_length = 4
+alignment = 1
+select_all_on_focus = true
+text = "1"
+tooltip_text = "Введите число или нажмите кнопку"
+
+[node name="Maximum" type="Label" parent="Panel/Margin/Content/Quantity/Amount"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.608, 0.878, 0.478, 1)
+text = "/ 25"
+
+
+[node name="More" type="Button" parent="Panel/Margin/Content/Quantity/Amount"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(20, 18)
+text = "+"
+
+[node name="Buttons" type="HBoxContainer" parent="Panel/Margin/Content/Quantity"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="Confirm" type="Button" parent="Panel/Margin/Content/Quantity/Buttons"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(104, 20)
+text = "Выбросить"
+
+[node name="Icon" type="TextureRect" parent="Panel/Margin/Content/Quantity/Buttons/Confirm"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("check")
+
+[node name="Cancel" type="Button" parent="Panel/Margin/Content/Quantity/Buttons"]
+layout_mode = 2
+focus_mode = 0
+custom_minimum_size = Vector2(60, 20)
+text = "Отмена"

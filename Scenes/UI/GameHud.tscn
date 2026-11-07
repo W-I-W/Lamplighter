@@ -111,6 +111,8 @@ step = 0.001
 show_percentage = false
 
 [node name="Goal" type="PanelContainer" parent="TopLeft" unique_id=2030040613]
+mouse_default_cursor_shape = 2
+modulate = Color(1, 1, 1, 0.92)
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -164,6 +166,7 @@ grow_horizontal = 0
 mouse_filter = 2
 
 [node name="World" type="PanelContainer" parent="TopRight" unique_id=1128974323]
+modulate = Color(1, 1, 1, 0.82)
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -188,6 +191,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="LBar" type="ProgressBar" parent="TopRight/World/V/LRow" unique_id=47197100]
+visible = false
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 6)
 layout_mode = 2
@@ -199,6 +203,7 @@ step = 0.001
 show_percentage = false
 
 [node name="LLabel" type="Label" parent="TopRight/World/V/LRow" unique_id=1978628706]
+modulate = Color(0.78, 0.82, 0.9, 1)
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -216,7 +221,12 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip0" unique_id=1142970121]
+[node name="IconMargin" type="MarginContainer" parent="TopRight/World/V/Res/Chip0"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip0/IconMargin" unique_id=1142970121]
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
 expand_mode = 1
@@ -230,7 +240,12 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip1" unique_id=1418091982]
+[node name="IconMargin" type="MarginContainer" parent="TopRight/World/V/Res/Chip1"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip1/IconMargin" unique_id=1418091982]
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
 expand_mode = 1
@@ -244,7 +259,12 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip2" unique_id=104978639]
+[node name="IconMargin" type="MarginContainer" parent="TopRight/World/V/Res/Chip2"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip2/IconMargin" unique_id=104978639]
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
 expand_mode = 1
@@ -258,7 +278,12 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip3" unique_id=976052832]
+[node name="IconMargin" type="MarginContainer" parent="TopRight/World/V/Res/Chip3"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip3/IconMargin" unique_id=976052832]
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
 expand_mode = 1
@@ -272,65 +297,18 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 1
 
-[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip4" unique_id=483901926]
+[node name="IconMargin" type="MarginContainer" parent="TopRight/World/V/Res/Chip4"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="Icon" type="TextureRect" parent="TopRight/World/V/Res/Chip4/IconMargin" unique_id=483901926]
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Label" type="Label" parent="TopRight/World/V/Res/Chip4" unique_id=504311322]
-layout_mode = 2
-
-[node name="Bottom" type="VBoxContainer" parent="." unique_id=623388019]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -120.0
-offset_top = -60.0
-offset_right = 120.0
-offset_bottom = -4.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-alignment = 2
-
-[node name="Hint" type="PanelContainer" parent="Bottom" unique_id=1452290948]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-theme_type_variation = &"PanelDark"
-
-[node name="HintLabel" type="Label" parent="Bottom/Hint" unique_id=650985687]
-unique_name_in_owner = true
-layout_mode = 2
-horizontal_alignment = 1
-
-[node name="Row" type="HBoxContainer" parent="Bottom" unique_id=1615178816]
-layout_mode = 2
-size_flags_horizontal = 4
-theme_override_constants/separation = 3
-
-[node name="Weapon" parent="Bottom/Row" unique_id=876047931 instance=ExtResource("slot")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="Hotbar" type="PanelContainer" parent="Bottom/Row" unique_id=124181866]
-layout_mode = 2
-
-[node name="Slots" type="HBoxContainer" parent="Bottom/Row/Hotbar" unique_id=1768918577]
-layout_mode = 2
-theme_override_constants/separation = 1
-
-[node name="Slot0" parent="Bottom/Row/Hotbar/Slots" unique_id=603229460 instance=ExtResource("slot")]
-layout_mode = 2
-
-[node name="Slot1" parent="Bottom/Row/Hotbar/Slots" unique_id=1807202755 instance=ExtResource("slot")]
-layout_mode = 2
-
-[node name="Slot2" parent="Bottom/Row/Hotbar/Slots" unique_id=5222236 instance=ExtResource("slot")]
 layout_mode = 2
 
 [node name="Abilities" type="HBoxContainer" parent="." unique_id=1494551793]
@@ -393,3 +371,56 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(152, 0)
 layout_mode = 2
 autowrap_mode = 3
+
+[node name="QuickSlots" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -28.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Quick1" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick2" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick3" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick4" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick5" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick6" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick7" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick8" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick9" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="Quick10" parent="QuickSlots" instance=ExtResource("slot")]
+layout_mode = 2
+
+[node name="DebugText" type="Label" parent="."]
+visible = false
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = -14.0
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.6, 0.9, 0.6, 0.85)

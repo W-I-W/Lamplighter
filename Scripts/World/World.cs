@@ -13,7 +13,7 @@ public enum Tl : byte
     CrystalLantern, CombatLantern, Rubble, BridgeBroken, Bridge, Deep, Seal, SecretDoor, Drill, Collector,
     DeadTree, Obsidian, Ember, AshRuin, Vent,
     TechCache, Spire, Altar, AltarOn, SecretCache, Stall, Hub, Refinery, AmpCrystal, BarrierPost, MeteorOre,
-    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge, Grave, BossTotem, BossGate, StorageChest
+    FrostOre, Pine, IceRuin, IceBlock, Void, Monolith, Tablet, FalseLantern, Pylon, PylonOn, ShadowPillar, Fragment, RiftGate, Statue, Fountain, Banner, Cryo, LightBridge, Grave, BossTotem, BossGate, StorageChest, ResearchTable
 }
 
 public enum PK { Chest, Ruins, House, Camp, Shrine, Captive, Obelisk, Grove, Workshop, Puzzle, BridgeSite, TechCache, Spire, Altar, Secret, Lore, Tower, Vault, Glade, SparkAltar, RuneObelisk, GiantTree, Survivor }

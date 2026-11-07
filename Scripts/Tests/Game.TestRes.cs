@@ -15,21 +15,24 @@ public partial class Game
             Menu = Mn.None; noHeal = true; Hp = MaxHp; Invuln = 99f; Enemies.Clear(); TestNoSpawn = true; Notify.History.Clear();
             SkillLv[(int)Tech.Spark] = 0; for (int i = 0; i < It.Count; i++) Inv[i] = 0; Ann = 0; RecomputeEffects();
             Check(SpriteLibrary.TileFrames[Art.Furnace] > 1 && SpriteLibrary.IconFrames[4] > 1 && Art.TileTex.GetHeight() >= 32 && Art.TileRect(Art.Furnace, .5).Position.Y > 0, "animated tiles and icons: frames are stacked in the atlas");
-            { var ai = Art.TileTex.GetImage(); bool all = true; for (int t = 134; t <= 176; t++) { if (t is >= 162 and <= 164 || t == 177) continue; bool any = false; for (int y = 0; y < 16 && !any; y++) for (int x = 0; x < 16; x++) if (ai.GetPixel(t * 16 + x, y).A > 0) { any = true; break; } if (!any) Log($"sway pose missing: tile {t}"); all &= any; } Check(all, "sway poses 134..176 loaded from _poses strips"); }
+            { var ai = Art.TileTex.GetImage(); bool all = true; for (int t = 146; t <= 161; t++) { bool any = false; for (int y = 0; y < 16 && !any; y++) for (int x = 0; x < 16; x++) if (ai.GetPixel(t * 16 + x, y).A > 0) { any = true; break; } if (!any) Log($"sway pose missing: tile {t}"); all &= any; } Check(all, "sway poses 146..161 (grass, bush, flowers) loaded from _poses strips; trees are 32x32 animated tiles"); }
             Check(!HasHandLamp && PlayerLightR == 0f, "start: a new hero has no personal light (radius 0)");
             Check(IsLit(PPos), "start: the starting clearing is lit by the Central Beacon, not by the hero");
             var nd = World.StartNeeds(); var hv = W.StartCounts(); Check(hv.trees >= nd.trees && hv.stones >= nd.stones && hv.copper >= nd.copper, $"start: guaranteed resources in the clearing ({hv.trees}/{nd.trees} trees, {hv.stones}/{nd.stones} stones, {hv.copper}/{nd.copper} copper)");
         });
-        S(.6f, () => { Shot("res1_start_dark"); Check(Goals.Count > 0 && Goals[0].Title == "Собрать ресурсы на печь", $"tutorial: the first goal is collecting resources ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); });
-        S(2.5f, () => { OwnedTools.Remove("pickaxe"); CurTool = ""; foreach (var c in CostFurnace) Inv[c[0]] = c[1]; });
+        S(.6f, () => { Shot("res1_start_dark"); Check(Goals.Count > 0 && Goals[0].Title == "Собрать дерево и камень", $"tutorial: the first goal is collecting wood and stone for the table ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); });
+        S(2.5f, () => { StrictResearch = true; foreach (var c in BCost(ResearchBk, 1)) Inv[c[0]] = c[1]; });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Построить Стол исследований [B]", $"tutorial: next goal is building the research table ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); Check(!LearnTech((int)Tech.Spark) && !Has(Tech.Spark), "table: the first light cannot be learned without a research table"); var tt = W.Spawn + new Vector2I(2, 3); for (int r = 0; r < 6 && W.Get(tt.X, tt.Y) != Tl.None; r++) tt += new Vector2I(1, 0); var tb = CreateBuilding(ResearchBk, tt); PPos = tb.Pos + new Vector2(0, 14); Inv[It.Wood] = 0; Inv[It.Stone] = 0; });
+        S(.4f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Изучить Искру света у стола [E]", $"tutorial: next goal is learning the spark at the table ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); foreach (var c in LevelCost((int)Tech.Spark, 1)) Inv[c[0]] = c[1]; Check(LearnTech((int)Tech.Spark), "table: the spark is learned at the level I table for 3 wood and 2 stone"); StrictResearch = false; Inv[It.Wood] = 0; Inv[It.Stone] = 0; Goals = BuildGoals(); });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Исследовать Тьму", $"tutorial: next goal is exploring the Darkness ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); Ann |= TutExplored; OwnedTools.Remove("pickaxe"); CurTool = ""; foreach (var c in CostFurnace) Inv[c[0]] = c[1]; });
         S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Построить печь [B]", $"tutorial: next goal is building the furnace ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); HasFurnace = true; Inv[It.Wood] = 0; Inv[It.Stone] = 0; });
-        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Создать кирку в кузне [U у печи]", $"tutorial: next goal is crafting the pickaxe ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OwnedTools.Add("pickaxe"); CurTool = "pickaxe"; foreach (var c in LevelCost((int)Tech.Spark, 1)) Inv[c[0]] = c[1]; });
-        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Изучить навык света [T]", $"tutorial: next goal is learning the light skill ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); Check(LearnTech((int)Tech.Spark), "spark: learned for wood and stone only"); });
+        S(2.5f, () => { Check(Goals.Count > 0 && Goals[0].Title == "Создать кирку в кузне [U у печи]", $"tutorial: next goal is crafting the pickaxe ({(Goals.Count > 0 ? Goals[0].Title : "-")})"); OwnedTools.Add("pickaxe"); CurTool = "pickaxe"; });
+        S(2.5f, () => { Check(Has(Tech.Spark), "spark: learned for wood and stone only"); });
         S(2.5f, () => Shot("res2_spark_start"));
         S(2.5f, () =>
         {
             Check(HasHandLamp && PlayerLightR > 20f && Notify.History.Exists(m => m.Text.Contains("Искра света")), $"spark: the light circle appeared ({PlayerLightR:F0}) and the chat says so");
-            Shot("res3_spark_lit"); Check(Goals.Count > 0 && Goals[0].Title == "Исследовать Тьму", $"tutorial: next goal is exploring the Darkness ({(Goals.Count > 0 ? Goals[0].Title : "-")})");
+            Shot("res3_spark_lit");
         });
         // выбрасывание, подбор, слияние
         S(.2f, () =>

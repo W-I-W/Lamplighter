@@ -15,6 +15,7 @@ public sealed partial class World
     {
         int wood = 0, stone = 0, copper = 0;
         void Add(int[][] cost) { if (cost == null) return; foreach (var c in cost) { if (c[0] == It.Wood) wood += c[1]; else if (c[0] == It.Stone) stone += c[1]; else if (c[0] == It.Copper) copper += c[1]; } }
+        Add(Game.BCost(Game.ResearchBk, 1));                   // Стол исследований I: без него первый свет не изучить
         Add(Game.Techs[(int)Tech.Spark].Cost);                 // первый навык света
         Add(Game.CostFurnace); Add(Game.CostPick[0]);          // печь и медная кирка
         wood += 5; stone += 3;                                 // топор: дерево 5, камень 3

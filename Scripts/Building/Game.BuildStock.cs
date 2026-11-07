@@ -26,6 +26,7 @@ public partial class Game
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
         var cost = e.Raw ?? e.CostArr; if (cost == null) return false;
         if (!Can(cost)) { Fail("Не хватает: " + MissingStr(cost)); return false; }
+        if (!CanStoreCraftedBuild(e.Key, cost)) { Fail("Инвентарь полон"); return false; }
         Pay(cost); StockAdd(e.Key, 1); GiveXp(BuildCraftXp(e.Key)); Sfx.Play("build", -3, 1.2f); Save();
         Toast($"Создано: {e.Name}"); return true;
     }
@@ -35,6 +36,7 @@ public partial class Game
     {
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
         if (StockOf(e.Key) <= 0) { Fail("Нет в запасе: создайте в меню [B]"); Placing = null; return false; }
+        if (e == inventoryPlacement) SyncInventorySlots();
         var raw = e.Raw; var snap = (int[])Inv.Clone(); var tile = ToTile(Aim);
         bool ok;
         placingStock = true;
@@ -46,18 +48,10 @@ public partial class Game
         }
         finally { Array.Copy(snap, Inv, snap.Length); placingStock = false; }
         if (!ok) return false;
-        StockAdd(e.Key, -1); Placed.Add(World.Key(tile.X, tile.Y)); PlaceFx(tile);
+        StockAdd(e.Key, -1); ConsumePlacedInventoryStack(e); Placed.Add(World.Key(tile.X, tile.Y)); PlaceFx(tile);
         if (StockOf(e.Key) <= 0) Placing = null;
         Save();
         return true;
-    }
-
-    /// <summary>Установка по ключу без меню (быстрые клавиши 9 и 0).</summary>
-    void PlaceKey(string key)
-    {
-        var e = EntryOf(key); if (e == null) return;
-        if (StockOf(key) <= 0) { Fail("Нет в запасе: создайте в меню [B]"); return; }
-        PlaceEntry(e);
     }
 
     // ───────────────────────── разбор ─────────────────────────

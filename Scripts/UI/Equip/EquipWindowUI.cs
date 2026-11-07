@@ -20,7 +20,7 @@ public partial class EquipWindowUI : Control
 
     public override void _Ready()
     {
-        ZIndex = 4040; panel = GetNode<Control>("%Panel"); listPanel = GetNode<Control>("%Scroll").GetParent<Control>(); rightPanel = GetNode<Control>("%RScroll").GetParent<Control>(); centerPanel = GetNode<Control>("%CenterBox").GetParent<Control>(); tabsBox = GetNode<HBoxContainer>("%Tabs"); list = GetNode<VBoxContainer>("%List"); scroll = GetNode<ScrollContainer>("%Scroll");
+        panel = GetNode<Control>("%Panel"); listPanel = GetNode<Control>("%Scroll").GetParent<Control>(); rightPanel = GetNode<Control>("%RScroll").GetParent<Control>(); centerPanel = GetNode<Control>("%CenterBox").GetParent<Control>(); tabsBox = GetNode<HBoxContainer>("%Tabs"); list = GetNode<VBoxContainer>("%List"); scroll = GetNode<ScrollContainer>("%Scroll");
         centerBox = GetNode<VBoxContainer>("%CenterBox"); rightBox = GetNode<VBoxContainer>("%RightBox"); rscroll = GetNode<ScrollContainer>("%RScroll");
         title = GetNode<Label>("%Title"); closeHint = GetNode<Label>("%CloseHint"); foot = GetNode<Label>("%Foot");
         cardScene = GD.Load<PackedScene>("res://Scenes/UI/EquipCard.tscn"); socketScene = GD.Load<PackedScene>("res://Scenes/UI/EquipSocket.tscn");
@@ -177,26 +177,12 @@ public partial class EquipWindowUI : Control
         var tl = G.ToolList(); int nt = tl.Count, total = nt + G.Owned.Count; G.WinCur = Mathf.Clamp(G.WinCur, 0, Math.Max(0, total - 1));
         for (int i = 0; i < total; i++)
         {
-            var c = Card(i); c.Visible = true; var r = G.EquipRef(i); int hs = r != null ? G.HotSlotOf(r) + 1 : 0; bool held = G.EqIsHeld(i);
-            if (i < nt) { var td = ToolDef.Get(tl[i]); string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; c.Bind(i, UiIcons.Item(td.Icon), T(nm) + LvTag(G.ToolLv(tl[i])), Text, held ? T("Сейчас в руках") : hs > 0 ? $"{T("В хотбаре")}: {T("слот")} {hs}" : T("Инструмент"), held ? Good : hs > 0 ? Cyan : Dim, held, hs, i == G.WinCur); }
-            else { var d = Db.Weapon(G.Owned[i - nt].Id); c.Bind(i, UiIcons.Item(G.HotIcon(Game.RefWeapon(d.Id))), T(d.Name) + LvTag(G.Owned[i - nt].Lv), Db.RarCol[(int)d.Rar], $"{T(Db.ClassNames[(int)d.Cls])} · {T(Db.RarName[(int)d.Rar])}", Dim, held, hs, i == G.WinCur); }
+            var c = Card(i); c.Visible = true; bool held = G.EqIsHeld(i);
+            if (i < nt) { var td = ToolDef.Get(tl[i]); string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; c.Bind(i, UiIcons.Item(td.Icon), T(nm) + LvTag(G.ToolLv(tl[i])), Text, held ? T("Сейчас в руках") : T("Инструмент"), held ? Good : Dim, held, 0, i == G.WinCur); }
+            else { var d = Db.Weapon(G.Owned[i - nt].Id); c.Bind(i, UiIcons.Item(G.HotIcon(Game.RefWeapon(d.Id))), T(d.Name) + LvTag(G.Owned[i - nt].Lv), Db.RarCol[(int)d.Rar], $"{T(Db.ClassNames[(int)d.Cls])} · {T(Db.RarName[(int)d.Rar])}", Dim, held, 0, i == G.WinCur); }
         }
         for (int i = total; i < cards.Count; i++) cards[i].Visible = false;
         if (G.WinCur < nt) BuildToolDetails(tl[G.WinCur]); else BuildWeaponDetails(G.WinCur - nt);
-    }
-
-    /// <summary>Назначение в хотбар: три пиктограммы-слота. Клик по слоту ставит сюда предмет, клик по слоту с этим предметом освобождает его.</summary>
-    void BuildHotbarAssign(int row)
-    {
-        var r = G.EquipRef(row); if (r == null) return; int cur = G.HotSlotOf(r);
-        centerBox.AddChild(Lbl("В хотбар", Dim, false, "DimLabel"));
-        var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 4); centerBox.AddChild(h);
-        for (int s = 0; s < Game.HotCount; s++)
-        {
-            int slot = s; var occ = G.Hot[s]; var chip = new HotSlotChipUI { Slot = s, Mine = cur == s, Occupant = occ != null && G.HotValid(occ) ? UiIcons.Item(G.HotIcon(occ)) : null };
-            chip.TooltipText = cur == s ? T("Сейчас в этом слоте. Клик — освободить") : occ != null && G.HotValid(occ) ? T("Заменит") + ": " + T(G.HotName(occ)) : T("Свободный слот");
-            chip.Clicked = () => { if (cur == slot) G.EqHotClear(row); else G.EqHotAssign(row, slot); Flash(centerBox); }; h.AddChild(chip);
-        }
     }
 
     static string LvTag(int lv) => lv > 0 ? " +" + lv : "";
@@ -205,23 +191,22 @@ public partial class EquipWindowUI : Control
 
     void BuildToolDetails(string id)
     {
-        int row = G.WinCur; var td = ToolDef.Get(id); string nm = id == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; bool held = G.EqIsHeld(row); int slot = G.HotSlotOf(Game.RefTool(id));
-        string status = held ? "Сейчас в руках" : slot >= 0 ? $"{T("В хотбаре")}: {T("слот")} {slot + 1}" : "Можно взять в руки";
-        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(td.Icon), null, T(nm), Gold, T(status), held ? Good : slot >= 0 ? Cyan : Dim, null));
+        int row = G.WinCur; var td = ToolDef.Get(id); string nm = id == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; bool held = G.EqIsHeld(row);
+        string status = held ? "Сейчас в руках" : "Можно взять в руки";
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(td.Icon), null, T(nm), Gold, T(status), held ? Good : Dim, null));
         var ok = new List<string>(); if (td.EffWood > 0) ok.Add(T("дерево")); if (td.EffStone > 0) ok.Add(T("камень")); if (td.EffOre > 0) ok.Add(T("руда")); if (td.EffRubble > 0) ok.Add(T("завалы"));
         centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", G.ToolHitDmg(id).ToString("0.#"), Text));
         centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Pickaxe), "Добыча", Level3(td.MiningPower, 1.05f, 1.7f, "обычная", "быстрая", "очень быстрая"), Cyan));
         if (ok.Count > 0) centerBox.AddChild(Lbl($"{T("Подходит")}: {string.Join(", ", ok)}", Dim, true, null, true));
         if (!held) centerBox.AddChild(MainActionButtonUI.Make("Взять в руки", () => { G.EqEquipRow(row); Flash(centerBox); }, true));
-        BuildHotbarAssign(row);
         if (G.Owned.Count == 0) rightBox.AddChild(EmptyStatePanelUI.Make(UiIcons.Item(UiIcons.Sword), 0, T("Пока только базовый инструмент"), T("Создайте оружие у печи или кузницы — оно появится здесь.")));
     }
 
     void BuildWeaponDetails(int idx)
     {
-        if (idx < 0 || idx >= G.Owned.Count) return; var ow = G.Owned[idx]; var w = Db.Weapon(ow.Id); int row = G.ToolList().Count + idx; bool held = G.EqIsHeld(row); int slot = G.HotSlotOf(Game.RefWeapon(w.Id));
-        string status = held ? "Сейчас в руках" : slot >= 0 ? $"{T("В хотбаре")}: {T("слот")} {slot + 1}" : "Можно взять в руки";
-        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(G.HotIcon(Game.RefWeapon(w.Id))), null, T(w.Name), Db.RarCol[(int)w.Rar], T(status), held ? Good : slot >= 0 ? Cyan : Dim, null));
+        if (idx < 0 || idx >= G.Owned.Count) return; var ow = G.Owned[idx]; var w = Db.Weapon(ow.Id); int row = G.ToolList().Count + idx; bool held = G.EqIsHeld(row);
+        string status = held ? "Сейчас в руках" : "Можно взять в руки";
+        centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Item(G.HotIcon(Game.RefWeapon(w.Id))), null, T(w.Name), Db.RarCol[(int)w.Rar], T(status), held ? Good : Dim, null));
         float dmg = G.WeaponDmg(w), rate = 1f / w.Cd; var cmp = held ? null : HeldWeaponDef();
         string D(float a, float b2, string fmt = "0.0#") { float d = a - b2; return Mathf.Abs(d) < .005f ? null : (d > 0 ? "+" : "") + d.ToString(fmt); }
         centerBox.AddChild(Stat(UiIcons.Item(UiIcons.Sword), "Урон", dmg.ToString("0.#"), Text, cmp == null ? null : D(dmg, G.WeaponDmg(cmp)), cmp == null || dmg >= G.WeaponDmg(cmp)));
@@ -242,7 +227,6 @@ public partial class EquipWindowUI : Control
             }
         }
         if (!held) centerBox.AddChild(MainActionButtonUI.Make("Взять в руки", () => { G.EqEquipRow(row); Flash(centerBox); }, true));
-        BuildHotbarAssign(row);
         // правая панель: описание, эффекты, выбор вставки
         rightBox.AddChild(Lbl(w.Desc, Text, true));
         if (held) { var eff = G.EffectsText(); if (eff != "") { rightBox.AddChild(Lbl("Бонусы", Gold, false, "GoldLabel")); rightBox.AddChild(Lbl(eff, Cyan, true)); } }
@@ -409,7 +393,7 @@ public partial class EquipWindowUI : Control
         centerBox.AddChild(ItemDetailsCardUI.Make(UiIcons.Tile(Art.Lantern), null, T("Фонарь героя"), new Color("#fff2b0"), lv >= 3 ? T("Улучшен полностью") : $"{T("Ступень")} {lv} {T("из")} 3", lv >= 3 ? Good : Gold));
         var stepBar = new ProgressBar { MinValue = 0, MaxValue = 3, Value = lv, ShowPercentage = false, CustomMinimumSize = new Vector2(0, 8), ThemeTypeVariation = "LightBar", MouseFilter = MouseFilterEnum.Ignore }; centerBox.AddChild(stepBar);
         if (G.HasHandLamp) centerBox.AddChild(Stat(UiIcons.Tile(Art.Lantern), "Радиус света", $"{(int)G.PlayerLightR}", Gold));
-        else centerBox.AddChild(Lbl("Света пока нет: изучите «Искру света» в дереве навыков [T].", new Color("#ffb36a"), true));
+        else centerBox.AddChild(Lbl("Света пока нет: изучите «Искру света» у Стола исследований.", new Color("#ffb36a"), true));
         if (lv < 3)
         {
             var cost = Game.HeroCostFor(lv); bool bp = G.BpDone.Contains("bp_herolamp"); bool can = bp && G.Can(cost);

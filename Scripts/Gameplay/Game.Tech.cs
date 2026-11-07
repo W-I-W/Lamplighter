@@ -19,7 +19,7 @@ public enum Tech
 
 public sealed class TechDef
 {
-    public string Name, Desc, Req; public Func<Game, bool> Ok; public int Page; public bool Reward; public SkillDef S;
+    public string Name, Desc, Req; public Func<Game, bool> Ok; public int Page; public bool Reward, FixedCost; public SkillDef S;       // FixedCost: цена не умножается на TechCostMul (первый свет всегда 3 дерева и 2 камня)
     int[][] baseCost, scaled;
     /// <summary>Базовая цена навыка: из таблицы, умноженная на TechCostMul из tuning.tres. Цена каждого уровня — база × кривая SkillDef.CostCurve (Game.LevelCost).</summary>
     public int[][] Cost
@@ -27,7 +27,7 @@ public sealed class TechDef
         get
         {
             if (baseCost == null) return null; if (scaled != null) return scaled;
-            var r = new int[baseCost.Length][]; float m = Tune.T.TechCostMul;
+            var r = new int[baseCost.Length][]; float m = FixedCost ? 1f : Tune.T.TechCostMul;
             for (int i = 0; i < r.Length; i++) r[i] = new[] { baseCost[i][0], baseCost[i][1] <= 0 ? 0 : (int)System.Math.Ceiling(baseCost[i][1] * m) };
             return scaled = r;
         }
@@ -86,7 +86,7 @@ public partial class Game
         new() { Name = "Линза света II", Desc = "Ваш свет шире ещё на 4% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 6, It.Crystal, 4), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Дальний свет II", Desc = "Ваши фонари светят дальше ещё на 6% за уровень", Req = "Зажгите фонарь в шахтах", Cost = C(It.Silver, 5, It.Crystal, 5), Ok = g => g.LitIn(1) >= 1 },
         new() { Name = "Регенерация", Desc = "Здоровье восстанавливается быстрее вне света; каждый уровень добавляет скорость", Req = "Победите 5 врагов", Cost = C(It.Shard, 3, It.Copper, 3), Ok = g => g.Kills >= 5 },
-        new() { Name = "Искра света", Desc = "Вокруг вас появляется круг света: можно исследовать Тьму. Открывает улучшения света", Req = "Соберите дерево и камень", Cost = C(It.Wood, 3, It.Stone, 2), Ok = g => g.Can(LevelCost((int)Tech.Spark, 1)) },     // «Соберите дерево и камень»: галочка и уведомление только когда ресурсов хватает
+        new() { Name = "Искра света", Desc = "Вокруг вас появляется круг света: можно исследовать Тьму. Открывает улучшения света", Req = "Соберите дерево и камень", Cost = C(It.Wood, 3, It.Stone, 2), FixedCost = true, Ok = g => g.Can(LevelCost((int)Tech.Spark, 1)) },     // «Соберите дерево и камень»: галочка и уведомление только когда ресурсов хватает
         new() { Name = "Рюкзак", Desc = "Больше места в инвентаре: +2 слота за уровень (в стопке до 99 предметов)", Req = "Доступно сразу", Cost = C(It.Wood, 20, It.Stone, 10), Ok = g => true },
     };
 

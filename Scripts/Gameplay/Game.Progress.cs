@@ -205,7 +205,7 @@ public partial class Game
             case Tl.AncOff: case Tl.BossOff: return 16;
             case Tl.Chest: return 7;
             case Tl.Lantern: case Tl.CombatLantern: case Tl.CrystalLantern: return 7;
-            case Tl.Warehouse: case Tl.Sawmill: case Tl.Mine: case Tl.Forge: case Tl.Drill: case Tl.Collector: case Tl.Furnace: return 9;
+            case Tl.Warehouse: case Tl.Sawmill: case Tl.Mine: case Tl.Forge: case Tl.ResearchTable: case Tl.Drill: case Tl.Collector: case Tl.Furnace: return 9;
             case Tl.Machine: case Tl.MachineOn: case Tl.Mirror1: case Tl.Mirror2: case Tl.Receiver: case Tl.ReceiverOn: case Tl.Emitter: return 17;
             case Tl.CrystalOre: case Tl.SilverOre: return 18;
             case Tl.Obsidian: case Tl.Ember: return 19;

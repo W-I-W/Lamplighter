@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Lamplighter;
 
@@ -10,20 +11,46 @@ public partial class ResourceActionUI : Control
 {
     public Game G;
     enum Act { Send, Drop, Deposit, Withdraw }
-    PanelContainer panel; VBoxContainer box; int item = -1, amount = 1, who; Act act; bool dialog;
+    PanelContainer panel;
+    Control actions, quantity, recipient;
+    readonly List<(Button Button, string Caption)> captions = new();
+    string inputTip;
+    TextureRect itemIcon;
+    Label itemLabel, recipientLabel, prompt;
+    Button drop, deposit, withdraw, confirm; int item = -1, amount = 1, who; Act act; bool dialog;
     List<NetPlayer> peers = new();
     public bool Active => Visible;
-    bool AmountFocused => amtEdit != null && GodotObject.IsInstanceValid(amtEdit) && amtEdit.HasFocus();
+    bool AmountFocused => amtEdit.HasFocus();
     public bool IsDialog => Visible && dialog;
-    static readonly Color Gold = new("#ffd23f"), Dim = new("#8a96b0"), Good = new("#9be07a");
 
     public override void _Ready()
     {
-        Theme = GD.Load<Theme>(Hud.ThemePath); MouseFilter = MouseFilterEnum.Stop; TextureFilter = TextureFilterEnum.Nearest; ZIndex = 4070; Visible = false;
-        var dim = new ColorRect { Color = new Color(0, 0, .03f, .35f), MouseFilter = MouseFilterEnum.Ignore }; dim.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(dim);
-        panel = new PanelContainer { ThemeTypeVariation = "PanelGold" }; AddChild(panel);
-        var m = new MarginContainer(); foreach (var s in new[] { "left", "right", "top", "bottom" }) m.AddThemeConstantOverride("margin_" + s, 6); panel.AddChild(m);
-        box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 4); m.AddChild(box);
+        panel = GetNode<PanelContainer>("Panel");
+        var content = panel.GetNode<VBoxContainer>("Margin/Content");
+        itemIcon = content.GetNode<TextureRect>("Head/IconMargin/Icon");
+        itemLabel = content.GetNode<Label>("Head/Item");
+        actions = content.GetNode<Control>("Actions");
+        quantity = content.GetNode<Control>("Quantity");
+        recipient = quantity.GetNode<Control>("Recipient");
+        recipientLabel = recipient.GetNode<Label>("Name");
+        prompt = quantity.GetNode<Label>("Prompt");
+        amtEdit = quantity.GetNode<LineEdit>("Amount/Input");
+        amtMaxL = quantity.GetNode<Label>("Amount/Maximum");
+        inputTip = amtEdit.TooltipText;
+        amtEdit.TextChanged += AmountChanged;
+        amtEdit.TextSubmitted += _ => Confirm();
+        drop = Bind(actions, "Drop", () => Start(Act.Drop));
+        deposit = Bind(actions, "Deposit", () => Start(Act.Deposit));
+        withdraw = Bind(actions, "Withdraw", () => Start(Act.Withdraw));
+        Bind(recipient, "Previous", () => Cycle(-1));
+        Bind(recipient, "Next", () => Cycle(1));
+        Bind(quantity, "Presets/One", () => SetAmount(1));
+        Bind(quantity, "Presets/Half", () => SetAmount(Max() / 2));
+        Bind(quantity, "Presets/All", () => SetAmount(Max()));
+        Bind(quantity, "Amount/Less", () => SetAmount(amount - 1));
+        Bind(quantity, "Amount/More", () => SetAmount(amount + 1));
+        confirm = Bind(quantity, "Buttons/Confirm", Confirm);
+        Bind(quantity, "Buttons/Cancel", Close);
     }
 
     public override void _GuiInput(InputEvent e)
@@ -31,12 +58,14 @@ public partial class ResourceActionUI : Control
         if (e is InputEventMouseButton mb && mb.Pressed && !new Rect2(panel.Position, panel.Size).HasPoint(mb.Position)) { Close(); AcceptEvent(); }       // клик мимо окна закрывает его
     }
 
-    public void Close() { Visible = false; dialog = false; item = -1; }
+    public void Close() { amtEdit.ReleaseFocus(); Visible = false; dialog = false; item = -1; }
 
     int Max() => Math.Min(Game.MaxMove, act == Act.Withdraw ? G.Stock[item] : G.Inv[item]);
 
     public void Open(int it)
     {
+        foreach (var (button, caption) in captions) button.Text = Loc.T(caption);
+        amtEdit.TooltipText = Loc.T(inputTip);
         item = it; dialog = false; peers = G.NearbyPlayers(); Build(); Visible = true;
     }
 
@@ -46,44 +75,48 @@ public partial class ResourceActionUI : Control
         return G.Inv[it] > 0 || (wh && G.Stock[it] > 0);
     }
 
-    void Row(string text, Action a) { box.AddChild(Px.Button(text, null, a, 150, 18)); }
+    Button Bind(Control parent, string path, Action action)
+    {
+        var button = parent.GetNode<Button>(path);
+        captions.Add((button, button.Text));
+        button.Pressed += () => { Sfx.Play("tick", -3, 1.3f); action(); };
+        return button;
+    }
 
     void Build()
     {
-        G?.PokeHover();
-        foreach (var c in box.GetChildren()) { box.RemoveChild(c); c.QueueFree(); }
-        string name = Loc.T(It.Names[item]); int have = G.Inv[item];
-        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 5); box.AddChild(head);
-        head.AddChild(Px.IconInline(UiIcons.Item(item), 16));
-        head.AddChild(Px.Label($"{name} ×{have}", Gold, false));
-        bool wh = G.NearChestFor(G.PPos) && item != It.Coins;
-        if (!dialog)
-        {
-            if (have > 0) Row("Выбросить", () => Start(Act.Drop));
-            if (have > 0 && wh) Row("Положить на склад", () => Start(Act.Deposit));
-            if (wh && G.Stock[item] > 0) Row("Взять со склада", () => Start(Act.Withdraw));
-            return;
-        }
-        if (act == Act.Send && peers.Count > 0)
-        {
-            var r = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; r.AddThemeConstantOverride("separation", 4); box.AddChild(r);
-            r.AddChild(Px.Button("", "left", () => Cycle(-1), 20, 18)); r.AddChild(Px.Label(Loc.T("Получатель") + ": " + peers[who % peers.Count].Name, Dim, false)); r.AddChild(Px.Button("", "right", () => Cycle(1), 20, 18));
-        }
-        int max = Math.Max(1, Max()); amount = Math.Clamp(amount, 1, max);
+        G.PokeHover();
+        int have = G.Inv[item];
+        itemIcon.Texture = UiIcons.Item(item);
+        itemLabel.Text = $"{Loc.T(It.Names[item])} ×{have}";
+        bool nearStorage = G.NearChestFor(G.PPos) && item != It.Coins;
+        actions.Visible = !dialog;
+        quantity.Visible = dialog;
+        drop.Visible = have > 0;
+        deposit.Visible = have > 0 && nearStorage;
+        withdraw.Visible = nearStorage && G.Stock[item] > 0;
+        if (!dialog) return;
+
+        recipient.Visible = act == Act.Send && peers.Count > 0;
+        if (recipient.Visible) recipientLabel.Text = $"{Loc.T("Получатель")}: {peers[who].Name}";
         string verb = act == Act.Send ? "передать" : act == Act.Drop ? "выбросить" : act == Act.Deposit ? "положить" : "взять";
-        box.AddChild(Px.Label(Loc.T("Сколько") + " " + Loc.T(verb) + "?", Dim, false, HorizontalAlignment.Center));
-        var q = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; q.AddThemeConstantOverride("separation", 3); box.AddChild(q);
-        q.AddChild(Px.Button("1", null, () => SetAmount(1), 26, 18)); q.AddChild(Px.Button("Половина", null, () => SetAmount(Math.Max(1, max / 2)), 62, 18)); q.AddChild(Px.Button("Всё", null, () => SetAmount(max), 36, 18));
-        var s = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; s.AddThemeConstantOverride("separation", 4); box.AddChild(s);
-        s.AddChild(Px.Button("-", null, () => SetAmount(amount - 1), 20, 18));
-        amtEdit = new LineEdit { Text = amount.ToString(), MaxLength = 4, CustomMinimumSize = new Vector2(46, 18), Alignment = HorizontalAlignment.Center, SelectAllOnFocus = true, TooltipText = Loc.T("Введите число или нажмите кнопку") }; Modal.Style(amtEdit); amtEdit.AddThemeFontSizeOverride("font_size", 9);
-        amtEdit.TextChanged += t => { var digits = new string(System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(t, char.IsDigit))); if (digits != t) { int c = amtEdit.CaretColumn; amtEdit.Text = digits; amtEdit.CaretColumn = Math.Min(c, digits.Length); } amount = digits == "" ? 1 : Math.Clamp(int.TryParse(digits, out var v) ? v : 1, 1, max); amtMaxL.Text = $"/ {max}"; };
-        amtEdit.TextSubmitted += _ => Confirm(); s.AddChild(amtEdit);
-        amtMaxL = Px.Label($"/ {max}", Good, false); s.AddChild(amtMaxL);
-        s.AddChild(Px.Button("+", null, () => SetAmount(amount + 1), 20, 18));
-        string go = act == Act.Send ? "Передать" : act == Act.Drop ? "Выбросить" : act == Act.Deposit ? "Положить" : "Взять";
-        var b = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; b.AddThemeConstantOverride("separation", 4); box.AddChild(b);
-        b.AddChild(Px.Button(go, "check", Confirm, 104, 20)); b.AddChild(Px.Button("Отмена", null, Close, 60, 20));
+        prompt.Text = $"{Loc.T("Сколько")} {Loc.T(verb)}?";
+        confirm.Text = Loc.T(act == Act.Send ? "Передать" : act == Act.Drop ? "Выбросить" : act == Act.Deposit ? "Положить" : "Взять");
+        amtMaxL.Text = $"/ {Math.Max(1, Max())}";
+        SetAmount(amount);
+    }
+
+    void AmountChanged(string text)
+    {
+        if (!dialog || item < 0) return;
+        string digits = new(text.Where(char.IsDigit).ToArray());
+        if (digits != text)
+        {
+            int caret = amtEdit.CaretColumn;
+            amtEdit.Text = digits;
+            amtEdit.CaretColumn = Math.Min(caret, digits.Length);
+        }
+        amount = Math.Clamp(int.TryParse(digits, out var value) ? value : 1, 1, Math.Max(1, Max()));
     }
 
     LineEdit amtEdit; Label amtMaxL;
@@ -133,6 +166,6 @@ public partial class ResourceActionUI : Control
         if (G == null) return;
         if (Visible && (G.Window != Win.Inventory || G.Menu != Mn.None)) Close();
         if (!Visible) return;
-        var vs = Size; panel.ResetSize(); panel.Position = ((vs - panel.Size) / 2).Round();
+        panel.ResetSize();
     }
 }

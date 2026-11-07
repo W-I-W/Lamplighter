@@ -20,6 +20,34 @@ public partial class Game
             Inv[It.Wood] = 5; Inv[It.Stone] = 3;
             Check(InvVisible().Count == 2 && InvVisible().Contains(It.Wood) && !InvVisible().Contains(It.Copper), "inventory: only resources with quantity > 0 are listed");
             Inv[It.Stone] = 0; Check(!InvVisible().Contains(It.Stone) && InvVisible().Count == 1, "inventory: a resource that ran out disappears, others close the gap");
+            var resourceSlots = InventorySlots();
+            int woodSlot = -1, freeSlot = -1, toolSlot = -1;
+            for (int i = 0; i < resourceSlots.Count; i++)
+            {
+                int item = resourceSlots[i].item;
+                if (item == It.Wood) woodSlot = i;
+                if (resourceSlots[i].n == 0 && freeSlot < 0) freeSlot = i;
+                if (InventoryKey(item) == RefTool("pickaxe")) toolSlot = i;
+            }
+            Check(toolSlot >= 0, "inventory: owned tools are visible in the backpack");
+            if (toolSlot >= 0)
+            {
+                BindQuickSlot(9, resourceSlots[toolSlot].item);
+                Check(QuickStack(9).n == 1, "inventory: a tool can be linked to the tenth quick slot");
+                var quickSave = SaveQuickSlots();
+                ClearQuickSlot(9);
+                LoadQuickSlots(quickSave);
+                Check(QuickStack(9).n == 1, "inventory: quick slot bindings round-trip by item identity");
+                ClearQuickSlot(9);
+            }
+            Check(MoveInventoryStack(woodSlot, freeSlot, It.Wood, 2) && SlotsUsed() == 2 &&
+                InventorySlots()[woodSlot] == (It.Wood, 3) && InventorySlots()[freeSlot] == (It.Wood, 2) &&
+                Inv[It.Wood] == 5, "inventory: splitting uses a slot and preserves the total");
+            Check(DropInventoryStack(woodSlot, It.Wood, 1) && Inv[It.Wood] == 4 &&
+                InventorySlots()[woodSlot] == (It.Wood, 2) && InventorySlots()[freeSlot] == (It.Wood, 2),
+                "inventory: dropping removes items from the selected stack");
+            Check(MoveInventoryStack(freeSlot, woodSlot, It.Wood, 2) && SlotsUsed() == 1 &&
+                InventorySlots()[woodSlot] == (It.Wood, 4), "inventory: merging frees a slot");
             Inv[It.Core] = 9999; Check(InvVisible().Contains(It.Core), "inventory: large quantities allowed (no cap)");
             // хотбар: можно только инструменты и оружие
             Check(HotValid("tool:pickaxe"), "hotbar: pickaxe is valid");
@@ -110,7 +138,14 @@ public partial class Game
             Check(StockOf("lamp0") == 0, "build: nothing is in stock at the start");
             Placing = le; PlaceNow(); Check(Lamps.Count == lamps0 && Placing == null, "build: cannot place a lamp that was not crafted");
             Check(CraftBuild(le) && StockOf("lamp0") == 1 && Inv[It.Wood] < wood0, "build: crafting pays resources and puts the item into stock");
-            int wood1 = Inv[It.Wood]; var tgt = ToTile(Aim); Placing = le; PlaceNow();
+            int slot = -1;
+            var bag = InventorySlots();
+            for (int i = 0; i < bag.Count; i++)
+                if (InventoryBuild(bag[i].item)?.Key == "lamp0") { slot = i; break; }
+            Check(slot >= 0 && bag[slot].n == 1, "build: a crafted lamp occupies a backpack slot");
+            int wood1 = Inv[It.Wood]; var tgt = ToTile(Aim);
+            Check(slot >= 0 && BeginInventoryPlacement(bag[slot].item, slot), "build: a backpack slot starts placement");
+            PlaceNow();
             Check(Lamps.Count == lamps0 + 1 && StockOf("lamp0") == 0 && Inv[It.Wood] == wood1, "build: placing uses the stocked item and costs no resources again");
             var lamp = Lamps.Find(l => l.X == tgt.X && l.Y == tgt.Y); Check(lamp != null, "build: the placed lamp exists");
             if (lamp != null) { DemolishLamp(lamp); Check(Lamps.Count == lamps0 + 1, "build: demolish asks for confirmation first"); DemolishLamp(lamp); }

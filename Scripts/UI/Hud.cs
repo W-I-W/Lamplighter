@@ -17,10 +17,16 @@ public partial class Hud : Control
 
     public override void _Ready()
     {
-        ProcessPriority = 1000;      // после игры и камеры: подписи над персонажами берут уже обновлённые позиции, иначе отстают на кадр и дрожат при ходьбе
-        theme = GD.Load<Theme>(ThemePath); font = theme.DefaultFont ?? ThemeDB.FallbackFont; Theme = theme;
-        wv = GD.Load<PackedScene>("res://Scenes/UI/Window.tscn").Instantiate<WindowView>(); wv.G = G; wv.ZIndex = 4050; AddChild(wv);
-        mv = GD.Load<PackedScene>("res://Scenes/UI/Menu.tscn").Instantiate<MenuView>(); mv.G = G; mv.ZIndex = 4060; AddChild(mv);
+        theme = Theme; font = theme.DefaultFont ?? ThemeDB.FallbackFont;
+        wv = GetNode<WindowView>("Window");
+        mv = GetNode<MenuView>("Menu");
+    }
+
+    public void Bind(Game game)
+    {
+        G = game;
+        wv.G = game;
+        mv.G = game;
     }
 
     // ───────────────────────── примитивы ─────────────────────────
@@ -82,7 +88,7 @@ public partial class Hud : Control
         if (G.Menu == Mn.Main || G.Menu == Mn.Flow) { DrawMenu(vs); FinishViews(); return; }
         if (G.LightBlockT > 0) Rect(new Rect2(Vector2.Zero, vs), new Color(0, 0, .05f, .25f));
         if (G.VictoryT > 0) { float vk = Mathf.Clamp(G.VictoryT / 3f, 0, 1); Rect(new Rect2(Vector2.Zero, vs), new Color(1f, .9f, .5f, .22f * vk * vk)); }
-        DrawDrops(vs); DrawMarkers(vs); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
+        DrawMarkers(vs); DrawNetLabels(vs); DrawBossBar(vs); DrawFloaters(); DrawCompass(); DrawTooltip(vs);
         LayoutTop(vs);
         if (G.LightBlockT > 0) Txt($"СВЕТ ПОГАШЕН · {G.LightBlockT:F0} с", new Vector2(0, vs.Y * .5f - 40), 14, new Color("#7ac8ff"), HorizontalAlignment.Center, vs.X);
         DrawStage4Hud(vs);

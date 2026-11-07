@@ -5,18 +5,18 @@ using System.Text.RegularExpressions;
 
 namespace Lamplighter;
 
-/// <summary>Основной HUD на сцене Scenes/UI/GameHud.tscn: здоровье и опыт, цель, мир, хотбар, способности, контекстная подсказка.
+/// <summary>Основной HUD на сцене Scenes/UI/GameHud.tscn: здоровье и опыт, цель, мир, способности, контекстная подсказка.
 /// Скрипт только читает состояние игры и заполняет готовые узлы; оформление задаётся сценой и темой Resources/UI/LanternTheme.tres.</summary>
 public partial class GameHud : Control
 {
     public Game G;
-    Control status, goal, world, hint, detail, abilities;
-    RichTextLabel goalTitle, goalNeeds, goalMore; Label level, lvCap, hpLabel, biome, lLabel, beacon, hintLabel, dTitle, dBody;
+    Control status, goal, world, abilities;
+    RichTextLabel goalTitle, goalNeeds, goalMore; Label level, lvCap, hpLabel, biome, lLabel, beacon;
     ProgressBar hp, xp, goalBar, lBar;
-    UiSlot weapon; readonly UiSlot[] hot = new UiSlot[Game.HotCount]; readonly UiSlot[] abil = new UiSlot[5];
+    readonly UiSlot[] abil = new UiSlot[5];
     readonly Control[] chips = new Control[5]; readonly TextureRect[] chipIcons = new TextureRect[5];
     readonly int[] lastInv = new int[It.Count]; readonly float[] lastChange = new float[It.Count];
-    float flashT, hintA; int flashSlot = -1; Control[] panels;
+    float flashT; int flashSlot = -1; Control[] panels;
     public bool GoalsOpen;                                      // раскрытый список целей
     static readonly Regex Frac = new(@"(\d+)\s*/\s*(\d+)", RegexOptions.Compiled);
     Texture2D[] abilIcons;
@@ -31,29 +31,64 @@ public partial class GameHud : Control
     public float RightBottom => topRight != null && topRight.Visible && world.Visible ? Bottom(topRight) : 4f;
     static float Bottom(Control c) { if (c == null) return 4f; float b = c.Position.Y; foreach (var k in c.GetChildren()) if (k is Control ch && ch.Visible) b = Mathf.Max(b, c.Position.Y + ch.Position.Y + ch.Size.Y); return b; }
 
+    readonly UiSlot[] quickSlots = new UiSlot[Game.QuickSlotCount];
+
+    Control BindQuickSlots()
+    {
+        var row = GetNode<HBoxContainer>("QuickSlots");
+        for (int i = 0; i < quickSlots.Length; i++)
+        {
+            var slot = row.GetNode<UiSlot>($"Quick{i + 1}");
+            slot.Index = i;
+            slot.Clicked += index => { if (G.Window == Win.None || G.Window == Win.Inventory) G.UseQuickSlot(index); };
+            slot.RightClicked += index => G.ClearQuickSlot(index);
+            quickSlots[i] = slot;
+        }
+        return row;
+    }
+
+    internal int QuickSlotAt(Vector2 viewportPosition)
+    {
+        for (int i = 0; i < quickSlots.Length; i++)
+        {
+            var slot = quickSlots[i];
+            if (slot != null && slot.IsVisibleInTree() &&
+                new Rect2(Vector2.Zero, slot.Size).HasPoint(slot.GetGlobalTransform().AffineInverse() * viewportPosition)) return i;
+        }
+        return -1;
+    }
+
+    void UpdateQuickSlots()
+    {
+        for (int i = 0; i < quickSlots.Length; i++)
+        {
+            var (item, n) = G.QuickStack(i);
+            var slot = quickSlots[i];
+            slot.Set(n > 0 ? G.InventoryItemTexture(item) : null, n > 1 ? n.ToString() : "", ((i + 1) % 10).ToString(),
+                n > 0 ? SlotState.Normal : SlotState.Disabled);
+            slot.TooltipText = n > 0 ? Loc.T(G.InventoryItemName(item)) : "";
+        }
+    }
+
+
     public override void _Ready()
     {
-        status = GetNode<Control>("%Status"); goal = GetNode<Control>("%Goal"); world = GetNode<Control>("%World"); hint = GetNode<Control>("%Hint"); detail = GetNode<Control>("%Detail"); abilities = GetNode<Control>("%Abilities");
+        status = GetNode<Control>("%Status"); goal = GetNode<Control>("%Goal"); world = GetNode<Control>("%World"); abilities = GetNode<Control>("%Abilities");
         level = GetNode<Label>("%Level"); lvCap = GetNode<Label>("%LvCap"); hpLabel = GetNode<Label>("%HpLabel"); goalTitle = GetNode<RichTextLabel>("%Title"); goalNeeds = GetNode<RichTextLabel>("%Needs"); goalMore = GetNode<RichTextLabel>("%More");
-        biome = GetNode<Label>("%Biome"); lLabel = GetNode<Label>("%LLabel"); beacon = GetNode<Label>("%Beacon"); hintLabel = GetNode<Label>("%HintLabel"); dTitle = GetNode<Label>("%DTitle"); dBody = GetNode<Label>("%DBody");
+        biome = GetNode<Label>("%Biome"); lLabel = GetNode<Label>("%LLabel"); beacon = GetNode<Label>("%Beacon");
         hp = GetNode<ProgressBar>("%HpBar"); xp = GetNode<ProgressBar>("%XpBar"); goalBar = GetNode<ProgressBar>("%Bar"); lBar = GetNode<ProgressBar>("%LBar");
-        weapon = GetNode<UiSlot>("%Weapon");
-        var slots = GetNode("Bottom/Row/Hotbar/Slots"); for (int i = 0; i < Game.HotCount; i++) hot[i] = slots.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) abil[i] = abilities.GetChild<UiSlot>(i);
         for (int i = 0; i < 5; i++) chips[i] = GetNode<Control>($"%Chip{i}");
-        for (int i = 0; i < 5; i++)            // значок ресурса на пиксель выше, чтобы стоять вровень с цифрами
-        {
-            var ic = chips[i].GetChild<TextureRect>(0); chips[i].RemoveChild(ic); var m = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore }; m.AddThemeConstantOverride("margin_bottom", 2); m.AddChild(ic); chips[i].AddChild(m); chips[i].MoveChild(m, 0); chipIcons[i] = ic;
-        }
+        for (int i = 0; i < chips.Length; i++) chipIcons[i] = chips[i].GetNode<TextureRect>("IconMargin/Icon");
         abilIcons = new[] { "dash", "spin", "flare", "pulse", "beam" }.Select(n => GD.Load<Texture2D>($"res://Assets/UI/ability_{n}.png")).ToArray();
         // клик мышью по блоку цели разворачивает и сворачивает подробности (то же, что клавиша G)
         goal.MouseFilter = MouseFilterEnum.Stop; goal.MouseDefaultCursorShape = CursorShape.PointingHand; foreach (var k in goal.FindChildren("*", "Control", true, false)) ((Control)k).MouseFilter = MouseFilterEnum.Ignore;
         goal.GuiInput += e => { if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left) { GoalsOpen = !GoalsOpen; Sfx.Play("tick", -6, 1.3f); goal.AcceptEvent(); } };
         topLeft = GetNode<Control>("TopLeft"); topRight = GetNode<Control>("TopRight"); lRow = lBar.GetParent<Control>(); resRow = chips[0].GetParent<Control>(); xpRow = xp.GetParent<Control>();
         foreach (var k in lRow.GetChildren()) if (k is TextureRect || k is ProgressBar) ((Control)k).Visible = false;      // «Фонари 2/5» — текстом, без полосы
-        regionOn = topRight.Visible; world.Modulate = new Color(1, 1, 1, .82f); goal.Modulate = new Color(1, 1, 1, .92f);
-        dbg = new Label { MouseFilter = MouseFilterEnum.Ignore, ThemeTypeVariation = "PlainLabel", Modulate = new Color(.6f, .9f, .6f, .85f), Visible = false }; AddChild(dbg);
-        panels = new[] { status, goal, world, hint, detail, GetNode<Control>("Bottom/Row/Hotbar"), weapon, abilities };
+        regionOn = topRight.Visible;
+        dbg = GetNode<Label>("DebugText");
+        panels = new[] { status, goal, world, abilities, BindQuickSlots() };
     }
 
     /// <summary>Находится ли точка (в логических координатах интерфейса) над видимой панелью HUD.</summary>
@@ -82,26 +117,14 @@ public partial class GameHud : Control
 
     public void Flash(int slot) { flashSlot = slot; flashT = .9f; }
 
-    /// <summary>Номер слота хотбара под точкой (логические координаты) или -1.</summary>
-    public int HotSlotAt(Vector2 p) { for (int i = 0; i < Game.HotCount; i++) if (hot[i] != null && hot[i].IsVisibleInTree() && hot[i].GetGlobalRect().HasPoint(p)) return i; return -1; }
-
-    TextureRect dragRect;
-    void UpdateDrag()
-    {
-        if (dragRect == null) { dragRect = new TextureRect { MouseFilter = MouseFilterEnum.Ignore, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.Nearest, ZIndex = 4090, CustomMinimumSize = new Vector2(32, 32), Size = new Vector2(32, 32) }; AddChild(dragRect); }
-        int ic = G.DragIcon; dragRect.Visible = ic >= 0;
-        if (ic >= 0) { dragRect.Texture = UiIcons.Item(ic); dragRect.GlobalPosition = G.DragPos - dragRect.Size * .5f; }
-    }
-
     static string T(string s) => Loc.T(s);
-
     public override void _Process(double delta)
     {
         if (G == null || G.W == null) return;
         float dt = (float)delta; flashT = Mathf.Max(0, flashT - dt);
         bool menu = G.Menu == Mn.Main || G.Menu == Mn.Flow;
         Visible = !menu && (G.Window == Win.None || G.Window == Win.Build || G.Window == Win.Inventory) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
-        UpdateStatus(); UpdateGoal(dt); UpdateWorld(dt); UpdateHotbar(); UpdateAbilities(); UpdateHint(dt); UpdateDebug();
+        UpdateStatus(); UpdateGoal(dt); UpdateWorld(dt); UpdateAbilities(); UpdateQuickSlots(); UpdateDebug();
     }
 
     void UpdateStatus()
@@ -137,7 +160,7 @@ public partial class GameHud : Control
         int reg = G.RegionAt(G.PPos);
         biome.Text = T(Game.RegionNames[reg]); biome.AddThemeColorOverride("font_color", Game.RegionCol(reg));
         int lit = reg == 0 ? G.LitCount : G.LitIn(reg), total = reg == 0 ? 5 : 3;
-        lLabel.Text = $"{T("Фонари")} {lit}/{total}"; lLabel.Modulate = new Color(.78f, .82f, .9f);
+        lLabel.Text = $"{T("Фонари")} {lit}/{total}";
         beacon.Text = $"{T("Маяк")} {G.BeaconLevel}/6";
         float now = (float)Time.GetTicksMsec() / 1000f;
         for (int i = 0; i < It.Count; i++) { if (G.Inv[i] != lastInv[i]) { if (lastInv[i] > 0 || G.Inv[i] > 0) lastChange[i] = now; lastInv[i] = G.Inv[i]; } }
@@ -146,7 +169,7 @@ public partial class GameHud : Control
         for (int c = 0; c < chips.Length; c++)
         {
             var chip = chips[c]; bool has = c < order.Count && c < 3; chip.Visible = has; if (!has) continue;
-            int it = order[c]; chip.MouseFilter = MouseFilterEnum.Pass; chip.TooltipText = Loc.T(It.Names[it]); chipIcons[c].Texture = UiIcons.Item(it); ((Label)chip.GetChild(1)).Text = Short(G.Inv[it]);
+            int it = order[c]; chip.MouseFilter = MouseFilterEnum.Pass; chip.TooltipText = Loc.T(It.Names[it]); chipIcons[c].Texture = UiIcons.Item(it); chip.GetNode<Label>("Label").Text = Short(G.Inv[it]);
         }
         resRow.Visible = order.Count > 0;
     }
@@ -156,23 +179,9 @@ public partial class GameHud : Control
     {
         dbg.Visible = HudDensity.Full; if (!dbg.Visible) return;
         dbg.Text = $"{Engine.GetFramesPerSecond()} fps · {(int)(G.PPos.X / 16)},{(int)(G.PPos.Y / 16)} · {G.RegionAt(G.PPos)} · enemies {G.Enemies.Count}";
-        dbg.Position = new Vector2(6, Size.Y - 14);
     }
 
     static string Short(int n) => n >= 10000 ? $"{n / 1000}k" : n >= 1000 ? $"{n / 1000f:0.#}k" : n.ToString();
-
-    /// <summary>Хотбар: инструменты и оружие. Выбранный слот — золотая рамка; клавиши 1–3, колесо мыши.</summary>
-    void UpdateHotbar()
-    {
-        for (int i = 0; i < Game.HotCount; i++)
-        {
-            string r = G.Hot[i]; bool has = G.HotValid(r);
-            var st = i == G.HotSel && (has || G.BareChosen) ? SlotState.Selected : !has ? SlotState.Disabled : SlotState.Normal;
-            hot[i].Visible = true;                                              // все три ячейки видны всегда, пустые — приглушённо
-            hot[i].Set(has ? UiIcons.Item(G.HotIcon(r)) : null, "", (i + 1).ToString(), st, 0, "", has ? 1f : .35f); hot[i].TooltipText = has ? Loc.T(G.HotName(r)) : "";
-        }
-        weapon.Visible = false; UpdateDrag();
-    }
 
     void UpdateAbilities()
     {
@@ -193,11 +202,6 @@ public partial class GameHud : Control
         abilities.Visible = any && !HudDensity.Minimal;
     }
 
-    /// <summary>Подсказки к объектам рисует Hud.DrawTooltip по модели TipModel; старые панели сцены (Hint/Detail) скрыты.</summary>
-    void UpdateHint(float dt)
-    {
-        hint.Visible = false; detail.Visible = false;
-    }
 }
 
 static class EnumerableExt

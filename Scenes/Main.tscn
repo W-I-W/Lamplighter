@@ -2,5 +2,74 @@
 
 [ext_resource type="Script" uid="uid://ctu7pijx3fv7d" path="res://Scripts/Core/Game.cs" id="1"]
 
+[ext_resource type="PackedScene" path="res://Scenes/UI/GameHud.tscn" id="GameHud"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/BuildMenu.tscn" id="BuildMenu"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/InventoryWindow.tscn" id="InventoryWindow"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/UpgradeWindow.tscn" id="UpgradeWindow"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/EquipWindow.tscn" id="EquipWindow"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/ChatHud.tscn" id="ChatHud"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/RegionTitle.tscn" id="RegionTitle"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/ResourceActions.tscn" id="ResourceActions"]
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Script" path="res://Scripts/UI/Hud.cs" id="hud"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/Window.tscn" id="window"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/Menu.tscn" id="menu"]
+
+[ext_resource type="PackedScene" path="res://Scenes/UI/DebugPanel.tscn" id="debug"]
+[ext_resource type="Script" path="res://Scripts/UI/Hud/WorldItems.cs" id="world_items"]
+
 [node name="Game" type="Node2D" unique_id=1538720868]
 script = ExtResource("1")
+
+[node name="WorldItemsLayer" type="CanvasLayer" parent="."]
+layer = 9
+
+[node name="WorldItems" type="Control" parent="WorldItemsLayer"]
+mouse_filter = 2
+texture_filter = 1
+process_priority = 1000
+theme = ExtResource("theme")
+script = ExtResource("world_items")
+
+[node name="Interface" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="UI" type="Control" parent="Interface"]
+layout_mode = 3
+offset_right = 640.0
+offset_bottom = 360.0
+mouse_filter = 2
+
+[node name="Overlay" type="Control" parent="Interface/UI"]
+layout_mode = 0
+mouse_filter = 2
+process_priority = 1000
+theme = ExtResource("theme")
+script = ExtResource("hud")
+
+[node name="Window" parent="Interface/UI/Overlay" instance=ExtResource("window")]
+z_index = 4050
+
+[node name="Menu" parent="Interface/UI/Overlay" instance=ExtResource("menu")]
+z_index = 4060
+
+[node name="GameHud" parent="Interface/UI" instance=ExtResource("GameHud")]
+
+[node name="ChatHud" parent="Interface/UI" instance=ExtResource("ChatHud")]
+
+[node name="RegionTitle" parent="Interface/UI" instance=ExtResource("RegionTitle")]
+
+[node name="BuildMenu" parent="Interface/UI" instance=ExtResource("BuildMenu")]
+
+[node name="InventoryWindow" parent="Interface/UI" instance=ExtResource("InventoryWindow")]
+
+[node name="UpgradeWindow" parent="Interface/UI" instance=ExtResource("UpgradeWindow")]
+
+[node name="EquipWindow" parent="Interface/UI" instance=ExtResource("EquipWindow")]
+
+[node name="ResourceActions" parent="Interface/UI" instance=ExtResource("ResourceActions")]
+
+[node name="DebugInterface" type="CanvasLayer" parent="."]
+layer = 30
+
+[node name="DebugPanel" parent="DebugInterface" instance=ExtResource("debug")]

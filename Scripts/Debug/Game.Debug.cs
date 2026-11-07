@@ -19,8 +19,8 @@ public partial class Game
 
     void DebugInit()
     {
-        var cl = new CanvasLayer { Layer = 30 }; AddChild(cl);
-        DebugUi = new DebugPanel { G = this, Visible = false }; cl.AddChild(DebugUi);
+        DebugUi = GetNode<DebugPanel>("DebugInterface/DebugPanel");
+        DebugUi.Bind(this);
     }
 
     /// <summary>true — событие поглощено панелью и игра его не обрабатывает.</summary>

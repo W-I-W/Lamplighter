@@ -105,6 +105,7 @@ public partial class Game
         {
             // улучшение: клиент заплатил за переход с уровня b. Если здание уже снесли, его успел улучшить другой игрок или уровень предельный — стоимость возвращается
             var ub = BuildingByKey(a);
+            if (ub != null && BuildUpBlock(ub) != null) { var rb = new int[It.Count]; foreach (var cc in BCost(c, b + 1)) rb[cc[0]] += cc[1]; return rb; }           // стол: следующая ступень требует открытого биома — иначе стоимость возвращается
             if (ub != null && BIndex(ub.Type) == c && ub.Level == b && ub.Level < MaxLv(c)) { ub.Level++; SetObj(ub.X, ub.Y, ub.Type); Fx("building_upgrade", ub.Pos); TradeEpoch++; netT = 0; return null; }
             if (c < 0 || c >= BCount || b < 1 || b >= BCosts[c].Length) return null;
             var back = new int[It.Count]; foreach (var cc in BCost(c, b + 1)) back[cc[0]] += cc[1]; return back;

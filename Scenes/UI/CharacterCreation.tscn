@@ -1,0 +1,458 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/Flow/CharacterCreationUI.cs" id="script"]
+[ext_resource type="Theme" path="res://Resources/UI/LanternTheme.tres" id="theme"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_walk.png" id="walk"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_flip.png" id="flip"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_dice.png" id="dice"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_check.png" id="check"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_left.png" id="left"]
+[ext_resource type="Texture2D" path="res://Assets/UI/Flow/icon_right.png" id="right"]
+
+[node name="CharacterCreation" type="Control"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 620.0
+offset_bottom = 340.0
+mouse_filter = 2
+theme = ExtResource("theme")
+script = ExtResource("script")
+
+[node name="Title" type="Label" parent="."]
+mouse_filter = 2
+theme_type_variation = &"BigLabel"
+modulate = Color(1, 0.824, 0.247, 1)
+horizontal_alignment = 1
+text = "Новый герой"
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 620.0
+offset_bottom = 20.0
+
+[node name="Subtitle" type="Label" parent="."]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 1
+text = ""
+offset_left = 0.0
+offset_top = 21.0
+offset_right = 620.0
+offset_bottom = 33.0
+
+[node name="Notice" type="Label" parent="."]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(1, 0.702, 0.42, 1)
+horizontal_alignment = 1
+text = ""
+offset_left = 0.0
+offset_top = 325.0
+offset_right = 620.0
+offset_bottom = 337.0
+
+[node name="Preview" type="PanelContainer" parent="."]
+offset_left = 0.0
+offset_top = 38.0
+offset_right = 250.0
+offset_bottom = 284.0
+theme_type_variation = &"PanelDark"
+
+[node name="Content" type="Control" parent="Preview"]
+layout_mode = 2
+
+
+[node name="Stage" type="Control" parent="Preview/Content"]
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 244.0
+offset_bottom = 194.0
+
+[node name="Actions" type="HBoxContainer" parent="Preview/Content"]
+offset_left = 8.0
+offset_top = 200.0
+offset_right = 242.0
+offset_bottom = 224.0
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="Walk" type="Button" parent="Preview/Content/Actions"]
+layout_mode = 2
+
+focus_mode = 0
+text = "Покой"
+custom_minimum_size = Vector2(76, 22)
+
+[node name="Icon" type="TextureRect" parent="Preview/Content/Actions/Walk"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("walk")
+
+[node name="Flip" type="Button" parent="Preview/Content/Actions"]
+layout_mode = 2
+
+focus_mode = 0
+text = "Взгляд"
+custom_minimum_size = Vector2(76, 22)
+
+[node name="Icon" type="TextureRect" parent="Preview/Content/Actions/Flip"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("flip")
+
+[node name="Random" type="Button" parent="Preview/Content/Actions"]
+layout_mode = 2
+
+focus_mode = 0
+text = "Случайно"
+custom_minimum_size = Vector2(76, 22)
+
+[node name="Icon" type="TextureRect" parent="Preview/Content/Actions/Random"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("dice")
+
+[node name="Hint" type="Label" parent="Preview/Content"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 1
+text = "Внешность — только для красоты"
+offset_left = 0.0
+offset_top = 226.0
+offset_right = 250.0
+offset_bottom = 238.0
+
+[node name="Appearance" type="PanelContainer" parent="."]
+offset_left = 260.0
+offset_top = 38.0
+offset_right = 620.0
+offset_bottom = 284.0
+theme_type_variation = &"PanelDark"
+
+[node name="Content" type="MarginContainer" parent="Appearance"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="Form" type="VBoxContainer" parent="Appearance/Content"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Name" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Name"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Имя"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Name"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Input" type="LineEdit" parent="Appearance/Content/Form/Name/Options"]
+layout_mode = 2
+max_length = 16
+custom_minimum_size = Vector2(180, 20)
+placeholder_text = "Имя героя"
+theme_type_variation = &"ChatInput"
+
+[node name="Roll" type="Button" parent="Appearance/Content/Form/Name/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(24, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Name/Options/Roll"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("dice")
+
+[node name="Species" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Species"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Вид"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Species"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Previous" type="Button" parent="Appearance/Content/Form/Species/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Species/Options/Previous"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("left")
+
+[node name="Value" type="Label" parent="Appearance/Content/Form/Species/Options"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(1, 0.824, 0.247, 1)
+horizontal_alignment = 1
+text = ""
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
+
+[node name="Next" type="Button" parent="Appearance/Content/Form/Species/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Species/Options/Next"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("right")
+
+[node name="Skin" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Skin"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Кожа"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Skin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Hair" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Hair"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Причёска"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Hair"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Previous" type="Button" parent="Appearance/Content/Form/Hair/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Hair/Options/Previous"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("left")
+
+[node name="Value" type="Label" parent="Appearance/Content/Form/Hair/Options"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(1, 0.824, 0.247, 1)
+horizontal_alignment = 1
+text = ""
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
+
+[node name="Next" type="Button" parent="Appearance/Content/Form/Hair/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Hair/Options/Next"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("right")
+
+[node name="HairColor" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/HairColor"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Цвет волос"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/HairColor"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Clothing" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Clothing"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Одежда"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Clothing"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Accent" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Accent"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Доп. цвет"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Accent"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Variant" type="HBoxContainer" parent="Appearance/Content/Form"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Caption" type="Label" parent="Appearance/Content/Form/Variant"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(0.541, 0.588, 0.69, 1)
+horizontal_alignment = 0
+text = "Фасон"
+layout_mode = 2
+custom_minimum_size = Vector2(64, 0)
+
+[node name="Options" type="HBoxContainer" parent="Appearance/Content/Form/Variant"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Previous" type="Button" parent="Appearance/Content/Form/Variant/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Variant/Options/Previous"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("left")
+
+[node name="Value" type="Label" parent="Appearance/Content/Form/Variant/Options"]
+mouse_filter = 2
+theme_type_variation = &"PlainLabel"
+modulate = Color(1, 0.824, 0.247, 1)
+horizontal_alignment = 1
+text = ""
+layout_mode = 2
+custom_minimum_size = Vector2(130, 0)
+
+[node name="Next" type="Button" parent="Appearance/Content/Form/Variant/Options"]
+layout_mode = 2
+
+focus_mode = 0
+text = ""
+custom_minimum_size = Vector2(26, 20)
+
+[node name="Icon" type="TextureRect" parent="Appearance/Content/Form/Variant/Options/Next"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 21.0
+offset_bottom = 19.0
+mouse_filter = 2
+texture = ExtResource("right")
+
+[node name="Back" type="Button" parent="."]
+offset_left = 0.0
+offset_top = 294.0
+offset_right = 90.0
+offset_bottom = 316.0
+focus_mode = 0
+text = "Назад"
+custom_minimum_size = Vector2(90, 22)
+
+[node name="Actions" type="HBoxContainer" parent="."]
+offset_left = 360.0
+offset_top = 294.0
+offset_right = 620.0
+offset_bottom = 318.0
+alignment = 2
+theme_override_constants/separation = 6
+
+[node name="Create" type="Button" parent="Actions"]
+layout_mode = 2
+
+focus_mode = 0
+text = "Создать героя"
+custom_minimum_size = Vector2(150, 22)
+
+[node name="Icon" type="TextureRect" parent="Actions/Create"]
+offset_left = 5.0
+offset_top = 4.0
+offset_right = 21.0
+offset_bottom = 20.0
+mouse_filter = 2
+texture = ExtResource("check")

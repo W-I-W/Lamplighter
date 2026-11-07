@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://crvgu72io8urx"]
 
-[ext_resource type="Script" path="res://Game.cs" id="1"]
+[ext_resource type="PackedScene" path="res://Scenes/Main.tscn" id="game"]
 
-[node name="Game" type="Node2D" unique_id=1538720868]
-script = ExtResource("1")
+[node name="Game" instance=ExtResource("game")]

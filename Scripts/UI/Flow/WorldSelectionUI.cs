@@ -13,19 +13,18 @@ public partial class WorldSelectionUI : FlowScreen
 
     public override void _Ready()
     {
-        base._Ready(); Header("Выбор мира", Flow.ModeLine + " · " + (SaveManager.LoadCharacter(Flow.CharId)?.Name ?? ""));
-        var lp = Px.Panel(); lp.Position = new Vector2(0, 38); lp.Size = new Vector2(270, 246); AddChild(lp);
-        var sc = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, VerticalScrollMode = ScrollContainer.ScrollMode.ShowNever, Size = new Vector2(258, 234), Position = new Vector2(6, 6) }; lp.AddChild(new Control()); lp.GetChild<Control>(0).AddChild(sc);
-        cardBox = new VBoxContainer(); cardBox.AddThemeConstantOverride("separation", 4); cardBox.CustomMinimumSize = new Vector2(250, 0); sc.AddChild(cardBox);
-        empty = Px.Label("Миров пока нет.\nСоздайте первый мир: он сохранит постройки, фонари и жителей независимо от героев.", Px.Dim, false, HorizontalAlignment.Center, true); empty.Position = new Vector2(14, 90); empty.Size = new Vector2(240, 60); lp.AddChild(empty);
-        var dp = Px.Panel(); dp.Position = new Vector2(280, 38); dp.Size = new Vector2(340, 246); AddChild(dp); detail = new Control { Size = dp.Size }; dp.AddChild(detail);
-
-        AddChild(Px.Button("Назад", null, Back, 90).Also(b => b.Position = new Vector2(0, 294)));
-        var r = Row(100, 294, 520, BoxContainer.AlignmentMode.End); AddChild(r);
-        ren = Px.Button("Переименовать", "edit", AskRename, 130); r.AddChild(ren);
-        del = Px.Button("Удалить", "trash", AskDelete, 92); r.AddChild(del);
-        r.AddChild(Px.Button("Создать мир", "plus", () => Flow.ShowCreateWorld(), 120));
-        play = Px.Button(Flow.Kind == FlowKind.Host ? "Создать лобби" : "Играть", Flow.Kind == FlowKind.Host ? "lobby" : "play", PlaySel, 130); r.AddChild(play);
+        BindSelectionLayout(Flow.ModeLine + " · " + (SaveManager.LoadCharacter(Flow.CharId)?.Name ?? ""), out cardBox, out detail, out empty);
+        BindButton("Back", Back);
+        ren = BindButton("Actions/Rename", AskRename);
+        del = BindButton("Actions/Delete", AskDelete);
+        BindButton("Actions/Create", Flow.ShowCreateWorld);
+        play = BindButton("Actions/Play", PlaySel);
+        if (Flow.Kind == FlowKind.Host)
+        {
+            play.Text = Loc.T("Создать лобби");
+            play.GetNode<TextureRect>("Icon").Hide();
+            play.GetNode<TextureRect>("LobbyIcon").Show();
+        }
         Reload(SelectId);
         if (list.Count == 0) CallDeferred(nameof(AutoCreate));
     }
@@ -141,80 +140,4 @@ public partial class WorldSelectionUI : FlowScreen
         if (k == Key.Escape) { Back(); return true; }
         return false;
     }
-}
-
-/// <summary>Создание мира: название, сложность и свёрнутые дополнительные настройки (seed). Пустой seed выбирается случайно. После создания мир сразу запускается с выбранным героем.</summary>
-public partial class WorldCreationUI : FlowScreen
-{
-    static readonly string[] Names = { "Тёмный лес", "Новое начало", "Мир друзей", "Долина фонарей", "Ночная застава", "Пепельный край", "Огни севера", "Тихая гавань" };
-    static readonly RandomNumberGenerator Rng = new();
-    LineEdit name, seed; int difficulty; Button bNormal, bHard, bMore; Control adv; PanelContainer panel; bool open;
-
-    public override void _Ready()
-    {
-        base._Ready(); Rng.Randomize(); Header("", "");
-        panel = Px.Panel("PanelGold"); panel.CustomMinimumSize = new Vector2(300, 0); AddChild(panel);
-        var m = new MarginContainer(); foreach (var s in new[] { "left", "right", "top", "bottom" }) m.AddThemeConstantOverride("margin_" + s, 10); panel.AddChild(m);
-        var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 6); m.AddChild(v);
-        v.AddChild(Px.Label("Новый мир", Px.Gold, true, HorizontalAlignment.Center));
-        name = new LineEdit { Text = Loc.T(Names[Rng.RandiRange(0, Names.Length - 1)]), MaxLength = 20, CustomMinimumSize = new Vector2(0, 20), PlaceholderText = Loc.T("Название мира") }; Modal.Style(name); v.AddChild(name);
-        name.TextSubmitted += _ => Create();
-        var dr = new HBoxContainer(); dr.AddThemeConstantOverride("separation", 6); v.AddChild(dr);
-        bNormal = Px.Button("Обычная", "shield", () => SetDiff(0), 0, 26); bHard = Px.Button("Сложная", "skull", () => SetDiff(1), 0, 26);
-        foreach (var b in new[] { bNormal, bHard }) { b.SizeFlagsHorizontal = SizeFlags.ExpandFill; dr.AddChild(b); }
-        bNormal.TooltipText = Loc.T("Сбалансированное приключение"); bHard.TooltipText = Loc.T("Более опасные враги и боссы");
-        SetDiff(0, true);
-        bMore = Px.Button("+ Дополнительные настройки", null, ToggleMore, 0, 18); bMore.SizeFlagsHorizontal = SizeFlags.ExpandFill; v.AddChild(bMore);
-        adv = new HBoxContainer { Visible = false }; ((HBoxContainer)adv).AddThemeConstantOverride("separation", 4); v.AddChild(adv);
-        seed = new LineEdit { MaxLength = 18, CustomMinimumSize = new Vector2(0, 20), SizeFlagsHorizontal = SizeFlags.ExpandFill, PlaceholderText = Loc.T("Seed: случайный") }; Modal.Style(seed); adv.AddChild(seed);
-        seed.TextSubmitted += _ => Create();
-        adv.AddChild(Px.Button("", "dice", () => { seed.Text = NewSeed().ToString(); Px.Pop(seed, .04f); }, 26, 20));
-        var br = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center }; br.AddThemeConstantOverride("separation", 8); v.AddChild(br);
-        br.AddChild(Px.Button("Назад", null, Back, 80, 24));
-        var cb = Px.Button("Создать мир", "check", Create, 150, 24); cb.AddThemeColorOverride("font_color", Px.Gold); cb.AddThemeColorOverride("font_hover_color", new Color("#fff2b0")); br.AddChild(cb);
-        CallDeferred(nameof(Place));
-    }
-
-    void Place() { panel.ResetSize(); panel.Position = new Vector2((FlowUI.BoxW - panel.Size.X) / 2, (FlowUI.BoxH - panel.Size.Y) / 2 - 4).Floor(); }
-
-    void ToggleMore()
-    {
-        open = !open; adv.Visible = open; bMore.Text = Loc.T(open ? "- Дополнительные настройки" : "+ Дополнительные настройки"); Sfx.Play("tick", -3, 1.3f); Place(); CallDeferred(nameof(Place));
-    }
-
-    static int NewSeed() => (int)(Rng.Randi() % 1000000);
-
-    /// <summary>Число используется как есть, слово даёт устойчивый seed (одно и то же слово — один и тот же мир). Пустая строка — 0 (вызывающий выбирает случайный).</summary>
-    public static int ParseSeed(string s)
-    {
-        s = (s ?? "").Trim(); if (s == "") return 0;
-        if (int.TryParse(s, out var n) && n >= 0) return n % 2000000000;
-        int h = 17; foreach (var ch in s) h = unchecked(h * 31 + ch); return Math.Abs(h % 2000000000);
-    }
-
-    void SetDiff(int d, bool quiet = false)
-    {
-        difficulty = d; bNormal.ThemeTypeVariation = d == 0 ? "ButtonSelected" : ""; bHard.ThemeTypeVariation = d == 1 ? "ButtonSelected" : "";
-        if (!quiet) Sfx.Play("tick", -3, 1.3f);
-    }
-
-    bool creating;
-    void Create()
-    {
-        if (creating) return; var n = SaveManager.CleanName(name.Text, ""); if (n == "") { Sfx.Play("error"); Px.Shake(name); Toast("Введите название мира"); return; }
-        string st = seed.Text.Trim(); int s = st == "" ? NewSeed() : ParseSeed(st);
-        creating = true; var w = SaveManager.CreateWorld(n, s, difficulty);
-        Flow.WorldId = w.Id; Flow.PlayWorld(w.Id);
-    }
-
-    public override bool OnKey(Key k)
-    {
-        if (k == Key.Escape) { Back(); return true; }
-        if (k == Key.Enter || k == Key.KpEnter) { Create(); return true; }
-        if (k == Key.Left || k == Key.A) { SetDiff(0); return true; }
-        if (k == Key.Right || k == Key.D) { SetDiff(1); return true; }
-        return false;
-    }
-
-    public override void Back() { if (SaveManager.ListWorlds().Count == 0) { Flow.ShowCharacters(null); return; } Flow.ShowWorlds(null); }
 }

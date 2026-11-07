@@ -97,7 +97,7 @@ public partial class Game : Node2D
     {
         float wh = testing ? ViewSize.Y : DisplayServer.WindowGetSize().Y; int si = Settings.UiInt(wh);
         UiScaleVp = si * ViewSize.Y / Mathf.Max(1f, wh);
-        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (RegionTitle != null) RegionTitle.Size = uiRoot.Size; if (ResUi != null) ResUi.Size = uiRoot.Size; if (flow != null && GodotObject.IsInstanceValid(flow)) flow.Size = uiRoot.Size;
+        uiRoot.Scale = new Vector2(UiScaleVp, UiScaleVp); uiRoot.Size = ViewSize / UiScaleVp; hud.Size = uiRoot.Size; GameHudNode.Size = uiRoot.Size; if (Chat != null) Chat.Size = uiRoot.Size; if (RegionTitle != null) RegionTitle.Size = uiRoot.Size; if (ResUi != null) ResUi.Size = uiRoot.Size;
     }
     public Vector2 CamCenter => cam.GetScreenCenterPosition();
     public int RegionAt(Vector2 p) => World.RegionOf((int)Mathf.Floor(p.X / TS));
@@ -145,15 +145,18 @@ public partial class Game : Node2D
         glowRect = new ColorRect { Material = glowMat, MouseFilter = Control.MouseFilterEnum.Ignore, Color = Colors.White };
         dl.AddChild(darkRect); dl.AddChild(glowRect);
 
-        var hl = new CanvasLayer { Layer = 10 }; AddChild(hl);
-        uiRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore }; hl.AddChild(uiRoot);
-        hud = new Hud { G = this, MouseFilter = Control.MouseFilterEnum.Ignore }; uiRoot.AddChild(hud);
-        GameHudNode = GD.Load<PackedScene>("res://Scenes/UI/GameHud.tscn").Instantiate<GameHud>(); GameHudNode.G = this; uiRoot.AddChild(GameHudNode); Chat = new ChatHud { G = this }; uiRoot.AddChild(Chat); RegionTitle = new RegionTitleHud { G = this }; uiRoot.AddChild(RegionTitle); ResUi = new ResourceActionUI { G = this }; uiRoot.AddChild(ResUi); DebugInit();
-        buildMenu = GD.Load<PackedScene>("res://Scenes/UI/BuildMenu.tscn").Instantiate<BuildWindowUI>(); buildMenu.G = this; uiRoot.AddChild(buildMenu);
-        invWindow = GD.Load<PackedScene>("res://Scenes/UI/InventoryWindow.tscn").Instantiate<InventoryWindow>(); invWindow.G = this; uiRoot.AddChild(invWindow);
-        upgradeWindow = GD.Load<PackedScene>("res://Scenes/UI/UpgradeWindow.tscn").Instantiate<UpgradeWindowUI>(); upgradeWindow.G = this; uiRoot.AddChild(upgradeWindow);
-        equipWindow = GD.Load<PackedScene>("res://Scenes/UI/EquipWindow.tscn").Instantiate<EquipWindowUI>(); equipWindow.G = this; uiRoot.AddChild(equipWindow);
-        uiRoot.MoveChild(ResUi, -1);                    // диалог ресурсов поверх всех окон и по порядку в дереве (так выбирается, кто получает щелчок), и по ZIndex
+        GetNode<WorldItems>("WorldItemsLayer/WorldItems").G = this;
+        uiRoot = GetNode<Control>("Interface/UI");
+        hud = uiRoot.GetNode<Hud>("Overlay"); hud.Bind(this);
+        GameHudNode = uiRoot.GetNode<GameHud>("GameHud"); GameHudNode.G = this;
+        Chat = uiRoot.GetNode<ChatHud>("ChatHud"); Chat.Bind(this);
+        RegionTitle = uiRoot.GetNode<RegionTitleHud>("RegionTitle"); RegionTitle.G = this;
+        buildMenu = uiRoot.GetNode<BuildWindowUI>("BuildMenu"); buildMenu.G = this;
+        invWindow = uiRoot.GetNode<InventoryWindow>("InventoryWindow"); invWindow.G = this;
+        upgradeWindow = uiRoot.GetNode<UpgradeWindowUI>("UpgradeWindow"); upgradeWindow.G = this;
+        equipWindow = uiRoot.GetNode<EquipWindowUI>("EquipWindow"); equipWindow.G = this;
+        ResUi = uiRoot.GetNode<ResourceActionUI>("ResourceActions"); ResUi.G = this;
+        DebugInit();
 
         if (CarryMsg != null) { pendingMsg ??= CarryMsg; CarryMsg = null; }
         if (pendingMsg != null) Toast(pendingMsg);
@@ -196,7 +199,7 @@ public partial class Game : Node2D
         Tl.Shrine => Art.Shrine, Tl.ShrineUsed => Art.ShrineUsed, Tl.Aether => Art.AetherOre, Tl.Cage => Art.Cage,
         Tl.BossOff => Art.BossOff, Tl.BossOn => Art.BossOn, Tl.Obelisk => Art.Obelisk, Tl.ObeliskUsed => Art.ObeliskUsed,
         Tl.Warehouse => lv >= 4 ? Art.Wh4 : Art.Warehouse + lv - 1, Tl.Sawmill => lv >= 4 ? Art.Saw4 : Art.Sawmill + lv - 1,
-        Tl.Mine => lv >= 4 ? Art.Mine4 : Art.Mine + lv - 1, Tl.Forge => lv >= 4 ? Art.Forge4 : Art.Forge + lv - 1,
+        Tl.Mine => lv >= 4 ? Art.Mine4 : Art.Mine + lv - 1, Tl.Forge => lv >= 4 ? Art.Forge4 : Art.Forge + lv - 1, Tl.ResearchTable => Art.ResTable + Math.Clamp(lv, 1, 5) - 1,
         Tl.Drill => Art.Drill + Math.Min(lv, 4) - 1, Tl.Collector => Art.Collector + Math.Min(lv, 4) - 1,
         Tl.CaveWall => Art.CaveWall, Tl.CrystalOre => Art.CrystalOre, Tl.SilverOre => Art.SilverOre, Tl.Machine => Art.Machine, Tl.MachineOn => Art.MachineOn,
         Tl.Mirror1 => Art.Mirror1, Tl.Mirror2 => Art.Mirror2, Tl.Receiver => Art.Receiver, Tl.ReceiverOn => Art.ReceiverOn, Tl.Emitter => Art.Emitter,
@@ -245,7 +248,6 @@ public partial class Game : Node2D
         if (DebugInput(e)) return;                                            // отладочная панель F10
         if (ChatOpen) { if (e is InputEventKey ck && ck.Pressed && ck.Keycode == Key.Escape) { Chat.CloseChat(); GetViewport().SetInputAsHandled(); } return; }      // чат открыт: ввод идёт в поле, игровые клавиши и мышь отключены
         if (e is InputEventKey ek && ek.Pressed && !ek.Echo && (ek.Keycode == Key.Enter || ek.Keycode == Key.KpEnter) && Window == Win.None && !TechOpen && !MapOpen && FinStage == 0 && Chat != null) { Chat.OpenChat(); GetViewport().SetInputAsHandled(); return; }
-        if (HotDragInput(e)) return;
         if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory && Window != Win.Equip ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
         if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0)
         {
@@ -256,7 +258,6 @@ public partial class Game : Node2D
         if (e is InputEventMouseButton pr && pr.Pressed && pr.ButtonIndex == MouseButton.Right && Placing != null) { Placing = null; Toast("Строительство отменено"); return; }
         if (FinStage > 0) { if (e is InputEventKey fk && fk.Pressed && !fk.Echo) FinaleKey(fk.Keycode); return; }
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right && Window == Win.None) TrySpin();
-        if (e is InputEventMouseButton wb && wb.Pressed && Window == Win.None && !TechOpen && !MapOpen && (wb.ButtonIndex == MouseButton.WheelUp || wb.ButtonIndex == MouseButton.WheelDown)) { HotCycle(wb.ButtonIndex == MouseButton.WheelUp ? -1 : 1); return; }
         if (e is InputEventKey k && k.Pressed && !k.Echo)
         {
             var key = KeyMap.Translate(k.Keycode); if (key == Key.None) return;
@@ -283,7 +284,7 @@ public partial class Game : Node2D
                 case Key.Escape: if (Placing != null) { Placing = null; Toast("Строительство отменено"); } else if (TechOpen || MapOpen) CloseWindows(); else OpenMenu(Mn.Pause); break;
                 case Key.Shift: TryDash(); break;
                 case Key.Q: TryFlare(); break;
-                case Key.V: if (k.ShiftPressed) CycleOwnedWeapon(); else CycleWeapon(); break;
+                case Key.V: CycleOwnedWeapon(); break;
                 case Key.C: OpenWin(Win.Equip); break;
                 case Key.J: OpenWin(Win.Journal); break;
                 case Key.B: OpenWin(Win.Build); break;
@@ -299,12 +300,7 @@ public partial class Game : Node2D
     void Digit(int n)
     {
         if (TechOpen) { var vis = Upgrades.Visible(); if (n >= 1 && n <= vis.Count) SelectTechPage(vis[n - 1].Page); return; }
-        if (n >= 1 && n <= HotCount) { HotSelect(n - 1); return; }                  // 1–3: выбор инструмента или оружия в хотбаре
-        switch (n)                                                                  // постройки теперь — только через меню строительства [B]
-        {
-            case 9: PlaceKey("lamp2"); break;
-            case 0: PlaceKey("mirror"); break;
-        }
+        UseQuickSlot(n == 0 ? QuickSlotCount - 1 : n - 1);
     }
 
     public void Fail(string msg) { Toast(msg, MsgTone.Warn); Sfx.Play("error"); }

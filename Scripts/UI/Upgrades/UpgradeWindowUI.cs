@@ -17,19 +17,26 @@ public partial class UpgradeWindowUI : Control
 
     public override void _Ready()
     {
-        ZIndex = 4045;                                      // выше всплывающих сообщений интерфейса
         panel = GetNode<Control>("%Panel"); tabsBox = GetNode<HBoxContainer>("%Tabs"); details = GetNode<SkillDetailsUI>("%Details"); canvas = GetNode<SkillTreeCanvasUI>("%Canvas");
         count = GetNode<Label>("%Count"); title = GetNode<Label>("%Title"); keys = GetNode<Label>("%Keys");
         star = GD.Load<Texture2D>("res://Assets/UI/Upgrades/state_star.png");
         details.LearnPressed += ClickLearn;
-        var head = panel.GetNode<HBoxContainer>("V/Head"); head.AddThemeConstantOverride("separation", 2);
-        btnCenter = Mk(head, () => canvas.CenterOnSelected()); btnFit = Mk(head, () => canvas.FitAll()); btnOut = Mk(head, () => canvas.Zoom(-1)); btnIn = Mk(head, () => canvas.Zoom(1));
+        var head = panel.GetNode<HBoxContainer>("V/Head");
+        btnCenter = Bind(head, "Center", canvas.CenterOnSelected);
+        btnFit = Bind(head, "Fit", canvas.FitAll);
+        btnOut = Bind(head, "ZoomOut", () => canvas.Zoom(-1));
+        btnIn = Bind(head, "ZoomIn", () => canvas.Zoom(1));
     }
 
-    Button Mk(Control parent, System.Action act) { var b = new Button { FocusMode = FocusModeEnum.None }; b.Pressed += () => act(); parent.AddChild(b); return b; }
+    static Button Bind(Control parent, string name, System.Action action)
+    {
+        var button = parent.GetNode<Button>(name);
+        button.Pressed += action;
+        return button;
+    }
 
     // ── действия (те же методы вызывают элементы окна и проверки)
-    public void ClickLearn() { if (G.TechSel >= 0) G.LearnTech(G.TechSel); }
+    public void ClickLearn() => G.LearnSelected();
     public void ClickNode(int tech) => canvas.ClickNode(tech);
     public void ClickTab(int i) { if (i >= 0 && i < tabs.Count && tabs[i].Visible && tabs[i].HasMeta("page")) G.SelectTechPage((int)tabs[i].GetMeta("page")); }
     public int TabCount { get { int n = 0; foreach (var b in tabs) if (b.Visible) n++; return n; } }
@@ -69,7 +76,7 @@ public partial class UpgradeWindowUI : Control
             if (G.SkillLv[i] >= Game.SkillMax(i)) canvas.FlashChildren(i);
         }
         var (own, total) = G.TechTotals(); count.Text = $"{own}/{total}";
-        string kl = Loc.Lang; if (kl != keysLang) { keysLang = kl; keys.Text = Loc.T("ЛКМ выбрать · тащить/СКМ двигать · колесо масштаб · Enter улучшить · Tab категория · T/Esc закрыть"); title.Text = Loc.T("Улучшения"); btnCenter.Text = Loc.T("Центр"); btnFit.Text = Loc.T("Всё"); btnOut.Text = "-"; btnIn.Text = "+"; }
+        bool atTable = G.TechAtTable || G.FreeResearch; string kl = Loc.Lang + atTable + G.TableLevel; if (kl != keysLang) { keysLang = kl; keys.Text = Loc.T(atTable ? "ЛКМ выбрать · тащить/СКМ двигать · колесо масштаб · Enter улучшить · Tab категория · Esc закрыть" : "ЛКМ выбрать · колесо масштаб · Tab категория · изучение — у Стола · T/Esc закрыть"); title.Text = G.TechAtTable ? Loc.T("Стол исследований") + $" · {Loc.T("ур.")}{G.TableLevel}" : Loc.T("Навыки: просмотр"); btnCenter.Text = Loc.T("Центр"); btnFit.Text = Loc.T("Всё"); btnOut.Text = "-"; btnIn.Text = "+"; }
         details.Show(G, G.TechSel);
     }
 

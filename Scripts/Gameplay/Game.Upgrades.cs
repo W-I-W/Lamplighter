@@ -31,7 +31,7 @@ public partial class Game
     {
         TabAnim.Add(c.Id);
         for (int i = 0; i < Techs.Length; i++) if (Techs[i].Page == c.Page && Techs[i].Ok(this)) Ann |= 1L << (12 + i);          // об этих улучшениях уже сказано в уведомлении категории
-        Announce("Открыта категория: " + c.Title, "Меню улучшений [T]", new Color("#ffd23f"), "upgrade");
+        Announce("Открыта категория: " + c.Title, "Исследования у Стола [E]; дерево навыков [T]", new Color("#ffd23f"), "upgrade");
         Burst(PPos, new Color("#ffd23f"), 26, 110); Flash = Mathf.Max(Flash, .12f);
     }
 
@@ -46,9 +46,10 @@ public partial class Game
         return (own, total);
     }
 
-    public void OpenTech(bool open)
+    /// <summary>Окно навыков. atTable — открыто у Стола исследований (можно изучать); иначе [T] только показывает дерево и планирование.</summary>
+    public void OpenTech(bool open, bool atTable = false)
     {
-        CloseWindows(); TechOpen = open; if (!open) return;
+        CloseWindows(); TechOpen = open; TechAtTable = open && atTable; if (!open) return;
         Ann |= TutTechOpened; PokeHover();
         if (!Upgrades.IsPageUnlocked(TechPage)) { var v = Upgrades.Visible(); TechPage = v.Count > 0 ? v[0].Page : 0; }
         EnsureTechSel(); Upgrades.MarkSeen(Upgrades.ByPage(TechPage)?.Id ?? "");
@@ -82,6 +83,14 @@ public partial class Game
         return best;
     }
 
+    /// <summary>Покупка выбранного навыка из окна: только у Стола исследований. В режиме просмотра (T) дерево ничего не покупает.</summary>
+    public bool LearnSelected()
+    {
+        if (TechSel < 0) return false;
+        if (!TechAtTable && !FreeResearch) { Toast("Навыки изучаются у Стола исследований"); return false; }
+        return LearnTech(TechSel);
+    }
+
     /// <summary>Клавиши окна: стрелки — по дереву, Tab/PgUp/PgDn — категории, Enter/E/Space — улучшить на один уровень, Home — к выбранному.</summary>
     bool TechKey(Key k)
     {
@@ -94,7 +103,7 @@ public partial class Game
             case Key.Left: case Key.Right: case Key.Up: case Key.Down:
                 { var dir = k == Key.Left ? Vector2.Left : k == Key.Right ? Vector2.Right : k == Key.Up ? Vector2.Up : Vector2.Down; int n = TechSel < 0 ? -1 : TechNeighbour(TechSel, dir); if (n >= 0) { TechSel = n; Sfx.Play("tick", -8, 1.5f); } return true; }
             case Key.Home: TechView.Remove(TechPage); return true;
-            case Key.Enter: case Key.KpEnter: case Key.E: case Key.Space: if (TechSel >= 0) LearnTech(TechSel); return true;
+            case Key.Enter: case Key.KpEnter: case Key.E: case Key.Space: LearnSelected(); return true;
         }
         return false;
     }

@@ -103,6 +103,7 @@ public partial class Game
         if (OS.GetEnvironment("LAMP_STAGE") == "upgrades") { BuildUpgradesScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "equip") { BuildEquipScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "skills") { BuildSkillsScript(); return; }
+        if (OS.GetEnvironment("LAMP_STAGE") == "table") { BuildTableScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "explore") { BuildExploreScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "village") { BuildVillageScript(); return; }
         if (OS.GetEnvironment("LAMP_STAGE") == "difficulty") { BuildDifficultyScript(); return; }
