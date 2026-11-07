@@ -18,7 +18,7 @@ public partial class InventoryWindow : Control
         preview = GetNode<UiSlot>("CarryPreview");
         previewIcon = preview.GetNode<TextureRect>("%Icon");
         panel = GetNode<Control>("%Panel"); grid = GetNode<GridContainer>("%Grid"); nameL = GetNode<Label>("%Name"); desc = GetNode<Label>("%Desc");
-        info = GetNode<Control>("Panel/V/Info"); info.Reparent(this, false); info.Visible = false; info.MouseFilter = MouseFilterEnum.Ignore;
+        info = GetNode<Control>("%Panel/V/Info"); info.Reparent(this, false); info.Visible = false; info.MouseFilter = MouseFilterEnum.Ignore;
         desc.CustomMinimumSize = new Vector2(260, 0); desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         var box = grid.GetParent();
         var gap = new Control { CustomMinimumSize = new Vector2(0, 3) }; box.AddChild(gap); box.MoveChild(gap, grid.GetIndex() + 1);
@@ -58,6 +58,8 @@ public partial class InventoryWindow : Control
     TextureRect previewIcon;
 
     Texture2D ItemTexture(int item) => G.InventoryItemTexture(item);
+
+    internal bool CarryActive => source >= 0;
 
     internal int CarriedCount(bool quick, bool chest, int index) =>
         preview.Visible && source == index && sourceQuick == quick && sourceChest == chest ? carriedCount : 0;
@@ -140,6 +142,7 @@ public partial class InventoryWindow : Control
     {
         carryPointer = viewportPosition;
         int remaining = PreviewRemaining();
+        previewIcon.Visible = remaining > 0;
         preview.Set(ItemTexture(carriedItem), remaining > 1 ? remaining.ToString() : "", "", SlotState.Normal);
         preview.Show();
         PositionCarry(viewportPosition);
@@ -263,7 +266,7 @@ public partial class InventoryWindow : Control
             else if (sourceChest) G.WithdrawChestToBag(source, target, carriedItem, amount);
             else G.MoveInventoryStack(source, target, carriedItem, amount);
         }
-        var result = CellStack(area, target);
+        var result = area == 2 ? G.InventorySlotBeforeResize(target) : CellStack(area, target);
         int moved = result.item == carriedItem ? Mathf.Max(0, result.n - destination.n) : 0;
         carriedCount -= moved;
         return moved;

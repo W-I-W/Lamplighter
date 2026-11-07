@@ -8,15 +8,27 @@ namespace Lamplighter;
 public partial class Game
 {
     public readonly InteractionController Interact = new();
-    public const float TipDistance = 22f, TipDelay = .5f;
-    float tipHoverT; public bool TipReady;
+    public const float TipDistance = InteractionController.Reach, TipDelay = .5f;
+    float tipHoverT; string tipHoverKey; public bool TipReady;
 
-    /// <summary>Подсказка над объектом появляется, только когда курсор наведён на выбранный объект, игрок стоит почти вплотную (до 22 пикселей) и прошло полсекунды; клавиши действий работают и без неё.</summary>
+    /// <summary>Показывать подсказку для объекта под курсором в пределах досягаемости после небольшой задержки.</summary>
     void UpdateTip(float dt)
     {
-        var s = Interact.Selected; var h = Interact.Hover;
-        bool ok = s != null && h != null && h.Key == s.Key && InteractionController.Distance(PPos, s.Bounds) <= TipDistance;
-        tipHoverT = ok ? tipHoverT + dt : 0f; TipReady = tipHoverT >= TipDelay;
+        var h = Interact.Hover;
+        string key = h != null && InteractionController.Distance(PPos, h.Bounds) <= TipDistance ? h.Key : null;
+        if (key != tipHoverKey) { tipHoverKey = key; tipHoverT = 0f; }
+        tipHoverT = key != null ? tipHoverT + dt : 0f;
+        TipReady = key != null && tipHoverT >= TipDelay;
+    }
+
+    internal Ix HoverTip()
+    {
+        var target = Interact.Hover;
+        if (!TipReady || target == null) return null;
+        var ix = new Ix { Title = target.Title, Key = target.Key };
+        if (Interact.Selected?.Key != target.Key) ix.Info("ЛКМ — выбрать объект для действий");
+        target.Describe(ix);
+        return ix;
     }
     public bool OverUi; public float DetailT;                           // курсор над интерфейсом: мир не получает клик
 

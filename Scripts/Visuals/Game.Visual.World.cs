@@ -223,7 +223,7 @@ public partial class Game
         else
         {
             var d = Aim - PPos; d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0); float sg = d.X < 0 ? -1 : 1;       // в покое предмет виден в руке, опущенный вдоль тела
-            if (CurW >= 0 || OwnedTools.Contains(CurTool))
+            if (CurW >= 0 || OwnedTools.Contains(CurTool) || HandResourceTexture() != null)
                 { float ra = d.Angle() + sg * 1.05f; DrawHeldItem(c, PPos + new Vector2(sg * 3f, -3) - Vector2.FromAngle(ra) * 5f, ra); }       // поворачивается за мышкой, но держится у тела (рычаг короче)       // пустая рука в покое не рисуется: видна только при замахе
         }
         if (SpinT > 0)

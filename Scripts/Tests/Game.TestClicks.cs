@@ -41,6 +41,9 @@ public partial class Game
         S(.3f, () =>
         {
             Check(invWindow.Columns == 10, "clicks: inventory rows contain ten cells");
+            var inventoryPanel = invWindow.GetNode<Control>("%Panel");
+            Check(Mathf.Abs(inventoryPanel.Size.Y - inventoryPanel.GetCombinedMinimumSize().Y) < 1f,
+                $"clicks: inventory panel fits its contents ({inventoryPanel.Size.Y}/{inventoryPanel.GetCombinedMinimumSize().Y})");
             var stacks = InventorySlots();
             int wood = Enumerable.Range(0, stacks.Count).FirstOrDefault(i => stacks[i].item == It.Wood && stacks[i].n > 0, -1);
             Check(wood >= 0, "clicks: a resource stack is available to drag");
@@ -126,6 +129,9 @@ public partial class Game
         S(.3f, () =>
         {
             var grids = ChestUi.FindChildren("*", "GridContainer", true, false);
+            var chestPanel = ChestUi.FindChild("Panel", true, false) as Control;
+            Check(chestPanel != null && Mathf.Abs(chestPanel.Size.Y - chestPanel.GetCombinedMinimumSize().Y) < 1f,
+                "clicks: chest panel fits its contents");
             var chestGrid = (GridContainer)grids[0];
             var bagGrid = (GridContainer)grids[1];
             var bag = InventorySlots();
@@ -536,6 +542,44 @@ public partial class Game
         {
             Check(ChestStacks().Any(stack => stack.item == It.Stone && stack.n == beforeDistribution),
                 "clicks: Shift-click transfers a bag stack into the chest");
+            CloseWindows();
+            Inv[It.Stone] = 2;
+            OpenWin(Win.Inventory);
+        });
+        S(.3f, () =>
+        {
+            var bag = InventorySlots();
+            int origin = Enumerable.Range(0, bag.Count).First(i => bag[i] == (It.Stone, 2));
+            int empty = Enumerable.Range(0, bag.Count - 1).Last(i => bag[i].n == 0 && bag[i + 1].n == 0);
+            var grid = invWindow.GetNode<GridContainer>("%Grid");
+            first = grid.GetChild<UiSlot>(empty);
+            second = grid.GetChild<UiSlot>(empty + 1);
+            RealClick(grid.GetChild<UiSlot>(origin), true);
+        });
+        S(.3f, () =>
+        {
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(!invWindow.GetNode<UiSlot>("CarryPreview").GetNode<TextureRect>("%Icon").Visible,
+                $"clicks: the held icon disappears while the whole stack is previewed in cells (carry {invWindow.CarrySignature}, cells {first.GetNode<Label>("%Count").Text}/{second.GetNode<Label>("%Count").Text})");
+            var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(InventorySlots().Count(stack => stack == (It.Stone, 1)) == 2 &&
+                !invWindow.GetNode<UiSlot>("CarryPreview").Visible,
+                $"clicks: distributing the entire bag stack keeps both items in their cells and clears the cursor (carry {invWindow.CarrySignature}, stone {string.Join(",", InventorySlots().Where(stack => stack.item == It.Stone))})");
             CloseWindows();
             Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
         });

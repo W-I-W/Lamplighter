@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-/// <summary>Отрисовка подсказки над выбранным объектом мира. Рисует только готовую модель (TipModel) по стилю (TooltipStyle):
+/// <summary>Отрисовка подсказки над объектом мира под курсором. Рисует только готовую модель (TipModel) по стилю (TooltipStyle):
 /// pixel-панель из темы, пиксельный шрифт, координаты округляются до целых пикселей.</summary>
 public partial class Hud
 {
@@ -47,11 +47,12 @@ public partial class Hud
         tipStyle ??= GD.Load<TooltipStyle>(TooltipStyle.Path) ?? new TooltipStyle(); var st = tipStyle;
         float now = Time.GetTicksMsec() / 1000f, dt = Mathf.Clamp(now - tipLast, 0, .1f); tipLast = now;
         TipModel m = null; string key = null;
-        if (G.Window == Win.None && G.Menu == Mn.None && !G.TechOpen && !G.MapOpen && G.Interact.Selected != null && G.selA > .02f && G.TipReady)
+        var hovered = G.Interact.Hover;
+        if (G.Window == Win.None && G.Menu == Mn.None && !G.TechOpen && !G.MapOpen && hovered != null && G.HoverTip() is { } hoverTip)
         {
-            m = TipModel.From(G.Cur); key = G.Cur.Key; if (m.Rows.Count == 0 && m.Title == "") m = null;
+            m = TipModel.From(hoverTip); key = hoverTip.Key; if (m.Rows.Count == 0 && m.Title == "") m = null;
         }
-        tip.Update(dt, key, m, G.selRect, st);
+        tip.Update(dt, key, m, hovered?.Bounds ?? G.selRect, st);
         if (tip.Shown == null || tip.Alpha <= .01f) return;
 
         var lines = LayoutTip(tip.Shown, st); if (lines.Count == 0) return;

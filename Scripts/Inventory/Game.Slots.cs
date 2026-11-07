@@ -337,6 +337,16 @@ public partial class Game
         var (item, count) = QuickStack(SelectedQuickSlot);
         string gear = InventoryKey(item);
         if (count > 0 && HotValid(gear)) HotEquip(gear);
+        else { BareChosen = true; CurTool = ""; EquipNone(); }       // пустой слот или ресурс/блок: оружие и инструмент убираются, в руке — выбранный предмет
+    }
+
+    /// <summary>Выбранный в хотбаре не-снаряжение (ресурс, блок): его значок рисуется в руке.</summary>
+    internal Texture2D HandResourceTexture()
+    {
+        if (SelectedQuickSlot < 0) return null;
+        var (item, n) = QuickStack(SelectedQuickSlot);
+        if (n <= 0 || HotValid(InventoryKey(item))) return null;
+        return InventoryItemTexture(item);
     }
 
     internal void UseQuickSlot(int slot)
@@ -465,7 +475,8 @@ public partial class Game
         int free = Math.Max(0, SlotCap - SlotsUsed());
         int empty = 0;
         foreach (var stack in inventorySlots) if (stack.n == 0) empty++;
-        for (int i = inventorySlots.Count - 1; empty > free; i--)
+        // Keep cell indices stable until the carried stack has finished moving.
+        for (int i = inventorySlots.Count - 1; empty > free && !(InventoryUi?.CarryActive ?? false); i--)
         {
             if (inventorySlots[i].n != 0) continue;
             inventorySlots.RemoveAt(i);
@@ -474,6 +485,10 @@ public partial class Game
         while (empty++ < free) inventorySlots.Add(EmptyStack);
         return inventorySlots;
     }
+
+    // Read a just-modified cell before InventorySlots can remove empty cells and shift indices.
+    internal (int item, int n) InventorySlotBeforeResize(int index) =>
+        index >= 0 && index < inventorySlots.Count ? inventorySlots[index] : EmptyStack;
 
     internal bool MoveInventoryStack(int source, int target, int item, int count)
     {

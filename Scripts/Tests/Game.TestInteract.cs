@@ -40,6 +40,14 @@ public partial class Game
             Interact.Reset(); At(cx - 4, belowY); SelKey();
             Mouse(ax * 16 + 16 + 8, ay * 16 + 8); OverUi = false; FindIx();
             Check("4a: hover detects building under cursor", Interact.Hover?.Key == kB, $"hover={Interact.Hover?.Key}");
+            UpdateTip(TipDelay);
+            Check("4a1: a hovered building has its own tooltip even when another is selected",
+                Interact.Selected?.Key == kA && TipReady && HoverTip()?.Key == kB);
+            Mouse(cx, ay * 16 + 8); FindIx(); UpdateTip(0);
+            Check("4a2: moving to another object restarts the tooltip delay", !TipReady);
+            At(cx - 4, ay * 16 + 16 + 30);
+            Mouse(ax * 16 + 16 + 8, ay * 16 + 8); FindIx(); UpdateTip(TipDelay);
+            Check("4a3: tooltip is available across the whole interaction range", TipReady && HoverTip()?.Key == kB);
             ClickWorld(); string s4 = SelKey(); Check("4b: click pins the clicked building", s4 == kB && Interact.Pinned, $"sel={s4}");
             OverUi = true; Interact.Reset(); At(cx - 4, belowY); Mouse(ax * 16 + 16 + 8, ay * 16 + 8); FindIx(); Check("4c: mouse over UI gives no hover", Interact.Hover == null);
             OverUi = false;

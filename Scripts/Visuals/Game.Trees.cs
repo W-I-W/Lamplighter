@@ -135,14 +135,21 @@ public partial class Game
 
     void DrawHeldItem(CanvasItem c, Vector2 hand, float ang)
     {
-        if (CurW < 0 && !OwnedTools.Contains(CurTool)) return;                                                                  // руки пусты: ничего не рисуется
+        if (CurW < 0 && !OwnedTools.Contains(CurTool))
+        {
+            var res = HandResourceTexture(); if (res == null) return;                                                           // руки пусты: ничего не рисуется
+            var ad = Aim - PPos; float side = (ad.LengthSquared() > 1 ? ad.X : Facing) >= 0 ? 1 : -1;       // предмет перед телом со стороны прицела, зеркалится вместе с игроком
+            var rc = hand + new Vector2(side * 2f, 6f);
+            c.DrawTextureRect(res, new Rect2(rc.X - 4, rc.Y - 4, 8, 8), false);
+            return;
+        }
         string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool);
         int icon = HotIcon(r); if (icon < 0) return;
         float baseAng = icon == UiIcons.Pickaxe ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;          // куда «смотрит» рисунок значка
         // при прицеле вправо рисунок зеркалится вдоль своей оси, чтобы рабочая сторона инструмента смотрела вперёд
         // сторона зеркала берётся от направления прицела, а не от текущего угла: угол замаха уходит за вертикаль, и предмет «переворачивался» посреди анимации
         var aimD = Aim - PPos; bool aimRight = (aimD.LengthSquared() > 1 ? aimD.X : Facing) >= 0;
-        hand += new Vector2(-HeldHandDx, HeldHandDy);                                                    // кисть героя: слева на экране у пояса (лампа в другой руке), а не у шеи
+        hand += new Vector2(aimRight ? -HeldHandDx : HeldHandDx, HeldHandDy);                                                 // кисть героя: слева на экране у пояса (лампа в другой руке), а не у шеи
         var centre = hand + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 10f;
         var held = HeldTex(icon);
         if (held != null)
