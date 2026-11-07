@@ -27,14 +27,6 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 
-[sub_resource type="StyleBoxFlat" id="Selected"]
-bg_color = Color(0.10196, 0.16471, 0.27843, 1)
-border_color = Color(1.00000, 0.82353, 0.24706, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-
 [sub_resource type="StyleBoxFlat" id="Hover"]
 bg_color = Color(0.10196, 0.16471, 0.27843, 1)
 border_color = Color(0.43529, 0.50588, 0.65882, 1)
@@ -53,7 +45,6 @@ script = ExtResource("card")
 LockedStyle = SubResource("Locked")
 UnavailableStyle = SubResource("Unavailable")
 AvailableStyle = SubResource("Available")
-SelectedStyle = SubResource("Selected")
 HoverStyle = SubResource("Hover")
 
 [node name="Icon" type="TextureRect" parent="."]

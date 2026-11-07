@@ -258,8 +258,8 @@ public partial class Game
         });
         S(.3f, () =>
         {
-            Check(first.GetNode<Label>("%Count").Text == beforeDistribution.ToString() && ChestStacks()[13].n == 0,
-                "clicks: right press immediately previews the held stack");
+            Check(first.GetNode<Label>("%Count").Text == "1" && ChestStacks()[13].n == 0,
+                "clicks: right press immediately previews one item");
             var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
             Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point, ButtonMask = MouseButtonMask.Right });
         });
@@ -385,6 +385,98 @@ public partial class Game
             Check(invWindow.GetNode<UiSlot>("CarryPreview").GetNode<Label>("%Count").Text == "6" &&
                 InventorySlots().Count(stack => stack.item == It.Stone && stack.n > 0) == 1,
                 "clicks: Shift-drag gathers matching items into the carried stack");
+            CloseWindows();
+            OpenChest(testChest.X, testChest.Y);
+            MoveChestStack(15, 11, 1);
+            beforeDistribution = ChestStacks()[16].n;
+        });
+        S(.3f, () =>
+        {
+            var grid = (GridContainer)ChestUi.FindChildren("*", "GridContainer", true, false)[0];
+            first = grid.GetChild<UiSlot>(11);
+            second = grid.GetChild<UiSlot>(16);
+            var start = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = start, GlobalPosition = start,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var end = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = end, GlobalPosition = end, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var end = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = end, GlobalPosition = end, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[11].n == 0 && ChestStacks()[16].n == beforeDistribution + 1,
+                "clicks: dragging one item past other cells places it in the release cell");
+            var grids = ChestUi.FindChildren("*", "GridContainer", true, false);
+            var chestGrid = (GridContainer)grids[0];
+            var bagGrid = (GridContainer)grids[1];
+            var bag = InventorySlots();
+            int stone = Enumerable.Range(0, bag.Count).First(i => bag[i].item == It.Stone && bag[i].n > 0);
+            first = chestGrid.GetChild<UiSlot>(16);
+            second = bagGrid.GetChild<UiSlot>(stone);
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () => RealClick(second, true));
+        S(.3f, () =>
+        {
+            Check(invWindow.GetNode<UiSlot>("CarryPreview").IsVisibleInTree(),
+                "clicks: an invalid drop leaves the carried items on the cursor");
+            var grid = (GridContainer)ChestUi.FindChildren("*", "GridContainer", true, false)[0];
+            first = grid.GetChild<UiSlot>(0);
+            beforeDistribution = ChestStacks()[16].n;
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[0] == (It.Wood, 1) && ChestStacks()[16].n == beforeDistribution - 1 &&
+                invWindow.GetNode<UiSlot>("CarryPreview").IsVisibleInTree(),
+                "clicks: right-click places one item and keeps the rest on the cursor");
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[0] == (It.Wood, 2), "clicks: another right-click adds one to the existing stack");
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Escape, Pressed = true });
+        });
+        S(.3f, () =>
+        {
+            var grid = (GridContainer)ChestUi.FindChildren("*", "GridContainer", true, false)[0];
+            first = grid.GetChild<UiSlot>(16);
+            second = grid.GetChild<UiSlot>(17);
+            beforeDistribution = ChestStacks()[16].n;
+            var point = GetViewport().GetFinalTransform() * (first.GetGlobalTransformWithCanvas() * (first.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point,
+                ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = point, GlobalPosition = point, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var point = GetViewport().GetFinalTransform() * (second.GetGlobalTransformWithCanvas() * (second.Size / 2));
+            Input.ParseInputEvent(new InputEventMouseButton { Position = point, GlobalPosition = point, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            Check(ChestStacks()[16].n == 0 && ChestStacks()[17] == (It.Wood, beforeDistribution),
+                "clicks: dragging a stack to one cell places the whole stack there");
             CloseWindows();
             Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
         });

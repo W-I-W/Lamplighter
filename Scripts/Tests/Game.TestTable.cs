@@ -152,7 +152,6 @@ public partial class Game
             ChestClick(false, 0, false, false); var st = ChestStacks(); Check(st[0].item >= 0 && st[0].n > 0 && Inv[st[0].item] < (st[0].item == It.Wood ? 150 : 30), "chest window: a click on an inventory cell moves that stack into the chest");
             int firstCount = st[0].n; ChestClick(true, 0, true, false);
             Check(ChestStacks()[0].n == firstCount / 2, "chest window: right click takes half back");
-            WinTab = 0; WinCur = 0; Check(ChestNav(Key.Up, false) && WinTab == 1, "chest window: Up from the top inventory row enters the chest grid"); Check(ChestNav(Key.Down, false) && WinTab == 0, "chest window: Down from the chest grid returns to the inventory");
             Inv[It.Wood] = 120; ChestMove(true, It.Wood, 120);
             for (int qi = 0; qi < QuickSlotCount; qi++) ClearQuickSlot(qi);
             { int wc = ChestStacks().FindIndex(x => x.item == It.Wood); Check(wc >= 0, "chest window: wood is in the chest");

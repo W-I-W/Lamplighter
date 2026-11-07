@@ -29,7 +29,7 @@ public partial class HotbarRow : GridContainer
 
     public string Signature(Game g)
     {
-        var sb = new System.Text.StringBuilder().Append(g.SelectedQuickSlot);
+        var sb = new System.Text.StringBuilder();
         for (int i = 0; i < slots.Length; i++) { var (it, n) = g.QuickStack(i); sb.Append(',').Append(it).Append(':').Append(n - g.InventoryUi.CarriedCount(true, false, i)); }
         return sb.ToString();
     }

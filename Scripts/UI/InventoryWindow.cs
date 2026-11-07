@@ -9,7 +9,7 @@ public partial class InventoryWindow : Control
 {
     public Game G;
     Control panel, info; HotbarRow hotbar; GridContainer grid; Label nameL, desc, slotsL; readonly List<UiSlot> slots = new();
-    readonly List<(int item, int n)> shown = new(); int shownSel = -1; string lastDesc = "";
+    readonly List<(int item, int n)> shown = new(); string lastDesc = "";
     public int Columns => grid.Columns;
 
     public override void _Ready()
@@ -42,6 +42,7 @@ public partial class InventoryWindow : Control
     MouseButton distributionButton;
     bool distributing;
     bool initialRightGrab;
+    bool rightDragMoved;
     Vector2 distributionStart;
     readonly HashSet<(int area, int index)> distributed = new();
     readonly List<(int area, int index)> distributionOrder = new();
@@ -68,7 +69,7 @@ public partial class InventoryWindow : Control
         if (distributing && distributionButton == MouseButton.Right && distributionOrder.Count > 0 &&
             distributed.Contains((area, index)))
         {
-            int share = Mathf.Min(carriedCount / distributionOrder.Count, Game.StackMax - count);
+            int share = Mathf.Min(DistributionShare(), Game.StackMax - count);
             if (share > 0) { item = carriedItem; count += share; }
         }
         return (item, Mathf.Max(0, count));
@@ -77,12 +78,14 @@ public partial class InventoryWindow : Control
     int PreviewRemaining()
     {
         if (!distributing || distributionButton != MouseButton.Right || distributionOrder.Count == 0) return carriedCount;
-        int share = carriedCount / distributionOrder.Count;
+        int share = DistributionShare();
         int assigned = 0;
         foreach (var (area, index) in distributionOrder)
             assigned += Mathf.Min(share, Game.StackMax - CellStack(area, index).n);
         return carriedCount - assigned;
     }
+
+    int DistributionShare() => rightDragMoved ? carriedCount / distributionOrder.Count : 1;
 
     internal UiSlot HotbarSlot(int i) => ChestOpen ? G.ChestUi.HotbarSlot(i) : hotbar.Slot(i);
 
@@ -115,6 +118,7 @@ public partial class InventoryWindow : Control
         distributing = false;
         shiftCollect = false;
         initialRightGrab = false;
+        rightDragMoved = false;
         distributionButton = MouseButton.None;
         distributed.Clear();
         distributionOrder.Clear();
@@ -157,6 +161,10 @@ public partial class InventoryWindow : Control
             CancelCarry();
             return;
         }
+        bool sameCell = sourceQuick && quick == source || sourceChest && chest == source ||
+            !sourceQuick && !sourceChest && target == source;
+        if (sameCell) { CancelCarry(); return; }
+        bool targetCell = quick >= 0 || chest >= 0 || target >= 0;
         if (quick >= 0)
         {
             if (sourceQuick) G.MoveQuickStack(source, quick, carriedCount);
@@ -173,12 +181,22 @@ public partial class InventoryWindow : Control
             if (sourceQuick) G.MoveQuickToBag(source, target, carriedCount);
             else if (sourceChest) G.WithdrawChestToBag(source, target, carriedItem, carriedCount);
             else G.MoveInventoryStack(source, target, carriedItem, carriedCount);
-            G.WinTab = 0;
-            G.WinCur = target;
         }
-        else if (!ChestOpen && !sourceQuick && !sourceChest && !IsOver(position) &&
-            !G.BeginInventoryPlacement(carriedItem, source)) G.DropInventoryStack(source, carriedItem, carriedCount);
-        CancelCarry();
+        else if (!ChestOpen && !sourceQuick && !sourceChest && !IsOver(position))
+        {
+            if (G.BeginInventoryPlacement(carriedItem, source) ||
+                G.DropInventoryStack(source, carriedItem, carriedCount)) CancelCarry();
+            return;
+        }
+        if (!targetCell) return;
+        var remaining = SourceStack();
+        int moved = remaining.item == carriedItem ? Mathf.Max(0, stack.n - remaining.n) : carriedCount;
+        if (moved >= carriedCount) CancelCarry();
+        else if (moved > 0)
+        {
+            carriedCount -= moved;
+            ShowCarry(pointer);
+        }
     }
 
     (int area, int index) CellAt(Vector2 position)
@@ -235,8 +253,9 @@ public partial class InventoryWindow : Control
         return moved;
     }
 
-    void VisitDistributionCell(Vector2 position)
+    void VisitDistributionCell(Vector2 position, bool final = false)
     {
+        if (distributionButton == MouseButton.Left && carriedCount == 1 && !final) return;
         var (area, target) = CellAt(position);
         if (!CanDistribute(area, target) || !distributed.Add((area, target))) return;
         distributionOrder.Add((area, target));
@@ -260,10 +279,27 @@ public partial class InventoryWindow : Control
 
     void FinishDistribution(Vector2 position)
     {
+        if (distributing && distributionButton == MouseButton.Left)
+        {
+            VisitDistributionPath(carryPointer, position);
+            if (source < 0) return;
+            var target = CellAt(position);
+            if (distributionOrder.Count == 1 && distributionOrder[0] == target)
+            {
+                MoveCarried(target.area, target.index, carriedCount);
+                if (carriedCount == 0) { CancelCarry(); return; }
+                ShowCarry(position);
+            }
+            else if (carriedCount == 1)
+            {
+                VisitDistributionCell(position, true);
+                if (source < 0) return;
+            }
+        }
         if (distributing && distributionButton == MouseButton.Right && distributionOrder.Count > 0)
         {
             distributing = false;
-            int share = carriedCount / distributionOrder.Count;
+            int share = DistributionShare();
             foreach (var (area, index) in distributionOrder)
                 if (share > 0) MoveCarried(area, index, share);
             if (carriedCount == 0) { CancelCarry(); return; }
@@ -272,6 +308,7 @@ public partial class InventoryWindow : Control
         else if (!distributing && !initialRightGrab)
             PlaceCarry(BagAt(position), ChestAt(position), QuickAt(position), position / G.UiScaleVp);
         initialRightGrab = false;
+        rightDragMoved = false;
         distributionButton = MouseButton.None;
         distributing = false;
         distributed.Clear();
@@ -398,16 +435,20 @@ public partial class InventoryWindow : Control
                 }
                 else return;
             }
-            else if (!ChestOpen && (key.Keycode is Key.Enter or Key.KpEnter) && source < 0 && G.WinCur < shown.Count && G.UseInventoryItem(shown[G.WinCur].item, G.WinCur)) { }
+            else if (!ChestOpen && (key.Keycode is Key.Enter or Key.KpEnter) && source < 0)
+            {
+                int hovered = BagAt(pointer);
+                if (hovered < 0 || hovered >= shown.Count || !G.UseInventoryItem(shown[hovered].item, hovered)) return;
+            }
             else if (!ChestOpen && key.Keycode == Key.Q)
             {
                 var current = G.InventorySlots();
                 if (sourceQuick && source >= 0) { CancelCarry(); }
                 else if (source >= 0) { G.DropInventoryStack(source, carriedItem, carriedCount); CancelCarry(); }
-                else if (G.WinCur < current.Count && current[G.WinCur].n > 0)
+                else if (BagAt(pointer) is int hovered && hovered >= 0 && hovered < current.Count && current[hovered].n > 0)
                 {
-                    var stack = current[G.WinCur];
-                    G.DropInventoryStack(G.WinCur, stack.item, key.CtrlPressed ? 1 : stack.n);
+                    var stack = current[hovered];
+                    G.DropInventoryStack(hovered, stack.item, key.CtrlPressed ? 1 : stack.n);
                 }
             }
             else return;
@@ -436,6 +477,9 @@ public partial class InventoryWindow : Control
             }
             if (distributionButton != MouseButton.None)
             {
+                if (distributionButton == MouseButton.Right &&
+                    motion.Position.DistanceTo(distributionStart) > 5 * G.UiScaleVp)
+                    rightDragMoved = true;
                 if (!distributing && motion.Position.DistanceTo(distributionStart) > 5 * G.UiScaleVp)
                 {
                     distributing = true;
@@ -482,6 +526,7 @@ public partial class InventoryWindow : Control
                 distributionButton = button.ButtonIndex;
                 distributionStart = button.Position;
                 distributing = button.ButtonIndex == MouseButton.Right;
+                rightDragMoved = false;
                 distributed.Clear();
                 distributionOrder.Clear();
                 if (distributing) VisitDistributionCell(button.Position);
@@ -491,7 +536,6 @@ public partial class InventoryWindow : Control
         else
         {
             if (target < 0 && chest < 0 && quick < 0) return;
-            if (target >= 0 || chest >= 0) { G.WinCur = chest >= 0 ? chest : target; G.WinTab = chest >= 0 ? 1 : 0; }
             IReadOnlyList<(int item, int n)> cells = chest >= 0 ? G.ChestStacks() : G.InventorySlots();
             int index = chest >= 0 ? chest : target;
             var (item, count) = quick >= 0 ? G.QuickStack(quick) : index < cells.Count ? cells[index] : (-1, 0);
@@ -544,17 +588,15 @@ public partial class InventoryWindow : Control
         }
         if (preview.Visible) PositionCarry(carryPointer);
         if (!show) { info.Visible = false; return; }
-        var vis = G.InventorySlots(); int total = vis.Count; G.WinCur = Mathf.Clamp(G.WinCur, 0, Mathf.Max(0, vis.Count - 1));
+        var vis = G.InventorySlots(); int total = vis.Count;
         bool listChanged = vis.Count != shown.Count; if (!listChanged) for (int i = 0; i < vis.Count; i++) if (vis[i] != shown[i]) { listChanged = true; break; }
-        if (listChanged) { shown.Clear(); shown.AddRange(vis); shownSel = -1; for (int i = total; i < slots.Count; i++) slots[i].Visible = false; }
+        if (listChanged) { shown.Clear(); shown.AddRange(vis); for (int i = total; i < slots.Count; i++) slots[i].Visible = false; }
         for (int i = 0; i < total; i++)
         {
-            bool sel = i == G.WinCur;
-            if (!listChanged && !(sel != (i == shownSel)) && !distributing && !repaintSlots) continue;
+            if (!listChanged && !distributing && !repaintSlots) continue;
             UpdateSlot(i);
         }
         repaintSlots = false;
-        shownSel = G.WinCur;
         string su = string.Format(Loc.T("Слоты {0}/{1}"), G.SlotsUsed(), G.SlotCap); if (slotsL.Text != su) slotsL.Text = su;
         hotbar.Refresh(G);
         UpdateTip(vis);

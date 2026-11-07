@@ -79,7 +79,7 @@ public partial class Game
             case Win.Build: return BuildEntriesFiltered().Count;
             case Win.Inventory: return InventorySlots().Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
-            case Win.Chest: return WinTab == 1 ? ChestSlots : InventorySlots().Count;
+            case Win.Chest: return ChestSlots;
             case Win.Talk: return 2;
         }
         return 0;
@@ -97,7 +97,12 @@ public partial class Game
     bool WindowKey(Key k, bool shift)
     {
         if (k == Key.E && (Window is Win.Chest or Win.Trade or Win.Equip || Window == Win.Rift && RiftState == 0)) { CloseWindows(); return true; }      // окно, открытое клавишей E, закрывается ею же
-        if (Window == Win.Chest && ChestNav(k, shift)) return true;
+        if (Window is Win.Chest or Win.Inventory)
+        {
+            if (k is Key.Escape or Key.Tab || k == Key.I && Window == Win.Inventory) CloseWindows();
+            else if (Window == Win.Inventory && k >= Key.Key0 && k <= Key.Key9) Digit((int)k - (int)Key.Key0);
+            return true;
+        }
         if (Window == Win.Equip && WinTab == 2)
         {
             // сетка рецептов: стрелки двигают выбор, Tab переключает ручной крафт и станцию
@@ -111,14 +116,9 @@ public partial class Game
                 case Key.Tab: { var g = CraftGroups(); EqCraftMode(g[(g.IndexOf(CraftGroup()) + 1) % g.Count]); return true; }
             }
         }
-        if (Window == Win.Inventory && k >= Key.Key0 && k <= Key.Key9)
+        if (Window == Win.Build)
         {
-            Digit((int)k - (int)Key.Key0);
-            return true;
-        }
-        if (Window == Win.Build || Window == Win.Inventory)
-        {
-            int cols = Window == Win.Inventory ? invWindow.Columns : 5, wlen = WinLen();
+            int cols = 5, wlen = WinLen();
             switch (k)
             {
                 case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;

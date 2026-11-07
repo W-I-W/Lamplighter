@@ -64,8 +64,7 @@ public partial class ChestWindow : Control
         if (G == null || G.W == null) return;
         bool show = G.Window == Win.Chest && G.Menu == Mn.None; Visible = show; if (!show) { sig = ""; return; }
         var chest = G.ChestStacks(); var bag = G.InventorySlots();
-        bool chestFocus = G.WinTab == 1; int sel = G.WinCur;
-        var sb = new System.Text.StringBuilder(); sb.Append(chestFocus).Append(sel).Append(Loc.Lang).Append(G.InventoryUi.CarrySignature).Append(hotbar.Signature(G));
+        var sb = new System.Text.StringBuilder(); sb.Append(Loc.Lang).Append(G.InventoryUi.CarrySignature).Append(hotbar.Signature(G));
         foreach (var (it, n) in chest) sb.Append(it).Append(':').Append(n).Append(','); sb.Append('|'); foreach (var (it, n) in bag) sb.Append(it).Append(':').Append(n).Append(',');
         string sg = sb.ToString();
         if (sg != sig)

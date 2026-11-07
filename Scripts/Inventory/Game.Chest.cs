@@ -147,7 +147,7 @@ public partial class Game
     public void OpenChest(int x, int y)
     {
         if (NetClient) { Fail("Сундуком управляет хозяин мира"); return; }
-        CloseWindows(); Window = Win.Chest; ChestAt = new Vector2I(x, y); WinTab = 1; WinCur = 0; ChestMsg = ""; Sfx.Play("tick");
+        CloseWindows(); Window = Win.Chest; ChestAt = new Vector2I(x, y); ChestMsg = ""; Sfx.Play("tick");
     }
 
     /// <summary>Закрывает окно, если сундук убрали или игрок ушёл.</summary>
@@ -169,31 +169,12 @@ public partial class Game
         if (Window != Win.Chest) return;
         IReadOnlyList<(int item, int n)> slots = fromChest ? ChestStacks() : InventorySlots();
         if (index < 0 || index >= slots.Count) return;
-        WinTab = fromChest ? 1 : 0;
-        WinCur = index;
         var (item, count) = slots[index];
         if (count == 0) return;
         if (all && Movable(item)) { ChestMove(!fromChest, item, 0); return; }
         if (half) count = (count + 1) / 2;
         if (fromChest) WithdrawChestToBag(index, -1, item, count);
         else DepositChestSlot(index, false, item, count);
-    }
-
-    /// <summary>Клавиши окна сундука. WinTab: 1 — выбрана ячейка сундука, 0 — инвентаря; WinCur — номер ячейки.</summary>
-    bool ChestNav(Key k, bool shift)
-    {
-        int inv = InventorySlots().Count; bool inChest = WinTab == 1; int len = inChest ? ChestSlots : inv; if (len <= 0) return k is Key.Left or Key.Right or Key.Up or Key.Down;
-        WinCur = Math.Clamp(WinCur, 0, len - 1);
-        switch (k)
-        {
-            case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;
-            case Key.Right: WinCur = Math.Min(len - 1, WinCur + 1); return true;
-            case Key.Up: if (WinCur >= ChestCols) WinCur -= ChestCols; else if (!inChest) { WinTab = 1; WinCur = Math.Min(ChestSlots - 1, (ChestSlots - 1) / ChestCols * ChestCols + WinCur % ChestCols); } return true;
-            case Key.Down: if (WinCur + ChestCols < len) WinCur += ChestCols; else if (inChest && inv > 0) { WinTab = 0; WinCur = Math.Min(inv - 1, WinCur % ChestCols); } return true;
-            case Key.Tab: if (inChest ? inv > 0 : true) { WinTab = inChest ? 0 : 1; WinCur = Math.Min(WinCur, (WinTab == 1 ? ChestSlots : inv) - 1); } return true;
-            case Key.Enter: case Key.KpEnter: ChestClick(inChest, WinCur, false, shift); return true;
-        }
-        return false;
     }
 
     void ChestFeedback(bool deposit, int item, int count)
