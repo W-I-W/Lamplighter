@@ -42,7 +42,7 @@ public partial class WorldItems : Control
             float hop = age >= 0 && age < .35f ? -Mathf.Sin(age / .35f * Mathf.Pi) * 6f : 0f;
             float bob = Mathf.Round(Mathf.Sin(G.Time * 3f + d.Id) * 1.2f + hop);
             DrawTextureRect(shadow, new Rect2(s.X - 4, s.Y + 1, 8, 8), false, new Color(0, 0, 0, .35f));
-            var icon = UiIcons.Item(Game.IsRelicDrop(d.Item) ? It.Relic : d.Item);
+            var icon = G.DropTexture(d.Item);
             DrawTextureRect(icon, new Rect2(s.X - 6, s.Y - 8 + bob, 12, 12), false);
             if (d.Count <= 1) continue;
             string count = $"x{d.Count}";

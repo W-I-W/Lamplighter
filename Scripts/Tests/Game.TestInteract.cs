@@ -53,6 +53,18 @@ public partial class Game
             OverUi = false;
             Interact.Reset(); At(cx - 4, belowY); Mouse(ax * 16 + 16 + 8, ay * 16 + 8); FindIx(); ClickWorld(); SelKey();
             At(cx, belowY + 90); SelKey(); At(cx - 4, belowY); string s4d = SelKey(); Check("4d: pin dropped after leaving range", s4d == kA && !Interact.Pinned, $"sel={s4d}");
+            int rx = ax + 5, ry = ay;
+            SetObj(rx, ry, Tl.Stone); Mouse(rx * 16 + 8, ry * 16 + 8); FindIx(); UpdateTip(TipDelay);
+            var stoneTip = HoverTip();
+            Check("4e: a distant resource under the cursor has a tooltip without changing the selected object",
+                TipReady && stoneTip?.Title == "Камень" && Interact.Selected?.Key == kA);
+            var model = stoneTip == null ? null : TipModel.From(stoneTip);
+            var animator = new TooltipAnimator(); animator.Update(.2f, stoneTip?.Key, model, TooltipTarget?.Bounds ?? default, new TooltipStyle());
+            Check("4f: the hovered resource tooltip reaches the HUD animation", animator.Shown?.Title == "Камень" && animator.Alpha > 0);
+            OverUi = true; FindIx(); UpdateTip(TipDelay); Check("4g: hovering UI hides world tooltips", !TipReady && HoverTip() == null); OverUi = false;
+            SetObj(rx, ry, Tl.Tree); SetObj(rx, ry - 1, Tl.None); Mouse(rx * 16 + 8, (ry - 1) * 16 + 8); FindIx(); UpdateTip(TipDelay);
+            Check("4h: hovering a tree crown shows the tree tooltip", HoverTip()?.Title == "Дерево");
+            SetObj(rx, ry, Tl.None);
             // 5) E действует на выбранное здание, U — улучшает именно его
             TestAim(new Vector2(900, 900)); Interact.Reset(); A.Local[It.Wood] = 5; B.Local[It.Wood] = 7; Array.Clear(Stock);
             At(cx - 4, belowY); FindIx(); int wood0 = Inv[It.Wood]; Cur.E?.Invoke();

@@ -61,6 +61,37 @@ fit_content = true
 scroll_active = false
 text = "[right][color=#ffd23f][lb]I][/color] / [color=#ffd23f][lb]Esc][/color] — закрыть[/right]"
 
+[node name="Craft" type="VBoxContainer" parent="Center/Panel/V"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Slots" type="HBoxContainer" parent="Center/Panel/V/Craft"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 3
+
+[node name="Ingredient1" parent="Center/Panel/V/Craft/Slots" instance=ExtResource("slot")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Plus" type="Label" parent="Center/Panel/V/Craft/Slots"]
+layout_mode = 2
+text = "+"
+vertical_alignment = 1
+
+[node name="Ingredient2" parent="Center/Panel/V/Craft/Slots" instance=ExtResource("slot")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Arrow" type="Label" parent="Center/Panel/V/Craft/Slots"]
+layout_mode = 2
+text = "→"
+vertical_alignment = 1
+
+[node name="Result" parent="Center/Panel/V/Craft/Slots" instance=ExtResource("slot")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="Grid" type="GridContainer" parent="Center/Panel/V"]
 unique_name_in_owner = true
 layout_mode = 2

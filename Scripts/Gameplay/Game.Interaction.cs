@@ -8,14 +8,14 @@ namespace Lamplighter;
 public partial class Game
 {
     public readonly InteractionController Interact = new();
-    public const float TipDistance = InteractionController.Reach, TipDelay = .5f;
+    public const float TipDelay = .5f;
     float tipHoverT; string tipHoverKey; public bool TipReady;
+    internal IInteractable TooltipTarget { get; private set; }
 
-    /// <summary>Показывать подсказку для объекта под курсором в пределах досягаемости после небольшой задержки.</summary>
+    /// <summary>Показывать подсказку для объекта под курсором после небольшой задержки.</summary>
     void UpdateTip(float dt)
     {
-        var h = Interact.Hover;
-        string key = h != null && InteractionController.Distance(PPos, h.Bounds) <= TipDistance ? h.Key : null;
+        string key = TooltipTarget?.Key;
         if (key != tipHoverKey) { tipHoverKey = key; tipHoverT = 0f; }
         tipHoverT = key != null ? tipHoverT + dt : 0f;
         TipReady = key != null && tipHoverT >= TipDelay;
@@ -23,10 +23,13 @@ public partial class Game
 
     internal Ix HoverTip()
     {
-        var target = Interact.Hover;
+        var target = TooltipTarget;
         if (!TipReady || target == null) return null;
         var ix = new Ix { Title = target.Title, Key = target.Key };
-        if (Interact.Selected?.Key != target.Key) ix.Info("ЛКМ — выбрать объект для действий");
+        if (InteractionController.Distance(PPos, target.Bounds) > InteractionController.Reach)
+            ix.Info("Подойдите ближе для взаимодействия");
+        else if (!target.Key.StartsWith("resource:") && Interact.Selected?.Key != target.Key)
+            ix.Info("ЛКМ — выбрать объект для действий");
         target.Describe(ix);
         return ix;
     }
@@ -42,19 +45,20 @@ public partial class Game
 
     static Rect2 TileRect(int x, int y) => new(x * TS, y * TS, TS, TS);
 
-    List<IInteractable> CollectInteractables()
+    List<IInteractable> CollectInteractables(bool forHover = false)
     {
         var list = new List<IInteractable>();
+        Vector2 center = forHover ? Aim : PPos;
         void Add(string key, string title, Rect2 r, int prio, Action<Ix> fill, bool test = true)
         {
-            if (test) { var probe = new Ix(); fill(probe); if (probe.Lines.Count == 0 && probe.E == null && probe.U == null && probe.X == null) return; }
+            if (test && !forHover) { var probe = new Ix(); fill(probe); if (probe.Lines.Count == 0 && probe.E == null && probe.U == null && probe.X == null) return; }
             list.Add(new Target { Key = key, Title = title, Bounds = r, Priority = prio, Fill = fill });
         }
         // древние фонари и Центральный маяк
         for (int i = 0; i < W.Ancients.Count; i++)
         {
             var a = W.Ancients[i]; int idx = i;
-            if (a.Pos.DistanceTo(PPos) > 80) continue;
+            if (a.Pos.DistanceTo(center) > 80) continue;
             Add("a:" + i, i == 0 ? "Центральный маяк" : a.Boss ? "Фонарь стража" : LampKindName(a.Kind), TileRect(a.Tile.X, a.Tile.Y), 0, ix =>
             {
                 if (idx == 0) { BeaconIx(ix); return; }
@@ -65,44 +69,64 @@ public partial class Game
             });
         }
         // объекты-тайлы: сундуки, святилища, зеркала, печь и т.д.
-        var c = ToTile(PPos);
+        var c = ToTile(center);
         for (int y = c.Y - 3; y <= c.Y + 3; y++)
             for (int x = c.X - 3; x <= c.X + 3; x++)
             {
                 var t = W.Get(x, y); int tx = x, ty = y;
+                if (forHover && t == Tl.None && IsPlantTile(W.Get(x, y + 1)))
+                {
+                    var tree = W.Get(x, y + 1);
+                    Add($"resource:{x}:{y + 1}", ResourceTitle(tree), TileRect(x, y), 10, _ => { }, false);
+                }
                 if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Печь: плавка руды"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); ix.Action("U", "Кузня: создание и улучшение"); ix.U = () => OpenStation("forge"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t == Tl.StorageChest) { Add($"t:{x}:{y}", "Сундук", TileRect(x, y), 5, ix => { ix.Action("E", "Открыть сундук"); ix.Gives("Хранит", "20 слотов по 99", TipRole.Resource); ix.E = () => OpenChest(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t != Tl.Mirror1 && t != Tl.Mirror2 && IsPlacedTile(x, y)) { Add($"t:{x}:{y}", PlacedTitle(t), TileRect(x, y), 1, ix => AddDemolishTile(tx, ty, ix)); continue; }
-                if (!IsTileInteractable(t)) continue;
+                if (!IsTileInteractable(t))
+                {
+                    if (forHover && Mineable(t)) Add($"resource:{x}:{y}", ResourceTitle(t), TileRect(x, y), 10, _ => { }, false);
+                    continue;
+                }
                 Add($"t:{x}:{y}", TileTitle(t), TileRect(x, y), 1, ix => { TileIx(tx, ty, W.Get(tx, ty), ix); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); });
             }
         // события (торговец, разлом, путник, осаждённый фонарь)
         foreach (var ev in Events)
         {
             var e = ev; var p = ev.Kind == "traveler" ? ev.Npc : ev.Pos;
-            if (p.DistanceTo(PPos) > 80) continue;
+            if (p.DistanceTo(center) > 80) continue;
             Add($"e:{ev.Seed}:{ev.Kind}", EvName(ev.Kind), new Rect2(p - new Vector2(8, 8), new Vector2(16, 16)), 2, ix => EventIx1(e, ix));
         }
         // жители деревни: поговорить [E]
         foreach (var v in Villagers)
         {
-            if (v.Pos.DistanceTo(PPos) > 80) continue; var vv = v;
+            if (v.Pos.DistanceTo(center) > 80) continue; var vv = v;
             Add($"v:{v.Id}", v.Name, new Rect2(v.Pos - new Vector2(8, 10), new Vector2(16, 16)), 2, ix => VillagerIx(vv, ix), false);
         }
         // фонари игрока
         foreach (var l in Lamps)
         {
-            if (l.Pos.DistanceTo(PPos) > 80) continue; var lamp = l;
+            if (l.Pos.DistanceTo(center) > 80) continue; var lamp = l;
             Add($"l:{l.X}:{l.Y}", LampNames[l.Kind], TileRect(l.X, l.Y), 3, ix => LampIx(lamp, ix), false);
         }
         // здания деревни
         foreach (var b in Buildings)
         {
-            if (b.Pos.DistanceTo(PPos) > 80) continue; var bb = b;
+            if (b.Pos.DistanceTo(center) > 80) continue; var bb = b;
             list.Add(new Target { Key = $"b:{b.X}:{b.Y}", Title = BNames[BIndex(b.Type)], Bounds = TileRect(b.X, b.Y), Priority = 4, Fill = ix => BuildingIx(bb, ix) });
         }
         return list;
     }
+
+    static string ResourceTitle(Tl t) => t switch
+    {
+        Tl.Tree => "Дерево", Tl.Pine => "Сосна", Tl.DeadTree => "Сухое дерево", Tl.Stone => "Камень",
+        Tl.Copper => "Медная руда", Tl.Iron => "Железная руда", Tl.SilverOre => "Серебряная руда",
+        Tl.CrystalOre => "Кристалл", Tl.Lumen => "Осколки света", Tl.Aether => "Эфир",
+        Tl.Obsidian => "Обсидиан", Tl.Ember => "Уголь пепла", Tl.FrostOre => "Ледяной кристалл",
+        Tl.MeteorOre => "Световой метеорит", Tl.Ruin => "Руины", Tl.Rubble => "Обломки",
+        Tl.IceBlock => "Лёд", Tl.ShadowPillar => "Теневой столб", Tl.Grave => "Могила",
+        Tl.BossTotem => "Тотем стража", Tl.ChestOpen => "Открытый сундук", _ => "Объект"
+    };
 
     static string PlacedTitle(Tl t) => TileStockKey(t) switch { "amp" => "Светокристалл", "barrier" => "Столб-барьер", "decor0" => "Статуя Фонарщика", "decor1" => "Фонтан света", "decor2" => "Знамя маяка", "chest" => "Сундук", _ => "Постройка" };
 
@@ -122,9 +146,20 @@ public partial class Game
     void RunInteraction()
     {
         bool enabled = Window == Win.None && !TechOpen && !MapOpen && Menu == Mn.None && FinStage == 0;
+        TooltipTarget = null;
         if (RiftOn) { Interact.Reset(); var rix = new Ix(); RiftIx(rix); Cur = rix; return; }
         var cands = enabled ? CollectInteractables() : new List<IInteractable>();
         Interact.Update(PPos, enabled ? Aim : null, OverUi, cands, enabled);
+        if (enabled && !OverUi)
+        {
+            float closest = float.MaxValue;
+            foreach (var candidate in CollectInteractables(true))
+                if (candidate.Bounds.Grow(InteractionController.HoverPad).HasPoint(Aim))
+                {
+                    float distance = Aim.DistanceSquaredTo(candidate.Bounds.GetCenter());
+                    if (distance < closest) { closest = distance; TooltipTarget = candidate; }
+                }
+        }
         var ix = new Ix();
         if (Interact.Selected != null) { Interact.Selected.Describe(ix); ix.Title ??= Interact.Selected.Title; ix.Key = Interact.Selected.Key; }
         Cur = ix;

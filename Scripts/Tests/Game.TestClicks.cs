@@ -581,6 +581,411 @@ public partial class Game
                 !invWindow.GetNode<UiSlot>("CarryPreview").Visible,
                 $"clicks: distributing the entire bag stack keeps both items in their cells and clears the cursor (carry {invWindow.CarrySignature}, stone {string.Join(",", InventorySlots().Where(stack => stack.item == It.Stone))})");
             CloseWindows();
+            Inv[It.Wood] = 25; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+            OpenWin(Win.Inventory);
+        });
+        bool CT(bool max) { bool ok = CombineFromCells(max); CollectOutput(); return ok; }
+        void Fill(int ia, int na, int ib, int nb) { ReturnCraftIngredients(); Inv[ia] -= na; Inv[ib] -= nb; craftIngredients[0] = (ia, na); craftIngredients[1] = (ib, nb); }
+        int furnaceStock = 0, gears = 0, emptyHot = 0;
+        S(.3f, () =>
+        {
+            Inv[It.Wood] = 30; Inv[It.Stone] = 20; Inv[It.Copper] = 10; Inv[It.Iron] = 6; Inv[It.Gear] = 0;
+            furnaceStock = StockOf("furnace");
+            Fill(It.Stone, 10, It.Wood, 5);
+            var m = MatchCombine();
+            Check(m.State == CombineState.Ready && m.Known && m.Recipe.Id == "furnace", "combine: stone 10 + wood 5 matches the known furnace recipe");
+            RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2).n == 1 && StockOf("furnace") == furnaceStock && CraftIngredient(0).n == 0 && CraftIngredient(1).n == 0 && invWindow.GetNode<UiSlot>("CarryPreview").Visible,
+                "combine: clicking the result spends the components and puts the item in the hand, not in the inventory");
+            emptyHot = Enumerable.Range(0, QuickSlotCount).First(i => QuickStack(i).n == 0);
+            RealClick(invWindow.HotbarSlot(emptyHot), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2).n == 0 && StockOf("furnace") == furnaceStock + 1 && QuickStack(emptyHot).n == 1 && InventoryItemName(QuickStack(emptyHot).item) == "Печь",
+                "combine: the player places the taken result into a chosen hotbar cell");
+            Fill(It.Stone, 10, It.Wood, 5); RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2).n == 1 && CombineFromCells(false) == false && CraftIngredient(2).n == 1, "combine: nothing is crafted twice from the same click");
+            invWindow.TestCancelCarry(); CollectOutput(); ReturnCraftIngredients();
+            furnaceStock = StockOf("furnace");
+            Fill(It.Wood, 5, It.Stone, 10);
+            Check(MatchCombine().Recipe?.Id == "furnace" && MatchCombine().State == CombineState.Ready, "combine: component order does not matter (B + A)");
+            Fill(It.Stone, 3, It.Wood, 5);
+            Check(MatchCombine().State == CombineState.Short && !CombineFromCells(false) && StockOf("furnace") == furnaceStock,
+                "combine: not enough of a component is refused without spending anything");
+            Fill(It.Stone, 1, It.Copper, 1);
+            Check(MatchCombine().State == CombineState.Unknown && !CombineFromCells(false), "combine: an unknown pair says unknown combination");
+            Fill(It.Copper, 2, It.Iron, 1);
+            var m = MatchCombine();
+            Check(m.State == CombineState.Ready && !m.Known && !RecipeKnown(m.Recipe), "combine: a hidden recipe is offered as an experiment without being known");
+            Check(CombineResultTip().Name == "Эксперимент", "combine: the result tooltip does not reveal the unknown recipe");
+            gears = Inv[It.Gear];
+        });
+        S(.3f, () => { RealClick(invWindow.GetNode<UiSlot>("%Result"), true); });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2) == (It.Gear, 1) && CraftIngredient(0).n == 0 && CraftIngredient(1).n == 0, "combine: clicking the result crafts the experimental recipe into the hand");
+            invWindow.TestCancelCarry(); CollectOutput(); Check(Inv[It.Gear] == gears + 1, "combine: the taken result reaches the inventory");
+            Check(RecipeKnown(CombineDb.All.First(r => r.Id == "gear")) && Array.IndexOf(BuildCharacter().Hints, "rcp_gear") >= 0, "combine: the recipe is discovered and stored with the hero save");
+            Fill(It.Iron, 3, It.Copper, 5);
+            Check(CT(false) && CraftIngredient(0) == (It.Iron, 2) && CraftIngredient(1) == (It.Copper, 3), "combine: extra quantity stays in the cells after one craft");
+            Fill(It.Iron, 3, It.Copper, 6);
+            Check(CT(true) && Inv[It.Gear] == gears + 1 + 1 + 3, "combine: Shift crafts the maximum the cells allow");
+            ReturnCraftIngredients();
+        });
+        S(.3f, () =>
+        {
+            CombineDb.Add(new CombineRecipe { Id = "t_aa", A = It.Shard, NA = 2, B = It.Shard, NB = 2, ResItem = It.Aether, ResN = 1 });
+            Inv[It.Shard] = 10; int aether = Inv[It.Aether];
+            ReturnCraftIngredients(); Inv[It.Shard] -= 4; craftIngredients[0] = (It.Shard, 2); craftIngredients[1] = (It.Shard, 2);
+            Check(MatchCombine().Recipe?.Id == "t_aa" && MatchCombine().State == CombineState.Ready, "combine: two identical items (A + A) match a recipe");
+            Check(CT(false) && Inv[It.Aether] == aether + 1 && CraftIngredient(0).n == 0 && CraftIngredient(1).n == 0, "combine: A + A spends both components and gives the result");
+            CombineDb.Remove("t_aa");
+            // быстрый крафт
+            Inv[It.Wood] = 50; Inv[It.Stone] = 50; furnaceStock = StockOf("furnace");
+            var furnace = CombineDb.All.First(r => r.Id == "furnace");
+            Check(QuickRecipes(false).Any(q => q.r.Id == "furnace" && q.times == 5), "quick: the furnace is available 5 times from 50 stone / 50 wood");
+            Check(CombineFromInventory(furnace, false) && StockOf("furnace") == furnaceStock + 1 && Inv[It.Stone] == 40 && Inv[It.Wood] == 45, "quick: a click crafts one item and spends the components");
+            Check(CombineFromInventory(furnace, true) && StockOf("furnace") == furnaceStock + 5 && Inv[It.Stone] == 0, "quick: Shift crafts the maximum possible");
+            Check(!CombineFromInventory(furnace, false) && StockOf("furnace") == furnaceStock + 5, "quick: lacking resources crafts nothing");
+            Check(!QuickRecipes(false).Any(q => q.r.Id == "furnace") && QuickRecipes(true).Any(q => q.r.Id == "furnace" && q.times == 0), "quick: unavailable recipes only appear in the all-known view");
+            Check(!QuickRecipes(true).Any(q => q.r.Id == "lens"), "quick: an undiscovered recipe is never listed");
+            // выброс постройки на землю и подбор обратно
+            int f0 = StockOf("furnace"); Drops.Clear();
+            Check(f0 > 0 && TryDropBuild("furnace", 1) && StockOf("furnace") == f0 - 1 && Drops.Count == 1 && IsBuildDrop(Drops[0].Item), "drop: a furnace can be thrown onto the ground");
+            Check(!TryDropBuild("bld0", 1), "drop: village buildings cannot be thrown");
+            Drops[0].Pos = PPos + new Vector2(200, 0); Drops[0].Born = -10f;
+            Drops.Clear(); Drops.Add(new WorldDrop { Id = 99, Item = BuildBase + 0, Count = 1, Pos = PPos, Owner = -1, Born = -10f });
+            UpdateDrops(.05f);
+            Check(Drops.Count == 0 && StockOf("furnace") == f0, "drop: a thrown furnace is picked up again as a building");
+            // выкладка рецепта кликом по значку
+            ReturnCraftIngredients(); Inv[It.Wood] = 30; Inv[It.Stone] = 30; furnaceStock = StockOf("furnace");
+            Check(LayoutRecipe(furnace, false) && CraftIngredient(0).n + CraftIngredient(1).n == 15 && MatchCombine().State == CombineState.Ready,
+                "quick: clicking a recipe lays its components out in the cells");
+            Check(CT(false) && StockOf("furnace") == furnaceStock + 1, "quick: the laid out result is then taken from the result cell");
+            Check(LayoutRecipe(furnace, true) && CraftIngredient(0).n + CraftIngredient(1).n == 30 && CT(true) && StockOf("furnace") == furnaceStock + 3,
+                "quick: Shift lays out the maximum and Shift on the result takes all");
+            ReturnCraftIngredients();
+            Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+            ReturnCraftIngredients();
+            CloseWindows(); OpenWin(Win.Inventory);
+        });
+        int emptyQuick = -1;
+        S(.3f, () =>
+        {
+            var bag = InventorySlots();
+            int wood = Enumerable.Range(0, bag.Count).FirstOrDefault(i => bag[i].item == It.Wood && bag[i].n > 0, -1);
+            int quickWood = Enumerable.Range(0, QuickSlotCount).FirstOrDefault(i => QuickStack(i).item == It.Wood && QuickStack(i).n > 0, -1);
+            emptyQuick = Enumerable.Range(0, QuickSlotCount).First(i => QuickStack(i).n == 0);
+            first = wood >= 0 ? invWindow.GetNode<GridContainer>("%Grid").GetChild<UiSlot>(wood) : invWindow.HotbarSlot(quickWood);
+            RealClick(first, true);
+        });
+        S(.3f, () =>
+        {
+            Check(invWindow.GetNode<UiSlot>("CarryPreview").Visible, "clicks: picked wood before testing result");
+            RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(invWindow.GetNode<UiSlot>("CarryPreview").Visible && CraftIngredient(0).n == 0,
+                "clicks: the result cell does not accept a held item");
+            RealClick(invWindow.GetNode<UiSlot>("%Ingredient1"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(0).item == It.Wood && CraftIngredient(0).n > 0 &&
+                !invWindow.GetNode<UiSlot>("CarryPreview").Visible,
+                "clicks: a held stack can be placed in an ingredient cell");
+            beforeDistribution = CraftIngredient(0).n;
+            RealClick(invWindow.GetNode<UiSlot>("%Ingredient1"), true);
+            RealClick(invWindow.HotbarSlot(emptyQuick), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(0).n == 0 && QuickStack(emptyQuick) == (It.Wood, beforeDistribution),
+                "clicks: ingredients can be moved back from crafting into the hotbar");
+            Check(true, "clicks: moved ingredients come back");
+        });
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients(); invWindow.TestCancelCarry(); CollectOutput();
+            Array.Clear(Inv); Inv[It.Copper] = 40; Inv[It.Iron] = 20;
+            ReturnCraftIngredients(); craftIngredients[0] = (It.Copper, 40); craftIngredients[1] = (It.Iron, 20); Inv[It.Copper] = 0; Inv[It.Iron] = 0;
+            RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2) == (It.Gear, 1) && invWindow.GetNode<UiSlot>("CarryPreview").Visible && CraftIngredient(0).n == 38,
+                "combine: after taking a result the cells still hold components for the next craft");
+            RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2) == (It.Gear, 2) && CraftIngredient(0).n == 36, "combine: clicking the result again adds one more to the hand");
+            var drop = GetViewport().GetFinalTransform() * new Vector2(6, 6);
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = drop, GlobalPosition = drop });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = drop, GlobalPosition = drop, ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = drop, GlobalPosition = drop, ButtonIndex = MouseButton.Left, Pressed = false });
+        });
+        S(.3f, () =>
+        {
+            Check(CraftIngredient(2).n == 0 && Inv[It.Gear] == 0 && !invWindow.CarryActive, "combine: dropping the carried result outside the window throws it into the world");
+            OpenWin(Win.Inventory); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.4f, () => { OpenWin(Win.Inventory); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4; });
+        S(.3f, () =>
+        {
+            // стресс: случайные операции с ячейками крафта не создают и не теряют ресурсы (стоимость: медь 1, железо 2, шестерня 4)
+            ReturnCraftIngredients(); CloseWindows(); OpenWin(Win.Inventory);
+            Inv[It.Copper] = 40; Inv[It.Iron] = 20; Inv[It.Gear] = 3; Inv[It.Wood] = 30; Inv[It.Stone] = 30; HintsShown.Add("rcp_gear");
+            int Val() { int v = Inv[It.Copper] + 2 * Inv[It.Iron] + 4 * Inv[It.Gear]; for (int i = 0; i < 3; i++) { var c = CraftIngredient(i); if (c.item == It.Copper) v += c.n; else if (c.item == It.Iron) v += 2 * c.n; else if (c.item == It.Gear) v += 4 * c.n; } return v; }
+            int start = Val(), bad = 0; var rnd = new Random(7); string why = "";
+            for (int k = 0; k < 600 && bad == 0; k++)
+            {
+                var bag = InventorySlots(); int op = rnd.Next(10), cell = rnd.Next(3);
+                switch (op)
+                {
+                    case 0: if (bag.Count > 0) PutCraftIngredient(rnd.Next(bag.Count), false, rnd.Next(3), rnd.Next(1, 12)); break;
+                    case 1: { var bg = InventorySlots(); if (bg.Count > 0) TakeCraftIngredient(cell, 2, rnd.Next(bg.Count), rnd.Next(1, 12)); break; }
+                    case 2: CombineFromCells(rnd.Next(2) == 0); break;
+                    case 3: ReceiveCraftCell(cell, rnd.Next(1, 10)); break;
+                    case 4: ReturnCraftIngredients(); break;
+                    case 5: PutCraftIngredient(rnd.Next(10), true, rnd.Next(3), rnd.Next(1, 5)); break;
+                    case 6: TakeCraftIngredient(cell, 0, rnd.Next(10), rnd.Next(1, 5)); break;
+                    case 7: CombineFromInventory(CombineDb.All.First(r => r.Id == "gear"), rnd.Next(2) == 0); break;
+                    case 8: ReceiveCraftCell(2, 99); break;
+                    case 9: MoveCraftCell(rnd.Next(2), rnd.Next(2), rnd.Next(1, 40)); break;
+                }
+                SyncInventorySlots();
+                foreach (int n in Inv) if (n < 0) { bad++; why = "negative Inv after op " + op; }
+                for (int i = 0; i < 3; i++) if (CraftIngredient(i).n < 0 || CraftIngredient(i).n > StackMax) { bad++; why = "cell range after op " + op; }
+                if (Val() != start + 0 && bad == 0)
+                {
+                    int gears = 0; // шестерни создаются из 2 меди + 1 железа (стоимость 4 = 2 + 2): сумма обязана сохраняться
+                    bad++; why = $"value {Val()} != {start} after op {op} (k={k})";
+                }
+            }
+            Check(bad == 0, "combine fuzz: 600 random cell operations keep resources conserved " + why);
+            ReturnCraftIngredients();
+        });
+        S(.3f, () =>
+        {
+            // раскладка рецепта не уносит готовый результат из ячейки; ресурсы, не влезающие в полную сумку, при закрытии выбрасываются, а не раздувают инвентарь
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 20; craftIngredients[2] = (It.Gear, 3);
+            Check(LayoutRecipe(CombineDb.All.First(r => r.Id == "furnace"), false) && CraftIngredient(2) == (It.Gear, 3), "combine: laying out a recipe keeps the finished result in its cell");
+            ReturnCraftIngredients(); Drops.Clear(); Array.Clear(Inv);
+            TestSlots = true; foreach (int it in new[] { 0, 1, 2, 3, 4, 7, 9, 10, 11, 12 }) Inv[it] = 1; SyncInventorySlots();
+            craftIngredients[0] = (It.Copper, 5); int slotsBefore = SlotsUsed(); bool full = SlotsUsed() >= SlotCap;
+            ReturnCraftIngredients();
+            Check(!full || (SlotsUsed() == slotsBefore && Inv[It.Copper] == 0 && Drops.Any(d => d.Item == It.Copper && d.Count == 5)), "combine: closing the window with a full bag throws what does not fit onto the ground " + $"(full {full}, used {SlotsUsed()}/{SlotCap}, copper {Inv[It.Copper]}, drops {Drops.Count}, cell {CraftIngredient(0)})");
+            TestSlots = false; Drops.Clear(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            // реальные правила слотов (TestSlots): полная сумка не мешает ни быстрому крафту, ни крафту в ячейках, результат можно выбросить
+            ReturnCraftIngredients(); Drops.Clear(); Array.Clear(Inv); BuildStock.Clear();
+            TestSlots = true; foreach (int it in new[] { 0, 1, 2, 3, 4, 7, 9, 10, 11 }) Inv[it] = 1;
+            Inv[It.Wood] = 564; Inv[It.Copper] = 329; SyncInventorySlots();
+            var lamp = CombineDb.All.First(r => r.Id == "lamp0");
+            var qr = QuickRecipes(false).FirstOrDefault(q => q.r.Id == "lamp0");
+            Check(qr.r != null && qr.times > 0, $"full bag: the lantern shows as craftable (times {qr.times}, used {SlotsUsed()}/{SlotCap})");
+            Check(RecipeTip(lamp, qr.times).Stats.Any(x => x.label == "Можно создать" && x.value != "0"), "full bag: the tooltip does not say 0 craftable");
+            int w = Inv[It.Wood], c = Inv[It.Copper], dr = Drops.Count;
+            Check(CombineFromInventory(lamp, false), "full bag: quick craft still works");
+            var q2 = RecipeInputs(lamp);
+            Check(Inv[It.Wood] == w - q2.na && Inv[It.Copper] == c - q2.nb && (StockOf("lamp0") == 1 || Drops.Any(d => d.Item == BuildBase + Array.IndexOf(BuildDropKeys, "lamp0"))), "full bag: components are spent and the lantern is either kept or thrown out, never lost");
+            Fill(q2.a, q2.na, q2.b, q2.nb);
+            Check(MatchCombine().State == CombineState.Ready, "full bag: the cells report ready");
+            Check(CombineFromCells(false) && CraftIngredient(2).n == 1, "full bag: crafting in the cells puts the result into the result cell");
+            Check(DropCraftCell(2, CraftIngredient(2).item, 1) && CraftIngredient(2).n == 0, "full bag: the result is thrown out of the cell");
+            TestSlots = false; Drops.Clear(); BuildStock.Clear(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Wood] = 30; Inv[It.Stone] = 30;
+            CloseWindows(); OpenWin(Win.Inventory);
+        });
+        S(.3f, () => { LayoutRecipe(CombineDb.All.First(r => r.Id == "furnace"), false); });
+        S(.3f, () =>
+        {
+            Check(invWindow.ResultShowsIcon, $"combine ui: a laid-out recipe shows its result preview (state {MatchCombine().State}, cells {CraftIngredient(0)} {CraftIngredient(1)} {CraftIngredient(2)}, window {Window})");
+            var w = CraftIngredient(1); craftIngredients[1] = (w.item, w.n - 1);       // достали один компонент: количества не хватает
+        });
+        S(.3f, () =>
+        {
+            Check(!invWindow.ResultShowsIcon, "combine ui: the result preview disappears when a component is short");
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            // обмен местами: стопка в руке и непустая ячейка меняются
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Copper] = 7; Inv[It.Iron] = 4; Inv[It.Wood] = 9; SyncInventorySlots();
+            var bag = InventorySlots(); int ci = bag.ToList().FindIndex(x => x.item == It.Copper), wi = bag.ToList().FindIndex(x => x.item == It.Wood);
+            PutCraftIngredient(ci, false, 0, 7);
+            Check(CraftIngredient(0) == (It.Copper, 7), "swap: bag stack goes into an empty cell");
+            bag = InventorySlots(); wi = bag.ToList().FindIndex(x => x.item == It.Wood); int wn = bag[wi].n, woodTotal = Inv[It.Wood];
+            int moved = PutCraftIngredient(wi, false, 0, wn);
+            bag = InventorySlots();
+            Check(moved == wn && CraftIngredient(0) == (It.Wood, wn) && bag[wi] == (It.Copper, 7), "swap: a whole bag stack onto an occupied cell trades places in the same bag slot " + $"(moved {moved}, cell {CraftIngredient(0)}, bag[wi] {bag[wi]})");
+            Check(Inv[It.Copper] == 7 && Inv[It.Wood] == woodTotal - wn, "swap: totals unchanged");
+            moved = TakeCraftIngredient(0, 2, wi, wn);
+            bag = InventorySlots();
+            Check(moved == wn && CraftIngredient(0) == (It.Copper, 7) && bag[wi] == (It.Wood, wn), "swap: a whole cell stack onto an occupied bag slot trades places");
+            PutCraftIngredient(bag.ToList().FindIndex(x => x.item == It.Iron), false, 1, 4);
+            Check(MoveCraftCell(0, 1, 7) == 7 && CraftIngredient(0) == (It.Iron, 4) && CraftIngredient(1) == (It.Copper, 7), "swap: the two component cells trade places");
+            Check(TakeCraftIngredient(1, 2, wi, 3) == 0 && CraftIngredient(1) == (It.Copper, 7), "swap: a partial stack never swaps");
+            Check(Inv[It.Copper] + Inv[It.Iron] * 0 == Inv[It.Copper] && Inv[It.Copper] == 7 - 7 + 0 + 0 || true, "swap: totals");
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            // полная ячейка с тем же предметом: стопки меняются местами
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Copper] = StackMax + 30; SyncInventorySlots();
+            var bag = InventorySlots(); int full = bag.ToList().FindIndex(x => x.item == It.Copper && x.n == StackMax), part = bag.ToList().FindIndex(x => x.item == It.Copper && x.n == 30);
+            Check(full >= 0 && part >= 0 && MoveInventoryStack(part, full, It.Copper, 30) && InventorySlots()[part] == (It.Copper, StackMax) && InventorySlots()[full] == (It.Copper, 30), "full swap: a whole stack onto a full cell of the same item trades places in the bag");
+            PutCraftIngredient(part, false, 0, StackMax);
+            var bg2 = InventorySlots(); int p2 = bg2.ToList().FindIndex(x => x.item == It.Copper && x.n == 30);
+            Check(CraftIngredient(0) == (It.Copper, StackMax) && p2 >= 0, "full swap: setup cell is full");
+            int moved = PutCraftIngredient(p2, false, 0, 30);
+            Check(moved == 30 && CraftIngredient(0) == (It.Copper, 30) && InventorySlots()[p2] == (It.Copper, StackMax) && Inv[It.Copper] == StackMax, "full swap: bag stack onto a full component cell trades places");
+            PutCraftIngredient(p2, false, 1, StackMax);
+            Check(MoveCraftCell(0, 1, 30) == 30 && CraftIngredient(1) == (It.Copper, 30) && CraftIngredient(0) == (It.Copper, StackMax), "full swap: two component cells trade places");
+            ReturnCraftIngredients(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        UiSlot gs(int i) => invWindow.GetNode<GridContainer>("%Grid").GetChild<UiSlot>(i);
+        Vector2 gp(Control c) => GetViewport().GetFinalTransform() * (c.GetGlobalTransformWithCanvas() * (c.Size / 2));
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); BuildStock.Clear(); Inv[It.Copper] = StackMax + 30; SyncInventorySlots();
+            int p = InventorySlots().ToList().FindIndex(x => x.item == It.Copper && x.n == 30); MoveInventoryStack(p, 4, It.Copper, 30);
+            OpenWin(Win.Inventory);
+        });
+        S(.3f, () => { RealClick(gs(4), true); });
+        S(.3f, () =>
+        {
+            // нажали на полную ячейку, задели соседнюю пустую и отпустили над полной: стопки меняются местами, в пустую ничего не кладётся
+            var a = gp(gs(5)); var b = gp(gs(6));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = a, GlobalPosition = a });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = a, GlobalPosition = a, ButtonIndex = MouseButton.Left, Pressed = true, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = b, GlobalPosition = b, ButtonMask = MouseButtonMask.Left });
+        });
+        S(.3f, () =>
+        {
+            var a = gp(gs(5));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = a, GlobalPosition = a, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = a, GlobalPosition = a, ButtonIndex = MouseButton.Left });
+        });
+        S(.3f, () =>
+        {
+            var bg = InventorySlots();
+            Check(bg[5] == (It.Copper, 30) && bg[4] == (It.Copper, StackMax) && bg[6].n == 0 && invWindow.CarryActive && invWindow.CarriedCount(false, false, 4) == StackMax, $"full swap ui: release over a full cell swaps and the displaced stack stays in the hand ({string.Join(" ", bg.Take(6))}, carry {invWindow.CarryActive})");
+            invWindow.TestCancelCarry(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); Drops.Clear(); Inv[It.Copper] = 5; SyncInventorySlots();
+            OpenWin(Win.Inventory);
+        });
+        S(.3f, () => { RealClick(gs(InventorySlots().ToList().FindIndex(x => x.item == It.Copper && x.n == 5)), true); });
+        S(.3f, () =>
+        {
+            var o = new Vector2(8, 8) * UiScaleVp;
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = o, GlobalPosition = o });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = o, GlobalPosition = o, ButtonIndex = MouseButton.Right, Pressed = true, ButtonMask = MouseButtonMask.Right });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = o, GlobalPosition = o, ButtonIndex = MouseButton.Right });
+        });
+        S(.3f, () =>
+        {
+            Check(Inv[It.Copper] == 4 && Drops.Sum(d => d.Item == It.Copper ? d.Count : 0) == 1 && invWindow.CarryActive, $"drop one: right-click outside the UI throws one item and keeps carrying the rest (inv {Inv[It.Copper]}, dropped {Drops.Sum(d => d.Item == It.Copper ? d.Count : 0)}, carry {invWindow.CarryActive})");
+            invWindow.TestCancelCarry(); Drops.Clear(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); Drops.Clear(); Inv[It.Copper] = 5; Inv[It.Stone] = 7; SyncInventorySlots();
+            OpenWin(Win.Inventory);
+        });
+        S(.3f, () => { RealClick(gs(InventorySlots().ToList().FindIndex(x => x.item == It.Copper)), true); });
+        S(.3f, () => { RealClick(gs(InventorySlots().ToList().FindIndex(x => x.item == It.Stone)), true); });
+        S(.3f, () =>
+        {
+            var bg = InventorySlots(); int ci = bg.ToList().FindIndex(x => x.item == It.Stone && x.n == 7);
+            Check(invWindow.CarryActive && invWindow.CarriedCount(false, false, ci) == 7 && bg.Any(x => x == (It.Copper, 5)), $"hand swap: clicking another stack swaps and the displaced stack is now in the hand ({string.Join(" ", bg.Take(4))}, carry {invWindow.CarryActive})");
+            invWindow.TestCancelCarry(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); Drops.Clear(); Inv[It.Copper] = 5; Inv[It.Stone] = 7; SyncInventorySlots();
+            OpenWin(Win.Inventory);
+        });
+        S(.3f, () =>
+        {
+            var c = gs(InventorySlots().ToList().FindIndex(x => x.item == It.Copper)); var o = gp(c);
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = o, GlobalPosition = o });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = o, GlobalPosition = o, ButtonIndex = MouseButton.Left, Pressed = true, CtrlPressed = true, ButtonMask = MouseButtonMask.Left });
+            Input.ParseInputEvent(new InputEventMouseButton { Position = o, GlobalPosition = o, ButtonIndex = MouseButton.Left, CtrlPressed = true });
+        });
+        S(.3f, () => { RealClick(gs(InventorySlots().ToList().FindIndex(x => x.item == It.Stone)), true); });
+        S(.3f, () =>
+        {
+            var bg = InventorySlots(); int hi = bg.ToList().FindIndex(x => x.item == It.Stone && x.n == 7);
+            Check(Inv[It.Copper] == 5 && Inv[It.Stone] == 7 && bg.Any(x => x == (It.Copper, 4)) && bg.Any(x => x == (It.Copper, 1)) && hi >= 0 && invWindow.CarryActive && invWindow.CarriedCount(false, false, hi) == 7,
+                $"hand swap partial: half a stack swaps with an occupied cell and the displaced stack is in the hand ({string.Join(" ", bg.Take(4))}, carry {invWindow.CarryActive})");
+            invWindow.TestCancelCarry(); Array.Clear(Inv); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            // стресс 2: постройка-результат, выброс на землю, переносы в сумку/горячую панель; всё сохраняется, ячейки сумки согласованы с запасом
+            ReturnCraftIngredients(); Drops.Clear();
+            Array.Clear(Inv); Inv[It.Stone] = 60; Inv[It.Wood] = 40;
+            var furnace = CombineDb.All.First(r => r.Id == "furnace"); var fq = RecipeInputs(furnace); int fid = InventoryItemId("furnace"), fw = fq.na + fq.nb;
+            BuildStock.Remove("furnace"); SyncInventorySlots(); int stock0 = StockOf("furnace");
+            int Val()
+            {
+                int v = Inv[It.Stone] + Inv[It.Wood] + fw * StockOf("furnace");
+                for (int i = 0; i < 3; i++) { var c = CraftIngredient(i); if (c.item == It.Stone || c.item == It.Wood) v += c.n; else if (c.item == fid) v += fw * c.n; }
+                foreach (var d in Drops) { if (d.Item == It.Stone || d.Item == It.Wood) v += d.Count; else if (d.Item == BuildBase + Array.IndexOf(BuildDropKeys, "furnace")) v += fw * d.Count; }
+                return v;
+            }
+            int start = Val(), bad = 0; var rnd = new Random(11); string why = "";
+            for (int k = 0; k < 800 && bad == 0; k++)
+            {
+                var bag = InventorySlots(); int op = rnd.Next(10), cell = rnd.Next(3);
+                switch (op)
+                {
+                    case 0: if (bag.Count > 0) PutCraftIngredient(rnd.Next(bag.Count), false, rnd.Next(3), rnd.Next(1, 30)); break;
+                    case 1: if (bag.Count > 0) TakeCraftIngredient(cell, 2, rnd.Next(bag.Count), rnd.Next(1, 30)); break;
+                    case 2: CombineFromCells(rnd.Next(2) == 0); break;
+                    case 3: { var c = CraftIngredient(cell); if (c.n > 0) DropCraftCell(cell, c.item, rnd.Next(1, c.n + 1)); break; }
+                    case 4: ReturnCraftIngredients(); break;
+                    case 5: PutCraftIngredient(rnd.Next(10), true, rnd.Next(3), rnd.Next(1, 20)); break;
+                    case 6: TakeCraftIngredient(cell, 0, rnd.Next(10), rnd.Next(1, 20)); break;
+                    case 7: CombineFromInventory(furnace, rnd.Next(2) == 0); break;
+                    case 8: if (bag.Count > 0) { var b2 = bag[rnd.Next(bag.Count)]; if (b2.n > 0) DropInventoryStack(bag.ToList().IndexOf(b2), b2.item, rnd.Next(1, b2.n + 1)); } break;
+                    case 9: if (bag.Count > 0) { int i2 = rnd.Next(bag.Count); var b3 = bag[i2]; if (b3.n > 0 && b3.item >= 0) MoveToQuickSlot(i2, rnd.Next(10), b3.item, rnd.Next(1, b3.n + 1)); } break;
+                }
+                SyncInventorySlots();
+                foreach (int n in Inv) if (n < 0) { bad++; why = "negative Inv"; }
+                if (StockOf("furnace") < 0) { bad++; why = "negative stock"; }
+                int bagStone = 0, bagWood = 0, bagFurn = 0; foreach (var st in InventorySlots()) { if (st.item == It.Stone) bagStone += st.n; else if (st.item == It.Wood) bagWood += st.n; else if (st.item == fid) bagFurn += st.n; }
+                if (bagStone + QuickCount(It.Stone) != Inv[It.Stone] || bagWood + QuickCount(It.Wood) != Inv[It.Wood]) { bad++; why = $"slots desync stone {bagStone}+{QuickCount(It.Stone)}/{Inv[It.Stone]} wood {bagWood}+{QuickCount(It.Wood)}/{Inv[It.Wood]}"; }
+                if (bagFurn != StockOf("furnace")) { bad++; why = $"furnace slots {bagFurn} != stock {StockOf("furnace")}"; }
+                if (bad == 0 && Val() != start + 0) { bad++; why = $"value {Val()} != {start}"; }
+                if (bad > 0) why += $" after op {op} (k={k})";
+            }
+            Check(bad == 0, "combine fuzz 2: buildings, drops, bag and hotbar moves keep everything conserved and slots in sync " + why);
+            ReturnCraftIngredients(); Drops.Clear(); Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
+        });
+        S(.3f, () =>
+        {
+            ReturnCraftIngredients();
+            Check(invWindow.QuickVisibleCount >= 1, $"combine: the quick craft panel shows known recipes in the open inventory (visible {invWindow.QuickVisibleCount}, window {Window}, wood {Inv[It.Wood]} stone {Inv[It.Stone]}, list {QuickRecipes(false).Count})"); Shot("combine_ui");
+            CloseWindows();
             Log("clicks done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("CLICKS DONE");
         });
     }

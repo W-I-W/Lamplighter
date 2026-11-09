@@ -47,7 +47,7 @@ public partial class Hud
         tipStyle ??= GD.Load<TooltipStyle>(TooltipStyle.Path) ?? new TooltipStyle(); var st = tipStyle;
         float now = Time.GetTicksMsec() / 1000f, dt = Mathf.Clamp(now - tipLast, 0, .1f); tipLast = now;
         TipModel m = null; string key = null;
-        var hovered = G.Interact.Hover;
+        var hovered = G.TooltipTarget;
         if (G.Window == Win.None && G.Menu == Mn.None && !G.TechOpen && !G.MapOpen && hovered != null && G.HoverTip() is { } hoverTip)
         {
             m = TipModel.From(hoverTip); key = hoverTip.Key; if (m.Rows.Count == 0 && m.Title == "") m = null;

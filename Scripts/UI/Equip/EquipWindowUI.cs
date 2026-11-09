@@ -93,6 +93,7 @@ public partial class EquipWindowUI : Control
             var c = cardScene.Instantiate<EquipCardUI>(); c.Picked += x => OnPick(x.Row); c.Activated += x => OnActivate(x.Row);
             list.AddChild(c); cards.Add(c);
         }
+        ItemTipHost.Bind(cards[i], null);                                                    // карточки переиспользуются: подсказку каждая вкладка задаёт заново
         return cards[i];
     }
 
@@ -178,8 +179,8 @@ public partial class EquipWindowUI : Control
         for (int i = 0; i < total; i++)
         {
             var c = Card(i); c.Visible = true; bool held = G.EqIsHeld(i);
-            if (i < nt) { var td = ToolDef.Get(tl[i]); string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; c.Bind(i, UiIcons.Item(td.Icon), T(nm) + LvTag(G.ToolLv(tl[i])), Text, held ? T("Сейчас в руках") : T("Инструмент"), held ? Good : Dim, held, 0, i == G.WinCur); }
-            else { var d = Db.Weapon(G.Owned[i - nt].Id); c.Bind(i, UiIcons.Item(G.HotIcon(Game.RefWeapon(d.Id))), T(d.Name) + LvTag(G.Owned[i - nt].Lv), Db.RarCol[(int)d.Rar], $"{T(Db.ClassNames[(int)d.Cls])} · {T(Db.RarName[(int)d.Rar])}", Dim, held, 0, i == G.WinCur); }
+            if (i < nt) { var td = ToolDef.Get(tl[i]); string nm = tl[i] == "pickaxe" ? Game.PickNames[G.Tier] : td.Name; c.Bind(i, UiIcons.Item(td.Icon), T(nm) + LvTag(G.ToolLv(tl[i])), Text, held ? T("Сейчас в руках") : T("Инструмент"), held ? Good : Dim, held, 0, i == G.WinCur); string tk = Game.RefTool(tl[i]); ItemTipHost.Bind(c, () => G.KeyTip(tk)); }
+            else { var d = Db.Weapon(G.Owned[i - nt].Id); c.Bind(i, UiIcons.Item(G.HotIcon(Game.RefWeapon(d.Id))), T(d.Name) + LvTag(G.Owned[i - nt].Lv), Db.RarCol[(int)d.Rar], $"{T(Db.ClassNames[(int)d.Cls])} · {T(Db.RarName[(int)d.Rar])}", Dim, held, 0, i == G.WinCur); string wk = Game.RefWeapon(d.Id); ItemTipHost.Bind(c, () => G.KeyTip(wk)); }
         }
         for (int i = total; i < cards.Count; i++) cards[i].Visible = false;
         if (G.WinCur < nt) BuildToolDetails(tl[G.WinCur]); else BuildWeaponDetails(G.WinCur - nt);
@@ -221,8 +222,8 @@ public partial class EquipWindowUI : Control
             for (int s = 0; s < w.Slots; s++)
             {
                 var so = socketScene.Instantiate<EquipSocketUI>(); sh.AddChild(so); int si = s;
-                if (s < ow.Mods.Count) { var m = Db.Mods[ow.Mods[s]]; so.Bind(s, UiIcons.Item(Game.ModIcon(m.Id)), Game.ModTint(m.Id), G.EqSocket == s, $"{T(m.Name)}\n{T(m.Desc)}\n{T("ПКМ — снять")}"); }
-                else so.Bind(s, null, Colors.White, G.EqSocket == s, T("Пустая ячейка: нажмите, чтобы выбрать вставку"));
+                if (s < ow.Mods.Count) { var m = Db.Mods[ow.Mods[s]]; so.Bind(s, UiIcons.Item(Game.ModIcon(m.Id)), Game.ModTint(m.Id), G.EqSocket == s, ""); int mi = ow.Mods[s]; ItemTipHost.Bind(so, () => { var t = G.KeyTip("mod:" + mi); t.Desc += "\n" + T("ПКМ — снять"); return t; }); }
+                else { so.Bind(s, null, Colors.White, G.EqSocket == s, ""); ItemTipHost.Bind(so, () => new ItemTipData { Name = "Пустая ячейка", Kind = "Вставка", Desc = T("Нажмите, чтобы выбрать вставку"), Accent = new Color("#6a7288") }); }
                 so.Picked += x => { G.EqSocket = x.Index; G.EqPick = -1; Sfx.Play("tick", -8, 1.5f); }; so.Removed += x => { if (x.Index < ow.Mods.Count) { x.Flash(Cyan); G.EqRemove(x.Index); } };
             }
         }
@@ -279,6 +280,7 @@ public partial class EquipWindowUI : Control
             var d = Db.Relic(G.OwnedRelics[i]); var c = Card(i); c.Visible = true; if (d == null) { c.Visible = false; continue; }
             bool eqd = G.EquippedRelics.Contains(d.Id);
             c.Bind(i, UiIcons.Item(It.Relic), T(d.Title), Db.RarCol[d.Rarity], eqd ? T("Надета") : T(Db.RarName[d.Rarity]), eqd ? Good : Dim, eqd, 0, i == G.WinCur, false, d.Tint);
+            string rk = "relic:" + d.Id; ItemTipHost.Bind(c, () => G.KeyTip(rk));
         }
         for (int i = n; i < cards.Count; i++) cards[i].Visible = false;
         if (n == 0)
@@ -341,10 +343,23 @@ public partial class EquipWindowUI : Control
         {
             var rc = rows[i].r; var cell = new RecipeCellUI(); grid.AddChild(cell); cells.Add(cell);
             cell.Bind(i, rc.Icon >= 0 ? UiIcons.Item(rc.Icon) : GroupIcon(rows[i].group), G.StateOf(rc), i == sel, T(rc.Title));
+            ItemTipHost.Bind(cell, () => RecipeTip(rc));
             cell.Picked += x => G.EqSelect(x); cell.Activated += x => { G.EqCraftRow(x); Flash(centerBox); };
         }
         if (sel >= Game.CraftCols * 2) CallDeferred(nameof(ScrollToCell), sel);
         BuildRecipeDetails(body, rows[sel].r, sel);
+    }
+
+    /// <summary>Подсказка рецепта: состояние, цена с учётом запаса и (для оружия/инструмента) урон.</summary>
+    ItemTipData RecipeTip(Recipe r)
+    {
+        var st = G.StateOf(r); var bad = new Color("#f06a5e");
+        var d = new ItemTipData { Name = r.Title, Kind = r.IsUpgrade ? "Улучшение" : "Рецепт", Accent = st == RecState.Ready ? Good : st == RecState.Owned ? Dim : bad };
+        d.Stat("Состояние", r.IsUpgrade || st == RecState.Owned ? "Уже есть" : st == RecState.Ready ? "Можно создать" : "Не хватает ресурсов", d.Accent);
+        if (r.Id.StartsWith("tool_")) d.Stat("Урон", G.ToolHitDmg(r.Id.Substring(5)).ToString("0.#"));
+        if (r.Id.StartsWith("w_") && r.Id.LastIndexOf('_') > 1 && Db.Weapon(r.Id.Substring(2, r.Id.LastIndexOf('_') - 2)) is { } wd) { d.Stat("Урон", G.WeaponDmg(wd).ToString("0.#")); d.Stat("Скорость", (1f / wd.Cd).ToString("0.##")); }
+        if (r.CostNow is { } cost) foreach (var c in cost) { int have = G.HaveAny(c[0]); d.Stat(It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? Good : bad); }
+        return d;
     }
 
     void ScrollToCell(int i) { foreach (var c in cells) if (IsInstanceValid(c) && c.Index == i && c.GetParent()?.GetParent() is ScrollContainer sc) sc.EnsureControlVisible(c); }

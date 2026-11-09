@@ -59,19 +59,21 @@ public partial class Game
         return IsInventoryGear(key) ? (HotValid(key) ? 1 : 0) : StockOf(key);
     }
 
-    internal string InventoryItemName(int item)
+    internal string InventoryItemName(int item) => item >= 0 ? It.Names[item] : KeyName(InventoryKey(item));
+
+    internal string KeyName(string key)
     {
-        if (item >= 0) return It.Names[item];
-        string key = InventoryKey(item);
         if (key.StartsWith("relic:")) return Db.Relic(key.Substring(6))?.Title ?? "";
         if (key.StartsWith("mod:")) return Db.Mods[int.Parse(key.Substring(4))].Name;
-        return IsInventoryGear(key) ? HotName(key) : InventoryBuild(item)?.Name ?? "";
+        return IsInventoryGear(key) ? HotName(key) : BuildOfKey(key)?.Name ?? "";
     }
 
-    internal string InventoryItemDetails(int item)
+    BuildEntry BuildOfKey(string key) => key.Length > 0 && !IsInventoryGear(key) ? EntryOf(key) : null;
+
+    internal string InventoryItemDetails(int item) => item >= 0 ? "" : KeyDetails(InventoryKey(item));
+
+    internal string KeyDetails(string key)
     {
-        if (item >= 0) return "";
-        string key = InventoryKey(item);
         if (key.StartsWith("relic:")) return Loc.T(Db.Relic(key.Substring(6))?.Desc ?? "");
         if (key.StartsWith("mod:"))
         {
@@ -89,8 +91,132 @@ public partial class Game
             if (weapon == null) return "";
             return $"{Loc.T("Базовый урон")}: {weapon.Dmg:0.#}\n{Loc.T(weapon.Desc ?? "")}".TrimEnd();
         }
-        return Loc.T(InventoryBuild(item)?.Hint ?? "");
+        return Loc.T(BuildOfKey(key)?.Hint ?? "");
     }
+
+    static string TagName(string t) => Loc.T(t switch { "fire" => "Огонь", "ice" => "Лёд", "light" => "Свет", "storm" => "Гроза", _ => t });
+    static readonly string[] FxLabels = { "Поджог", "Замедление", "Заморозка", "Молния", "Залп", "Пробой", "Сифон", "Взрыв", "Дуга" };
+    static readonly Color TipGood = new("#8fe07a"), TipGold = new("#ffd36a"), TipWarm = new("#ffb36a");
+
+    /// <summary>Данные красивой подсказки: название, тип, характеристики (если есть) и описание.</summary>
+    internal ItemTipData InventoryItemTip(int item, int count)
+    {
+        if (item >= 0)
+        {
+            var r = new ItemTipData { Name = It.Names[item], Count = count, Kind = "Ресурс" };
+            r.Stat("Стопка", $"{count}/{StackMax}"); return r;
+        }
+        return KeyTip(InventoryKey(item), count);
+    }
+
+    /// <summary>Подсказка по ключу предмета («tool:…», «weapon:…», «relic:…», «mod:…», чертёж постройки) — для окон, где предмета нет в инвентаре.</summary>
+    internal ItemTipData KeyTip(string key, int count = 1)
+    {
+        var d = new ItemTipData { Name = KeyName(key), Count = count, Desc = KeyDetails(key) };
+        if (key.StartsWith("relic:"))
+        {
+            var r = Db.Relic(key.Substring(6)); if (r == null) return d;
+            int rar = Mathf.Clamp(r.Rarity, 0, Db.RarCol.Length - 1); d.Accent = Db.RarCol[rar];
+            d.Kind = $"Реликвия · {Loc.T(Db.RarName[rar])}";
+            d.Stat("Действие", r.Permanent ? "Постоянное" : "Временное");
+            if (r.Tags.Length > 0) d.Stat("Теги", string.Join(", ", System.Linq.Enumerable.Select(r.Tags, TagName)), TipWarm);
+        }
+        else if (key.StartsWith("mod:"))
+        {
+            int i = int.Parse(key.Substring(4)); if (i < 0 || i >= Db.Mods.Length) return d;
+            var m = Db.Mods[i]; d.Accent = new Color("#5aa8ff"); d.Kind = "Модификатор оружия";
+            foreach (var (k, p) in m.Eff) d.Stat(FxLabels[(int)k], $"+{p:0.#}", TipGood);
+            if (!string.IsNullOrEmpty(m.Tag)) d.Stat("Стихия", TagName(m.Tag), TipWarm);
+        }
+        else if (IsToolRef(key))
+        {
+            var t = ToolDef.Get(RefId(key)); if (t == null) return d;
+            d.Accent = TipGold; d.Kind = "Инструмент";
+            d.Stat("Скорость добычи", $"×{t.MiningPower:0.##}", TipGood);
+            d.Stat("Урон в бою", $"×{t.CombatDamage:0.##}", TipGood);
+            d.Stat("Скорость удара", $"×{1f / Mathf.Max(.01f, t.AttackInterval):0.##}");
+            if (t.AttackRange != 0) d.Stat("Дальность", $"{t.AttackRange:+0;-0}");
+            foreach (var (n, v) in new[] { ("Дерево", t.EffWood), ("Камень", t.EffStone), ("Руда", t.EffOre), ("Завалы", t.EffRubble) })
+                if (!Mathf.IsEqualApprox(v, 1f)) d.Stat(n, $"×{v:0.##}", v > 1f ? TipGood : TipWarm);
+        }
+        else if (IsWeaponRef(key))
+        {
+            var w = Db.Weapon(RefId(key)); if (w == null) return d;
+            d.Accent = Db.RarCol[(int)w.Rar];
+            d.Kind = $"{Loc.T(Db.ClassNames[(int)w.Cls])} · {Loc.T(Db.RarName[(int)w.Rar])}" + (w.Unique ? " · " + Loc.T("Уникальное") : "");
+            d.Stat("Урон", $"{w.Dmg:0.#}", TipGood);
+            if (w.Cd > 0) d.Stat("Перезарядка", $"{w.Cd:0.##} " + Loc.T("с"));
+            if (w.Reach > 0) d.Stat("Дальность", $"{w.Reach:0.#}");
+            if (w.Speed > 0) d.Stat("Скорость снаряда", $"{w.Speed:0.#}");
+            if (w.Pierce > 0) d.Stat("Пробитие", $"{w.Pierce}");
+            foreach (var (k, p) in w.Inherent) d.Stat(FxLabels[(int)k], $"{p:0.#}", TipWarm);
+            if (w.Tags.Length > 0) d.Stat("Стихия", string.Join(", ", System.Linq.Enumerable.Select(w.Tags, TagName)), TipWarm);
+            d.Stat("Слоты модов", $"{w.Slots}", new Color("#5aa8ff"));
+        }
+        else if (BuildOfKey(key) is { } b)
+        {
+            d.Accent = TipGold; d.Kind = "Постройка";
+            if (!string.IsNullOrEmpty(b.Cost)) d.Stat("Стоимость", b.Cost);
+        }
+        return d;
+    }
+
+    /// <summary>Подсказка рецепта быстрого крафта: что получится, нужные компоненты (есть/нужно) и сколько раз можно создать.</summary>
+    internal ItemTipData RecipeTip(CombineRecipe r, int times)
+    {
+        int res = RecipeResultItem(r), n = RecipeResultCount(r);
+        var d = new ItemTipData { Name = InventoryItemName(res), Count = n, Kind = "Рецепт", Accent = TipGold };
+        var q = RecipeInputs(r); var bad = new Color("#f06a5e");
+        if (q.a == q.b) d.Stat(It.Names[q.a], $"{Inv[q.a]}/{q.na + q.nb}", Inv[q.a] >= q.na + q.nb ? TipGood : bad);
+        else { d.Stat(It.Names[q.a], $"{Inv[q.a]}/{q.na}", Inv[q.a] >= q.na ? TipGood : bad); d.Stat(It.Names[q.b], $"{Inv[q.b]}/{q.nb}", Inv[q.b] >= q.nb ? TipGood : bad); }
+        d.Stat("Можно создать", times.ToString(), times > 0 ? TipGood : bad);
+        if (times > 1) d.Stat("Shift + клик", "максимум", TipGold);
+        return d;
+    }
+
+    /// <summary>Подсказка ячейки результата в блоке «A + B».</summary>
+    internal ItemTipData CombineResultTip()
+    {
+        if (craftIngredients[2].n > 0) return InventoryItemTip(craftIngredients[2].item, craftIngredients[2].n);
+        var m = MatchCombine();
+        if (m.Recipe == null) return m.State == CombineState.Unknown ? new ItemTipData { Name = "Неизвестная комбинация", Kind = "Результата нет", Accent = new Color("#6a7288") } : null;
+        if (!m.Known) { var e = new ItemTipData { Name = "Эксперимент", Kind = "Новый рецепт", Accent = new Color("#c070ff") }; e.Stat("Результат", "?", new Color("#c070ff")); return e; }
+        return RecipeTip(m.Recipe, CellTimes(RecipeInputs(m.Recipe)));
+    }
+
+    /// <summary>«Нужно: Камень ×10 + Дерево ×5» — для подписи, когда в ячейках не хватает количества.</summary>
+    internal string RecipeNeedText(CombineRecipe r)
+    {
+        var q = RecipeInputs(r);
+        return q.a == q.b ? $"{Loc.T("Нужно")}: {Loc.T(It.Names[q.a])} ×{q.na + q.nb}" : $"{Loc.T("Нужно")}: {Loc.T(It.Names[q.a])} ×{q.na} + {Loc.T(It.Names[q.b])} ×{q.nb}";
+    }
+
+    /// <summary>Подсказка постройки из меню строительства/крафта: стоимость, запас, причина блокировки.</summary>
+    internal ItemTipData BuildEntryTip(BuildEntry e)
+    {
+        var d = new ItemTipData { Name = e.Name, Kind = "Постройка", Accent = TipGold };
+        if (!e.Unlocked) { d.Kind = "Закрыто"; d.Accent = new Color("#6a7288"); if (!string.IsNullOrEmpty(e.Lock)) d.Stat("Откроется", e.Lock, TipWarm); }
+        if (e.CostArr != null && e.Stock == 0)                                                   // строка Cost содержит значки-символы: выводим по строке на ресурс
+            foreach (var c in e.CostArr) { int have = HaveOf(c[0]); d.Stat(It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? TipGood : new Color("#f06a5e")); }
+        if (e.Stock > 0) d.Stat("В запасе", $"{e.Stock}", TipGood);
+        foreach (var (label, value) in BuildTraits(e.Key)) d.Stat(label, value, TipGood);
+        return d;
+    }
+
+    /// <summary>Свойства построек в виде характеристик (вместо текстовых описаний).</summary>
+    static (string, string)[] BuildTraits(string key) => key switch
+    {
+        "furnace" => new[] { ("Плавка", "1 руда + 1 дерево"), ("Результат", "Слиток") },
+        "chest" => new[] { ("Слотов", ChestSlots.ToString()), ("В стопке", StackMax.ToString()) },
+        "lamp0" => new[] { ("Свет", "Постоянный") },
+        "lamp1" => new[] { ("Свет", "Постоянный"), ("Урон врагам", "Рядом") },
+        "lamp2" => new[] { ("Свет", "Лучом") },
+        "mirror" => new[] { ("Луч", "Поворачивает") },
+        "amp" => new[] { ("Фонари рядом", "Усиливает") },
+        "barrier" => new[] { ("Задерживает", "Теней"), ("Длина линии", "до 9 клеток") },
+        _ when key.StartsWith("decor") => new[] { ("Бонус", "Производство") },
+        _ => System.Array.Empty<(string, string)>(),
+    };
 
     internal Texture2D InventoryItemTexture(int item)
     {
@@ -151,6 +277,23 @@ public partial class Game
         }
     }
 
+    /// <summary>Обмен, когда в руке только часть стопки: часть ложится в занятую ячейку, а вытесненная стопка уходит в свободную ячейку сумки (home) — оттуда она берётся в руку.</summary>
+    internal bool PartialSwap(bool srcQuick, int src, int count, bool dstQuick, int dst, out int home)
+    {
+        home = -1; var bag = InventorySlots();
+        var from = srcQuick ? QuickStack(src) : src >= 0 && src < bag.Count ? bag[src] : EmptyStack;
+        var to = dstQuick ? QuickStack(dst) : dst >= 0 && dst < bag.Count ? bag[dst] : EmptyStack;
+        if (from.item < 0 || to.item < 0 || count <= 0 || from.n <= count || to.n <= 0 || to.item == from.item || !UsesSlot(from.item) || !UsesSlot(to.item)) return false;
+        if (srcQuick == dstQuick && src == dst) return false;
+        int free = -1; for (int i = 0; i < bag.Count; i++) if (bag[i].n == 0) { free = i; break; }
+        if (free < 0) { FullMsg(); return false; }
+        if (srcQuick) quickCounts[src] = from.n - count; else inventorySlots[src] = (from.item, from.n - count);
+        if (dstQuick) { quickItems[dst] = from.item; quickCounts[dst] = count; SelectedQuickSlot = dst; } else inventorySlots[dst] = (from.item, count);
+        inventorySlots[free] = to;
+        foreach (int it in new[] { from.item, to.item }) { int sum = 0; foreach (var st in inventorySlots) if (st.item == it) sum += st.n; slotTotals[it] = sum; }
+        home = free; return true;
+    }
+
     internal bool MoveToQuickSlot(int source, int target, int item, int count)
     {
         var bag = InventorySlots();
@@ -159,6 +302,7 @@ public partial class Game
 
         int fromCount = bag[source].n;
         int previousItem = quickItems[target], previousCount = quickCounts[target];
+        if (previousItem == item && previousCount >= StackMax && count == fromCount && fromCount < StackMax) { SwapBagQuick(source, target); return true; }
         if (previousCount > 0 && previousItem != item)
         {
             if (count != fromCount) return false;
@@ -212,6 +356,7 @@ public partial class Game
         var (item, available) = QuickStack(quick);
         if (count <= 0 || count > available || target < 0 || target >= bag.Count) return false;
         var (other, otherCount) = bag[target];
+        if (other == item && otherCount >= StackMax && count == available && available < StackMax) { SwapBagQuick(target, quick); return true; }
         if (otherCount > 0 && other != item)
         {
             if (count != available || (!IsInventoryGear(item) && IsInventoryGear(other) && SlotsUsed() >= SlotCap)) return false;
@@ -250,6 +395,11 @@ public partial class Game
     {
         if (source == target || count <= 0 || count > quickCounts[source]) return;
         int item = quickItems[source], other = quickItems[target], otherCount = quickCounts[target];
+        if (otherCount >= StackMax && item == other && count == quickCounts[source] && count < StackMax)
+        {
+            (quickCounts[source], quickCounts[target]) = (otherCount, count);
+            SelectedQuickSlot = target; return;
+        }
         if (otherCount > 0 && item != other)
         {
             if (count != quickCounts[source]) return;
@@ -497,6 +647,11 @@ public partial class Game
         var from = slots[source];
         var to = slots[target];
         if (from.item != item || !UsesSlot(item) || count <= 0 || count > from.n) return false;
+        if (to.item == item && to.n >= StackMax && count == from.n && from.n < StackMax)      // полная ячейка с тем же предметом: стопки меняются местами
+        {
+            (inventorySlots[source], inventorySlots[target]) = (to, from);
+            return true;
+        }
         if (to.item == item) count = Math.Min(count, StackMax - to.n);
         else if (to.n > 0)
         {
@@ -514,7 +669,7 @@ public partial class Game
     internal bool DropQuickStack(int slot, int item, int count)
     {
         var (have, n) = QuickStack(slot);
-        if (have != item || item < 0 || count <= 0 || count > n || !TryDrop(item, count)) return false;
+        if (have != item || count <= 0 || count > n || !(item >= 0 ? TryDrop(item, count) : TryDropBuild(InventoryKey(item), count))) return false;
         RemoveQuickCount(slot, count);
         return true;
     }
@@ -524,9 +679,9 @@ public partial class Game
         var slots = InventorySlots();
         if (source < 0 || source >= slots.Count) return false;
         var stack = slots[source];
-        if (stack.item != item || item < 0 || count > stack.n || !TryDrop(item, count)) return false;
+        if (stack.item != item || count > stack.n || !(item >= 0 ? TryDrop(item, count) : TryDropBuild(InventoryKey(item), count))) return false;
         inventorySlots[source] = count == stack.n ? EmptyStack : (item, stack.n - count);
-        slotTotals[item] -= count;
+        TrackBagChange(item, -count);
         return true;
     }
 

@@ -118,7 +118,7 @@ public partial class GameHud : Control
             var slot = quickSlots[i];
             slot.Set(n > 0 ? G.InventoryItemTexture(item) : null, n > 1 ? n.ToString() : "", ((i + 1) % 10).ToString(),
                 i == (wheelHover >= 0 && QuickWheelHeld ? wheelHover : G.SelectedQuickSlot) ? SlotState.Selected : n > 0 ? SlotState.Normal : SlotState.Disabled);
-            slot.TooltipText = n > 0 ? Loc.T(G.InventoryItemName(item)) : "";
+            int qi = i; ItemTipHost.Bind(slot, () => { var (it, k) = G.QuickStack(qi); return k > 0 ? G.InventoryItemTip(it, k) : null; });
         }
     }
 
@@ -233,7 +233,7 @@ public partial class GameHud : Control
         for (int c = 0; c < chips.Length; c++)
         {
             var chip = chips[c]; bool has = c < order.Count && c < 3; chip.Visible = has; if (!has) continue;
-            int it = order[c]; chip.MouseFilter = MouseFilterEnum.Pass; chip.TooltipText = Loc.T(It.Names[it]); chipIcons[c].Texture = UiIcons.Item(it); chip.GetNode<Label>("Label").Text = Short(G.Inv[it]);
+            int it = order[c]; chip.MouseFilter = MouseFilterEnum.Pass; int tipItem = it; ItemTipHost.Bind(chip, () => G.InventoryItemTip(tipItem, G.Inv[tipItem])); chipIcons[c].Texture = UiIcons.Item(it); chip.GetNode<Label>("Label").Text = Short(G.Inv[it]);
         }
         resRow.Visible = order.Count > 0;
     }

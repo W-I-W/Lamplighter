@@ -42,8 +42,11 @@ public partial class Game
             Check(TryDrop(It.Wood, 20) && Inv[It.Wood] == 30 && Drops.Count == 1 && Drops[0].Count == 20, "drop: 20 wood left the inventory and lay on the ground");
             TryDrop(It.Wood, 5); Check(Drops.Count == 1 && Drops[0].Count == 25 && Inv[It.Wood] == 25, "drop: the same resource merges into one stack");
             UpdateDrops(.1f); Check(Drops.Count == 1 && Inv[It.Wood] == 25, "drop: the dropper does not pick the stack up at once");
-            dropClock += 3f; UpdateDrops(.1f); Check(Drops.Count == 0 && Inv[It.Wood] == 50, "drop: after the delay the stack is picked up exactly once");
+            UpdateDrops(.1f); dropClock += 3f; UpdateDrops(.1f); Check(Drops.Count == 1 && Inv[It.Wood] == 25, "drop: standing on your own thrown stack does not pick it up within 5 seconds");
+            dropClock += 3f; UpdateDrops(.1f); Check(Drops.Count == 0 && Inv[It.Wood] == 50, "drop: after 5 seconds without stepping away the stack is picked up exactly once");
             UpdateDrops(.1f); Check(Inv[It.Wood] == 50, "drop: a second pass gives nothing more");
+            TryDrop(It.Wood, 20); dropClock += 3f; { var home = PPos; PPos = home + new Vector2(80, 0); UpdateDrops(.1f); PPos = home; }
+            UpdateDrops(.1f); Check(Drops.Count == 0 && Inv[It.Wood] == 50, "drop: stepping away and back picks the stack up after the short protection");
         });
         // склад
         S(.2f, () =>
@@ -59,7 +62,7 @@ public partial class Game
         });
         // меню по ПКМ
         S(.2f, () => { OpenWin(Win.Inventory); });
-        S(.4f, () => { CloseWindows(); { string rid = Db.Relics[0].Id; OwnedRelics.Remove(rid); OwnedRelics.Add(rid); Drops.Clear(); Check(TryDropRelic(rid) && !OwnedRelics.Contains(rid) && Drops.Count == 1 && IsRelicDrop(Drops[0].Item), "relic: dropping puts it on the ground"); Drops[0].Born = -9; dropClock = 0; Drops[0].Pos = PPos; UpdateDrops(.1f); Check(Drops.Count == 0 && OwnedRelics.Contains(rid), "relic: picking it up returns it"); } Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
+        S(.4f, () => { CloseWindows(); { string rid = Db.Relics[0].Id; OwnedRelics.Remove(rid); OwnedRelics.Add(rid); Drops.Clear(); Check(TryDropRelic(rid) && !OwnedRelics.Contains(rid) && Drops.Count == 1 && IsRelicDrop(Drops[0].Item), "relic: dropping puts it on the ground"); Drops[0].Born = -9; dropClock = 0; Drops[0].Pos = PPos; { var home = PPos; PPos = home + new Vector2(80, 0); UpdateDrops(.1f); PPos = home; } UpdateDrops(.1f); Check(Drops.Count == 0 && OwnedRelics.Contains(rid), "relic: picking it up returns it"); } Log("res done"); GD.Print("[check] SUMMARY failures=" + fails); GD.Print("RES DONE"); });
         // анимация добычи: замах вверх, удар вниз, возврат (три фазы цикла)
         foreach (var (name, ph) in new[] { ("res6_swing_windup", .27f), ("res6_swing_strike", .49f), ("res6_swing_return", .85f), ("res6_swing_left_strike", -.49f) })
         {

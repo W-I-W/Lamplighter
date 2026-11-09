@@ -40,12 +40,12 @@ public partial class Game
         try
         {
             while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
-            SaveManager.SaveCharacter(BuildCharacter());
             if (GameSession.Mode != SessionMode.Guest && NetService.Role != NetRole.Client && worldSave != null)
             {
-                SaveManager.SaveWorld(BuildWorld());
+                if (!SaveManager.SaveSession(BuildCharacter(), BuildWorld())) { GD.PushWarning("session save failed"); return; }
                 if (thumb || saveCount % 6 == 0) SaveManager.WriteThumb(worldSave.Id, W, Expl);
             }
+            else if (!SaveManager.SaveCharacter(BuildCharacter())) { GD.PushWarning("character save failed"); return; }
             saveCount++;
         }
         catch (Exception e) { GD.PushWarning("save failed: " + e.Message); }
@@ -56,11 +56,11 @@ public partial class Game
         var c = charSave; var sk = SaveSkills();
         c.HealthModel = CombatMath.HealthModel;
         c.Look = PlayerLook; c.PlaySecs = PlaySecs; c.Hp = Hp; c.MaxHp = MaxHp - relicHp; c.Xp = Xp; c.Level = Level; c.Tier = Tier; c.Kills = Kills; c.HeroLamp = HeroLampLv; c.Ann = Ann;
-        c.Inv = (int[])Inv.Clone(); c.ModInv = (int[])ModInv.Clone(); c.SkK = sk.k; c.SkV = sk.v;
+        c.Inv = (int[])Inv.Clone(); IncludeCraftIngredientsInSave(c.Inv); c.ModInv = (int[])ModInv.Clone(); c.SkK = sk.k; c.SkV = sk.v;
         c.Hot = (string[])Hot.Clone(); c.Quick = SaveQuickSlots(); c.QuickCounts = SaveQuickCounts(); c.HotSel = HotSel; c.Tools = OwnedTools.ToArray(); c.CurTool = CurTool;
         c.Graves = Graves.ToArray(); c.BuildingUp = MyBuildingUp; c.WId = Owned.ConvertAll(o => o.Id).ToArray(); c.WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(); c.CurW = CurW; c.WLv = Owned.ConvertAll(o => o.Lv).ToArray(); c.AxeLv = AxeLv;
         c.Relics = OwnedRelics.ToArray(); c.Equipped = EquippedRelics.ToArray(); c.BpDone = BpDone.ToArray();
-        c.FragK = Frag.Keys.ToArray(); c.FragV = Frag.Values.ToArray(); c.BsK = BuildStock.Keys.ToArray(); c.BsV = BuildStock.Values.ToArray();
+        c.FragK = Frag.Keys.ToArray(); c.FragV = Frag.Values.ToArray(); (c.BsK, c.BsV) = BuildStockForSave();
         c.Hints = HintsShown.ToArray(); c.Found = Found.ToArray(); c.LegendMask = LegendMask; c.CosmMask = CosmMask; c.CosmSel = CosmSel;
         if (GameSession.Mode != SessionMode.Guest && worldSave != null) c.Worlds[worldSave.Id] = new PerWorld { X = PPos.X, Y = PPos.Y, Has = true, Stamp = SaveManager.Stamp() };
         return c;
@@ -131,7 +131,7 @@ public partial class Game
             Drops.Clear();
             if (d.DropItem != null && d.DropCount != null && d.DropX != null && d.DropY != null)
                 for (int i = 0; i < d.DropItem.Length && i < d.DropCount.Length && i < d.DropX.Length && i < d.DropY.Length; i++)
-                    if (Movable(d.DropItem[i]) && d.DropCount[i] > 0 && d.DropCount[i] <= MaxStack) Drops.Add(new WorldDrop { Id = nextDropId++, Item = d.DropItem[i], Count = d.DropCount[i], Pos = new Vector2(d.DropX[i], d.DropY[i]), Owner = -1 });
+                    if (ValidDrop(d.DropItem[i]) && d.DropCount[i] > 0 && d.DropCount[i] <= MaxStack) Drops.Add(new WorldDrop { Id = nextDropId++, Item = d.DropItem[i], Count = d.DropCount[i], Pos = new Vector2(d.DropX[i], d.DropY[i]), Owner = -1 });
             if (d.BT != null)
                 for (int i = 0; i < d.BT.Length; i++)
                 {
@@ -166,6 +166,7 @@ public partial class Game
         bool migrateHealth = c.HealthModel < CombatMath.HealthModel;
         PlaySecs = c.PlaySecs; relicHp = 0; Hp = c.Hp; MaxHp = migrateHealth ? CombatMath.MigrateBaseHealth(c.MaxHp, c.Level) : c.MaxHp; Xp = c.Xp; Level = c.Level; Tier = c.Tier; Kills = c.Kills; HeroLampLv = c.HeroLamp; Ann = c.Ann;
         LoadSkills(c.SkK, c.SkV, 0);
+        ClearCraftCells();                                                          // ячейки прежнего героя не должны перейти к загружаемому
         if (c.Inv != null) for (int i = 0; i < Inv.Length && i < c.Inv.Length; i++) Inv[i] = Math.Max(0, c.Inv[i]);
         if (c.ModInv != null) for (int i = 0; i < ModInv.Length && i < c.ModInv.Length; i++) ModInv[i] = Math.Max(0, c.ModInv[i]);
         if (c.WId != null) for (int i = 0; i < c.WId.Length; i++) { var o = new OwnedWeapon { Id = c.WId[i] }; if (c.WMods != null && i < c.WMods.Length && c.WMods[i] != null) o.Mods.AddRange(c.WMods[i]); if (c.WLv != null && i < c.WLv.Length) o.Lv = Math.Clamp(c.WLv[i], 0, WeaponMaxLv); if (Db.Weapon(o.Id) != null) Owned.Add(o); }

@@ -441,6 +441,7 @@ public partial class Game
         if (!NetService.Active) { ResetGuardFights(); var bs = Boss; Enemies.RemoveAll(e => e.Guard != null || e.Ev != null || e == bs); Projs.Clear(); Boss = null; }        // обычные враги остаются в мире; уходят только бои со стражей, события и босс. В сети враги принадлежат хосту
         LightBlockT = 0; LeechT = 0; Zones.Clear(); ClearHeartTemps();
         Diag.Count("deaths");
+        ReturnCraftIngredients(false);                                              // содержимое ячеек крафта тоже остаётся в могиле, а не выживает со смертью
         int lost = BuryPlayer();                                                   // все ресурсы, инструменты и оружие остаются в могиле там, где игрок пал
         bool lvLoss = Diff == 1 && Level > 1;                                      // сложный режим: смерть стоит уровня
         bool xpLoss = Diff == 1 && !lvLoss && Xp > 0;                              // на 1-м уровне терять нечего, кроме набранного опыта

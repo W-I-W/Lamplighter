@@ -28,6 +28,46 @@ public static class SaveManager
     static string Abs(string p) => p.StartsWith("user://") || p.StartsWith("res://") ? ProjectSettings.GlobalizePath(p) : p;
     static void Ensure(string absDir) { if (!Directory.Exists(absDir)) Directory.CreateDirectory(absDir); }
 
+    // A character and its world must be committed together: either can contain the
+    // same item after a transfer, so independently replacing the files can duplicate it.
+    sealed class SessionJournal
+    {
+        public string CharacterId, WorldId, CharacterJson, WorldJson;
+    }
+
+    static string SessionJournalPath => DirOf(Root, "session-transaction.json");
+
+    internal static bool RecoverSessionSave()
+    {
+        string path = Abs(SessionJournalPath);
+        if (!File.Exists(path)) return true;
+        try
+        {
+            var journal = JsonSerializer.Deserialize<SessionJournal>(File.ReadAllText(path), Opt);
+            if (journal == null || !ValidId(journal.CharacterId) || !ValidId(journal.WorldId) ||
+                string.IsNullOrEmpty(journal.CharacterJson) || string.IsNullOrEmpty(journal.WorldJson)) return false;
+            var character = JsonSerializer.Deserialize<CharacterSave>(journal.CharacterJson, Opt);
+            var world = JsonSerializer.Deserialize<WorldSave>(journal.WorldJson, Opt);
+            if (character?.Id != journal.CharacterId || world?.Id != journal.WorldId) return false;
+            if (!Write(CharPath(journal.CharacterId), journal.CharacterJson) ||
+                !Write(WorldPath(journal.WorldId), journal.WorldJson)) return false;
+            File.Delete(path);
+            return !File.Exists(path);
+        }
+        catch (Exception e) { GD.PushWarning("session recovery failed: " + e.Message); return false; }
+    }
+
+    internal static bool PrepareSessionSave(CharacterSave c, WorldSave w)
+    {
+        if (c == null || w == null || !ValidId(c.Id) || !ValidId(w.Id) || !RecoverSessionSave()) return false;
+        c.Stamp = Stamp(); c.Look?.Clamp(); w.Stamp = Stamp();
+        var journal = new SessionJournal { CharacterId = c.Id, WorldId = w.Id,
+            CharacterJson = JsonSerializer.Serialize(c, Opt), WorldJson = JsonSerializer.Serialize(w, Opt) };
+        return Write(SessionJournalPath, JsonSerializer.Serialize(journal, Opt));
+    }
+
+    public static bool SaveSession(CharacterSave c, WorldSave w) => PrepareSessionSave(c, w) && RecoverSessionSave();
+
     static bool Write(string path, string json)
     {
         try
@@ -48,19 +88,20 @@ public static class SaveManager
     }
 
     // ───────────────────────── герои ─────────────────────────
-    public static CharacterSave LoadCharacter(string id) => ValidId(id) ? Read<CharacterSave>(CharPath(id)) : null;
+    public static CharacterSave LoadCharacter(string id) => ValidId(id) && RecoverSessionSave() ? Read<CharacterSave>(CharPath(id)) : null;
 
     public static bool SaveCharacter(CharacterSave c)
     {
-        if (c == null || !ValidId(c.Id)) return false; c.Stamp = Stamp(); c.Look?.Clamp();
+        if (c == null || !ValidId(c.Id) || !RecoverSessionSave()) return false; c.Stamp = Stamp(); c.Look?.Clamp();
         return Write(CharPath(c.Id), JsonSerializer.Serialize(c, Opt));
     }
 
-    public static bool DeleteCharacter(string id) => ValidId(id) && DeleteFiles(CharPath(id), CharPath(id) + ".bak", CharPath(id) + ".tmp");
+    public static bool DeleteCharacter(string id) => ValidId(id) && RecoverSessionSave() && DeleteFiles(CharPath(id), CharPath(id) + ".bak", CharPath(id) + ".tmp");
 
     public static List<CharInfo> ListCharacters()
     {
         var res = new List<CharInfo>();
+        if (!RecoverSessionSave()) return res;
         foreach (var f in Files(CharDir))
         {
             var id = Path.GetFileNameWithoutExtension(f); var c = LoadCharacter(id); if (c == null || c.Id != id) continue;
@@ -75,19 +116,20 @@ public static class SaveManager
     }
 
     // ───────────────────────── миры ─────────────────────────
-    public static WorldSave LoadWorld(string id) => ValidId(id) ? Read<WorldSave>(WorldPath(id)) : null;
+    public static WorldSave LoadWorld(string id) => ValidId(id) && RecoverSessionSave() ? Read<WorldSave>(WorldPath(id)) : null;
 
     public static bool SaveWorld(WorldSave w)
     {
-        if (w == null || !ValidId(w.Id)) return false; w.Stamp = Stamp();
+        if (w == null || !ValidId(w.Id) || !RecoverSessionSave()) return false; w.Stamp = Stamp();
         return Write(WorldPath(w.Id), JsonSerializer.Serialize(w, Opt));
     }
 
-    public static bool DeleteWorld(string id) => ValidId(id) && DeleteFiles(WorldPath(id), WorldPath(id) + ".bak", WorldPath(id) + ".tmp", ThumbPath(id));
+    public static bool DeleteWorld(string id) => ValidId(id) && RecoverSessionSave() && DeleteFiles(WorldPath(id), WorldPath(id) + ".bak", WorldPath(id) + ".tmp", ThumbPath(id));
 
     public static List<WorldInfo> ListWorlds()
     {
         var res = new List<WorldInfo>();
+        if (!RecoverSessionSave()) return res;
         foreach (var f in Files(WorldDir))
         {
             var id = Path.GetFileNameWithoutExtension(f); var w = LoadWorld(id); if (w == null || w.Id != id) continue;

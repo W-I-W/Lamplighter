@@ -15,7 +15,7 @@ public partial class Game
     public bool TradeOpen => Window == Win.Trade;
     public static readonly string[] EquipTabs = { "Оружие", "Реликвии", "Создание", "Фонарь" };
 
-    public void CloseWindows() { Window = Win.None; TechOpen = false; TechAtTable = false; MapOpen = false; TravelMode = false; }
+    public void CloseWindows() { ReturnCraftIngredients(); Window = Win.None; TechOpen = false; TechAtTable = false; MapOpen = false; TravelMode = false; }
 
     void OpenWin(Win w)
     {

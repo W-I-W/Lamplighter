@@ -7,7 +7,7 @@ namespace Lamplighter;
 public partial class ChestWindow : Control
 {
     public Game G;
-    Control panel; GridContainer chestGrid, invGrid; HotbarRow hotbar; PanelContainer info; Label nameL, hintL, chestTitle, invTitle;
+    Control panel; GridContainer chestGrid, invGrid; HotbarRow hotbar; ItemTipPanel tipPanel; Label chestTitle, invTitle;
     readonly List<UiSlot> chestSlots = new(), invSlots = new();
     string sig = "";
 
@@ -24,10 +24,7 @@ public partial class ChestWindow : Control
         invGrid = Grid(v);
         v.AddChild(new Control { CustomMinimumSize = new Vector2(0, 3) });
         hotbar = HotbarRow.Create(); v.AddChild(hotbar);
-        info = new PanelContainer { ThemeTypeVariation = "PanelDark", Visible = false, MouseFilter = MouseFilterEnum.Ignore }; AddChild(info);
-        var iv = new VBoxContainer(); info.AddChild(iv);
-        nameL = new Label { ThemeTypeVariation = "GoldLabel", Text = " " }; iv.AddChild(nameL);
-        hintL = new Label { ThemeTypeVariation = "DimLabel", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(260, 0) }; iv.AddChild(hintL);
+        tipPanel = ItemTipPanel.Create(this);
     }
 
     static GridContainer Grid(Control parent)
@@ -86,15 +83,8 @@ public partial class ChestWindow : Control
         int c = CellAt(mouse, true), b = c >= 0 ? -1 : CellAt(mouse, false), q = c >= 0 || b >= 0 ? -1 : hotbar.QuickAt(mouse);
         if (c >= 0 && c < chest.Count) cur = chest[c]; else if (b >= 0 && b < bag.Count) cur = bag[b]; else if (q >= 0) cur = G.QuickStack(q);
         bool carrying = G.InventoryUi.CarrySignature != "";
-        if (cur.n <= 0 || carrying) { info.Visible = false; return; }
-        string details = G.InventoryItemDetails(cur.item);
-        if (string.IsNullOrWhiteSpace(details)) { info.Visible = false; return; }
-        nameL.Text = $"{Loc.T(G.InventoryItemName(cur.item))} ×{cur.n}";
-        hintL.Text = details;
-        info.ResetSize();
-        var at = GetGlobalTransformWithCanvas().AffineInverse() * mouse + new Vector2(12, 14);
-        at.X = Mathf.Clamp(at.X, 0, Mathf.Max(0, Size.X - info.Size.X)); at.Y = Mathf.Clamp(at.Y, 0, Mathf.Max(0, Size.Y - info.Size.Y));
-        info.Position = at; info.Visible = true;
+        if (cur.n <= 0 || carrying) { tipPanel.Visible = false; return; }
+        tipPanel.Set(G.InventoryItemTip(cur.item, cur.n)); tipPanel.ShowAt(this, mouse);
     }
 
     void Fill(List<UiSlot> list, GridContainer grid, bool chestSide, IReadOnlyList<(int item, int n)> stacks)

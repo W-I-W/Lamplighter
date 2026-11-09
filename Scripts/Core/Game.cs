@@ -159,6 +159,7 @@ public partial class Game : Node2D
         chestWindow = new ChestWindow { Name = "ChestWindow", G = this }; uiRoot.AddChild(chestWindow); uiRoot.MoveChild(chestWindow, invWindow.GetIndex() + 1);
         upgradeWindow = uiRoot.GetNode<UpgradeWindowUI>("UpgradeWindow"); upgradeWindow.G = this;
         equipWindow = uiRoot.GetNode<EquipWindowUI>("EquipWindow"); equipWindow.G = this;
+        ItemTipHost.Create(this, uiRoot);                                                       // подсказки предметов для всех окон; создаётся после окон и лежит поверх них
         DebugInit();
 
         if (CarryMsg != null) { pendingMsg ??= CarryMsg; CarryMsg = null; }

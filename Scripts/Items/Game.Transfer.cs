@@ -6,14 +6,14 @@ using System.Linq;
 namespace Lamplighter;
 
 /// <summary>Предмет на земле: общая стопка мира. Принадлежит хосту (в одиночной игре — самому игроку); клиенты показывают копию.</summary>
-public sealed class WorldDrop { public int Id, Item, Count; public Vector2 Pos; public long Owner; public float Born; public Vector2 Vel; }          // Vel — только хост: «выпрыгивание» новой добычи, по сети не передаётся
+public sealed class WorldDrop { public int Id, Item, Count; public Vector2 Pos; public long Owner; public float Born; public Vector2 Vel; public bool NeedLeave; }          // Vel — только хост: «выпрыгивание» новой добычи, по сети не передаётся
 
 /// <summary>Передача ресурсов между игроками, выбрасывание на землю и общий склад. Игрок сначала списывает у себя, потом просит хоста; хост проверяет отправителя, получателя, количество и дистанцию
 /// и либо доставляет (RpcGrant), либо возвращает отправителю. Двойное нажатие видит уже уменьшенный запас, а разрыв связи в пути теряет предметы, но не дублирует их.
 /// Подбор решает только хост: он убирает стопку и выдаёт её ближайшему игроку, поэтому один предмет не подобрать дважды.</summary>
 public partial class Game
 {
-    public const float TransferRange = 112f, PickupRange = 14f, DropProtect = 2.0f;
+    public const float TransferRange = 112f, PickupRange = 14f, DropProtect = 2.0f, DropReclaim = 5.0f;
     public const float MagnetRange = 19f, MagnetMin = 30f, MagnetMax = 85f, MagnetDelay = .45f;                  // слабый магнит: тянет только совсем рядом и медленно, после «выпрыгивания»
     public const int MaxMove = 999, MaxStack = 999;
     public readonly List<WorldDrop> Drops = new();
@@ -24,6 +24,23 @@ public partial class Game
     public static bool Movable(int item) => item >= 0 && item < It.Count;
     public const int RelicBase = 1000;                                              // реликвия на земле: Item = RelicBase + номер в Db.Relics, Count = 1
     public static bool IsRelicDrop(int item) => item >= RelicBase && item < RelicBase + 400;
+    /// <summary>Постройка на земле: Item = BuildBase + номер ключа в BuildDropKeys. Выбрасываются только предметы, которые можно просто носить с собой (не здания деревни).</summary>
+    public const int BuildBase = 1500;
+    public static readonly string[] BuildDropKeys = { "furnace", "chest", "lamp0", "lamp1", "lamp2", "mirror", "amp", "barrier", "decor0", "decor1", "decor2" };
+    public static bool IsBuildDrop(int item) => item >= BuildBase && item < BuildBase + BuildDropKeys.Length;
+    public static string BuildKeyOfDrop(int item) => IsBuildDrop(item) ? BuildDropKeys[item - BuildBase] : null;
+    public static bool ValidDrop(int item) => Movable(item) || RelicOfDrop(item) != null || IsBuildDrop(item);
+    public Texture2D DropTexture(int item) => IsRelicDrop(item) ? UiIcons.Item(It.Relic) : IsBuildDrop(item) ? (EntryOf(BuildKeyOfDrop(item)) is { } e ? UiIcons.Tile(e.Tile) : null) : UiIcons.Item(item);
+
+    /// <summary>Выбросить постройку из запаса на землю (только хост или одиночная игра).</summary>
+    public bool TryDropBuild(string key, int n)
+    {
+        int idx = Array.IndexOf(BuildDropKeys, key);
+        if (idx < 0 || n < 1 || StockOf(key) < n || !Authority) return false;
+        StockAdd(key, -n); HostDrop(LocalPeer, BuildBase + idx, n);
+        Sfx.Play("tick", -4, .9f); return true;
+    }
+
     public static RelicDef RelicOfDrop(int item) => IsRelicDrop(item) && item - RelicBase < Db.Relics.Count ? Db.Relics[item - RelicBase] : null;
 
     /// <summary>Позиция игрока по номеру соединения (хост знает всех).</summary>
@@ -109,17 +126,17 @@ public partial class Game
     public void HostDrop(long owner, int item, int n)
     {
         bool relic = IsRelicDrop(item) && RelicOfDrop(item) != null; if (relic) n = 1;
-        if ((!Movable(item) && !relic) || n < 1 || n > MaxMove || PosOf(owner) is not Vector2 pp) return;
-        HostDropAt(owner, item, n, pp + new Vector2(owner == LocalPeer ? Facing * 10f : 12f, 4f), Vector2.Zero);
+        if ((!ValidDrop(item) && !relic) || n < 1 || n > MaxMove || PosOf(owner) is not Vector2 pp) return;
+        HostDropAt(owner, item, n, pp + new Vector2(owner == LocalPeer ? Facing * 10f : 12f, 4f), Vector2.Zero, true);
     }
 
     /// <summary>Хост: стопка в заданной точке (добыча из блоков и с врагов: Owner = -1, подобрать может любой). vel — начальный «прыжок» стопки.</summary>
-    public void HostDropAt(long owner, int item, int n, Vector2 pos, Vector2 vel)
+    public void HostDropAt(long owner, int item, int n, Vector2 pos, Vector2 vel, bool thrown = false)
     {
         bool relic = IsRelicDrop(item) && RelicOfDrop(item) != null; if (relic) n = 1;
-        if ((!Movable(item) && !relic) || n < 1 || n > MaxStack) return;
-        if (!relic) foreach (var d in Drops) if (d.Item == item && d.Pos.DistanceTo(pos) < 20f && d.Count + n <= MaxStack && (vel == Vector2.Zero || dropClock - d.Born > MagnetDelay)) { d.Count += n; d.Owner = owner; d.Born = (float)dropClock; dropsDirty = true; return; }       // добыча сливается только с уже улёгшейся стопкой
-        Drops.Add(new WorldDrop { Id = nextDropId++, Item = item, Count = n, Pos = pos, Owner = owner, Born = (float)dropClock, Vel = vel }); dropsDirty = true;
+        if ((!ValidDrop(item) && !relic) || n < 1 || n > MaxStack) return;
+        if (!relic) foreach (var d in Drops) if (d.Item == item && d.Pos.DistanceTo(pos) < 20f && d.Count + n <= MaxStack && (vel == Vector2.Zero || dropClock - d.Born > MagnetDelay)) { d.Count += n; d.Owner = owner; d.Born = (float)dropClock; d.NeedLeave |= thrown; dropsDirty = true; return; }       // добыча сливается только с уже улёгшейся стопкой
+        Drops.Add(new WorldDrop { Id = nextDropId++, Item = item, Count = n, Pos = pos, Owner = owner, Born = (float)dropClock, Vel = vel, NeedLeave = thrown }); dropsDirty = true;
     }
 
     /// <summary>Добытое из блока или выпавшее с врага падает на землю рядом и лежит, пока игрок не подберёт. Не хост (гость): возвращает false, и добыча выдаётся сразу, как раньше.</summary>
@@ -196,15 +213,20 @@ public partial class Game
             for (int i = Drops.Count - 1; i >= 0; i--)
             {
                 var d = Drops[i]; if (d.Count <= 0) { Drops.RemoveAt(i); dropsDirty = true; continue; }
+                if (d.NeedLeave && dropClock - d.Born >= DropReclaim) d.NeedLeave = false;          // не отошли за 5 секунд: выброшенное снова подбирается
                 if (d.Vel.LengthSquared() > 4f) { d.Pos += d.Vel * dt; d.Vel *= Mathf.Exp(-9f * dt); dropsDirty = true; }                       // «выпрыгивание» новой добычи
-                else if (!IsRelicDrop(d.Item) && dropClock - d.Born > MagnetDelay)
+                else if (!IsRelicDrop(d.Item) && !IsBuildDrop(d.Item) && dropClock - d.Born > MagnetDelay)
                 {
                     d.Vel = Vector2.Zero; Vector2? to = null; float bd = MagnetRange;
-                    foreach (var peer in peers) { if (peer == d.Owner && dropClock - d.Born < DropProtect) continue; if (PosOf(peer) is Vector2 mp) { float md = mp.DistanceTo(d.Pos); if (md < bd && (peer != LocalPeer || Room(d.Item) > 0)) { bd = md; to = mp; } } }
+                    foreach (var peer in peers) { if (peer == d.Owner && (d.NeedLeave || dropClock - d.Born < DropProtect)) continue; if (PosOf(peer) is Vector2 mp) { float md = mp.DistanceTo(d.Pos); if (md < bd && (peer != LocalPeer || Room(d.Item) > 0)) { bd = md; to = mp; } } }
                     if (to is Vector2 tp && bd > PickupRange * .5f) { float sp = MagnetMin + (MagnetMax - MagnetMin) * (1f - bd / MagnetRange); d.Pos += (tp - d.Pos).Normalized() * Math.Min(sp * dt, bd); dropsDirty = true; }
                 }
                 foreach (var peer in peers)
                 {
+                    if (peer == d.Owner && d.NeedLeave)                                        // выброшенное вручную не подбирается, пока выбросивший не отойдёт (иначе стопка возвращается сразу после закрытия окна)
+                    {
+                        if (PosOf(peer) is Vector2 op && op.DistanceTo(d.Pos) > PickupRange + 8f) d.NeedLeave = false; else continue;
+                    }
                     if (peer == d.Owner && dropClock - d.Born < DropProtect) continue;        // выбросивший не подбирает свою стопку сразу
                     if (PosOf(peer) is not Vector2 pp || pp.DistanceTo(d.Pos) > PickupRange) continue;
                     if (IsRelicDrop(d.Item))
@@ -214,6 +236,11 @@ public partial class Game
                         Drops.RemoveAt(i); dropsDirty = true;
                         if (peer == LocalPeer) GiveRelic(rd.Id); else Net?.RpcId(peer, nameof(NetNode.RpcGrantRelic), d.Item - RelicBase);
                         Sfx.Play("pickup", -4); break;
+                    }
+                    if (IsBuildDrop(d.Item))
+                    {
+                        if (peer != LocalPeer) continue;
+                        StockAdd(BuildKeyOfDrop(d.Item), d.Count); Drops.RemoveAt(i); dropsDirty = true; Sfx.Play("pickup", -6); break;
                     }
                     if (peer != LocalPeer) continue;                                         // гость запрашивает только то количество, которое помещается у него
                     // В инвентаре нет места: стопка остаётся лежать (частично — берётся сколько влезает).
@@ -239,7 +266,7 @@ public partial class Game
         if (ids == null || items == null || counts == null || xs == null || ys == null) return;
         int n = Math.Min(Math.Min(ids.Length, items.Length), Math.Min(counts.Length, Math.Min(xs.Length, ys.Length))); n = Math.Min(n, 200);
         Drops.Clear();
-        for (int i = 0; i < n; i++) if ((Movable(items[i]) || RelicOfDrop(items[i]) != null) && counts[i] > 0 && counts[i] <= MaxStack && float.IsFinite(xs[i]) && float.IsFinite(ys[i])) Drops.Add(new WorldDrop { Id = ids[i], Item = items[i], Count = counts[i], Pos = new Vector2(xs[i], ys[i]), Owner = -1 });
+        for (int i = 0; i < n; i++) if (ValidDrop(items[i]) && counts[i] > 0 && counts[i] <= MaxStack && float.IsFinite(xs[i]) && float.IsFinite(ys[i])) Drops.Add(new WorldDrop { Id = ids[i], Item = items[i], Count = counts[i], Pos = new Vector2(xs[i], ys[i]), Owner = -1 });
     }
 
     // ───────────────────────── общий склад ─────────────────────────
