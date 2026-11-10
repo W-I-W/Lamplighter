@@ -158,5 +158,5 @@ public partial class Game
         });
     }
 
-    static bool CostFurnaceOk(BalanceModel m) => m.CostFurnace != null && m.CostFurnace.Length == 2 && m.CostLantern != null && m.CostPick.All(c => c.Length >= 2);
+    static bool CostFurnaceOk(BalanceModel m) => m.CostFurnace != null && m.CostFurnace.Length >= 1 && m.CostLantern != null && m.CostPick.All(c => c.Length >= 2);
 }

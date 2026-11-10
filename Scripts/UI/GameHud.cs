@@ -187,7 +187,7 @@ public partial class GameHud : Control
         }
         float dt = (float)delta; flashT = Mathf.Max(0, flashT - dt);
         bool menu = G.Menu == Mn.Main || G.Menu == Mn.Flow;
-        Visible = !menu && (G.Window == Win.None || G.Window == Win.Build || G.Window == Win.Inventory || G.Window == Win.Chest) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
+        Visible = !menu && (G.Window == Win.None || G.Window == Win.Inventory || G.Window == Win.Chest) && !G.TechOpen && !G.MapOpen && G.Menu == Mn.None;
         UpdateStatus(); UpdateGoal(dt); UpdateWorld(dt); UpdateAbilities(); UpdateQuickSlots(); UpdateDebug();
     }
 

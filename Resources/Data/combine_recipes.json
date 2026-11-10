@@ -1,6 +1,7 @@
 {
   "_help": "Рецепты комбинирования двух предметов в инвентаре. a, b — компоненты {item, n}; порядок не важен, a и b могут совпадать. result — {item, n} (ресурс из класса It) или {build} (постройка из меню [B]); у построек без a/b цена берётся из меню построек. known — рецепт известен с начала игры, иначе открывается первым успешным созданием. Новый рецепт = новая запись, код менять не нужно.",
   "recipes": [
+    { "id": "workbench", "result": { "build": "workbench" }, "known": true },
     { "id": "furnace", "result": { "build": "furnace" }, "known": true },
     { "id": "chest",   "result": { "build": "chest" },   "known": true },
     { "id": "lamp0",   "result": { "build": "lamp0" },   "known": true },

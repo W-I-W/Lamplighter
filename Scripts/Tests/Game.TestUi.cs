@@ -17,8 +17,8 @@ public partial class Game
         });
         S(1.6f, () => { aimOverride = Aim = PPos + new Vector2(0, -22); });
         S(.8f, () => Shot("ui_hud")); S(.4f, () => Shot("ui_wind_a")); S(.9f, () => Shot("ui_wind_b"));
-        Win1(Win.Build, 0, "ui_build");
-        S(.2f, () => { BuildCat = 2; WinCur = 1; }); S(.5f, () => Shot("ui_build2")); S(.1f, () => BuildCat = 0);
+        S(.2f, () => { CloseWindows(); TestOpenBench(); }); S(.5f, () => Shot("ui_build"));
+        S(.2f, () => WinCur = 1); S(.5f, () => Shot("ui_build2")); S(.1f, CloseWindows);
         Win1(Win.Inventory, 0, "ui_inventory");
         for (int t = 0; t < 4; t++) Win1(Win.Equip, t);
         for (int t = 0; t < 3; t++) Win1(Win.Journal, t);

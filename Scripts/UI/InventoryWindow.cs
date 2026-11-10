@@ -107,7 +107,7 @@ public partial class InventoryWindow : Control
         else craftResult.Set(null, "", "", SlotState.Normal);
     }
 
-    public bool IsOver(Vector2 p) => OverControl(panel, p) || OverControl(craftPanel, p);
+    public bool IsOver(Vector2 p) => OverControl(panel, p) || OverControl(craftPanel, p) || BenchOpen && G.BenchUi.IsOver(p);
     bool OverControl(Control c, Vector2 p) => c != null && c.IsVisibleInTree() && new Rect2(Vector2.Zero, c.Size).HasPoint(c.GetGlobalTransform().AffineInverse() * (p * G.UiScaleVp));
 
     UiSlot Slot(int i)
@@ -173,22 +173,24 @@ public partial class InventoryWindow : Control
 
     int DistributionShare() => distributionMoved ? carriedCount / distributionOrder.Count : 1;
 
-    internal UiSlot HotbarSlot(int i) => ChestOpen ? G.ChestUi.HotbarSlot(i) : hotbar.Slot(i);
+    internal UiSlot HotbarSlot(int i) => ChestOpen ? G.ChestUi.HotbarSlot(i) : BenchOpen ? G.BenchUi.HotbarSlot(i) : hotbar.Slot(i);
 
     bool ChestOpen => G.Window == Win.Chest;
+    bool BenchOpen => G.Window == Win.Bench;
+    bool ExtOpen => ChestOpen || BenchOpen;                    // окна сундука и Рабочего стола используют этот же ввод, но рисуют свои сетки
 
     int QuickAt(Vector2 p)
     {
-        return ChestOpen ? G.ChestUi.QuickAt(p) : hotbar.QuickAt(p);      // хотбар HUD под затемнением недоступен: только ряд внутри окна
+        return ChestOpen ? G.ChestUi.QuickAt(p) : BenchOpen ? G.BenchUi.QuickAt(p) : hotbar.QuickAt(p);      // хотбар HUD под затемнением недоступен: только ряд внутри окна
     }
 
-    int BagAt(Vector2 p) => ChestOpen ? G.ChestUi.CellAt(p, false) :
+    int BagAt(Vector2 p) => ChestOpen ? G.ChestUi.CellAt(p, false) : BenchOpen ? G.BenchUi.CellAt(p) :
         slots.FindIndex(s => s.IsVisibleInTree() && new Rect2(Vector2.Zero, s.Size)
             .HasPoint(s.GetGlobalTransformWithCanvas().AffineInverse() * p));
 
     int ChestAt(Vector2 p) => ChestOpen ? G.ChestUi.CellAt(p, true) : -1;
 
-    int CraftAt(Vector2 p) => ChestOpen ? -1 : System.Array.FindIndex(craftCells, s => Hit(s, p));
+    int CraftAt(Vector2 p) => ChestOpen ? -1 : BenchOpen ? G.BenchUi.CraftAt(p) : System.Array.FindIndex(craftCells, s => Hit(s, p));
     static bool Hit(Control s, Vector2 p) => s.IsVisibleInTree() && new Rect2(Vector2.Zero, s.Size).HasPoint(s.GetGlobalTransformWithCanvas().AffineInverse() * p);
 
     (int item, int n) SourceStack()
@@ -233,7 +235,7 @@ public partial class InventoryWindow : Control
         preview.Set(ItemTexture(carriedItem), remaining > 1 ? remaining.ToString() : "", "", SlotState.Normal);
         preview.Show();
         PositionCarry(viewportPosition);
-        if (!sourceQuick && !sourceChest && !sourceCraft && !ChestOpen && source < shown.Count) UpdateSlot(source);
+        if (!sourceQuick && !sourceChest && !sourceCraft && !ExtOpen && source < shown.Count) UpdateSlot(source);
     }
 
     void UpdateSlot(int index)
@@ -310,7 +312,7 @@ public partial class InventoryWindow : Control
             else if (sourceChest) G.WithdrawChestToBag(source, target, carriedItem, carriedCount);
             else G.MoveInventoryStack(source, target, carriedItem, carriedCount);
         }
-        else if (!ChestOpen && !sourceChest && !IsOver(position))
+        else if (!ExtOpen && !sourceChest && !IsOver(position))
         {
             if ((sourceQuick ? G.DropQuickStack(source, carriedItem, carriedCount) : G.DropInventoryStack(source, carriedItem, carriedCount)) ||
                 G.BeginInventoryPlacement(carriedItem, sourceQuick ? -2 - source : source)) CancelCarry();           // клик за окном выбрасывает; установка начинается только для предметов, которые выбросить нельзя
@@ -352,15 +354,16 @@ public partial class InventoryWindow : Control
     bool CanDistribute(int area, int target)
     {
         if (area < 0) return false;
+        if (area == 3 && target >= G.CraftResultIndex) return false;                       // в ячейку результата ничего не кладётся — даже в ту, откуда взяли
         if (IsSourceCell(area, target)) return carriedCount > 0;
         if (area == 3 && (sourceChest || carriedItem < 0) || sourceCraft && area is not (0 or 2 or 3)) return false;
-        if (sourceCraft && area == 3 && (source >= 2 || target >= 2)) return false;
-        if (area == 3 && target >= 2) return false;
+        if (sourceCraft && area == 3 && (source >= G.CraftResultIndex || target >= G.CraftResultIndex)) return false;
+        if (area == 3 && target >= G.CraftResultIndex) return false;
         if (area == 3) return CellStack(3, target).n < Game.StackMax || CellStack(3, target).item != carriedItem || carriedCount == SourceStack().n && carriedCount < Game.StackMax;   // другой предмет заменяет компонент; полная ячейка меняется местами
         if (sourceChest && area != 1 && !G.CanTakeChestItem(carriedItem)) return false;
         var destination = CellStack(area, target);
         if (sourceCraft && destination.n > 0 && (destination.item != carriedItem || destination.n >= Game.StackMax))   // в ячейку с другим предметом или полную: обмен целой стопкой
-            return source < 2 && destination.item >= 0 && carriedItem >= 0 && carriedCount == CellStack(3, source).n && (destination.item != carriedItem || carriedCount < Game.StackMax);
+            return source < G.CraftResultIndex && destination.item >= 0 && carriedItem >= 0 && carriedCount == CellStack(3, source).n && (destination.item != carriedItem || carriedCount < Game.StackMax);
         if (area == 2 && destination.n == 0 && (sourceQuick || sourceChest) &&
             !G.CanFillEmptyInventorySlot(carriedItem)) return false;
         return destination.n < Game.StackMax && (destination.n == 0 || destination.item == carriedItem);
@@ -550,7 +553,7 @@ public partial class InventoryWindow : Control
 
     public override void _Input(InputEvent e)
     {
-        if (G == null || G.Window is not (Win.Inventory or Win.Chest) || G.Menu != Mn.None || G.ChatOpen) return;
+        if (G == null || G.Window is not (Win.Inventory or Win.Chest or Win.Bench) || G.Menu != Mn.None || G.ChatOpen) return;
         if (pointerWindow != G.Window)
         {
             pointerWindow = G.Window;
@@ -626,7 +629,7 @@ public partial class InventoryWindow : Control
                 }
                 else return;
             }
-            else if (!ChestOpen && (key.Keycode is Key.Enter or Key.KpEnter) && source < 0)
+            else if (!ExtOpen && (key.Keycode is Key.Enter or Key.KpEnter) && source < 0)
             {
                 int hovered = BagAt(pointer);
                 if (hovered < 0 || hovered >= shown.Count || !G.UseInventoryItem(shown[hovered].item, hovered)) return;
@@ -722,13 +725,14 @@ public partial class InventoryWindow : Control
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (!ChestOpen && button.Pressed && button.ButtonIndex == MouseButton.Left && Hit(craftResult, pointer))
+        int resultCell = G.CraftResultIndex; var resultSlot = BenchOpen ? G.BenchUi.Result : craftResult;
+        if (!ChestOpen && button.Pressed && button.ButtonIndex == MouseButton.Left && Hit(resultSlot, pointer))
         {
-            if (source < 0 && G.CraftIngredient(2).n == 0) G.CombineFromCells(button.ShiftPressed);
-            else if (source == 2 && sourceCraft && preview.Visible)                                    // в руке результат: следующий крафт добавляется к нему
+            if (source < 0 && G.CraftIngredient(resultCell).n == 0) G.CraftFromCells(button.ShiftPressed);
+            else if (source == resultCell && sourceCraft && preview.Visible)                                    // в руке результат: следующий крафт добавляется к нему
             {
-                int before = G.CraftIngredient(2).n;
-                if (G.CombineFromCells(button.ShiftPressed)) { carriedCount += G.CraftIngredient(2).n - before; ShowCarry(button.Position); }
+                int before = G.CraftIngredient(resultCell).n;
+                if (G.CraftFromCells(button.ShiftPressed)) { carriedCount += G.CraftIngredient(resultCell).n - before; ShowCarry(button.Position); }
                 GetViewport().SetInputAsHandled(); return;
             }
         }
@@ -792,7 +796,7 @@ public partial class InventoryWindow : Control
                 shiftVisited.Clear();
                 ShiftTransferAt(button.Position, button.CtrlPressed);
             }
-            else if (!ChestOpen && button.ButtonIndex == MouseButton.Left && button.DoubleClick && target >= 0 && G.UseInventoryItem(item, target)) { }
+            else if (!ExtOpen && button.ButtonIndex == MouseButton.Left && button.DoubleClick && target >= 0 && G.UseInventoryItem(item, target)) { }
             else if (count > 0 && Game.UsesSlot(item))
             {
                 sourceQuick = quick >= 0;
@@ -835,7 +839,7 @@ public partial class InventoryWindow : Control
         if (G == null || G.W == null) return;
         BindTips();
         bool show = G.Window == Win.Inventory;
-        Visible = show || ChestOpen;
+        Visible = show || ExtOpen;
         if (!Visible || G.Menu != Mn.None) { pointerWindow = Win.None; shiftTransfer = false; shiftCollect = false; shiftVisited.Clear(); }
         panel.Visible = show;
         if (source >= 0)

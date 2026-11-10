@@ -73,7 +73,7 @@ public partial class Game
             Cur.U?.Invoke(); Check("6b: U upgrades only the selected building", B.Level == 2 && A.Level == 1, $"A={A.Level} B={B.Level}");
             Check("9: panel title names the selected instance", Cur.Title != null && Cur.Title.Contains("уровень"), Cur.Title ?? "");
             // 7) окно строительства имеет приоритет
-            Window = Win.Build; FindIx(); Check("7: build window disables selection", Interact.Selected == null && Cur.E == null && Cur.U == null); Window = Win.None;
+            Window = Win.Bench; FindIx(); Check("7: bench window disables selection", Interact.Selected == null && Cur.E == null && Cur.U == null); Window = Win.None;
             // 8) удаление объекта очищает выбор
             Interact.Reset(); At(cx + 24, belowY); FindIx(); Check("8a: B selected", Interact.Selected?.Key == kB);
             Buildings.Remove(B); SetObj(B.X, B.Y, Tl.None); FindIx(); Check("8b: removed building is no longer selected", Interact.Selected?.Key != kB, $"sel={Interact.Selected?.Key}");

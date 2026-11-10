@@ -94,12 +94,12 @@ public static class Settings
 /// <summary>Привязка клавиш: игра обрабатывает «стандартные» клавиши, а нажатая клавиша переводится в стандартную по привязке.</summary>
 public static class KeyMap
 {
-    public static readonly string[] Actions = { "Up", "Down", "Left", "Right", "Interact", "Upgrade", "Dash", "Flare", "Weapon", "Equip", "Journal", "Prod", "Build", "Pulse", "Tech", "Map", "Beam", "Attack" };
-    public static readonly string[] Labels = { "Вверх", "Вниз", "Влево", "Вправо", "Взаимодействие", "Улучшить", "Рывок", "Вспышка", "Смена оружия", "Экипировка", "Журнал", "Производство", "Постройки", "Импульс света", "Улучшения", "Карта", "Луч", "Атака / добыча" };
+    public static readonly string[] Actions = { "Up", "Down", "Left", "Right", "Interact", "Upgrade", "Dash", "Flare", "Weapon", "Equip", "Journal", "Prod", "Pulse", "Tech", "Map", "Beam", "Attack" };
+    public static readonly string[] Labels = { "Вверх", "Вниз", "Влево", "Вправо", "Взаимодействие", "Улучшить", "Рывок", "Вспышка", "Смена оружия", "Экипировка", "Журнал", "Производство", "Импульс света", "Улучшения", "Карта", "Луч", "Атака / добыча" };
     public static readonly Dictionary<string, Key> Defaults = new()
     {
         ["Up"] = Key.W, ["Down"] = Key.S, ["Left"] = Key.A, ["Right"] = Key.D, ["Interact"] = Key.E, ["Upgrade"] = Key.U, ["Dash"] = Key.Shift, ["Flare"] = Key.Q, ["Weapon"] = Key.V,
-        ["Equip"] = Key.C, ["Journal"] = Key.J, ["Prod"] = Key.P, ["Build"] = Key.B, ["Pulse"] = Key.F, ["Tech"] = Key.T, ["Map"] = Key.M, ["Beam"] = Key.R, ["Attack"] = Key.Space,
+        ["Equip"] = Key.C, ["Journal"] = Key.J, ["Prod"] = Key.P, ["Pulse"] = Key.F, ["Tech"] = Key.T, ["Map"] = Key.M, ["Beam"] = Key.R, ["Attack"] = Key.Space,
     };
     public static readonly Dictionary<string, Key> Map = new();
 

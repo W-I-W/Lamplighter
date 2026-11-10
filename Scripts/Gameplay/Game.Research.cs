@@ -47,7 +47,7 @@ public partial class Game
     public string TableReason(int tech)
     {
         int need = TableReq(tech), have = EffTableLevel;
-        if (have == 0) return "Постройте Стол исследований [B]";
+        if (have == 0) return "Постройте Стол исследований";
         if (have < need) return $"Улучшите Стол исследований до {need} уровня";
         return null;
     }

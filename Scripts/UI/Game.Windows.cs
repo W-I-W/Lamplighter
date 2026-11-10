@@ -4,11 +4,11 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-public enum Win { None, Equip, Journal, Build, Trade, Story, Rift, Inventory, Talk, Chest }
+public enum Win { None, Equip, Journal, Bench, Trade, Story, Rift, Inventory, Talk, Chest }
 
 public sealed class BuildEntry { public string Key, Name, Cost, Lock, Hint = ""; public bool Unlocked, Affordable; public Action Do; public int Cat, Tile = -1, Stock; public int[][] CostArr, Raw; }
 
-/// <summary>Состояние и ввод окон: экипировка [C], журнал [J], производство [P], постройки [B], торговля.</summary>
+/// <summary>Состояние и ввод окон: экипировка [C], журнал [J], рабочий стол (у постройки, [E]), торговля.</summary>
 public partial class Game
 {
     public Win Window; public int WinTab, WinCur;
@@ -27,13 +27,12 @@ public partial class Game
     public const int CraftCols = 5;
     public List<WeaponDef> CraftableWeapons() { var l = new List<WeaponDef>(); foreach (var w in Db.Weapons) if (w.Cost != null) l.Add(w); return l; }
 
-    public static readonly string[] BuildCatNames = { "Базовое", "Производство", "Декор" };
-
-    /// <summary>Все постройки с категорией и иконкой тайла (для меню строительства). Cat: 1 — базовое, 2 — производство, 3 — декор.</summary>
+    /// <summary>Все постройки с категорией и иконкой тайла (для Рабочего стола и установки). Cat: 1 — базовое, 2 — производство, 3 — декор.</summary>
     public List<BuildEntry> BuildEntries()
     {
         var l = new List<BuildEntry>();
         void E(string key, int cat, int tile, string n, int[][] cost, bool unl, string lk, Action a, string hint = "", int[][] raw = null) => l.Add(new BuildEntry { Key = key, Stock = StockOf(key), Raw = raw ?? cost, Cat = cat, Tile = tile, Name = n, Hint = hint, CostArr = cost, Cost = cost == null ? "" : CostStr(cost), Unlocked = unl, Lock = lk, Affordable = cost == null || Can(cost), Do = a });
+        E("workbench", 1, Art.Workbench, "Рабочий стол", CostWorkbench, true, "", BuildWorkbench, "Создание построек: ресурсы берутся из сумки");
         E("furnace", 1, Art.Furnace, "Печь", CostFurnace, true, "", BuildFurnace, "Плавит руду в слитки, улучшает кирку");
         E("chest", 1, Art.StorageChest, "Сундук", CostChest, true, "", BuildChest, "Хранит вещи: 20 слотов по 99");
         E("lamp0", 1, Art.Lantern, "Фонарь", CostLantern, true, "", () => BuildLamp(0), "Постоянный свет на клетке");
@@ -53,17 +52,8 @@ public partial class Game
         return l;
     }
 
-    /// <summary>Постройки выбранной категории (BuildCat: 0 — базовое, 1 — производство, 2 — декор).</summary>
-    /// <summary>Доступное — первым, закрытое — после него и приглушённое; закрытых показываем не больше трёх (ближайшие к открытию), чтобы в начале игры не было десятков вариантов.</summary>
-    /// <summary>Здание деревни существует в одном экземпляре: когда оно уже стоит (и нет лишнего в запасе), из списка строительства оно пропадает.</summary>
+    /// <summary>Здание деревни существует в одном экземпляре: когда оно уже стоит (и нет лишнего в запасе), из списка Рабочего стола оно пропадает.</summary>
     bool BuiltOnce(BuildEntry e) => e.Key.StartsWith("bld") && int.TryParse(e.Key.Substring(3), out var k) && k >= 0 && k < BCount && HasBuilding(BTypes[k]) && StockOf(e.Key) == 0;
-
-    public List<BuildEntry> BuildEntriesFiltered()
-    {
-        var all = BuildEntries().FindAll(e => e.Cat == BuildCat + 1 && !BuiltOnce(e));
-        var open = all.FindAll(e => e.Unlocked); var shut = all.FindAll(e => !e.Unlocked); if (shut.Count > 3) shut = shut.GetRange(0, 3);
-        open.AddRange(shut); return open;
-    }
 
     public List<int> SellList()
     {
@@ -76,7 +66,7 @@ public partial class Game
         {
             case Win.Equip: return WinTab == 0 ? ToolList().Count + Owned.Count : WinTab == 1 ? OwnedRelics.Count : WinTab == 2 ? CraftRows().Count : 1;
             case Win.Journal: return WinTab == 0 ? Db.Bps.Length : WinTab == 2 ? Goals.Count : Found.Count;
-            case Win.Build: return BuildEntriesFiltered().Count;
+            case Win.Bench: return BenchEntries().Count;
             case Win.Inventory: return InventorySlots().Count;
             case Win.Trade: return TradeTab == 0 ? CurOffers.Count : SellList().Count;
             case Win.Chest: return ChestSlots;
@@ -85,7 +75,7 @@ public partial class Game
         return 0;
     }
 
-    /// <summary>Режим размещения: выбранная в меню [B] постройка следует за курсором; ЛКМ строит, ПКМ или Esc отменяют.</summary>
+    /// <summary>Режим размещения: постройка из запаса (сумка или горячая панель) следует за курсором; ЛКМ строит, ПКМ или Esc отменяют.</summary>
     public BuildEntry Placing;
     void PlaceNow() { if (Placing != null) PlaceEntry(Placing); }
 
@@ -96,7 +86,7 @@ public partial class Game
     // ───────────────────────── ввод ─────────────────────────
     bool WindowKey(Key k, bool shift)
     {
-        if (k == Key.E && (Window is Win.Chest or Win.Trade or Win.Equip || Window == Win.Rift && RiftState == 0)) { CloseWindows(); return true; }      // окно, открытое клавишей E, закрывается ею же
+        if (k == Key.E && (Window is Win.Chest or Win.Trade or Win.Equip or Win.Bench || Window == Win.Rift && RiftState == 0)) { CloseWindows(); return true; }      // окно, открытое клавишей E, закрывается ею же
         if (Window is Win.Chest or Win.Inventory)
         {
             if (k is Key.Escape or Key.Tab || k == Key.I && Window == Win.Inventory) CloseWindows();
@@ -116,25 +106,7 @@ public partial class Game
                 case Key.Tab: { var g = CraftGroups(); EqCraftMode(g[(g.IndexOf(CraftGroup()) + 1) % g.Count]); return true; }
             }
         }
-        if (Window == Win.Build)
-        {
-            int cols = 5, wlen = WinLen();
-            switch (k)
-            {
-                case Key.Left: WinCur = Math.Max(0, WinCur - 1); return true;
-                case Key.Right: WinCur = Math.Min(Math.Max(0, wlen - 1), WinCur + 1); return true;
-                case Key.Up: WinCur = Math.Max(0, WinCur - cols); return true;
-                case Key.Down: WinCur = Math.Min(Math.Max(0, wlen - 1), WinCur + cols); return true;
-                case Key.Q: if (Window == Win.Build) { var ql = BuildEntriesFiltered(); if (WinCur < ql.Count) CraftBuild(ql[WinCur]); return true; } break;
-                case Key.Tab: if (Window == Win.Build) { BuildCat = (BuildCat + 1) % BuildCatNames.Length; WinCur = 0; Sfx.Play("tick", -6, 1.3f); } else CloseWindows(); return true;
-                case Key.Enter: case Key.KpEnter:
-                    if (Window == Win.Build) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else if (e.Stock > 0) { Placing = e; Window = Win.None; } else CraftBuild(e); } }
-                    return true;
-                case Key.Escape: CloseWindows(); return true;
-                case Key.B: if (Window == Win.Build) { CloseWindows(); return true; } break;
-                case Key.I: if (Window == Win.Inventory) { CloseWindows(); return true; } break;
-            }
-        }
+        if (Window == Win.Bench) return BenchKey(k, shift);
         if (Window == Win.Rift)
         {
             if (k == Key.Escape) { if (RiftState == 0) CloseWindows(); return true; }
@@ -147,7 +119,6 @@ public partial class Game
             case Key.Escape: CloseWindows(); return true;
             case Key.C: OpenWin(Win.Equip); return true;
             case Key.J: OpenWin(Win.Journal); return true;
-            case Key.B: OpenWin(Win.Build); return true;
             case Key.I: OpenWin(Win.Inventory); return true;
             case Key.T: OpenTech(true); return true;
             case Key.M: CloseWindows(); MapOpen = true; return true;
@@ -160,7 +131,6 @@ public partial class Game
         {
             case Win.Equip: EquipKey(k, shift); break;
             case Win.Journal: if (k == Key.Left) { WinTab = (WinTab + 2) % 3; WinCur = 0; } else if (k == Key.Right) { WinTab = (WinTab + 1) % 3; WinCur = 0; } break;
-            case Win.Build: if (k == Key.Enter || k == Key.KpEnter) { var l = BuildEntriesFiltered(); if (WinCur < l.Count) { var e = l[WinCur]; if (!e.Unlocked) Fail("Недоступно: " + e.Lock); else { var tmp = e; Window = Win.None; tmp.Do(); } } } break;
             case Win.Trade: TradeKey(k, shift); break;
             case Win.Talk: TalkKey(k); break;
             case Win.Story: if (k == Key.E || k == Key.Enter || k == Key.KpEnter || k == Key.Space) { if (!hud.StorySkip()) CloseWindows(); } break;

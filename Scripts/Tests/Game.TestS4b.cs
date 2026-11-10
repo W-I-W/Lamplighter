@@ -180,8 +180,8 @@ public partial class Game
         S(.4f, () => { Shot("s4b_8_equip_relics"); WinTab = 2; WinCur = 0; });
         S(.4f, () => { Shot("s4b_9_equip_craft"); WinTab = 3; });
         S(.4f, () => { Shot("s4b_10_equip_lamp"); OpenWin(Win.Journal); });
-        S(.4f, () => { Shot("s4b_11_journal"); OpenWin(Win.Build); });
-        S(.4f, () => { Shot("s4b_12_prod"); OpenWin(Win.Build); });
+        S(.4f, () => { Shot("s4b_11_journal"); CloseWindows(); TestOpenBench(); });
+        S(.4f, () => { Shot("s4b_12_prod"); CloseWindows(); });
         S(.4f, () => { Shot("s4b_13_build"); CloseWindows(); Buildings.Add(new Building { Type = Tl.Stall, X = W.Spawn.X - 3, Y = W.Spawn.Y }); OpenTrade(null); });
         S(.4f, () => { Shot("s4b_14_trade_stall"); TradeTab = 1; });
         S(.4f, () => { Shot("s4b_15_trade_sell"); CloseWindows(); Save(); Log($"saved: events={Events.Count} bought={Bought.Count} relics={OwnedRelics.Count}"); });

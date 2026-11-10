@@ -26,7 +26,7 @@ public partial class Game
     public static bool IsRelicDrop(int item) => item >= RelicBase && item < RelicBase + 400;
     /// <summary>Постройка на земле: Item = BuildBase + номер ключа в BuildDropKeys. Выбрасываются только предметы, которые можно просто носить с собой (не здания деревни).</summary>
     public const int BuildBase = 1500;
-    public static readonly string[] BuildDropKeys = { "furnace", "chest", "lamp0", "lamp1", "lamp2", "mirror", "amp", "barrier", "decor0", "decor1", "decor2" };
+    public static readonly string[] BuildDropKeys = { "furnace", "chest", "lamp0", "lamp1", "lamp2", "mirror", "amp", "barrier", "decor0", "decor1", "decor2", "workbench" };
     public static bool IsBuildDrop(int item) => item >= BuildBase && item < BuildBase + BuildDropKeys.Length;
     public static string BuildKeyOfDrop(int item) => IsBuildDrop(item) ? BuildDropKeys[item - BuildBase] : null;
     public static bool ValidDrop(int item) => Movable(item) || RelicOfDrop(item) != null || IsBuildDrop(item);

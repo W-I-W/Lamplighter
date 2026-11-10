@@ -104,6 +104,20 @@ texture_margin_top = 1.0
 texture_margin_right = 1.0
 texture_margin_bottom = 1.0
 
+[sub_resource type="StyleBoxTexture" id="sb_panel_gold"]
+texture = ExtResource("4")
+texture_margin_left = 6.0
+texture_margin_top = 6.0
+texture_margin_right = 6.0
+texture_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="sb_panel_dark"]
+texture = ExtResource("3")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+
 [sub_resource type="StyleBoxTexture" id="sb_bar_hp"]
 texture = ExtResource("18")
 texture_margin_left = 1.0
@@ -127,20 +141,6 @@ texture_margin_bottom = 1.0
 
 [sub_resource type="StyleBoxTexture" id="sb_panel"]
 texture = ExtResource("2")
-texture_margin_left = 6.0
-texture_margin_top = 6.0
-texture_margin_right = 6.0
-texture_margin_bottom = 6.0
-
-[sub_resource type="StyleBoxTexture" id="sb_panel_dark"]
-texture = ExtResource("3")
-texture_margin_left = 5.0
-texture_margin_top = 5.0
-texture_margin_right = 5.0
-texture_margin_bottom = 5.0
-
-[sub_resource type="StyleBoxTexture" id="sb_panel_gold"]
-texture = ExtResource("4")
 texture_margin_left = 6.0
 texture_margin_top = 6.0
 texture_margin_right = 6.0
@@ -264,6 +264,15 @@ ButtonSelected/styles/pressed = SubResource("sb_button_selected")
 CdBar/base_type = &"ProgressBar"
 CdBar/styles/background = SubResource("sb_bar_bg")
 CdBar/styles/fill = SubResource("sb_bar_cd")
+ChatInput/base_type = &"LineEdit"
+ChatInput/colors/caret_color = Color(1, 0.823529, 0.247059, 1)
+ChatInput/colors/font_color = Color(0.847059, 0.878431, 0.941176, 1)
+ChatInput/colors/selection_color = Color(1, 0.82, 0.25, 0.35)
+ChatInput/constants/caret_width = 1
+ChatInput/font_sizes/font_size = 9
+ChatInput/styles/focus = SubResource("sb_panel_gold")
+ChatInput/styles/normal = SubResource("sb_panel_dark")
+ChatInput/styles/read_only = SubResource("sb_panel_dark")
 CountLabel/base_type = &"Label"
 CountLabel/colors/font_outline_color = Color(0.043, 0.059, 0.102, 1)
 CountLabel/constants/outline_size = 3
@@ -341,13 +350,3 @@ WarnLabel/colors/font_color = Color(1, 0.7, 0.42, 1)
 XpBar/base_type = &"ProgressBar"
 XpBar/styles/background = SubResource("sb_bar_bg")
 XpBar/styles/fill = SubResource("sb_bar_xp")
-
-ChatInput/base_type = &"LineEdit"
-ChatInput/styles/normal = SubResource("sb_panel_dark")
-ChatInput/styles/read_only = SubResource("sb_panel_dark")
-ChatInput/styles/focus = SubResource("sb_panel_gold")
-ChatInput/colors/font_color = Color(0.847059, 0.878431, 0.941176, 1)
-ChatInput/colors/caret_color = Color(1, 0.823529, 0.247059, 1)
-ChatInput/colors/selection_color = Color(1, 0.82, 0.25, 0.35)
-ChatInput/font_sizes/font_size = 9
-ChatInput/constants/caret_width = 1

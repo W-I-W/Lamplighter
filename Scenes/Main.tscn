@@ -3,7 +3,6 @@
 [ext_resource type="Script" uid="uid://ctu7pijx3fv7d" path="res://Scripts/Core/Game.cs" id="1"]
 
 [ext_resource type="PackedScene" path="res://Scenes/UI/GameHud.tscn" id="GameHud"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/BuildMenu.tscn" id="BuildMenu"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/InventoryWindow.tscn" id="InventoryWindow"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/UpgradeWindow.tscn" id="UpgradeWindow"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/EquipWindow.tscn" id="EquipWindow"]
@@ -57,8 +56,6 @@ z_index = 4060
 [node name="ChatHud" parent="Interface/UI" instance=ExtResource("ChatHud")]
 
 [node name="RegionTitle" parent="Interface/UI" instance=ExtResource("RegionTitle")]
-
-[node name="BuildMenu" parent="Interface/UI" instance=ExtResource("BuildMenu")]
 
 [node name="InventoryWindow" parent="Interface/UI" instance=ExtResource("InventoryWindow")]
 

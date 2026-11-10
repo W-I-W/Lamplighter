@@ -35,7 +35,7 @@ public partial class Game
     public bool PlaceEntry(BuildEntry e)
     {
         if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
-        if (StockOf(e.Key) <= 0) { Fail("Нет в запасе: создайте в меню [B]"); Placing = null; return false; }
+        if (StockOf(e.Key) <= 0) { Fail("Нет в запасе: создайте на Рабочем столе"); Placing = null; return false; }
         if (e == inventoryPlacement)
         {
             SyncInventorySlots();
@@ -106,7 +106,7 @@ public partial class Game
 
     static string TileStockKey(Tl t) => t switch
     {
-        Tl.Furnace => "furnace", Tl.StorageChest => "chest", Tl.AmpCrystal => "amp", Tl.BarrierPost => "barrier", Tl.Statue => "decor0", Tl.Fountain => "decor1", Tl.Banner => "decor2",
+        Tl.Furnace => "furnace", Tl.StorageChest => "chest", Tl.Workbench => "workbench", Tl.AmpCrystal => "amp", Tl.BarrierPost => "barrier", Tl.Statue => "decor0", Tl.Fountain => "decor1", Tl.Banner => "decor2",
         Tl.Mirror1 or Tl.Mirror2 => "mirror", _ => null
     };
 

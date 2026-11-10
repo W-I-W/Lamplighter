@@ -25,7 +25,7 @@ public partial class Game
             var e = BuildEntries().Find(x => x.Key == "bld" + ResearchBk); Check(e != null && e.Cat == 1 && e.Unlocked, "table: it sits in the basic build category and is unlocked");
             Check(!FreeResearch && TableLevel == 0 && !NearTable(), "table: strict mode — no table in the world yet");
             Check(!LearnTech((int)Tech.Spark) && !Has(Tech.Spark), "table: without a table the first light cannot be learned");
-            Check(TableReason((int)Tech.Spark) == "Постройте Стол исследований [B]", "table: the reason says to build the table");
+            Check(TableReason((int)Tech.Spark) == "Постройте Стол исследований", "table: the reason says to build the table");
             Check(StateOfTech((int)Tech.Spark) == TechState.Locked, "table: the spark shows as locked while there is no table");
             var nd = World.StartNeeds(); Check(nd.trees >= 1 && nd.stones >= 1, $"table: the start clearing is guaranteed to hold the table and the spark ({nd.trees} trees, {nd.stones} stones)");
         });

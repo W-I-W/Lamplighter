@@ -101,7 +101,7 @@ public partial class Game
         var t = Techs[i]; int lv = SkillLv[i], mx = SkillMax(i);
         if (lv >= mx) { Toast("Максимальный уровень"); return false; }
         if (lv == 0 && t.Reward) { Fail("Это награда: её даёт победа над стражем"); return false; }
-        if (!NearTable()) { Fail(TableLevel == 0 ? "Навыки изучаются у Стола исследований: постройте его [B]" : "Навыки изучаются у Стола исследований: подойдите к нему"); return false; }
+        if (!NearTable()) { Fail(TableLevel == 0 ? "Навыки изучаются у Стола исследований: постройте его" : "Навыки изучаются у Стола исследований: подойдите к нему"); return false; }
         var tableWhy = TableReason(i); if (tableWhy != null) { Fail(tableWhy); return false; }
         if (!ParentsOwned(i)) { Fail("Сначала изучите: " + MissingParents(i)); return false; }
         if (lv == 0 && !t.Ok(this)) { Fail("Пока недоступно: " + t.Req); return false; }

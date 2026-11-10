@@ -23,8 +23,8 @@ public partial class Game
         });
         for (int t = 0; t < 4; t++) { int tt = t; S(.25f, () => Open(Win.Equip, tt)); }
         for (int t = 0; t < 2; t++) { int tt = t; S(.25f, () => Open(Win.Journal, tt)); }
-        S(.25f, () => Open(Win.Build));
-        S(.25f, () => Open(Win.Build));
+        S(.25f, () => { CloseWindows(); TestOpenBench(); });
+        S(.25f, () => WinCur = 1);
         S(.25f, () => { CloseWindows(); OpenTrade(null); });
         S(.25f, () => { TradeTab = 1; });
         for (int p = 0; p < 4; p++) { int pp = p; S(.25f, () => { foreach (var an in W.Ancients) if (an.Region >= 1 && an.Region <= 3 && !an.Boss) an.Lit = true; Upgrades.Update(false); OpenTech(true); TechPage = pp; TechSel = -1; }); }

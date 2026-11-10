@@ -30,18 +30,40 @@ public partial class Game
         S(.1f, () => { var an = W.Ancients.Find(x => x.Region == 1 && !x.Boss); if (an != null) Tp(an.Pos + new Vector2(0, 40)); });
         S(1.6f, () => { });
         S(.3f, () => { Check("hud: walking into another location replaces the title with the new name", RegionTitle.Showing && RegionTitle.Text == Loc.T(RegionNames[1])); Shot("hud8_region_title"); Tp(TileCenter(W.Spawn.X, W.Spawn.Y)); });
-        S(.2f, () => { Inv[It.Stone] = 3; Inv[It.Wood] = 0; OpenWin(Win.Build); });
+        S(.2f, () => { Inv[It.Stone] = 3; Inv[It.Wood] = 0; TestOpenBench(); });
+        int benchFurnace = 0, benchHot = 0; BuildEntry benchFe = null;
         S(.6f, () =>
         {
-            var l = BuildEntriesFiltered(); Check("build: the compact window opens with a short list", buildMenu.PanelVisible && l.Count > 0 && l.Count <= 4 + 3 + 24);
-            Check("build: at most three locked entries are shown", l.FindAll(e => !e.Unlocked).Count <= 3);
-            Check("build: with not enough resources the action line has no create command", buildMenu.ActionText.StartsWith("Tab"));
-            Shot("build1_short");
-            Inv[It.Stone] = 60; Inv[It.Wood] = 60; BuildCat = 0; WinCur = l.FindIndex(e => e.Key == "furnace");
+            var l = BenchEntries(); Check("bench: the window opens with a short list", benchWindow.Visible && l.Count > 0 && l.Count <= 4 + 3 + 24);
+            Check("bench: quick craft lists only affordable recipes on the first tab", BenchRecipes(false).TrueForAll(x => x.times > 0) && BenchRecipes(true).Count == l.Count);
+            Check("bench: at most three locked entries are shown", l.FindAll(e => !e.Unlocked).Count <= 3);
+            benchFe = l.Find(e => e.Key == "furnace"); benchFurnace = StockOf("furnace");
+            Check("bench: with empty cells nothing is created", !BenchCraftFromCells(false) && StockOf("furnace") == benchFurnace);
+            Check("bench: with not enough resources a recipe click lays nothing out", !BenchLayout(benchFe, false) && CraftIngredient(0).n == 0);
+            Shot("bench1_short");
+            Inv[It.Stone] = 60; Inv[It.Wood] = 60; SyncInventorySlots();
         });
-        S(.5f, () => { Check("build: when resources suffice the line offers Enter — create", buildMenu.ActionText.StartsWith("Enter — создать")); Shot("build2_ready"); PressWindowKey(Key.Enter); });
-        S(.4f, () => { Check("build: after crafting the line offers placing and one more", buildMenu.ActionText.Contains("Enter — поставить")); Shot("build3_stock"); PressWindowKey(Key.Enter); });
-        S(.5f, () => { Check("build: in placement mode the window is closed and one short hint remains", Placing != null && !buildMenu.PanelVisible && buildMenu.PlaceHintVisible); Shot("build4_placing"); Placing = null; });
+        S(.4f, () => { Check("bench: clicking a recipe lays its components out in the cells", BenchLayout(benchFe, false) && CraftIngredient(0) == (It.Stone, 12) && MatchBench().State == BenchState.Ready && Inv[It.Stone] == 48); });
+        S(.4f, () => { Shot("bench2_ready"); RealClick(benchWindow.Result, true); });
+        S(.3f, () =>
+        {
+            Check("bench: clicking the result spends the cells and puts the building in the hand, not in the bag", CraftIngredient(4).n == 1 && CraftIngredient(0).n == 0 && StockOf("furnace") == benchFurnace && invWindow.GetNode<UiSlot>("CarryPreview").Visible);
+            benchHot = Enumerable.Range(0, QuickSlotCount).First(i => QuickStack(i).n == 0); RealClick(invWindow.HotbarSlot(benchHot), true);
+        });
+        S(.3f, () =>
+        {
+            Check("bench: the player places the taken result into a hotbar cell", CraftIngredient(4).n == 0 && StockOf("furnace") == benchFurnace + 1 && QuickStack(benchHot).n == 1);
+            int si = InventorySlots().ToList().FindIndex(x => x.item == It.Stone); RealClick(benchWindow.TestBagSlot(si), true);
+        });
+        S(.3f, () => { RealClick(benchWindow.TestCell(1), true); });
+        S(.3f, () =>
+        {
+            Check("bench: a stack from the bag is carried into a component cell like in the inventory", CraftIngredient(1) == (It.Stone, 48) && Inv[It.Stone] == 0);
+            Shot("bench3_stock"); CloseWindows();
+            Check("bench: closing the window returns the cells to the bag", CraftIngredient(1).n == 0 && Inv[It.Stone] == 48);
+            Placing = EntryOf("furnace");
+        });
+        S(.5f, () => { Check("bench: in placement mode the window is closed and one short hint remains", Placing != null && !benchWindow.Visible && PlaceHintVisible); Shot("bench4_placing"); Placing = null; });
         S(.2f, () => { Check("hud: H cycles the mode", HudDensity.Next() == HudMode.Minimal && HudDensity.Next() == HudMode.Full && HudDensity.Next() == HudMode.Normal); Log("hud done"); GD.Print("[check] SUMMARY failures=" + checkFails); GD.Print("HUD DONE"); });
     }
 }

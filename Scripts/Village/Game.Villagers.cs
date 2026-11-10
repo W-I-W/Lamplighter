@@ -306,7 +306,7 @@ public partial class Game
         if (BeaconLevel >= 4) l.Add("Холодный ветер из монастыря... Свет там нужнее всего.");
         if (BossDown(1)) l.Add("Страж пал. Тени отступили — хотя бы ненадолго.");
         if (HousingFree < 0 || (v.Home < 0 && Buildings.Exists(b => b.Type == Tl.House))) l.Add("Домов не хватает, но я не жалуюсь: у маяка тепло.");
-        else if (v.Home < 0) l.Add("Хорошо бы крышу над головой. Дом можно построить [B].");
+        else if (v.Home < 0) l.Add("Хорошо бы крышу над головой. Дом можно построить.");
         else l.Add("Дома тепло. Спасибо.");
         return l;
     }

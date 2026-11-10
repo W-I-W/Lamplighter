@@ -210,7 +210,7 @@ public partial class Game
         Texts.Add(new FText { P = p.Pos + new Vector2(0, -38), S = $"{nv.Name}: Спасибо! Я не забуду.", Life = 3f, C = ProfDefs.Of(nv.Prof)?.Accent ?? Colors.White });
         Burst(p.Pos + new Vector2(0, -6), new Color("#ffe9a0"), 18, 70);
         GiveXp(50); Burst(p.Pos, new Color("#7ad45a"), 24, 100); if (BpDone.Add("bp_stall")) Frag["bp_stall"] = 1;
-        Announce($"Спасён: {nv.Name}", $"{ProfTitle(nv)}. " + (Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница [B]" : "Ещё один житель в деревне"), new Color("#7ad45a"), "rescue");
+        Announce($"Спасён: {nv.Name}", $"{ProfTitle(nv)}. " + (Villagers.Count == 1 ? "Он пойдёт в деревню и начнёт работать. Открыта Кузница" : "Ещё один житель в деревне"), new Color("#7ad45a"), "rescue");
         Save();
     }
 
@@ -267,23 +267,26 @@ public partial class Game
         var sparkCost = LevelCost((int)Tech.Spark, 1); bool spark = Has(Tech.Spark);
         bool pickOwned = OwnedTools.Contains("pickaxe") || Tier >= 1 || Graves.Count > 0;          // после смерти кирка ждёт в могиле
         var tableCost = BCost(ResearchBk, 1); bool tableBuilt = HasBuilding(Tl.ResearchTable);
-        Add("Собрать дерево и камень", tableBuilt || spark || Can(tableCost), NeedShort(tableCost));
-        Add("Построить Стол исследований [B]", tableBuilt || spark, NeedShort(tableCost));
+        bool benchDone = HasWorkbench || tableBuilt || spark || HasFurnace;                // опытному герою рабочий стол не навязывается
+        Add("Собрать дерево и камень", benchDone || Can(CostWorkbench), NeedShort(CostWorkbench));
+        Add("Построить Рабочий стол", benchDone, "Создайте его в инвентаре [I] (быстрый крафт) и поставьте на землю");
+        Add("Собрать ресурсы на Стол исследований", tableBuilt || spark || Can(tableCost), NeedShort(tableCost));
+        Add("Построить Стол исследований", tableBuilt || spark, "Рабочий стол [E]: " + NeedShort(tableCost));
         Add("Изучить Искру света у стола [E]", spark, "Первый свет: Стол исследований → Искра света. " + NeedShort(sparkCost));
         Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
         Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
-        Add("Построить печь [B]", HasFurnace, NeedShort(CostFurnace));
+        Add("Построить печь", HasFurnace, "Инвентарь [I] или Рабочий стол [E]: " + NeedShort(CostFurnace));
         Add("Создать кирку в кузне [U у печи]", pickOwned, NeedShort(CostPickaxe));
         Add("Создать оружие в кузне [U у печи]", Owned.Count > 0, "Меч, лук и посох — окно кузни");
         Add("Медная кирка в кузне [U у печи]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи], затем кузня [U]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
-        Add("Построить склад [B]", HasBuilding(Tl.Warehouse), NeedShort(BCost(0, 1)));
+        Add("Построить склад", HasBuilding(Tl.Warehouse), "Рабочий стол [E]: " + NeedShort(BCost(0, 1)));
         var techP = NearestPoi(PK.TechCache, false);                 // указатель на постамент есть, даже если он ещё не найден: игроку не нужно искать первый вслепую
         var cap = NearestPoi(PK.Captive, false);                      // метка на ближайшую клетку даже неоткрытую: игрок не ищет вслепую
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
-        Add("Построить торговую лавку [B]", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : NeedShort(BCost(8, 1)));
+        Add("Построить торговую лавку", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : "Рабочий стол [E]: " + NeedShort(BCost(8, 1)));
         Add("Железная кирка в кузне [U у печи]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
-        Add("Построить кузницу [B]", HasBuilding(Tl.Forge), rescued >= 1 ? NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
+        Add("Построить кузницу", HasBuilding(Tl.Forge), rescued >= 1 ? "Рабочий стол [E]: " + NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)", NearestExplorePoi()?.Pos);
         Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
         Add("Улучшить Стол исследований до ур.2 [U]", !tableBuilt || TableLevel >= 2, NeedShort(BCost(ResearchBk, 2)));
@@ -331,7 +334,7 @@ public partial class Game
             var gt = RiftGateTile(); Vector2? gp = gt.X >= 0 ? TileCenter(gt.X, gt.Y) : null;
             Add("Пройти Разлом Тьмы", RiftClears >= 1, "Врата у Центрального маяка: волны врагов и награды", gp);
             Add("Получить легендарное улучшение", LegendMask != 0, "Осколки разломов меняют на легенды у врат", gp);
-            Add("Украсить земли [B]", DecorCount >= 3, "Статуи, фонтаны, знамёна: производство +1,5% за каждое");
+            Add("Украсить земли", DecorCount >= 3, "Рабочий стол [E]: статуи, фонтаны, знамёна, производство +1,5% за каждое");
         }
         if (TestGoal != null) g.Insert(0, new Goal { Title = TestGoal, Needs = "" });       // только проверки: общий список целей в сети
         return g;

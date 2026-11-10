@@ -80,6 +80,7 @@ public partial class Game
                     Add($"resource:{x}:{y + 1}", ResourceTitle(tree), TileRect(x, y), 10, _ => { }, false);
                 }
                 if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Печь: плавка руды"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); ix.Action("U", "Кузня: создание и улучшение"); ix.U = () => OpenStation("forge"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
+                if (t == Tl.Workbench) { Add($"t:{x}:{y}", "Рабочий стол", TileRect(x, y), 5, ix => { ix.Action("E", "Рабочий стол: создание построек"); ix.Gives("Создаёт", "постройки из ресурсов сумки", TipRole.Resource); ix.E = () => OpenBench(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t == Tl.StorageChest) { Add($"t:{x}:{y}", "Сундук", TileRect(x, y), 5, ix => { ix.Action("E", "Открыть сундук"); ix.Gives("Хранит", "20 слотов по 99", TipRole.Resource); ix.E = () => OpenChest(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t != Tl.Mirror1 && t != Tl.Mirror2 && IsPlacedTile(x, y)) { Add($"t:{x}:{y}", PlacedTitle(t), TileRect(x, y), 1, ix => AddDemolishTile(tx, ty, ix)); continue; }
                 if (!IsTileInteractable(t))
@@ -128,7 +129,7 @@ public partial class Game
         Tl.BossTotem => "Тотем стража", Tl.ChestOpen => "Открытый сундук", _ => "Объект"
     };
 
-    static string PlacedTitle(Tl t) => TileStockKey(t) switch { "amp" => "Светокристалл", "barrier" => "Столб-барьер", "decor0" => "Статуя Фонарщика", "decor1" => "Фонтан света", "decor2" => "Знамя маяка", "chest" => "Сундук", _ => "Постройка" };
+    static string PlacedTitle(Tl t) => TileStockKey(t) switch { "amp" => "Светокристалл", "barrier" => "Столб-барьер", "decor0" => "Статуя Фонарщика", "decor1" => "Фонтан света", "decor2" => "Знамя маяка", "chest" => "Сундук", "workbench" => "Рабочий стол", _ => "Постройка" };
 
     static bool IsTileInteractable(Tl t) => t == Tl.Chest || t == Tl.Shrine || t == Tl.Obelisk || t == Tl.Cage || t == Tl.Machine || t == Tl.MachineOn || t == Tl.Mirror1 || t == Tl.Mirror2
         || t == Tl.BridgeBroken || t == Tl.Seal || t == Tl.Receiver || t == Tl.ReceiverOn || t == Tl.TechCache || t == Tl.Spire || t == Tl.Altar || t == Tl.AltarOn
@@ -189,7 +190,7 @@ public partial class Game
     }
 
     /// <summary>Курсор над любым элементом интерфейса (панели HUD, меню строительства, инвентарь, окна).</summary>
-    public bool UiOver(Vector2 logical) => (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical, UiScaleVp)) || (buildMenu != null && buildMenu.IsOver(logical)) || (upgradeWindow != null && upgradeWindow.IsOver(logical)) || (equipWindow != null && equipWindow.IsOver(logical)) || (chestWindow != null && chestWindow.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
+    public bool UiOver(Vector2 logical) => (hud != null && hud.IsOverUi(logical)) || (GameHudNode != null && GameHudNode.IsOver(logical, UiScaleVp)) || (benchWindow != null && benchWindow.IsOver(logical)) || (upgradeWindow != null && upgradeWindow.IsOver(logical)) || (equipWindow != null && equipWindow.IsOver(logical)) || (chestWindow != null && chestWindow.IsOver(logical)) || (invWindow != null && invWindow.IsOver(logical));
     public void PressWindowKey(Key k) => WindowKey(k, false);
     public string NeedText(int[][] cost) => NeedStr(cost);
     public int HaveOf(int item) => HaveAny(item);

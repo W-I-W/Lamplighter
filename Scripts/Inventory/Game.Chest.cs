@@ -10,7 +10,7 @@ namespace Lamplighter;
 public partial class Game
 {
     public const int ChestSlots = 20, ChestCols = 10;                  // сундук в окне — две строки по десять ячеек, как инвентарь
-    public static readonly int[][] CostChest = { new[] { It.Wood, 20 }, new[] { It.Stone, 5 } };
+    public static readonly int[][] CostChest = { new[] { It.Wood, 12 } };
     readonly Dictionary<int, ChestCell[]> Chests = new();
     public Vector2I ChestAt = new(-1, -1); public string ChestMsg = "";
 
@@ -101,7 +101,7 @@ public partial class Game
 
     void BuildChest()
     {
-        if (!Can(CostChest)) { Fail("Для сундука нужно: 20 дерева и 5 камня"); return; }
+        if (!Can(CostChest)) { Fail("Для сундука нужно: 12 дерева"); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(CostChest); SetObj(t.Value.X, t.Value.Y, Tl.StorageChest);
         PlaceFx(t.Value, new Color("#b07a40"), 1.1f); Sfx.Play("build");

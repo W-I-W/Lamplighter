@@ -13,7 +13,11 @@ public partial class Game
     readonly (int item, int n)[] craftIngredients = { (-1, 0), (-1, 0), (-1, 0) };      // 0, 1 — компоненты; 2 — готовый результат, который игрок забирает сам (в инвентарь он попадает только при переносе)
     bool combining;
 
-    internal (int item, int n) CraftIngredient(int index) => craftIngredients[index];
+    /// <summary>Ячейки, с которыми сейчас работает окно: у Рабочего стола — его пять (4 компонента и результат), иначе — две ячейки и результат инвентаря. Одни и те же операции переноса работают для обоих.</summary>
+    (int item, int n)[] CC => Window == Win.Bench ? benchCells : craftIngredients;
+    internal int CraftResultIndex => CC.Length - 1;
+
+    internal (int item, int n) CraftIngredient(int index) => CC[index];
 
     // ───────────────────────── рецепты ─────────────────────────
     internal bool RecipeKnown(CombineRecipe r) => r.Known || HintsShown.Contains("rcp_" + r.Id);
@@ -23,7 +27,8 @@ public partial class Game
     {
         if (!r.Derived) return (r.A, r.NA, r.B, r.NB);
         var cost = EntryOf(r.Build)?.Raw;
-        if (cost == null || cost.Length != 2) return (-1, 0, -1, 0);
+        if (cost == null || cost.Length < 1 || cost.Length > 2) return (-1, 0, -1, 0);
+        if (cost.Length == 1) { int half = (cost[0][1] + 1) / 2; return (cost[0][0], half, cost[0][0], cost[0][1] - half); }      // один ресурс делится на две ячейки: 12 = 6 + 6
         return (cost[0][0], cost[0][1], cost[1][0], cost[1][1]);
     }
 
@@ -93,10 +98,10 @@ public partial class Game
     // ───────────────────────── перенос компонентов ─────────────────────────
     internal int PutCraftIngredient(int source, bool quick, int target, int amount)
     {
-        if (target >= 2) return 0;                                              // в ячейку результата ничего положить нельзя
+        if (target >= CraftResultIndex) return 0;                                              // в ячейку результата ничего положить нельзя
         if (source < 0 || !quick && source >= InventorySlots().Count) return 0;
         var from = quick ? QuickStack(source) : InventorySlots()[source];
-        var to = craftIngredients[target];
+        var to = CC[target];
         if (from.item < 0 || from.n <= 0) return 0;                              // предметы-постройки компонентами не бывают
         bool replace = to.n > 0 && (to.item != from.item || to.n >= StackMax && amount >= from.n && from.n < StackMax);                       // замена компонента: прежний возвращается в инвентарь
         if (replace)
@@ -108,11 +113,11 @@ public partial class Game
                 if (quick) { quickItems[source] = old.item; quickCounts[source] = old.n; }
                 else { inventorySlots[source] = old; TrackBagChange(from.item, -from.n); TrackBagChange(old.item, old.n); }
                 Inv[old.item] += old.n; Inv[from.item] -= from.n;
-                craftIngredients[target] = from;
+                CC[target] = from;
                 return from.n;
             }
             if ((quick || canMove < from.n) && !CanFillEmptyInventorySlot(to.item)) return 0;     // некуда вернуть прежний предмет (из горячей панели сумка не освобождается)
-            Inv[to.item] += to.n; craftIngredients[target] = (-1, 0); to = (-1, 0);
+            Inv[to.item] += to.n; CC[target] = (-1, 0); to = (-1, 0);
         }
         int moved = Math.Min(amount, Math.Min(from.n, StackMax - to.n));
         if (moved <= 0) return 0;
@@ -123,22 +128,22 @@ public partial class Game
             TrackBagChange(from.item, -moved);
         }
         Inv[from.item] -= moved;
-        craftIngredients[target] = (from.item, to.n + moved);
+        CC[target] = (from.item, to.n + moved);
         return moved;
     }
 
     internal int TakeCraftIngredient(int source, int area, int target, int amount)
     {
-        var from = craftIngredients[source];
+        var from = CC[source];
         if (from.n <= 0) return 0;
         var to = area == 0 ? QuickStack(target) : InventorySlots()[target];
         if (to.n > 0 && (to.item != from.item || to.n >= StackMax && amount >= from.n && from.n < StackMax))
         {
-            if (source >= 2 || to.item < 0 || from.item < 0 || amount < from.n) return 0;      // обмен только целой стопкой компонента, результат и постройки не обмениваются
+            if (source >= CraftResultIndex || to.item < 0 || from.item < 0 || amount < from.n) return 0;      // обмен только целой стопкой компонента, результат и постройки не обмениваются
             if (area == 0) { quickItems[target] = from.item; quickCounts[target] = from.n; }
             else { inventorySlots[target] = from; TrackBagChange(from.item, from.n); TrackBagChange(to.item, -to.n); }
             Inv[from.item] += from.n; Inv[to.item] -= to.n;
-            craftIngredients[source] = to;
+            CC[source] = to;
             return from.n;
         }
         if (area == 2 && to.n == 0 && !CanFillEmptyInventorySlot(from.item)) return 0;
@@ -147,7 +152,7 @@ public partial class Game
         DeliverOutput(from.item, moved);
         if (area == 0) { quickItems[target] = from.item; quickCounts[target] = to.n + moved; }
         else { inventorySlots[target] = (from.item, to.n + moved); TrackBagChange(from.item, moved); }
-        craftIngredients[source] = moved == from.n ? (-1, 0) : (from.item, from.n - moved);
+        CC[source] = moved == from.n ? (-1, 0) : (from.item, from.n - moved);
         return moved;
     }
 
@@ -155,29 +160,36 @@ public partial class Game
     /// <summary>Перенос между ячейками-компонентами: та же стопка складывается, разные предметы меняются местами (целой стопкой).</summary>
     internal int MoveCraftCell(int source, int target, int count)
     {
-        if (source == target || source >= 2 || target >= 2) return 0;
-        var a = craftIngredients[source]; var b = craftIngredients[target];
+        if (source == target || source >= CraftResultIndex || target >= CraftResultIndex) return 0;
+        var a = CC[source]; var b = CC[target];
         if (a.n <= 0 || count <= 0) return 0;
         if (b.n > 0 && (b.item != a.item || b.n >= StackMax && count >= a.n && a.n < StackMax))
         {
             if (count < a.n) return 0;
-            craftIngredients[source] = b; craftIngredients[target] = a; return a.n;
+            CC[source] = b; CC[target] = a; return a.n;
         }
         int moved = Math.Min(count, Math.Min(a.n, StackMax - b.n));
         if (moved <= 0) return 0;
-        craftIngredients[target] = (a.item, b.n + moved);
-        craftIngredients[source] = moved == a.n ? (-1, 0) : (a.item, a.n - moved);
+        CC[target] = (a.item, b.n + moved);
+        CC[source] = moved == a.n ? (-1, 0) : (a.item, a.n - moved);
         return moved;
     }
 
-    internal void ReturnCraftIngredients(bool allowDrop = true, int cells = 3)
+    /// <summary>Вернуть содержимое ячеек крафта (инвентаря и Рабочего стола) в сумку. cells — только первые N ячеек инвентарного крафта.</summary>
+    internal void ReturnCraftIngredients(bool allowDrop = true, int cells = -1)
+    {
+        ReturnCellsOf(craftIngredients, allowDrop, cells < 0 ? craftIngredients.Length : cells);
+        if (cells < 0) ReturnCellsOf(benchCells, allowDrop, benchCells.Length);
+    }
+
+    void ReturnCellsOf((int item, int n)[] arr, bool allowDrop, int cells)
     {
         for (int i = 0; i < cells; i++)
         {
-            var stack = craftIngredients[i];
+            var stack = arr[i];
             if (stack.n <= 0) continue;
-            if (allowDrop && !FitsItem(stack.item, stack.n)) DropCraftCell(i, stack.item, stack.n);
-            else { DeliverOutput(stack.item, stack.n); craftIngredients[i] = (-1, 0); }
+            if (allowDrop && !FitsItem(stack.item, stack.n)) DropCellOf(arr, i, stack.item, stack.n);
+            else { DeliverOutput(stack.item, stack.n); arr[i] = (-1, 0); }
         }
     }
 
@@ -197,18 +209,20 @@ public partial class Game
     }
 
     /// <summary>Очистить ячейки без выдачи (при смене героя Inv перезаписывается целиком).</summary>
-    internal void ClearCraftCells() { for (int i = 0; i < craftIngredients.Length; i++) craftIngredients[i] = (-1, 0); }
+    internal void ClearCraftCells() { for (int i = 0; i < craftIngredients.Length; i++) craftIngredients[i] = (-1, 0); for (int i = 0; i < benchCells.Length; i++) benchCells[i] = (-1, 0); }
 
     internal void IncludeCraftIngredientsInSave(int[] inventory)
     {
         foreach (var stack in craftIngredients) if (stack.n > 0 && stack.item >= 0) inventory[stack.item] += stack.n;
+        foreach (var stack in benchCells) if (stack.n > 0 && stack.item >= 0) inventory[stack.item] += stack.n;
     }
 
     /// <summary>Запас построек для сохранения: готовая постройка, лежащая в ячейке результата, считается уже полученной.</summary>
     internal (string[] k, int[] v) BuildStockForSave()
     {
-        var d = new Dictionary<string, int>(BuildStock); var o = craftIngredients[2];
-        if (o.n > 0 && o.item < 0) { string key = InventoryKey(o.item); d[key] = d.GetValueOrDefault(key) + o.n; }
+        var d = new Dictionary<string, int>(BuildStock);
+        foreach (var o in new[] { craftIngredients[2], benchCells[benchCells.Length - 1] })
+            if (o.n > 0 && o.item < 0) { string key = InventoryKey(o.item); d[key] = d.GetValueOrDefault(key) + o.n; }
         return (d.Keys.ToArray(), d.Values.ToArray());
     }
 
@@ -309,24 +323,26 @@ public partial class Game
     }
 
     /// <summary>Выброс результата из руки за пределы окна: предмет попадает в инвентарь и возвращается номер ячейки сумки, где он лёг (или -1).</summary>
-    internal int ReceiveCraftOutput(int amount) => ReceiveCraftCell(2, amount);
+    internal int ReceiveCraftOutput(int amount) => ReceiveCraftCell(CraftResultIndex, amount);
 
     /// <summary>Выбросить стопку из ячейки крафта на землю. Если предмет выбросить нельзя, он просто уходит в инвентарь. Предмет в ячейке должен совпадать с ожидаемым (ячейка могла измениться, пока стопка была в руке).</summary>
-    internal bool DropCraftCell(int cell, int item, int amount)
+    internal bool DropCraftCell(int cell, int item, int amount) => DropCellOf(CC, cell, item, amount);
+
+    bool DropCellOf((int item, int n)[] arr, int cell, int item, int amount)
     {
-        var o = craftIngredients[cell];
+        var o = arr[cell];
         if (o.n <= 0 || o.item != item || amount <= 0) return false;
         amount = Math.Min(amount, o.n);
-        DeliverOutput(item, amount); craftIngredients[cell] = amount == o.n ? (-1, 0) : (item, o.n - amount);
+        DeliverOutput(item, amount); arr[cell] = amount == o.n ? (-1, 0) : (item, o.n - amount);
         return item >= 0 ? TryDrop(item, amount) : TryDropBuild(InventoryKey(item), amount);
     }
 
     /// <summary>Перенос стопки из любой ячейки крафта в инвентарь (как у обычной ячейки): возвращает номер ячейки сумки или -1.</summary>
     internal int ReceiveCraftCell(int cell, int amount)
     {
-        var o = craftIngredients[cell]; amount = Math.Min(amount, o.n);
+        var o = CC[cell]; amount = Math.Min(amount, o.n);
         if (amount <= 0) return -1;
-        DeliverOutput(o.item, amount); craftIngredients[cell] = amount == o.n ? (-1, 0) : (o.item, o.n - amount);
+        DeliverOutput(o.item, amount); CC[cell] = amount == o.n ? (-1, 0) : (o.item, o.n - amount);
         var bag = InventorySlots();
         for (int i = bag.Count - 1; i >= 0; i--) if (bag[i].item == o.item && bag[i].n > 0) return i;
         return -1;

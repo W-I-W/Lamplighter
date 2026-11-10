@@ -32,9 +32,9 @@ public partial class Game
         S(.6f, () => { Check(WinTab == 1, $"clicks: the tab switches with a still cursor ({WinTab})"); EqTab(0); WinCur = 0; });
         S(.6f, () => { HoldEquipRow(ToolList().Count); WinCur = ToolList().Count + 1; equipWindow.Force(); });
         S(.4f, () => { Check(RealClick(FindButton(equipWindow, "Взять в руки"), false), "clicks: the Equip main button exists"); });
-        S(.6f, () => { Check(CurW >= 0 || CurTool != "pickaxe" || true, "clicks: equip click done"); Check(EqIsHeld(ToolList().Count + 1), "clicks: the main action puts the weapon in hand with a still cursor"); CloseWindows(); OpenWin(Win.Build); });
-        S(.6f, () => { Check(RealClick(buildMenu.TestChip(1), false), "clicks: the Production chip exists"); });
-        S(.5f, () => { Check(BuildCat == 1, $"clicks: the build category changes with a still cursor ({BuildCat})"); CloseWindows(); OpenWin(Win.Inventory); });
+        S(.6f, () => { Check(CurW >= 0 || CurTool != "pickaxe" || true, "clicks: equip click done"); Check(EqIsHeld(ToolList().Count + 1), "clicks: the main action puts the weapon in hand with a still cursor"); CloseWindows(); TestOpenBench(); benchWindow.TestShowAll(); });
+        S(.6f, () => { Check(RealClick(benchWindow.TestListSlot(0), false), "clicks: the first bench recipe exists"); });
+        S(.5f, () => { CloseWindows(); OpenWin(Win.Inventory); });
         Vector2 pointer = Vector2.Zero;
         UiSlot sourceSlot = null;
         int sourceCount = 0;
@@ -591,9 +591,9 @@ public partial class Game
         {
             Inv[It.Wood] = 30; Inv[It.Stone] = 20; Inv[It.Copper] = 10; Inv[It.Iron] = 6; Inv[It.Gear] = 0;
             furnaceStock = StockOf("furnace");
-            Fill(It.Stone, 10, It.Wood, 5);
+            Fill(It.Stone, 6, It.Stone, 6);
             var m = MatchCombine();
-            Check(m.State == CombineState.Ready && m.Known && m.Recipe.Id == "furnace", "combine: stone 10 + wood 5 matches the known furnace recipe");
+            Check(m.State == CombineState.Ready && m.Known && m.Recipe.Id == "furnace", "combine: stone 6 + stone 6 matches the known furnace recipe");
             RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
         });
         S(.3f, () =>
@@ -607,16 +607,16 @@ public partial class Game
         {
             Check(CraftIngredient(2).n == 0 && StockOf("furnace") == furnaceStock + 1 && QuickStack(emptyHot).n == 1 && InventoryItemName(QuickStack(emptyHot).item) == "Печь",
                 "combine: the player places the taken result into a chosen hotbar cell");
-            Fill(It.Stone, 10, It.Wood, 5); RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
+            Fill(It.Stone, 6, It.Stone, 6); RealClick(invWindow.GetNode<UiSlot>("%Result"), true);
         });
         S(.3f, () =>
         {
             Check(CraftIngredient(2).n == 1 && CombineFromCells(false) == false && CraftIngredient(2).n == 1, "combine: nothing is crafted twice from the same click");
             invWindow.TestCancelCarry(); CollectOutput(); ReturnCraftIngredients();
             furnaceStock = StockOf("furnace");
-            Fill(It.Wood, 5, It.Stone, 10);
-            Check(MatchCombine().Recipe?.Id == "furnace" && MatchCombine().State == CombineState.Ready, "combine: component order does not matter (B + A)");
-            Fill(It.Stone, 3, It.Wood, 5);
+            Fill(It.Wood, 6, It.Stone, 2);
+            Check(MatchCombine().Recipe?.Id == "workbench" && MatchCombine().State == CombineState.Ready, "combine: component order does not matter (B + A)");
+            Fill(It.Stone, 1, It.Wood, 6);
             Check(MatchCombine().State == CombineState.Short && !CombineFromCells(false) && StockOf("furnace") == furnaceStock,
                 "combine: not enough of a component is refused without spending anything");
             Fill(It.Stone, 1, It.Copper, 1);
@@ -648,10 +648,10 @@ public partial class Game
             Check(CT(false) && Inv[It.Aether] == aether + 1 && CraftIngredient(0).n == 0 && CraftIngredient(1).n == 0, "combine: A + A spends both components and gives the result");
             CombineDb.Remove("t_aa");
             // быстрый крафт
-            Inv[It.Wood] = 50; Inv[It.Stone] = 50; furnaceStock = StockOf("furnace");
+            Inv[It.Wood] = 50; Inv[It.Stone] = 60; furnaceStock = StockOf("furnace");
             var furnace = CombineDb.All.First(r => r.Id == "furnace");
-            Check(QuickRecipes(false).Any(q => q.r.Id == "furnace" && q.times == 5), "quick: the furnace is available 5 times from 50 stone / 50 wood");
-            Check(CombineFromInventory(furnace, false) && StockOf("furnace") == furnaceStock + 1 && Inv[It.Stone] == 40 && Inv[It.Wood] == 45, "quick: a click crafts one item and spends the components");
+            Check(QuickRecipes(false).Any(q => q.r.Id == "furnace" && q.times == 5), "quick: the furnace is available 5 times from 60 stone");
+            Check(CombineFromInventory(furnace, false) && StockOf("furnace") == furnaceStock + 1 && Inv[It.Stone] == 48 && Inv[It.Wood] == 50, "quick: a click crafts one item and spends the components");
             Check(CombineFromInventory(furnace, true) && StockOf("furnace") == furnaceStock + 5 && Inv[It.Stone] == 0, "quick: Shift crafts the maximum possible");
             Check(!CombineFromInventory(furnace, false) && StockOf("furnace") == furnaceStock + 5, "quick: lacking resources crafts nothing");
             Check(!QuickRecipes(false).Any(q => q.r.Id == "furnace") && QuickRecipes(true).Any(q => q.r.Id == "furnace" && q.times == 0), "quick: unavailable recipes only appear in the all-known view");
@@ -665,11 +665,11 @@ public partial class Game
             UpdateDrops(.05f);
             Check(Drops.Count == 0 && StockOf("furnace") == f0, "drop: a thrown furnace is picked up again as a building");
             // выкладка рецепта кликом по значку
-            ReturnCraftIngredients(); Inv[It.Wood] = 30; Inv[It.Stone] = 30; furnaceStock = StockOf("furnace");
-            Check(LayoutRecipe(furnace, false) && CraftIngredient(0).n + CraftIngredient(1).n == 15 && MatchCombine().State == CombineState.Ready,
+            ReturnCraftIngredients(); Inv[It.Wood] = 30; Inv[It.Stone] = 36; furnaceStock = StockOf("furnace");
+            Check(LayoutRecipe(furnace, false) && CraftIngredient(0).n + CraftIngredient(1).n == 12 && MatchCombine().State == CombineState.Ready,
                 "quick: clicking a recipe lays its components out in the cells");
             Check(CT(false) && StockOf("furnace") == furnaceStock + 1, "quick: the laid out result is then taken from the result cell");
-            Check(LayoutRecipe(furnace, true) && CraftIngredient(0).n + CraftIngredient(1).n == 30 && CT(true) && StockOf("furnace") == furnaceStock + 3,
+            Check(LayoutRecipe(furnace, true) && CraftIngredient(0).n + CraftIngredient(1).n == 24 && CT(true) && StockOf("furnace") == furnaceStock + 3,
                 "quick: Shift lays out the maximum and Shift on the result takes all");
             ReturnCraftIngredients();
             Inv[It.Wood] = 20; Inv[It.Stone] = 15; Inv[It.Copper] = 4;
@@ -907,7 +907,7 @@ public partial class Game
         });
         S(.3f, () =>
         {
-            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); Drops.Clear(); Inv[It.Copper] = 5; Inv[It.Stone] = 7; SyncInventorySlots();
+            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); BuildStock.Clear(); Array.Fill(quickItems, -1); Array.Clear(quickCounts); inventorySlots.Clear(); Array.Clear(slotTotals); inventoryItemTotals.Clear(); Drops.Clear(); Inv[It.Copper] = 5; Inv[It.Stone] = 7; SyncInventorySlots();
             OpenWin(Win.Inventory);
         });
         S(.3f, () => { RealClick(gs(InventorySlots().ToList().FindIndex(x => x.item == It.Copper)), true); });
@@ -920,7 +920,7 @@ public partial class Game
         });
         S(.3f, () =>
         {
-            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); Drops.Clear(); Inv[It.Copper] = 5; Inv[It.Stone] = 7; SyncInventorySlots();
+            ReturnCraftIngredients(); CloseWindows(); Array.Clear(Inv); BuildStock.Clear(); Array.Fill(quickItems, -1); Array.Clear(quickCounts); inventorySlots.Clear(); Array.Clear(slotTotals); inventoryItemTotals.Clear(); Drops.Clear(); Inv[It.Copper] = 5; Inv[It.Stone] = 7; SyncInventorySlots();
             OpenWin(Win.Inventory);
         });
         S(.3f, () =>

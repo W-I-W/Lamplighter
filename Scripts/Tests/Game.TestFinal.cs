@@ -83,7 +83,7 @@ public partial class Game
             Inv[It.Wood] = 0; Inv[It.Stone] = 0; Stock[It.Wood] = 100; Stock[It.Stone] = 100;
             var whb = Buildings.Find(b => b.Type == Tl.Warehouse); Tp(whb.Pos + new Vector2(0, 30));
             Check("craft uses warehouse stock near warehouse", Can(CostFurnace));
-            Pay(CostFurnace); Check("stock paid", Stock[It.Stone] == 90 && Stock[It.Wood] == 95, $"stone={Stock[It.Stone]} wood={Stock[It.Wood]}");
+            Pay(CostFurnace); Check("stock paid", Stock[It.Stone] == 88 && Stock[It.Wood] == 100, $"stone={Stock[It.Stone]} wood={Stock[It.Wood]}");
             Tp(TileCenter(World.IX0 + 40, 64));
             Check("no warehouse crafting when far", !Can(CostFurnace));
             // 7) быстрый путь после победы над стражем и возрождение на базе

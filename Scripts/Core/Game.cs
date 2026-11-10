@@ -47,9 +47,10 @@ public partial class Game : Node2D
     public World W;
     int srcId;
     const int LightLimit = 96;                       // должен совпадать с размером массива lights в Assets/Shaders/Lighting/lights_common.gdshaderinc
-    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; ChestWindow chestWindow; Control uiRoot; public GameHud GameHudNode; BuildWindowUI buildMenu; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
+    EntityLayer ents; OverlayLayer overlay; public bool TestKeepMine; Camera2D cam; ColorRect darkRect, glowRect; ShaderMaterial darkMat, glowMat; Hud hud; ChestWindow chestWindow; Control uiRoot; public GameHud GameHudNode; WorkbenchWindow benchWindow; BuildActionHintUI placeHint; InventoryWindow invWindow; UpgradeWindowUI upgradeWindow;
     public float UiScaleVp = 2f;
     internal InventoryWindow InventoryUi => invWindow;
+    internal WorkbenchWindow BenchUi => benchWindow;
     internal ChestWindow ChestUi => chestWindow;
     public readonly RandomNumberGenerator rng = new();
 
@@ -61,7 +62,7 @@ public partial class Game : Node2D
     float regenDelay, tierMsgCd, rippleT, dustT;
     public Vector2I MineTile = new(-1, -1);
     public Vector2 Aim;
-    public Ix Cur = new(); public int BuildCat;
+    public Ix Cur = new();
     public Vector2 SmeltAt; public List<int> SmeltQ = new(); float smeltT; public float SmeltProg => SmeltQ.Count > 0 ? smeltT / SmeltTime : 0;
     const float SmeltTime = 0.9f;
     public bool HasFurnace;
@@ -76,7 +77,7 @@ public partial class Game : Node2D
     public int Kills;
     Vector3 tint = new(.012f, .016f, .045f);
 
-    public static readonly int[][] CostFurnace = { new[] { It.Stone, 10 }, new[] { It.Wood, 5 } };
+    public static readonly int[][] CostFurnace = { new[] { It.Stone, 12 } };
     static readonly int[][] CostLantern = { new[] { It.Wood, 4 }, new[] { It.Copper, 2 } };
     public static readonly int[][][] CostPick = {
         new[] { new[] { It.Copper, 5 }, new[] { It.Wood, 5 } },
@@ -153,10 +154,11 @@ public partial class Game : Node2D
         GameHudNode = uiRoot.GetNode<GameHud>("GameHud"); GameHudNode.G = this;
         Chat = uiRoot.GetNode<ChatHud>("ChatHud"); Chat.Bind(this);
         RegionTitle = uiRoot.GetNode<RegionTitleHud>("RegionTitle"); RegionTitle.G = this;
-        buildMenu = uiRoot.GetNode<BuildWindowUI>("BuildMenu"); buildMenu.G = this;
         invWindow = uiRoot.GetNode<InventoryWindow>("InventoryWindow"); invWindow.G = this;
         var dim = new WindowDim { G = this }; uiRoot.AddChild(dim); uiRoot.MoveChild(dim, GameHudNode.GetIndex() + 1);   // выбор мышью идёт по порядку узлов: затемнение перекрывает HUD, но не окна после него
         chestWindow = new ChestWindow { Name = "ChestWindow", G = this }; uiRoot.AddChild(chestWindow); uiRoot.MoveChild(chestWindow, invWindow.GetIndex() + 1);
+        benchWindow = new WorkbenchWindow { Name = "WorkbenchWindow", G = this }; uiRoot.AddChild(benchWindow); uiRoot.MoveChild(benchWindow, chestWindow.GetIndex() + 1);
+        CreatePlaceHint();
         upgradeWindow = uiRoot.GetNode<UpgradeWindowUI>("UpgradeWindow"); upgradeWindow.G = this;
         equipWindow = uiRoot.GetNode<EquipWindowUI>("EquipWindow"); equipWindow.G = this;
         ItemTipHost.Create(this, uiRoot);                                                       // подсказки предметов для всех окон; создаётся после окон и лежит поверх них
@@ -198,7 +200,7 @@ public partial class Game : Node2D
     static int AtlasX(Tl t, int lv = 1) => t switch
     {
         Tl.Tree => Art.BigTree, Tl.Stone => Art.Stone, Tl.Copper => Art.Copper, Tl.Iron => Art.Iron, Tl.Lumen => Art.Lumen,
-        Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.StorageChest => Art.StorageChest, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
+        Tl.AncOff => Art.AncOff, Tl.AncOn => Art.AncOn, Tl.Furnace => Art.Furnace, Tl.StorageChest => Art.StorageChest, Tl.Workbench => Art.Workbench, Tl.Lantern => Art.Lantern, Tl.Cliff => Art.Cliff,
         Tl.Chest => Art.StorageChest, Tl.ChestOpen => Art.ChestOpen, Tl.Ruin => Art.Ruin, Tl.House => Art.House, Tl.Tent => Art.Tent,
         Tl.Shrine => Art.Shrine, Tl.ShrineUsed => Art.ShrineUsed, Tl.Aether => Art.AetherOre, Tl.Cage => Art.Cage,
         Tl.BossOff => Art.BossOff, Tl.BossOn => Art.BossOn, Tl.Obelisk => Art.Obelisk, Tl.ObeliskUsed => Art.ObeliskUsed,
@@ -291,7 +293,7 @@ public partial class Game : Node2D
             return;
         }
         if (e is InputEventKey ek && ek.Pressed && !ek.Echo && (ek.Keycode == Key.Enter || ek.Keycode == Key.KpEnter) && Window == Win.None && !TechOpen && !MapOpen && FinStage == 0 && Chat != null) { Chat.OpenChat(); GetViewport().SetInputAsHandled(); return; }
-        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Build && Window != Win.Inventory && Window != Win.Equip && Window != Win.Chest ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
+        if (e is InputEventMouse wm && FinStage == 0 && (Window != Win.None && Window != Win.Bench && Window != Win.Inventory && Window != Win.Equip && Window != Win.Chest ? WinMouse(wm) : TechOpen && TechMouse(wm))) return;
         if (e is InputEventMouseButton cb && cb.Pressed && cb.ButtonIndex == MouseButton.Left && FinStage == 0)
         {
             OverUi = UiOver(cb.Position / UiScaleVp);
@@ -330,7 +332,6 @@ public partial class Game : Node2D
                 case Key.V: CycleOwnedWeapon(); break;
                 case Key.C: OpenWin(Win.Equip); break;
                 case Key.J: OpenWin(Win.Journal); break;
-                case Key.B: OpenWin(Win.Build); break;
                 case Key.I: case Key.Tab: OpenWin(Win.Inventory); break;
                 case Key.G: if (GameHudNode != null) GameHudNode.GoalsOpen = !GameHudNode.GoalsOpen; break;
                 case Key.H: Toast(HudDensity.Names[(int)HudDensity.Next()]); break;
@@ -378,7 +379,7 @@ public partial class Game : Node2D
         UpdateDesign(dt);
         UpdateChunks(dt);
         UpdateEvents(dt);
-        UpdateTrade(dt); UpdateChest();
+        UpdateTrade(dt); UpdateChest(); UpdateBench(); UpdatePlaceHint();
         UpdateLightTech(dt);
         UpdateRelics(dt);
         UpdateEnemies(dt);
@@ -765,7 +766,7 @@ public partial class Game : Node2D
 
     void BuildFurnace()
     {
-        if (!Can(CostFurnace)) { Fail("Для печи нужно: 10 камня и 5 дерева"); return; }
+        if (!Can(CostFurnace)) { Fail("Для печи нужно: 12 камня"); return; }
         var t = PlaceTarget(); if (t == null) return;
         Pay(CostFurnace); SetObj(t.Value.X, t.Value.Y, Tl.Furnace); HasFurnace = true;
         PlaceFx(t.Value, new Color("#ff9a2e"), 1.3f); Sfx.Play("build");
