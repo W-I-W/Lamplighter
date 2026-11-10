@@ -31,12 +31,12 @@ public partial class Game
     public int[][] NextWeaponUpCost(int idx) => idx >= 0 && idx < Owned.Count && Owned[idx].Lv < WeaponMaxLv ? WeaponUpCost(Db.Weapon(Owned[idx].Id).Tier, Owned[idx].Lv + 1) : null;
     public int[][] NextAxeUpCost => AxeLv < AxeMaxLv ? AxeUpCost(AxeLv + 1) : null;
 
-    public bool NearUpgrade() => HasFurnace && FurnaceNear(56, out _) || BuildingNear(PPos, 56) is { Type: Tl.Forge };
+    public bool NearUpgrade() => BuildingNear(PPos, 56) is { Type: Tl.Forge };          // кузница — отдельная постройка: улучшения только у неё, не у печи
 
     bool NearForge(string what)
     {
-        if (FurnaceNear(56, out _) || BuildingNear(PPos, 56) is { Type: Tl.Forge }) return true;
-        Fail($"Улучшать {what} можно только рядом с печью или кузницей"); return false;
+        if (BuildingNear(PPos, 56) is { Type: Tl.Forge }) return true;
+        Fail($"Улучшать {what} можно только рядом с кузницей"); return false;
     }
 
     void UpgradeDone(string title, string gain)

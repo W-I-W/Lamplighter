@@ -126,7 +126,10 @@ public partial class Game
         S(.2f, () =>
         {
             Check(!CraftRows().Exists(x => x.r.Id == "tool_axe") && CraftRows().TrueForAll(x => x.r.Id.StartsWith("smelt_")), "equip: the furnace window only smelts");
-            OpenStation("forge"); equipWindow.Force(); Check(CraftGroup() == "forge" && CraftRows().Exists(x => x.r.Id == "tool_axe") && !CraftRows().Exists(x => x.r.Id.StartsWith("smelt_")), "equip: the forge window (U at a furnace) crafts and upgrades, no smelting");
+            OpenStation("forge"); equipWindow.Force(); Check(CraftGroup() != "forge", "equip: a furnace has no forge recipes: the forge is a separate building");
+            { var ft = ToTile(PPos) + new Vector2I(0, 3); var fb = CreateBuilding(3, ft); OpenStation("forge"); equipWindow.Force();
+              Check(CraftGroup() == "forge" && CraftRows().Exists(x => x.r.Id.StartsWith("part_")) && !CraftRows().Exists(x => x.r.Id.StartsWith("smelt_")) && !CraftRows().Exists(x => x.r.Id == "tool_pickaxe"), "equip: the forge building makes working parts (heads, blades), no smelting and no whole pickaxe");
+              Buildings.Remove(fb); SetObj(ft.X, ft.Y, Tl.None); OpenStation("furnace"); }
             PPos += new Vector2(300, 0); equipWindow.Force(); Check(ActiveStation() == null && CraftGroups().Count == 0 && !CraftTabAvail, "equip: leaving the furnace hides its recipes");
             CloseWindows(); StationOpened = false;
         });

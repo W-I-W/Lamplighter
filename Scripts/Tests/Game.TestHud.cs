@@ -31,12 +31,11 @@ public partial class Game
         S(1.6f, () => { });
         S(.3f, () => { Check("hud: walking into another location replaces the title with the new name", RegionTitle.Showing && RegionTitle.Text == Loc.T(RegionNames[1])); Shot("hud8_region_title"); Tp(TileCenter(W.Spawn.X, W.Spawn.Y)); });
         S(.2f, () => { Inv[It.Stone] = 3; Inv[It.Wood] = 0; TestOpenBench(); });
-        int benchFurnace = 0, benchHot = 0; BuildEntry benchFe = null;
+        int benchFurnace = 0, benchHot = 0; BenchRecipe benchFe = null;
         S(.6f, () =>
         {
-            var l = BenchEntries(); Check("bench: the window opens with a short list", benchWindow.Visible && l.Count > 0 && l.Count <= 4 + 3 + 24);
+            var l = BenchEntries(); Check("bench: the window opens with a short list", benchWindow.Visible && l.Count > 0 && l.Exists(e => e.Key == PartPlank) && l.Exists(e => e.Key == PartHandle));
             Check("bench: quick craft lists only affordable recipes on the first tab", BenchRecipes(false).TrueForAll(x => x.times > 0) && BenchRecipes(true).Count == l.Count);
-            Check("bench: at most three locked entries are shown", l.FindAll(e => !e.Unlocked).Count <= 3);
             benchFe = l.Find(e => e.Key == "furnace"); benchFurnace = StockOf("furnace");
             Check("bench: with empty cells nothing is created", !BenchCraftFromCells(false) && StockOf("furnace") == benchFurnace);
             Check("bench: with not enough resources a recipe click lays nothing out", !BenchLayout(benchFe, false) && CraftIngredient(0).n == 0);

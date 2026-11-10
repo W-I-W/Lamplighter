@@ -256,7 +256,7 @@ public partial class EquipWindowUI : Control
             row.GuiInput += e => { if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left) { if (mb.DoubleClick && G.ModInv[id] > 0) { FlashSocket(); G.EqInstall(id); } else { G.EqPick = id; Sfx.Play("tick", -8, 1.4f); } } };
             rightBox.AddChild(row);
         }
-        if (shown == 0) rightBox.AddChild(Lbl("Вставок нет. Создайте их в кузне [U у печи] или нажмите «Показать все».", Dim, true));
+        if (shown == 0) rightBox.AddChild(Lbl("Вставок нет. Создайте их в кузнице [E] или нажмите «Показать все».", Dim, true));
         if (G.EqPick >= 0 && G.EqPick < Db.Mods.Length) { var pm = Db.Mods[G.EqPick]; rightBox.AddChild(Lbl(pm.Desc, Cyan, true)); int id2 = G.EqPick; bool can = G.ModInv[id2] > 0 && ow.Mods.Count < w.Slots; rightBox.AddChild(Btn("Установить", "1–7", () => { FlashSocket(); G.EqInstall(id2); Flash(centerBox); }, can, true)); }
     }
 

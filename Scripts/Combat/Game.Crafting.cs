@@ -30,13 +30,13 @@ public partial class Game
     public float StationFlashT; string lastStation;
     public static readonly int[] QtySteps = { 1, 5, 10, int.MaxValue };
 
-    public static string GroupName(string g) => g == "furnace" ? "Печь: плавка" : "Кузня: создание и улучшение";
+    public static string GroupName(string g) => g == "furnace" ? "Печь: плавка" : "Кузница: рабочие части и улучшения";
 
     /// <summary>Ближайшая станция в радиусе взаимодействия.</summary>
     public string StationNear()
     {
         bool f = FurnaceNear(56, out var fa); var b = BuildingNear(PPos, 56); bool forge = b != null && b.Type == Tl.Forge;
-        if (CraftStation == "forge" && (f || forge)) return "forge";                // кузня работает и у печи (там [U]), и у кузницы деревни
+        if (CraftStation == "forge" && forge) return "forge";                       // кузница — отдельная постройка; у печи только плавка
         if (CraftStation == "furnace" && f) return "furnace";
         return f ? "furnace" : forge ? "forge" : null;
     }
@@ -58,11 +58,12 @@ public partial class Game
     {
         recipes = new();
         int[][] C(params int[] a) { var l = new int[a.Length / 2][]; for (int i = 0; i < l.Length; i++) l[i] = new[] { a[i * 2], a[i * 2 + 1] }; return l; }
-        // кузня: кирка (герой начинает без неё и после смерти теряет её) и топор. Печь только плавит
-        foreach (var (id, cost) in new[] { ("pickaxe", CostPickaxe), ("axe", C(It.Wood, 5, It.Stone, 3)) })
+        // кузница делает только рабочие части (боёк, лезвие, клинок…); сборка рукоять + деталь — на Рабочем столе. Здесь остаются улучшения уже собранных топора и оружия
+        AddForgePartRecipes(recipes);
+        foreach (var (id, cost) in new[] { ("axe", C(It.Wood, 5, It.Stone, 3)) })
         {
             var td = ToolDef.Get(id); string tid = id; var tc = cost;
-            recipes.Add(new Recipe { Id = "tool_" + id, Group = "forge", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => true, Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
+            recipes.Add(new Recipe { Id = "tool_" + id, Group = "forge", Name = td.Name, Desc = td.Desc, Icon = td.Icon, Cost = tc, Known = () => OwnedTools.Contains(tid), Done = () => OwnedTools.Contains(tid), Craft = n => CraftTool(tid, tc),
                 NameFn = tid == "axe" ? () => td.Name + (AxeLv > 0 ? $" +{AxeLv}" : "") : null, UpCost = tid == "axe" ? () => NextAxeUpCost : null, Upgrade = tid == "axe" ? UpgradeAxe : null, UpDesc = "+30% к добыче и +10% к урону за уровень" });
         }
         // печь: плавка слитков (очередь общая и работает после закрытия окна)
@@ -78,15 +79,13 @@ public partial class Game
             int it = item; var unit = cost;
             recipes.Add(new Recipe { Id = "make_" + it, Group = "forge", Name = It.Names[it], Desc = desc, Icon = it, Cost = unit, Multi = true, Known = () => true, Done = () => false, Craft = n => CraftItem(it, unit, n) });
         }
-        // кузня: улучшение кирки, оружие, модификаторы (кузня — у печи по [U] или у кузницы деревни)
+        // кузница: улучшения оружия (само оружие собирается на Рабочем столе из детали и рукояти), вставки
         foreach (var g in new[] { "forge" })
         {
             string grp = g;
-            recipes.Add(new Recipe { Id = "pick_" + g, Group = g, Name = "Улучшение кирки", Desc = "Новая кирка добывает быстрее и бьёт сильнее", Icon = UiIcons.Pickaxe, Improves = true, Known = () => Tier < 4 && OwnedTools.Contains("pickaxe"), Done = () => false,
-                CostFn = () => Tier < 4 ? CostPick[Tier] : null, Craft = n => UpgradePick() });
             foreach (var w in CraftableWeapons())
             {
-                var wd = w; recipes.Add(new Recipe { Id = $"w_{wd.Id}_{g}", Group = g, Name = wd.Name, Desc = wd.Desc, Icon = HotIcon(RefWeapon(wd.Id)), Cost = wd.Cost, Known = () => BpOk(wd.Bp), Done = () => HasWeapon(wd.Id), Craft = n => CraftWeapon(wd),
+                var wd = w; recipes.Add(new Recipe { Id = $"w_{wd.Id}_{g}", Group = g, Name = wd.Name, Desc = wd.Desc, Icon = HotIcon(RefWeapon(wd.Id)), Cost = wd.Cost, Known = () => BpOk(wd.Bp) && HasWeapon(wd.Id), Done = () => HasWeapon(wd.Id), Craft = n => CraftWeapon(wd),
                     NameFn = () => wd.Name + (WeaponLv(wd.Id) > 0 ? $" +{WeaponLv(wd.Id)}" : ""), UpCost = () => WeaponLv(wd.Id) < WeaponMaxLv ? WeaponUpCost(wd.Tier, WeaponLv(wd.Id) + 1) : null, Upgrade = () => UpgradeWeapon(Owned.FindIndex(o => o.Id == wd.Id)), UpDesc = "+10% урона за уровень" });
             }
             for (int m = 0; m < Db.Mods.Length; m++)

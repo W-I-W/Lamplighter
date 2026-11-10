@@ -63,7 +63,7 @@ public partial class Game
         EquipWeapon((cur + 1) % Owned.Count);
     }
 
-    bool NearForge() => FurnaceNear(56, out _) || (BuildingNear(PPos, 56) is Building b && b.Type == Tl.Forge);
+    bool NearForge() => BuildingNear(PPos, 56) is Building b && b.Type == Tl.Forge;
     public bool BpOk(string bp) => bp == null || BpDone.Contains(bp);
 
     public bool CraftWeapon(WeaponDef w)
@@ -72,7 +72,7 @@ public partial class Game
         if (w.Cost == null) return false;
         if (HasWeapon(w.Id)) { Toast("Это оружие уже есть"); return false; }
         if (!BpOk(w.Bp)) { Fail("Нужен чертёж: " + Db.Bp(w.Bp).Name + " (журнал [J])"); return false; }
-        if (!NearForge()) { Fail("Оружие создаётся рядом с печью или кузницей"); return false; }
+        if (!NearForge()) { Fail("Оружие создаётся рядом с кузницей"); return false; }
         if (!Can(w.Cost)) { Fail("Не хватает: " + NeedStr(w.Cost)); return false; }
         Pay(w.Cost); GiveWeapon(w.Id); HotEquip(RefWeapon(w.Id)); GiveXp(25); Sfx.Play("build"); Save(); return true;       // созданное оружие сразу берётся в руки (прежнее остаётся в экипировке [C])
     }
@@ -81,7 +81,7 @@ public partial class Game
     {
         var m = Db.Mods[id];
         if (!BpOk(m.Bp)) { Fail("Нужен чертёж: " + Db.Bp(m.Bp).Name + " (журнал [J])"); return false; }
-        if (!NearForge()) { Fail("Модификаторы создаются рядом с печью или кузницей"); return false; }
+        if (!NearForge()) { Fail("Модификаторы создаются рядом с кузницей"); return false; }
         if (!Can(m.Cost)) { Fail("Не хватает: " + NeedStr(m.Cost)); return false; }
         Pay(m.Cost); ModInv[id]++; GiveXp(10); Sfx.Play("upgrade"); Toast($"Создан модификатор: {m.Name}"); return true;
     }

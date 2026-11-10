@@ -77,11 +77,13 @@ public partial class Game
                 {
                     e.Dash -= dt; vel = e.DashDir * 165f * k;
                     if (dist < 12 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(8f * e.Scale, -dir); Chill(2f); }
+                    if (e.Dash <= 0) EndDash(e);
                 }
+                else if (e.T3 > 0) { e.T3 -= dt; vel = RetreatVel(e, dir, perp, 66f * k); }
                 else
                 {
                     vel = (dir + perp * Mathf.Sin(Time * 2.5f + e.Phase) * .6f).Normalized() * 60f * k;
-                    if (e.Cd <= 0 && dist < 85) { e.Tele = .45f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
+                    if (e.Cd <= 0 && dist < 85 && !IsLit(e.Pos)) { e.Tele = .45f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
                 }
                 break;
             case EK.FrostPriest:

@@ -62,10 +62,17 @@ public partial class Game
         S(.2f, () =>
         {
             OwnedTools.Clear(); CurTool = ""; Tier = 0; CurW = -1; Inv[It.Wood] = 3; Inv[It.Stone] = 4; Tp(W.Ancients[0].Pos + new Vector2(0, 28)); var ft = ToTile(PPos) + new Vector2I(1, 0); SetObj(ft.X, ft.Y, Tl.Furnace); HasFurnace = true; RecomputeEffects();
-            var rec = RecipesOf("forge").Find(r => r.Id == "tool_pickaxe");
-            Check(rec != null && !RecipesOf("forge").Exists(r => r.Id == "pick_forge") && RecipesOf("furnace").TrueForAll(r => r.Id.StartsWith("smelt_")), "start: without a pickaxe the forge offers to craft one, not to improve one");
-            CraftStation = "forge"; if (rec != null) CraftRecipe(rec);
-            Check(OwnedTools.Contains("pickaxe") && Inv[It.Wood] == 0 && Inv[It.Stone] == 0, "start: the pickaxe is crafted from wood and stone");
+            var rec = RecipesOf("forge").Find(r => r.Id == PartPick(0));
+            Check(rec != null && !RecipesOf("forge").Exists(r => r.Id == "tool_pickaxe" || r.Id == "pick_forge") && RecipesOf("furnace").TrueForAll(r => r.Id.StartsWith("smelt_")), "start: without a pickaxe the forge offers a stone pick head, not a whole pickaxe");
+            rec?.Craft(1);
+            Check(StockOf(PartPick(0)) == 1 && Inv[It.Stone] == 0 && Inv[It.Wood] == 3, "start: the forge makes only the head (4 stone)");
+            bool Make(string key) { var r = BenchEntries().Find(x => x.Key == key); if (r == null || !BenchLayout(r, false) || !BenchCraftFromCells(false)) return false; ReturnCellsOf(benchCells, false, benchCells.Length); return true; }
+            Check(Make(PartPlank) && StockOf(PartPlank) == 2 && Inv[It.Wood] == 2, "start: the workbench turns 1 wood into 2 planks");
+            Check(Make(PartHandle) && StockOf(PartHandle) == 1 && StockOf(PartPlank) == 0, "start: the workbench makes a handle from 2 planks");
+            Check(Make("tool_pickaxe0") && OwnedTools.Contains("pickaxe") && StockOf(PartHandle) == 0 && StockOf(PartPick(0)) == 0 && benchCells[Game.BenchInputs].n == 0, "start: handle + stone head = pickaxe, assembled at the workbench");
+            Inv[It.Copper] = 5; Inv[It.Wood] = 5; RecipesOf("forge").Find(r => r.Id == PartPick(1))?.Craft(1); Inv[It.Wood] = 1; Make(PartPlank); Make(PartHandle);
+            Check(Make("tool_pickaxe1") && Tier == 1 && OwnedTools.Contains("pickaxe"), "parts: a copper head + handle upgrades the pickaxe to copper");
+            Tier = 0; Inv[It.Wood] = 0; Inv[It.Stone] = 0; Inv[It.Copper] = 0;
             OwnedTools.Clear(); CurTool = ""; CurW = -1; for (int i = 0; i < HotCount; i++) Hot[i] = null; if (Owned.Count == 0) GiveWeapon("sword1", false); CurW = -1; InitHotbar();
             Check(CurW >= 0 && HeldIcon() >= 0 && IsWeaponRef(Hot[HotSel]), $"start: a hero without a pickaxe holds the sword (CurW {CurW}, icon {HeldIcon()}, hot {Hot[HotSel]})");
             Aim = PPos + new Vector2(40, 10); Swing = 0f;
@@ -197,6 +204,18 @@ public partial class Game
                 "chest: legacy resource totals load as stacks");
             SetObj(ct.X, ct.Y, Tl.None); Placed.Remove(World.Key(ct.X, ct.Y)); Chests.Clear(); TestSlots = false;
             for (int i = 0; i < It.Count; i++) Inv[i] = 0;
+        });
+        S(.2f, () =>
+        {
+            Enemies.Clear(); Projs.Clear(); TestNoSpawn = true; Invuln = 99f; var lp = W.Ancients[0].Pos + new Vector2(0, 36); Tp(lp + new Vector2(28, 0));
+            var we = SpawnEnemy(lp, EK.Wraith); we.MaxHp = we.Hp = 999f; we.Dash = .01f; we.DashDir = Vector2.Right; we.Cd = 0;
+            Check(IsLit(lp), "dash: the test wraith ends its dash in the light near the player");
+        });
+        S(.5f, () =>
+        {
+            var we = Enemies.Find(x => x.Kind == EK.Wraith);
+            Check(we != null && we.Dash <= 0 && we.Tele <= 0 && we.T3 > 0 && we.Cd > 1f && we.Pos.DistanceTo(PPos) > 28f, $"dash: after a dash into the light the wraith runs back instead of dashing again (tele {we?.Tele:0.00}, retreat {we?.T3:0.00}, dist {we?.Pos.DistanceTo(PPos):0})");
+            Enemies.Clear(); TestNoSpawn = false; Invuln = 0;
         });
         S(.2f, () =>
         {

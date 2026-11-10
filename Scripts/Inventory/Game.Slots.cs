@@ -65,6 +65,7 @@ public partial class Game
     {
         if (key.StartsWith("relic:")) return Db.Relic(key.Substring(6))?.Title ?? "";
         if (key.StartsWith("mod:")) return Db.Mods[int.Parse(key.Substring(4))].Name;
+        if (PartOf(key) is { } part) return PartName(part);
         return IsInventoryGear(key) ? HotName(key) : BuildOfKey(key)?.Name ?? "";
     }
 
@@ -91,6 +92,7 @@ public partial class Game
             if (weapon == null) return "";
             return $"{Loc.T("Базовый урон")}: {weapon.Dmg:0.#}\n{Loc.T(weapon.Desc ?? "")}".TrimEnd();
         }
+        if (PartOf(key) is { } part) return Loc.T(PartDesc(part));
         return Loc.T(BuildOfKey(key)?.Hint ?? "");
     }
 
@@ -152,6 +154,11 @@ public partial class Game
             foreach (var (k, p) in w.Inherent) d.Stat(FxLabels[(int)k], $"{p:0.#}", TipWarm);
             if (w.Tags.Length > 0) d.Stat("Стихия", string.Join(", ", System.Linq.Enumerable.Select(w.Tags, TagName)), TipWarm);
             d.Stat("Слоты модов", $"{w.Slots}", new Color("#5aa8ff"));
+        }
+        else if (PartOf(key) is { } part)
+        {
+            d.Accent = TipWarm; d.Kind = "Деталь";
+            d.Stat("Стопка", $"{count}/{StackMax}");
         }
         else if (BuildOfKey(key) is { } b)
         {
@@ -226,6 +233,7 @@ public partial class Game
         if (key.StartsWith("relic:")) return UiIcons.Item(It.Relic);
         if (key.StartsWith("mod:")) return UiIcons.Item(ModIcon(Db.Mods[int.Parse(key.Substring(4))].Id));
         if (IsInventoryGear(key)) return UiIcons.Item(HotIcon(key));
+        if (PartOf(key) is { } part) return UiIcons.Item(part.Icon);
         return InventoryBuild(item) is { } entry ? UiIcons.Tile(entry.Tile) : null;
     }
 

@@ -79,8 +79,8 @@ public partial class Game
                     var tree = W.Get(x, y + 1);
                     Add($"resource:{x}:{y + 1}", ResourceTitle(tree), TileRect(x, y), 10, _ => { }, false);
                 }
-                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Печь: плавка руды"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); ix.Action("U", "Кузня: создание и улучшение"); ix.U = () => OpenStation("forge"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
-                if (t == Tl.Workbench) { Add($"t:{x}:{y}", "Рабочий стол", TileRect(x, y), 5, ix => { ix.Action("E", "Рабочий стол: создание построек"); ix.Gives("Создаёт", "постройки из ресурсов сумки", TipRole.Resource); ix.E = () => OpenBench(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
+                if (t == Tl.Furnace) { var at = TileCenter(x, y); Add($"t:{x}:{y}", "Печь", TileRect(x, y), 5, ix => { ix.Action("E", "Печь: плавка руды"); ix.Gives("Плавка", "слиток = 1 руда + 1 дерево", TipRole.Resource); ix.E = () => OpenStation("furnace"); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
+                if (t == Tl.Workbench) { Add($"t:{x}:{y}", "Рабочий стол", TileRect(x, y), 5, ix => { ix.Action("E", "Рабочий стол: постройки и сборка"); ix.Gives("Создаёт", "постройки, доски, рукояти, инструменты и оружие", TipRole.Resource); ix.E = () => OpenBench(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t == Tl.StorageChest) { Add($"t:{x}:{y}", "Сундук", TileRect(x, y), 5, ix => { ix.Action("E", "Открыть сундук"); ix.Gives("Хранит", "20 слотов по 99", TipRole.Resource); ix.E = () => OpenChest(tx, ty); if (IsPlacedTile(tx, ty)) AddDemolishTile(tx, ty, ix); }); continue; }
                 if (t != Tl.Mirror1 && t != Tl.Mirror2 && IsPlacedTile(x, y)) { Add($"t:{x}:{y}", PlacedTitle(t), TileRect(x, y), 1, ix => AddDemolishTile(tx, ty, ix)); continue; }
                 if (!IsTileInteractable(t))

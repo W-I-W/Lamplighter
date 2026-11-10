@@ -400,6 +400,16 @@ public partial class Game
         return -toPlayerDir * 55f;
     }
 
+    /// <summary>Рывок закончился: враг не рвётся снова, а отбегает от игрока. Если рывок привёл его на свет — отступает дольше и следующий рывок ждёт дольше.</summary>
+    void EndDash(Enemy e)
+    {
+        bool lit = IsLit(e.Pos);
+        e.T3 = lit ? 1.4f : .6f; e.Cd = Mathf.Max(e.Cd, lit ? 2.4f : 1.4f);
+    }
+
+    /// <summary>Отступление после рывка: бегом прочь от игрока (с лёгким уклоном вбок), без нового рывка.</summary>
+    Vector2 RetreatVel(Enemy e, Vector2 dir, Vector2 perp, float speed) => (-dir + perp * (e.Phase > Mathf.Pi ? .35f : -.35f)).Normalized() * speed;
+
     Vector2 AvoidLight(Enemy e, Vector2 vel, Vector2 toPlayerDir, float auraR)
     {
         if (BossFightNear(e.Pos) || !IsLit(PPos)) return vel;              // игрок вышел из света — враг нападает, даже если зайдёт на свет
@@ -586,11 +596,13 @@ public partial class Game
                     {
                         e.Dash -= dt; vel = e.DashDir * 170f * k;
                         if (dist < 13 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(7f * e.Scale, -dir); }
+                        if (e.Dash <= 0) EndDash(e);
                     }
+                    else if (e.T3 > 0) { e.T3 -= dt; vel = RetreatVel(e, dir, perp, 64f * k); }
                     else
                     {
                         vel = (dir + perp * Mathf.Sin(Time * 3f + e.Phase) * .8f).Normalized() * 58f * k;
-                        if (e.Cd <= 0 && dist < 100 && AtkSlot()) { e.Tele = .35f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
+                        if (e.Cd <= 0 && dist < 100 && !IsLit(e.Pos) && AtkSlot()) { e.Tele = .35f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
                     }
                     break;
                 case EK.Spitter:

@@ -102,7 +102,7 @@ public partial class Game
         if (source < 0 || !quick && source >= InventorySlots().Count) return 0;
         var from = quick ? QuickStack(source) : InventorySlots()[source];
         var to = CC[target];
-        if (from.item < 0 || from.n <= 0) return 0;                              // предметы-постройки компонентами не бывают
+        if (from.item < 0 && !IsPartItem(from.item) || from.n <= 0) return 0;      // постройки и снаряжение компонентами не бывают; детали (доска, рукоять, боёк…) — бывают
         bool replace = to.n > 0 && (to.item != from.item || to.n >= StackMax && amount >= from.n && from.n < StackMax);                       // замена компонента: прежний возвращается в инвентарь
         if (replace)
         {
@@ -112,12 +112,12 @@ public partial class Game
                 var old = to;
                 if (quick) { quickItems[source] = old.item; quickCounts[source] = old.n; }
                 else { inventorySlots[source] = old; TrackBagChange(from.item, -from.n); TrackBagChange(old.item, old.n); }
-                Inv[old.item] += old.n; Inv[from.item] -= from.n;
+                AddItem(old.item, old.n); AddItem(from.item, -from.n);
                 CC[target] = from;
                 return from.n;
             }
             if ((quick || canMove < from.n) && !CanFillEmptyInventorySlot(to.item)) return 0;     // некуда вернуть прежний предмет (из горячей панели сумка не освобождается)
-            Inv[to.item] += to.n; CC[target] = (-1, 0); to = (-1, 0);
+            AddItem(to.item, to.n); CC[target] = (-1, 0); to = (-1, 0);
         }
         int moved = Math.Min(amount, Math.Min(from.n, StackMax - to.n));
         if (moved <= 0) return 0;
@@ -127,10 +127,12 @@ public partial class Game
             inventorySlots[source] = from.n == moved ? EmptyStack : (from.item, from.n - moved);
             TrackBagChange(from.item, -moved);
         }
-        Inv[from.item] -= moved;
+        AddItem(from.item, -moved);
         CC[target] = (from.item, to.n + moved);
         return moved;
     }
+
+    bool Swappable(int item) => item >= 0 || IsPartItem(item);
 
     internal int TakeCraftIngredient(int source, int area, int target, int amount)
     {
@@ -139,10 +141,10 @@ public partial class Game
         var to = area == 0 ? QuickStack(target) : InventorySlots()[target];
         if (to.n > 0 && (to.item != from.item || to.n >= StackMax && amount >= from.n && from.n < StackMax))
         {
-            if (source >= CraftResultIndex || to.item < 0 || from.item < 0 || amount < from.n) return 0;      // обмен только целой стопкой компонента, результат и постройки не обмениваются
+            if (source >= CraftResultIndex || !Swappable(to.item) || !Swappable(from.item) || amount < from.n) return 0;      // обмен только целой стопкой компонента, результат и постройки не обмениваются
             if (area == 0) { quickItems[target] = from.item; quickCounts[target] = from.n; }
             else { inventorySlots[target] = from; TrackBagChange(from.item, from.n); TrackBagChange(to.item, -to.n); }
-            Inv[from.item] += from.n; Inv[to.item] -= to.n;
+            AddItem(from.item, from.n); AddItem(to.item, -to.n);
             CC[source] = to;
             return from.n;
         }
@@ -217,11 +219,11 @@ public partial class Game
         foreach (var stack in benchCells) if (stack.n > 0 && stack.item >= 0) inventory[stack.item] += stack.n;
     }
 
-    /// <summary>Запас построек для сохранения: готовая постройка, лежащая в ячейке результата, считается уже полученной.</summary>
+    /// <summary>Запас построек и деталей для сохранения: что лежит в ячейках крафта (готовая постройка, детали), считается уже полученным.</summary>
     internal (string[] k, int[] v) BuildStockForSave()
     {
         var d = new Dictionary<string, int>(BuildStock);
-        foreach (var o in new[] { craftIngredients[2], benchCells[benchCells.Length - 1] })
+        foreach (var o in craftIngredients.Concat(benchCells))                     // детали в ячейках-компонентах тоже лежат в запасе
             if (o.n > 0 && o.item < 0) { string key = InventoryKey(o.item); d[key] = d.GetValueOrDefault(key) + o.n; }
         return (d.Keys.ToArray(), d.Values.ToArray());
     }

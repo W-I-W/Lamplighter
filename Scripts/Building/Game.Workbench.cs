@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-/// <summary>Рабочий стол: ставимая постройка, у которой [E] открывает окно создания. Туда перенесены все крафты, что раньше были в меню строительства:
+/// <summary>Рабочий стол: ставимая постройка, у которой [E] открывает окно создания: постройки, доски и рукоять, сборка инструментов и оружия из деталей (Game.Parts).
 /// слева список рецептов, в центре результат и до четырёх компонентов вокруг него (есть/нужно), снизу инвентарь.
 /// Создание не меняет механику построек: цена списывается из инвентаря, готовая постройка попадает в запас (сумку) и ставится оттуда.</summary>
 public partial class Game
@@ -69,38 +69,38 @@ public partial class Game
         OpenBench(t.X, t.Y);
     }
 
-    /// <summary>Рецепты стола: все доступные постройки (закрытые не показываются, как неизвестные рецепты в инвентаре).</summary>
-    public List<BuildEntry> BenchEntries() => BuildEntries().FindAll(e => !BuiltOnce(e) && e.Unlocked && e.CostArr != null);
-
-    /// <summary>Сколько раз рецепт можно выполнить из сумки.</summary>
-    internal int BenchTimes(BuildEntry e)
+    /// <summary>Сколько раз рецепт можно выполнить из сумки (ресурсы и детали).</summary>
+    internal int BenchTimes(BenchRecipe r)
     {
-        var cost = e.Raw ?? e.CostArr; if (cost == null) return 0;
-        int t = 99; foreach (var c in cost) t = Math.Min(t, Inv[c[0]] / c[1]); return t;
+        if (r.Cost == null) return 0;
+        int t = 99; foreach (var c in r.Cost) t = Math.Min(t, HaveItem(c[0]) / c[1]);
+        return r.Give != null ? Math.Min(t, 1) : t;                       // инструмент или оружие собирается один раз
     }
 
     /// <summary>Быстрый крафт стола: те же вкладки, что в инвентаре — только доступные сейчас или все.</summary>
-    internal List<(BuildEntry e, int times)> BenchRecipes(bool all)
+    internal List<(BenchRecipe r, int times)> BenchRecipes(bool all)
     {
-        var list = new List<(BuildEntry, int)>();
-        foreach (var e in BenchEntries()) { int t = BenchTimes(e); if (all || t > 0) list.Add((e, t)); }
+        var list = new List<(BenchRecipe, int)>();
+        foreach (var r in BenchEntries()) { int t = BenchTimes(r); if (all || t > 0) list.Add((r, t)); }
         return list;
     }
 
-    /// <summary>Отпечаток данных быстрого крафта стола: меняется при расходовании ресурсов и открытии построек.</summary>
+    /// <summary>Отпечаток данных быстрого крафта стола: меняется при расходовании ресурсов и деталей, открытии построек, новых инструментах.</summary>
     internal string BenchSignature()
     {
         var sb = new System.Text.StringBuilder();
         foreach (int n in Inv) sb.Append(n).Append(',');
-        foreach (var e in BenchEntries()) sb.Append(e.Key).Append(e.Stock).Append(',');
+        foreach (var kv in BuildStock) sb.Append(kv.Key).Append(kv.Value).Append(',');
+        sb.Append(Tier).Append(OwnedTools.Count).Append(Owned.Count).Append('|');
+        foreach (var r in BenchEntries()) sb.Append(r.Key).Append(',');
         return sb.ToString();
     }
 
     /// <summary>Подсказка рецепта: что получится, нужные компоненты (есть/нужно) и сколько раз можно создать — как у быстрого крафта в инвентаре.</summary>
-    internal ItemTipData BenchRecipeTip(BuildEntry e, int times)
+    internal ItemTipData BenchRecipeTip(BenchRecipe r, int times)
     {
-        var d = new ItemTipData { Name = e.Name, Count = 1, Kind = "Рецепт", Accent = TipGold }; var bad = new Color("#f06a5e");
-        foreach (var c in e.Raw ?? e.CostArr) { int have = HaveOf(c[0]); d.Stat(It.Names[c[0]], $"{have}/{c[1]}", have >= c[1] ? TipGood : bad); }
+        var d = new ItemTipData { Name = r.Name, Count = r.ResultN, Kind = r.Kind, Accent = TipGold }; var bad = new Color("#f06a5e");
+        foreach (var c in r.Cost) { int have = HaveItem(c[0]); d.Stat(ItemName(c[0]), $"{have}/{c[1]}", have >= c[1] ? TipGood : bad); }
         d.Stat("Можно создать", times.ToString(), times > 0 ? TipGood : bad);
         if (times > 1) d.Stat("Shift + клик", "максимум", TipGold);
         return d;
@@ -113,18 +113,18 @@ public partial class Game
     internal bool CraftFromCells(bool max) => Window == Win.Bench ? BenchCraftFromCells(max) : CombineFromCells(max);
 
     internal enum BenchState { Empty, Unknown, Short, Blocked, Ready }
-    internal sealed class BenchMatchInfo { public BenchState State; public BuildEntry Entry; public int Times; }
+    internal sealed class BenchMatchInfo { public BenchState State; public BenchRecipe Entry; public int Times; }
 
     /// <summary>Что получится из ячеек: рецепт, у которого набор ресурсов совпадает с содержимым ячеек (порядок не важен); хватает ли количества и свободна ли ячейка результата.</summary>
     internal BenchMatchInfo MatchBench()
     {
         var have = new Dictionary<int, int>();
-        for (int i = 0; i < BenchInputs; i++) if (benchCells[i].n > 0 && benchCells[i].item >= 0) have[benchCells[i].item] = have.GetValueOrDefault(benchCells[i].item) + benchCells[i].n;
+        for (int i = 0; i < BenchInputs; i++) if (benchCells[i].n > 0 && benchCells[i].item != -1) have[benchCells[i].item] = have.GetValueOrDefault(benchCells[i].item) + benchCells[i].n;
         if (have.Count == 0) return new BenchMatchInfo { State = BenchState.Empty };
-        BuildEntry short_ = null; BuildEntry loose = null; int looseTimes = 0;
+        BenchRecipe short_ = null; BenchRecipe loose = null; int looseTimes = 0;
         foreach (var e in BenchEntries())
         {
-            var cost = e.Raw ?? e.CostArr; if (!e.Unlocked || cost == null || cost.Length != have.Count) continue;
+            var cost = e.Cost; if (cost == null || cost.Length != have.Count) continue;
             int times = 99; bool same = true, exact = true; int k0 = -1;
             foreach (var c in cost)
             {
@@ -133,6 +133,7 @@ public partial class Game
                 int k = n % c[1] == 0 ? n / c[1] : -2; if (k < 1 || k0 != -1 && k != k0) exact = false; k0 = k;       // точное совпадение: все количества кратны цене в одно и то же число раз
             }
             if (!same) continue;
+            if (e.Give != null) times = Math.Min(times, 1);
             if (times < 1) { short_ ??= e; continue; }
             if (!exact) { if (loose == null) { loose = e; looseTimes = times; } continue; }           // рецепты с тем же набором ресурсов различаются количеством: точное совпадение важнее порядка в списке
             return Ready(e, times);
@@ -141,10 +142,10 @@ public partial class Game
         return short_ != null ? new BenchMatchInfo { Entry = short_, State = BenchState.Short } : new BenchMatchInfo { State = BenchState.Unknown };
     }
 
-    BenchMatchInfo Ready(BuildEntry e, int times)
+    BenchMatchInfo Ready(BenchRecipe e, int times)
     {
-        var res = benchCells[BenchInputs]; int id = InventoryItemId(e.Key);
-        bool free = res.n <= 0 || res.item == id && res.n < StackMax;
+        var res = benchCells[BenchInputs]; int id = e.ResultItem;
+        bool free = e.Give != null || res.n <= 0 || res.item == id && res.n + e.ResultN <= StackMax;
         return new BenchMatchInfo { Entry = e, Times = times, State = free ? BenchState.Ready : BenchState.Blocked };
     }
 
@@ -158,8 +159,9 @@ public partial class Game
             var m = MatchBench();
             if (m.State == BenchState.Blocked) { Fail("Сначала заберите результат"); return false; }
             if (m.State != BenchState.Ready) { if (m.State == BenchState.Short) Fail("Не хватает ресурсов"); else if (m.State == BenchState.Unknown) Fail("Неизвестная комбинация"); return false; }
-            var e = m.Entry; var cost = e.Raw ?? e.CostArr; var res = benchCells[BenchInputs];
-            int times = Math.Max(1, Math.Min(max ? m.Times : 1, StackMax - res.n));
+            var e = m.Entry; var cost = e.Cost; var res = benchCells[BenchInputs];
+            int times = e.Give != null ? 1 : Math.Max(1, Math.Min(max ? m.Times : 1, (StackMax - Math.Max(0, res.n)) / e.ResultN));
+            if (e.Give != null && !e.Give()) return false;                  // инструмент или оружие: выдаётся сразу, ячейка результата не нужна
             foreach (var c in cost)
             {
                 int need = c[1] * times;
@@ -169,8 +171,7 @@ public partial class Game
                     int take = Math.Min(need, st.n); need -= take; benchCells[i] = take == st.n ? (-1, 0) : (st.item, st.n - take);
                 }
             }
-            benchCells[BenchInputs] = (InventoryItemId(e.Key), res.n + times);
-            GiveXp(BuildCraftXp(e.Key) * times); Sfx.Play("build", -3, 1.2f);
+            if (e.Give == null) { benchCells[BenchInputs] = (e.ResultItem, Math.Max(0, res.n) + e.ResultN * times); GiveXp((e.Build != null ? BuildCraftXp(e.Key) : 1) * times); Sfx.Play("build", -3, 1.2f); }
             Toast(Loc.T("Создано") + ": " + Loc.T(e.Name) + (times > 1 ? " ×" + times : ""));
             return true;
         }
@@ -178,17 +179,16 @@ public partial class Game
     }
 
     /// <summary>Клик по рецепту в списке: компоненты выкладываются из сумки в ячейки (как быстрый крафт в инвентаре). max — на максимум повторов.</summary>
-    internal bool BenchLayout(BuildEntry e, bool max)
+    internal bool BenchLayout(BenchRecipe e, bool max)
     {
-        if (combining || e == null) return false; var cost = e.Raw ?? e.CostArr;
-        if (!e.Unlocked) { Fail("Недоступно: " + e.Lock); return false; }
+        if (combining || e == null) return false; var cost = e.Cost;
         if (cost == null || cost.Length > BenchInputs) return false;
         ReturnCellsOf(benchCells, true, BenchInputs);                              // прежние компоненты возвращаются в сумку; готовый результат остаётся в ячейке
         int times = 99; int maxNeed = 1;
-        foreach (var c in cost) { times = Math.Min(times, Inv[c[0]] / c[1]); maxNeed = Math.Max(maxNeed, c[1]); }
+        foreach (var c in cost) { times = Math.Min(times, HaveItem(c[0]) / c[1]); maxNeed = Math.Max(maxNeed, c[1]); }
         if (times <= 0) { Fail("Не хватает ресурсов"); return false; }
-        times = max ? Math.Max(1, Math.Min(times, StackMax / maxNeed)) : 1;
-        for (int k = 0; k < cost.Length; k++) { Inv[cost[k][0]] -= cost[k][1] * times; benchCells[k] = (cost[k][0], cost[k][1] * times); }
+        times = max && e.Give == null ? Math.Max(1, Math.Min(times, StackMax / maxNeed)) : 1;
+        for (int k = 0; k < cost.Length; k++) { AddItem(cost[k][0], -cost[k][1] * times); benchCells[k] = (cost[k][0], cost[k][1] * times); }
         Sfx.Play("tick", -6, 1.3f);
         return true;
     }

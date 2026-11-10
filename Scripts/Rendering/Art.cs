@@ -6,7 +6,7 @@ namespace Lamplighter;
 public static partial class Art
 {
     public const int Dirt = 4, Tree = 5, Stone = 6, Copper = 7, Iron = 8, Lumen = 9,
-        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 207, StorageChest = 200, ResTable = 201, Workbench = 206, BossTotem = 180, BossGate = 181, IconCount = 34, TreeTop = 162, Grave = 177, PineTop = 163, DeadTop = 164;
+        AncOff = 10, AncOn = 11, Furnace = 12, Lantern = 13, Cliff = 14, TileCount = 207, StorageChest = 200, ResTable = 201, Workbench = 206, BossTotem = 180, BossGate = 181, IconCount = 45, TreeTop = 162, Grave = 177, PineTop = 163, DeadTop = 164;
     /// <summary>Область тайла в атласе с текущим кадром анимации (кадры лежат столбиком под основным).</summary>
     public static Rect2 TileRect(int idx, double time) { int n = idx >= 0 && idx < SpriteLibrary.TileFrames.Length ? SpriteLibrary.TileFrames[idx] : 1; return new Rect2(idx * 16, n > 1 ? ((int)(time / .22) % n) * 16 : 0, 16, 16); }
     /// <summary>Дерево — один большой тайл 32×32 (два столбца и два ряда атласа): крона над стволом и по 8 px запаса по бокам для качания. Индекс — левый столбец.</summary>

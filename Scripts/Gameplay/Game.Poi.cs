@@ -263,30 +263,33 @@ public partial class Game
         int rescued = Villagers.Count;
         var a1 = W.Ancients[1]; var boss1 = BossLantern(1);
         bool Lv2() { foreach (var b in Buildings) if (b.Level >= 2) return true; return false; }
-        // начало игры: ресурсы на печь → печь → кирка → навык света; показывается по одной цели, опытному герою не повторяется
+        // начало игры: рабочий стол → кузница → боёк → рукоять → кирка → печь → стол исследований → навык света; показывается по одной цели, опытному герою не повторяется
         var sparkCost = LevelCost((int)Tech.Spark, 1); bool spark = Has(Tech.Spark);
         bool pickOwned = OwnedTools.Contains("pickaxe") || Tier >= 1 || Graves.Count > 0;          // после смерти кирка ждёт в могиле
         var tableCost = BCost(ResearchBk, 1); bool tableBuilt = HasBuilding(Tl.ResearchTable);
         bool benchDone = HasWorkbench || tableBuilt || spark || HasFurnace;                // опытному герою рабочий стол не навязывается
         Add("Собрать дерево и камень", benchDone || Can(CostWorkbench), NeedShort(CostWorkbench));
         Add("Построить Рабочий стол", benchDone, "Создайте его в инвентаре [I] (быстрый крафт) и поставьте на землю");
+        bool forgeBuilt = HasBuilding(Tl.Forge);
+        Add("Построить кузницу", forgeBuilt || pickOwned, "Рабочий стол [E]: " + NeedShort(BCost(3, 1)));
+        Add("Выковать каменный боёк в кузнице [E]", pickOwned || StockOf(PartPick(0)) > 0, NeedShort(CostPickHead0));
+        Add("Сделать рукоять на рабочем столе [E]", pickOwned || StockOf(PartHandle) > 0, "Доски из дерева, затем рукоять из 2 досок");
+        Add("Собрать кирку на рабочем столе [E]", pickOwned, "Рукоять + каменный боёк");
         Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
         Add("Построить печь", HasFurnace, "Инвентарь [I] или Рабочий стол [E]: " + NeedShort(CostFurnace));
-        Add("Создать кирку в кузне [U у печи]", pickOwned, NeedShort(CostPickaxe));
         Add("Собрать ресурсы на Стол исследований", tableBuilt || spark || Can(tableCost), NeedShort(tableCost));
         Add("Построить Стол исследований", tableBuilt || spark, "Рабочий стол [E]: " + NeedShort(tableCost));
         Add("Изучить Искру света у стола [E]", spark, "Первый свет: Стол исследований → Искра света. " + NeedShort(sparkCost));
         Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
-        Add("Создать оружие в кузне [U у печи]", Owned.Count > 0, "Меч, лук и посох — окно кузни");
-        Add("Медная кирка в кузне [U у печи]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи], затем кузня [U]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
+        Add("Создать оружие: деталь в кузнице, сборка на столе", Owned.Count > 0, "Клинок, плечи лука или навершие + рукоять");
+        Add("Медная кирка: боёк в кузнице, сборка на столе", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи], затем боёк в кузнице: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);
         Add("Построить склад", HasBuilding(Tl.Warehouse), "Рабочий стол [E]: " + NeedShort(BCost(0, 1)));
         var techP = NearestPoi(PK.TechCache, false);                 // указатель на постамент есть, даже если он ещё не найден: игроку не нужно искать первый вслепую
         var cap = NearestPoi(PK.Captive, false);                      // метка на ближайшую клетку даже неоткрытую: игрок не ищет вслепую
         Add("Спасти жителя", rescued >= 1, cap != null ? "Победите стражу у клетки" : "Ищите клетку: места и обелиски подскажут", cap?.Pos);
         Add("Построить торговую лавку", HasBuilding(Tl.Stall), rescued < 1 ? "Чертёж лавки дарит спасённый житель" : "Рабочий стол [E]: " + NeedShort(BCost(8, 1)));
-        Add("Железная кирка в кузне [U у печи]", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
-        Add("Построить кузницу", HasBuilding(Tl.Forge), rescued >= 1 ? "Рабочий стол [E]: " + NeedShort(BCost(3, 1)) : "Нужен спасённый житель");
+        Add("Железная кирка: боёк в кузнице, сборка на столе", Tier >= 2, Tier < 1 ? "Сначала медная кирка" : NeedShort(CostPick[1]));
         Add("Исследовать 4 места", PoisDone >= 4, $"Исследовано {PoisDone}/4 (сундуки, руины, лагеря…)", NearestExplorePoi()?.Pos);
         Add("Улучшить здание до ур.2 [U]", MyBuildingUp || (!NetService.Active && Lv2()), "Подойдите к зданию и нажмите U");
         Add("Улучшить Стол исследований до ур.2 [U]", !tableBuilt || TableLevel >= 2, NeedShort(BCost(ResearchBk, 2)));
@@ -299,7 +302,7 @@ public partial class Game
             var nm = NearestUnlit(1);
             Add("Зажечь фонари шахт", LitIn(1) >= 3 || nm == null, $"Зажжено {LitIn(1)}/3 — осколки света {Inv[It.Shard]}", nm?.Pos);
             Add("Решить загадку света", PuzzlesSolved >= 1, "Найдите хранилище: зеркала [E] направляют луч на приёмник", NearestPoi(PK.Puzzle, false)?.Pos);
-            Add("Кристальная кирка в кузне [U у печи]", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
+            Add("Кристальная кирка: боёк в кузнице, сборка на столе", Tier >= 3, Tier < 2 ? "Сначала железная кирка" : NeedShort(CostPick[2]));
             Add("Улучшить Стол исследований до ур.3 [U]", !tableBuilt || TableLevel >= 3, BuildUpBlock(Buildings.Find(q => q.Type == Tl.ResearchTable)) ?? NeedShort(BCost(ResearchBk, 3)));
             Add("Изучить «Кристальную оптику» у Стола [E]", Has(Tech.Optics), "Нужны кристаллы и серебро (вкладка «Глубины»)");
             Add("Победить Хранителя глубин", BossDown(2), "В глубоком озере шахт. Награда: Прожектор [R], ядро", BossLantern(2)?.Pos);
@@ -311,7 +314,7 @@ public partial class Game
             Add("Зажечь фонари пустошей", LitIn(2) >= 3 || na == null, $"Зажжено {LitIn(2)}/3 — осколки света {Inv[It.Shard]}", na?.Pos);
             Add("Улучшить Стол исследований до ур.4 [U]", !tableBuilt || TableLevel >= 4, BuildUpBlock(Buildings.Find(q => q.Type == Tl.ResearchTable)) ?? NeedShort(BCost(ResearchBk, 4)));
             Add("Теплозащита или огненное лезвие у Стола [E]", Has(Tech.HeatShield) || Has(Tech.FlameEdge), "Вкладка «Пепел»: нужны обсидиан и уголь пепла");
-            Add("Обсидиановая кирка в кузне [U у печи]", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
+            Add("Обсидиановая кирка: боёк в кузнице, сборка на столе", Tier >= 4, Tier < 3 ? "Сначала кристальная кирка (шахты)" : NeedShort(CostPick[3]));
             Add("Победить Пепельного стража", BossDown(3), "Он у края пустошей — награда: огнестойкость и третье ядро", BossLantern(3)?.Pos);
             Add("Улучшить маяк до 4 уровня", BeaconLevel >= 4, $"Ядро света {Math.Min(Inv[It.Core], 1)}/1 — нажмите E у маяка", W.Ancients[0].Pos);
         }

@@ -21,7 +21,7 @@ public partial class Game
         new[] { C(It.Wood, 15, It.Stone, 10), C(It.Wood, 20, It.Stone, 20, It.Copper, 4), C(It.Iron, 6, It.Relic, 1), C(It.Silver, 6, It.Crystal, 3), C(It.Gear, 4, It.Lens, 2, It.Crystal, 4) },
         new[] { C(It.Wood, 12, It.Stone, 6, It.Copper, 2), C(It.Wood, 15, It.Copper, 6), C(It.Iron, 6, It.Aether, 2), C(It.Silver, 6, It.Crystal, 3), C(It.Gear, 3, It.Lens, 2, It.Silver, 6) },
         new[] { C(It.Stone, 10, It.Copper, 4, It.Wood, 6), C(It.Iron, 5, It.Wood, 10), C(It.Iron, 8, It.Aether, 3), C(It.Silver, 8, It.Crystal, 4), C(It.Gear, 4, It.Lens, 3, It.Silver, 6) },
-        new[] { C(It.Stone, 15, It.Copper, 6, It.Iron, 3), C(It.Iron, 6, It.Relic, 1), C(It.Iron, 10, It.Aether, 3), C(It.Silver, 8, It.Crystal, 4), C(It.Gear, 4, It.Lens, 3, It.Crystal, 4) },
+        new[] { C(It.Stone, 10, It.Wood, 4), C(It.Iron, 6, It.Relic, 1), C(It.Iron, 10, It.Aether, 3), C(It.Silver, 8, It.Crystal, 4), C(It.Gear, 4, It.Lens, 3, It.Crystal, 4) },
         new[] { C(It.Crystal, 5, It.Silver, 5, It.Iron, 4), C(It.Silver, 4, It.Iron, 4, It.Wood, 6), C(It.Silver, 6, It.Crystal, 3), C(It.Crystal, 5, It.Silver, 6, It.Relic, 1), C(It.Gear, 3, It.Lens, 3, It.AncCrystal, 1) },
         new[] { C(It.Obsidian, 4, It.Silver, 4, It.Crystal, 3), C(It.Ember, 3, It.Obsidian, 3), C(It.Ember, 4, It.Silver, 4), C(It.Obsidian, 5, It.Ember, 5, It.Crystal, 3), C(It.Gear, 3, It.Lens, 3, It.AncCrystal, 1) },
         new[] { C(It.Iron, 8, It.Copper, 10, It.Stone, 15), C(It.Iron, 8, It.Silver, 4), C(It.Silver, 8, It.Crystal, 4), C(It.Gear, 4, It.Lens, 2), C(It.Gear, 6, It.Lens, 4, It.Crystal, 6) },
@@ -36,7 +36,7 @@ public partial class Game
         new[] { "общий сундук: 60 каждого ресурса", "120", "250, отдаёт ресурсы вам рядом", "500", "800" },
         new[] { "2 дерева / 6 с", "2 дерева / 4 с", "3 дерева / 3 с", "4 дерева / 2,2 с", "5 деревьев / 1,6 с" },
         new[] { "камень и медная руда / 6 с", "+ железная руда / 5 с", "+ осколки света / 3,6 с", "+ серебряная руда / 2,8 с", "очень быстро / 2 с" },
-        new[] { "станция крафта: оружие, вставки, шестерни и линзы" },
+        new[] { "рабочие части: бойки кирок, лезвия, клинки; вставки, шестерни и линзы" },
         new[] { "серебряная руда и кристаллы / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "обсидиан и уголь пепла / 12 с", "быстрее / 9 с", "быстрее / 6 с", "очень быстро / 4,5 с", "молниеносно / 3 с" },
         new[] { "делает шестерни и линзы / 8 с", "быстрее / 6 с", "быстрее / 4,5 с", "быстрее / 3,5 с", "быстрее / 2,5 с" },
@@ -52,7 +52,7 @@ public partial class Game
     public static int[][] BCost(int bk, int toLevel) => BCosts[bk][toLevel - 1];
     public bool BUnlocked(int bk) => BActive(bk) && bk switch
     {
-        0 => HasFurnace, 1 => HasBuilding(Tl.Warehouse), 2 => LitCount >= 1, 3 => Villagers.Count >= 1, 4 => Has(Tech.AutoDrill), 5 => Has(Tech.Collector),
+        0 => HasFurnace, 1 => HasBuilding(Tl.Warehouse), 2 => LitCount >= 1, 3 => true, 4 => Has(Tech.AutoDrill), 5 => Has(Tech.Collector),
         6 => BpDone.Contains("bp_refinery"), 7 => BpDone.Contains("bp_hub"), 8 => BpDone.Contains("bp_stall"), 10 => Villagers.Count >= 1, ResearchBk => true, _ => BpDone.Contains("bp_cryo")
     };
     public static string BLock(int bk) => bk switch
@@ -194,7 +194,7 @@ public partial class Game
             foreach (var hv in Villagers) if (hv.Home == BKey(b)) ix.Info($"{hv.Name} · {ProfTitle(hv)}");
         }
         if (b.Type == Tl.Stall) { ix.Action("E", "Торговать"); ix.E = () => OpenTrade(null); }
-        else if (b.Type == Tl.Forge) { ix.Action("E", "Кузня: создание и улучшение предметов"); ix.E = () => OpenStation("forge"); }
+        else if (b.Type == Tl.Forge) { ix.Action("E", "Кузница: рабочие части и улучшения"); ix.E = () => OpenStation("forge"); }
         else if (b.Type == Tl.ResearchTable) { ix.Action("E", "Исследования: изучить навыки"); ix.E = () => OpenTech(true, true); ResearchIx(b, ix); }
         else
         {

@@ -235,7 +235,9 @@ public partial class Game
                 {
                     e.Dash -= dt; vel = e.DashDir * 150f * k;
                     if (dist < 12 && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(10f * e.Scale, -dir); }
+                    if (e.Dash <= 0) EndDash(e);
                 }
+                else if (e.T3 > 0) { e.T3 -= dt; vel = RetreatVel(e, dir, perp, 60f * k); }
                 else
                 {
                     vel = (dir + perp * Mathf.Sin(Time * 3f + e.Phase) * .4f).Normalized() * (InDark ? 68f : 40f) * k;

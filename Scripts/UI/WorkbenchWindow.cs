@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Lamplighter;
 
-/// <summary>Окно Рабочего стола: слева список рецептов, в центре креста результат, вокруг него четыре ячейки компонентов, снизу сумка и горячая панель.
+/// <summary>Окно Рабочего стола: слева быстрый крафт (постройки, доски, рукоять, сборка инструментов и оружия), в центре креста результат, вокруг него четыре ячейки компонентов, снизу сумка и горячая панель.
 /// Ячейки и сумка работают как в инвентаре: предметы берутся в руку, кладутся, делятся, меняются местами (ввод и перенос мышью обрабатывает InventoryWindow).
 /// Клик по рецепту выкладывает его компоненты из сумки в ячейки; клик по результату создаёт постройку, она остаётся в ячейке, пока игрок не заберёт её сам.</summary>
 public partial class WorkbenchWindow : Control
@@ -11,7 +11,7 @@ public partial class WorkbenchWindow : Control
     public Game G;
     Control panel; GridContainer listGrid, invGrid; Label title, nameL, statusL, invTitle; HotbarRow hotbar; ItemTipPanel tipPanel;
     readonly List<UiSlot> listSlots = new(), invSlots = new();
-    Button tabAvailable, tabAll; bool quickAll; Label quickTitle; List<(BuildEntry e, int times)> quickList = new();
+    Button tabAvailable, tabAll; bool quickAll; Label quickTitle; List<(BenchRecipe r, int times)> quickList = new();
     UiSlot[] cells; UiSlot result;                       // cells: сверху, слева, справа, снизу = ячейки 0–3; result = ячейка 4
     string sig = "";
 
@@ -94,7 +94,7 @@ public partial class WorkbenchWindow : Control
         while (listSlots.Count <= i)
         {
             var s = Cell(listSlots.Count);
-            s.Clicked += k => { if (k < quickList.Count) G.BenchLayout(quickList[k].e, Input.IsKeyPressed(Key.Shift)); };
+            s.Clicked += k => { if (k < quickList.Count) G.BenchLayout(quickList[k].r, Input.IsKeyPressed(Key.Shift)); };
             listGrid.AddChild(s); listSlots.Add(s);
         }
         return listSlots[i];
@@ -135,8 +135,8 @@ public partial class WorkbenchWindow : Control
         for (int i = 0; i < quickList.Count; i++)
         {
             var (e, times) = quickList[i]; var s = ListSlot(i); s.Visible = true; int idx = i;
-            s.Set(UiIcons.Tile(e.Tile), times > 1 ? times.ToString() : "", "", times > 0 ? SlotState.Normal : SlotState.Disabled, 0f, "", times > 0 ? 1f : .45f);
-            ItemTipHost.Bind(s, () => idx < quickList.Count ? G.BenchRecipeTip(quickList[idx].e, quickList[idx].times) : null);
+            s.Set(e.Icon, times > 1 ? times.ToString() : "", "", times > 0 ? SlotState.Normal : SlotState.Disabled, 0f, "", times > 0 ? 1f : .45f);
+            ItemTipHost.Bind(s, () => idx < quickList.Count ? G.BenchRecipeTip(quickList[idx].r, quickList[idx].times) : null);
         }
         for (int i = quickList.Count; i < listSlots.Count; i++) listSlots[i].Visible = false;
 
@@ -147,7 +147,7 @@ public partial class WorkbenchWindow : Control
         }
         var m = G.MatchBench(); var (ri, rn) = G.CraftIngredient(Game.BenchInputs); (ri, rn) = G.InventoryUi.DisplayStack(3, Game.BenchInputs, ri, rn);
         if (rn > 0) result.Set(G.InventoryItemTexture(ri), rn.ToString(), "", SlotState.Normal);
-        else if (m.State == Game.BenchState.Ready) result.Set(UiIcons.Tile(m.Entry.Tile), "", "", SlotState.Ok, 0f, "", .6f);          // предпросмотр, только когда создать действительно можно
+        else if (m.State == Game.BenchState.Ready) result.Set(m.Entry.Icon, "", "", SlotState.Ok, 0f, "", .6f);          // предпросмотр, только когда создать действительно можно
         else result.Set(null, "", "", SlotState.Normal);
 
         nameL.Text = m.Entry != null ? Loc.T(m.Entry.Name) : "";
