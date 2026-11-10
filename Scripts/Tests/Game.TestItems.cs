@@ -59,7 +59,10 @@ public partial class Game
             Check(QuickStack(0).n == 0 && InventorySlots().Any(stack => stack == (It.Wood, 4)), "inventory: clearing a quick slot returns the stack to the bag");
             Inv[It.Core] = 9999; Check(InvVisible().Contains(It.Core), "inventory: large quantities allowed (no cap)");
             // хотбар: можно только инструменты и оружие
-            Check(HotValid("tool:pickaxe"), "hotbar: pickaxe is valid");
+            Check(HotValid("tool:pickaxe"), "hotbar: pickaxe is valid"); { int tk = Tier; string ct = CurTool; Tier = 2; UiIcons.SetPickTier(Tier); CurTool = "pickaxe";
+                var at = (AtlasTexture)UiIcons.Item(UiIcons.Pickaxe); Check(at.Region.Position.X == 31 * 16 && (CurW >= 0 || HeldIcon() == 31) && UiIcons.PickIndex(2) == 31 && SwingKindOfIcon(31) == 0, "pickaxe tiers: the shared icon shows the iron pickaxe and the net sends the iron icon");
+                Check(((AtlasTexture)UiIcons.ItemFixed(UiIcons.Pickaxe)).Region.Position.X == UiIcons.Pickaxe * 16, "pickaxe tiers: a remote stone pickaxe is drawn as stone, not with the local tier");
+                Tier = tk; UiIcons.SetPickTier(Tier); CurTool = ct; }
             Check(!HotValid("item:wood") && !HotValid("weapon:nonexistent") && !HotValid("tool:axe"), "hotbar: wood, unknown weapons and not-yet-owned tools are rejected");
             Check(!HotAssign(3, "item:wood"), "hotbar: wood cannot be assigned");
             // создание инструментов и оружия

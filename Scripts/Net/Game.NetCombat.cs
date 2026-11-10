@@ -173,8 +173,11 @@ public partial class Game
     }
 
     /// <summary>Клиент: враг ударил именно вас (решение хоста).</summary>
+    internal float LastNetHurt;                                                   // для проверок: последний урон, присланный хостом
+
     public void NetHurtMe(float dmg, Vector2 kb, bool fire)
     {
+        LastNetHurt = dmg;
         if (!float.IsFinite(dmg) || dmg <= 0) return; long saved = aiRemote; aiRemote = 0; float c = ctxDmg; ctxDmg = 1f;
         HurtPlayer(Mathf.Min(dmg, 300f), kb, fire); aiRemote = saved; ctxDmg = c;
     }

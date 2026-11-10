@@ -44,6 +44,17 @@ public partial class Game
             Inv[It.Stone] = 60; Inv[It.Wood] = 60; SyncInventorySlots();
         });
         S(.4f, () => { Check("bench: clicking a recipe lays its components out in the cells", BenchLayout(benchFe, false) && CraftIngredient(0) == (It.Stone, 12) && MatchBench().State == BenchState.Ready && Inv[It.Stone] == 48); });
+        S(.4f, () =>
+        {
+            var tb = BenchEntries().Find(e => e.Key == "bld" + ResearchBk);
+            if (tb != null)
+            {
+                ReturnCellsOf(benchCells, true, BenchInputs); var invKeep = (int[])Inv.Clone(); foreach (var c in BCost(ResearchBk, 1)) Inv[c[0]] += c[1];
+                bool lay = BenchLayout(tb, false); var mm = MatchBench();
+                Check("bench: the research table recipe lays out and matches the table, not the workbench", lay && mm.Entry?.Key == tb.Key && mm.State == BenchState.Ready);
+                ReturnCellsOf(benchCells, true, BenchInputs); Array.Copy(invKeep, Inv, invKeep.Length); SyncInventorySlots(); BenchLayout(benchFe, false);
+            }
+        });
         S(.4f, () => { Shot("bench2_ready"); RealClick(benchWindow.Result, true); });
         S(.3f, () =>
         {

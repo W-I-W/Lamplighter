@@ -31,7 +31,7 @@ public partial class Game
     {
         TabAnim.Add(c.Id);
         for (int i = 0; i < Techs.Length; i++) if (Techs[i].Page == c.Page && Techs[i].Ok(this)) Ann |= 1L << (12 + i);          // об этих улучшениях уже сказано в уведомлении категории
-        Announce("Открыта категория: " + c.Title, "Исследования у Стола [E]; дерево навыков [T]", new Color("#ffd23f"), "upgrade");
+        Announce("Открыта категория: " + c.Title, "Исследования у Стола [E]", new Color("#ffd23f"), "upgrade");
         Burst(PPos, new Color("#ffd23f"), 26, 110); Flash = Mathf.Max(Flash, .12f);
     }
 
@@ -46,7 +46,7 @@ public partial class Game
         return (own, total);
     }
 
-    /// <summary>Окно навыков. atTable — открыто у Стола исследований (можно изучать); иначе [T] только показывает дерево и планирование.</summary>
+    /// <summary>Окно навыков. Изучение доступно при открытии у Стола исследований.</summary>
     public void OpenTech(bool open, bool atTable = false)
     {
         CloseWindows(); TechOpen = open; TechAtTable = open && atTable; if (!open) return;

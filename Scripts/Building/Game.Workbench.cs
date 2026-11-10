@@ -121,19 +121,31 @@ public partial class Game
         var have = new Dictionary<int, int>();
         for (int i = 0; i < BenchInputs; i++) if (benchCells[i].n > 0 && benchCells[i].item >= 0) have[benchCells[i].item] = have.GetValueOrDefault(benchCells[i].item) + benchCells[i].n;
         if (have.Count == 0) return new BenchMatchInfo { State = BenchState.Empty };
-        BuildEntry short_ = null;
+        BuildEntry short_ = null; BuildEntry loose = null; int looseTimes = 0;
         foreach (var e in BenchEntries())
         {
             var cost = e.Raw ?? e.CostArr; if (!e.Unlocked || cost == null || cost.Length != have.Count) continue;
-            int times = 99; bool same = true;
-            foreach (var c in cost) { if (!have.TryGetValue(c[0], out int n)) { same = false; break; } times = Math.Min(times, n / c[1]); }
+            int times = 99; bool same = true, exact = true; int k0 = -1;
+            foreach (var c in cost)
+            {
+                if (!have.TryGetValue(c[0], out int n)) { same = false; break; }
+                times = Math.Min(times, n / c[1]);
+                int k = n % c[1] == 0 ? n / c[1] : -2; if (k < 1 || k0 != -1 && k != k0) exact = false; k0 = k;       // точное совпадение: все количества кратны цене в одно и то же число раз
+            }
             if (!same) continue;
             if (times < 1) { short_ ??= e; continue; }
-            var res = benchCells[BenchInputs]; int id = InventoryItemId(e.Key);
-            bool free = res.n <= 0 || res.item == id && res.n < StackMax;
-            return new BenchMatchInfo { Entry = e, Times = times, State = free ? BenchState.Ready : BenchState.Blocked };
+            if (!exact) { if (loose == null) { loose = e; looseTimes = times; } continue; }           // рецепты с тем же набором ресурсов различаются количеством: точное совпадение важнее порядка в списке
+            return Ready(e, times);
         }
+        if (loose != null) return Ready(loose, looseTimes);
         return short_ != null ? new BenchMatchInfo { Entry = short_, State = BenchState.Short } : new BenchMatchInfo { State = BenchState.Unknown };
+    }
+
+    BenchMatchInfo Ready(BuildEntry e, int times)
+    {
+        var res = benchCells[BenchInputs]; int id = InventoryItemId(e.Key);
+        bool free = res.n <= 0 || res.item == id && res.n < StackMax;
+        return new BenchMatchInfo { Entry = e, Times = times, State = free ? BenchState.Ready : BenchState.Blocked };
     }
 
     /// <summary>Создание из ячеек: одна операция проверки, списания и выдачи. Готовая постройка лежит в ячейке результата, пока игрок не заберёт её сам. max — столько раз, сколько позволяют ячейки.</summary>
@@ -175,7 +187,7 @@ public partial class Game
         int times = 99; int maxNeed = 1;
         foreach (var c in cost) { times = Math.Min(times, Inv[c[0]] / c[1]); maxNeed = Math.Max(maxNeed, c[1]); }
         if (times <= 0) { Fail("Не хватает ресурсов"); return false; }
-        times = max ? Math.Min(times, StackMax / maxNeed) : 1;
+        times = max ? Math.Max(1, Math.Min(times, StackMax / maxNeed)) : 1;
         for (int k = 0; k < cost.Length; k++) { Inv[cost[k][0]] -= cost[k][1] * times; benchCells[k] = (cost[k][0], cost[k][1] * times); }
         Sfx.Play("tick", -6, 1.3f);
         return true;

@@ -147,7 +147,7 @@ public partial class Game
     }
 
     /// <summary>Вид предмета по значку (для чужих игроков): 0 кирка, 1 топор, 2 меч, 3 лук, 4 посох.</summary>
-    public static int SwingKindOfIcon(int icon) => icon == UiIcons.Sword ? 2 : icon == UiIcons.Bow ? 3 : icon == UiIcons.Staff ? 4 : icon == UiIcons.Axe ? 1 : 0;
+    public static int SwingKindOfIcon(int icon) => icon == UiIcons.Sword ? 2 : icon == UiIcons.Bow ? 3 : icon == UiIcons.Staff ? 4 : icon == UiIcons.Axe ? 1 : 0;          // кирка любого тира — поза 0
 
     public static (float ang, Vector2 off) SwingPoseKind(int kind, Vector2 d, float sg, float t)
     {

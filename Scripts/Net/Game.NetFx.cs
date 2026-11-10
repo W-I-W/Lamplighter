@@ -42,16 +42,16 @@ public partial class Game
     }
 
     /// <summary>Что игрок держит в руках (значок для показа другим).</summary>
-    public int HeldIcon() { if (CurW < 0 && !OwnedTools.Contains(CurTool)) return -1; string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool); return HotIcon(r); }
+    public int HeldIcon() { if (CurW < 0 && !OwnedTools.Contains(CurTool)) return -1; string r = CurW >= 0 && CurW < Owned.Count ? RefWeapon(Owned[CurW].Id) : RefTool(CurTool); int ic = HotIcon(r); return ic == UiIcons.Pickaxe ? UiIcons.PickIndex(Tier) : ic; }      // кирка уходит в сеть со своим тиром
 
     /// <summary>Рисует предмет в руке удалённого игрока во время его замаха — тот же значок и поворот, что у своего персонажа.</summary>
     void DrawHeldIcon(CanvasItem c, int icon, Vector2 hand, float ang)
     {
-        if (icon < 0) return;
-        float baseAng = icon == UiIcons.Pickaxe ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;
+        if (icon < 0 || icon >= Art.IconCount) return;
+        float baseAng = UiIcons.IsPick(icon) ? -Mathf.Pi / 2 : icon == UiIcons.Bow ? 0f : -Mathf.Pi / 4;
         var centre = hand + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 8f;
         c.DrawSetTransform(centre, ang - baseAng, Vector2.One);
-        c.DrawTextureRect(UiIcons.Item(icon), new Rect2(-8, -8, 16, 16), false);
+        c.DrawTextureRect(UiIcons.ItemFixed(icon), new Rect2(-8, -8, 16, 16), false);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 }

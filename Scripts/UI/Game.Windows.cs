@@ -120,7 +120,6 @@ public partial class Game
             case Key.C: OpenWin(Win.Equip); return true;
             case Key.J: OpenWin(Win.Journal); return true;
             case Key.I: OpenWin(Win.Inventory); return true;
-            case Key.T: OpenTech(true); return true;
             case Key.M: CloseWindows(); MapOpen = true; return true;
             case Key.F5: Save(); Toast("Игра сохранена"); return true;
             case Key.Up: WinCur = Math.Max(0, WinCur - 1); return true;
@@ -166,7 +165,7 @@ public partial class Game
         return false;
     }
 
-    /// <summary>Мышь в окне улучшений [T]: ПКМ закрывает окно; вкладки, карточки и кнопка — элементы UpgradeWindowUI.</summary>
+    /// <summary>Мышь в окне исследований: ПКМ закрывает окно; вкладки, карточки и кнопка — элементы UpgradeWindowUI.</summary>
     bool TechMouse(InputEventMouse e)
     {
         if (e is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Right) { CloseWindows(); return true; }

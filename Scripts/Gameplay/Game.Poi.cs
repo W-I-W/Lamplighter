@@ -270,13 +270,13 @@ public partial class Game
         bool benchDone = HasWorkbench || tableBuilt || spark || HasFurnace;                // опытному герою рабочий стол не навязывается
         Add("Собрать дерево и камень", benchDone || Can(CostWorkbench), NeedShort(CostWorkbench));
         Add("Построить Рабочий стол", benchDone, "Создайте его в инвентаре [I] (быстрый крафт) и поставьте на землю");
+        Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
+        Add("Построить печь", HasFurnace, "Инвентарь [I] или Рабочий стол [E]: " + NeedShort(CostFurnace));
+        Add("Создать кирку в кузне [U у печи]", pickOwned, NeedShort(CostPickaxe));
         Add("Собрать ресурсы на Стол исследований", tableBuilt || spark || Can(tableCost), NeedShort(tableCost));
         Add("Построить Стол исследований", tableBuilt || spark, "Рабочий стол [E]: " + NeedShort(tableCost));
         Add("Изучить Искру света у стола [E]", spark, "Первый свет: Стол исследований → Искра света. " + NeedShort(sparkCost));
         Add("Исследовать Тьму", (Ann & TutExplored) != 0 || LitCount >= 1, "Выйдите за границу света маяка");
-        Add("Собрать ресурсы на печь", HasFurnace || Can(CostFurnace), NeedShort(CostFurnace));
-        Add("Построить печь", HasFurnace, "Инвентарь [I] или Рабочий стол [E]: " + NeedShort(CostFurnace));
-        Add("Создать кирку в кузне [U у печи]", pickOwned, NeedShort(CostPickaxe));
         Add("Создать оружие в кузне [U у печи]", Owned.Count > 0, "Меч, лук и посох — окно кузни");
         Add("Медная кирка в кузне [U у печи]", Tier >= 1 || !pickOwned, Inv[It.Copper] < 5 ? "Переплавьте медь [E у печи], затем кузня [U]: " + NeedShort(CostPick[0]) : NeedShort(CostPick[0]));
         Add("Зажечь древний фонарь #1", a1.Lit, $"Осколки света {Math.Min(Inv[It.Shard], a1.Cost)}/{a1.Cost} (их роняют тени)", a1.Pos);

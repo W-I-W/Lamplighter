@@ -418,7 +418,7 @@ public partial class NetNode : Node
         float maxX = World.Wd * 16f, maxY = World.Ht * 16f; x = Mathf.Clamp(x, 0, maxX); y = Mathf.Clamp(y, 0, maxY);
         double dt = Math.Max(.02, now - p.LastRecv); var np = new Vector2(x, y);
         if (p.LastRecv > 0 && now >= p.SpeedFreeUntil && p.Pos.DistanceTo(np) / dt > 1200f) { return; }             // слишком быстрое перемещение — состояние отвергается (позиция остаётся прежней)
-        p.Pos = np; p.Face = face < 0 ? -1 : 1; p.MaxHp = Mathf.Clamp(float.IsFinite(maxHp) ? maxHp : 100, 1, 1000); p.Hp = Mathf.Clamp(float.IsFinite(hp) ? hp : p.MaxHp, 0, p.MaxHp); p.Flags = (byte)(flags & 3); p.Light = float.IsFinite(light) ? Mathf.Clamp(light, 20f, 400f) : 72f; p.Held = held; p.AimAng = float.IsFinite(aim) ? aim : 0f; p.LastRecv = now;
+        p.Pos = np; p.Face = face < 0 ? -1 : 1; p.MaxHp = Mathf.Clamp(float.IsFinite(maxHp) ? maxHp : 100, 1, 1000); p.Hp = Mathf.Clamp(float.IsFinite(hp) ? hp : p.MaxHp, 0, p.MaxHp); p.Flags = (byte)(flags & 3); p.Light = float.IsFinite(light) ? Mathf.Clamp(light, 20f, 400f) : 72f; p.Held = held >= -1 && held < Art.IconCount ? held : -1; p.AimAng = float.IsFinite(aim) ? aim : 0f; p.LastRecv = now;
     }
 
     bool RateOk(long id)
@@ -435,7 +435,7 @@ public partial class NetNode : Node
         {
             long id = (long)data[i]; if (id == NetService.LocalId) continue;
             if (!NetService.Players.TryGetValue(id, out var p)) continue;
-            bool first = p.LastRecv <= 0; p.Pos = new Vector2(data[i + 1], data[i + 2]); p.Face = (int)data[i + 3]; p.Hp = data[i + 4]; p.MaxHp = data[i + 5]; p.Flags = (byte)(int)data[i + 6]; p.Light = data[i + 7]; p.Held = (int)data[i + 8]; p.AimAng = data[i + 9]; p.LastRecv = now;
+            bool first = p.LastRecv <= 0; p.Pos = new Vector2(data[i + 1], data[i + 2]); p.Face = (int)data[i + 3]; p.Hp = data[i + 4]; p.MaxHp = data[i + 5]; p.Flags = (byte)(int)data[i + 6]; p.Light = data[i + 7]; p.Held = (int)data[i + 8] is var hi && hi >= -1 && hi < Art.IconCount ? hi : -1; p.AimAng = data[i + 9]; p.LastRecv = now;
             if (first) p.Shown = p.Pos;
         }
     }

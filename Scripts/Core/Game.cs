@@ -84,7 +84,7 @@ public partial class Game : Node2D
         new[] { new[] { It.Iron, 6 }, new[] { It.Shard, 3 } },
         new[] { new[] { It.Crystal, 6 }, new[] { It.Silver, 4 }, new[] { It.Iron, 3 } },
         new[] { new[] { It.Obsidian, 5 }, new[] { It.Ember, 5 }, new[] { It.Silver, 3 } } };
-    public static readonly string[] PickNames = { "Деревянная кирка", "Медная кирка", "Железная кирка", "Кристальная кирка", "Обсидиановая кирка" };
+    public static readonly string[] PickNames = { "Каменная кирка", "Медная кирка", "Железная кирка", "Кристальная кирка", "Обсидиановая кирка" };
     static readonly string[] PickGain = {
         "", "Добыча быстрее, урон выше, берёт железную руду",
         "Ещё быстрее, берёт люмен-руду, эфир, серебро и кристаллы",
@@ -324,7 +324,6 @@ public partial class Game : Node2D
                 case Key.Key8: Digit(8); break;
                 case Key.Key9: Digit(9); break;
                 case Key.Key0: Digit(0); break;
-                case Key.T: OpenTech(!TechOpen); Sfx.Play("tick"); break;
                 case Key.M: { bool o = !MapOpen; CloseWindows(); MapOpen = o; Sfx.Play("tick"); break; }
                 case Key.Escape: if (Placing != null) { Placing = null; Toast("Строительство отменено"); } else if (TechOpen || MapOpen) CloseWindows(); else OpenMenu(Mn.Pause); break;
                 case Key.Shift: TryDash(); break;
@@ -358,7 +357,7 @@ public partial class Game : Node2D
         Aim = aimOverride ?? GetGlobalMousePosition();
         if (testing) AutoTest(dt);
         if (!IsInsideTree()) return;                                            // сцена перезагружена прямо в этом кадре (смена героя или мира)
-        UiTime += dt; UiIcons.Tick(UiTime); UpdateMusic(dt); UpdateUiScale();
+        UiTime += dt; UiIcons.Tick(UiTime); UiIcons.SetPickTier(Tier); UpdateMusic(dt); UpdateUiScale();
         if (Menu != Mn.None) { NetJoinTick(); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }
         PlaySecs += dt; achT -= dt; if (achT <= 0) { achT = 2f; Ach.Check(this); }
         if (FinStage >= 2) { UpdateFinale(dt); UpdateShaders(dt); ents.QueueRedraw(); overlay?.QueueRedraw(); breakArea?.QueueRedraw(); hud.QueueRedraw(); return; }

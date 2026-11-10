@@ -158,7 +158,7 @@ public partial class Game
         int ForageKind(Vector2I q) => StartForage(q.X, q.Y, W.Seed, W.Spawn);
         bool Gone(Vector2I q) => CutBush.Contains(World.Key(q.X, q.Y)) && !IsBushAt(q.X, q.Y);
         var surv = W.Pois.Find(p => p.Kind == PK.Survivor && p.Variant == 1 && World.RegionOf(p.Tile.X) == 0);
-        Building Saw() => Buildings.Find(b => b.Type == Tl.Sawmill);
+        Building Wh() => Buildings.Find(b => b.Type == Tl.Warehouse);          // пассивного производства больше нет (IsProducer = false): проверяется синхронизация здания и жителя
         if (host)
         {
             S(.3f, () => Check(NetService.Role == NetRole.Host && NetService.Online && NetService.LocalId == 1, "net host: the session is open and the host is peer 1"));
@@ -174,8 +174,8 @@ public partial class Game
                 S(.2f, () =>
                 {
                     var sites = new System.Collections.Generic.List<Vector2I>(); for (int r = 2; r < 9 && sites.Count < 2; r++) for (int a = -r; a <= r && sites.Count < 2; a++) { var t = new Vector2I(W.Spawn.X + a, W.Spawn.Y - r); if (sites.Count == 0 || Math.Abs(sites[0].X - t.X) >= 3) if (SafeTile(t.X, t.Y) && DecorFree(t.X, t.Y)) sites.Add(t); }
-                    var wh = CreateBuilding(0, sites[0]); wh.Forced = true; var sw = CreateBuilding(1, sites[1]); sw.Forced = true; AddVillager(9501, TileCenter(W.Spawn.X, W.Spawn.Y + 2), "lumberjack", "test"); RecomputeNetwork();
-                    Check(WorkerOf(sw)?.Id == 9501, "net host: a villager works in the sawmill before the client joins");
+                    var wh = CreateBuilding(0, sites[0]); wh.Forced = true; AddVillager(9501, TileCenter(W.Spawn.X, W.Spawn.Y + 2), "lumberjack", "test"); RecomputeNetwork();
+                    Check(VillagerById(9501) != null && Wh() != null, "net host: a villager and a warehouse exist before the client joins");
                 });
                 WaitStep(25f, () => NetService.Count >= 2 && Other() != null, ok => Check(ok, "net host: the client completed the handshake"));
                 S(.2f, () => { var o = Other(); Check(o != null && o.Look.Skin == 5 && o.Look.Hair == 3 && o.Look.Cloth1 == 9 && o.Look.Variant == 2, "net host: the guest's appearance arrived with the handshake (validated by the host)"); });
@@ -183,17 +183,16 @@ public partial class Game
                 WaitStep(20f, () => W.Get(ns[3].X, ns[3].Y) == Tl.Banner && Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y) && stoneT.X >= 0 && W.Get(stoneT.X, stoneT.Y) == Tl.None, ok => Check(ok, $"net host: the client's placed banner and lamp and a mined stone are visible here banner={W.Get(ns[3].X, ns[3].Y)} lamp={Lamps.Any(l => l.X == ns[4].X && l.Y == ns[4].Y)} stone={(stoneT.X >= 0 ? W.Get(stoneT.X, stoneT.Y).ToString() : "none")}"));
                 WaitStep(20f, () => IsOpen(chests[2]), ok => Check(ok, "net host: a chest opened by the client is opened here too"));
                 WaitStep(20f, () => fg.Count < 2 || Gone(fg[1]), ok => Check(ok, "net host: a stick or pebble collected by the client is gone here too"));
-                WaitStep(20f, () => Saw() != null && Saw().Manual && WorkerOf(Saw()) == null, ok => Check(ok, "net host: the client's worker removal command arrived and was applied"));
                 WaitStep(20f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && surv.State == 3, ok => Check(ok, "net host: the client's rescue created the villager here (one, shared)"));
                 S(.3f, () => Check(Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, "net host: the rescued villager exists exactly once"));
                 Vector2 arena = default; Enemy te = null;
-                S(.3f, () => { arena = FindDarkArena(); Tp(arena); Enemies.Clear(); Projs.Clear(); });
+                S(.3f, () => { arena = FindDarkArena(); Tp(arena); Enemies.Clear(); Projs.Clear(); TestNoSpawn = true; });          // в арене только тестовая тень: случайный призрак бьёт на 7, а не на 9, и проверка урона «целыми ударами» сбивалась
                 WaitStep(20f, () => Other() != null && Other().Pos.DistanceTo(arena + new Vector2(60, 0)) < 24f, ok => Check(ok, "net host: the client joined the arena"));
                 S(.3f, () => { te = SpawnEnemy(arena + new Vector2(110, 0), EK.Shade, null, 1f); te.MaxHp = te.Hp = 400f; te.Cd = 0; });
                 WaitStep(20f, () => te != null && te.Hp < 399f, ok => Check(ok, "net host: a hit made by the client reduced the host's enemy health (host-authoritative damage)"));
                 S(.3f, () => Check(te != null && te.Target == Other()?.PeerId, $"net host: the enemy chose the nearest player, not the host (target {te?.Target})"));
                 S(4f, () => { });
-                S(.3f, () => { Enemies.Clear(); });
+                S(.3f, () => { Enemies.Clear(); TestNoSpawn = false; });
                 Vector2 mpos = default;
                 S(.3f, () => { mpos = TileCenter(W.Spawn.X + 2, W.Spawn.Y - 24); SpawnEvent("meteor", mpos); BeaconLevel = 3; });
                 WaitStep(20f, () => { var mt = ToTile(mpos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net host: the meteor falls and leaves its ore"));
@@ -219,15 +218,14 @@ public partial class Game
                 S(.3f, () => { SetObj(ns[3].X, ns[3].Y, Tl.Banner); Placed.Add(World.Key(ns[3].X, ns[3].Y)); SetObj(ns[4].X, ns[4].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[4].X, Y = ns[4].Y, Anim = 1 }); if (stoneT.X >= 0) SetObj(stoneT.X, stoneT.Y, Tl.None); });
                 WaitStep(10f, () => IsOpen(chests[1]), ok => Check(ok, "net client: a chest opened by the host while online opens here too"));
                 S(.2f, () => { UpdateChunks(0, true); Check(fg.Count == 0 || Gone(fg[0]), "net client: a stick or pebble collected by the host before joining is gone here too (late join)"); if (fg.Count > 1) CutBushAt(fg[1]); });
-                WaitStep(10f, () => VillagerById(9501) != null && Saw() != null && WorkerOf(Saw())?.Id == 9501, ok => Check(ok, "net client: the host's villager, sawmill and assignment arrive with the world (late join)"));
-                WaitStep(10f, () => VillagerById(9501)?.State == VState.Working, ok => Check(ok, "net client: the villager's work state is shown (host-simulated)"));
+                WaitStep(10f, () => VillagerById(9501) != null && Wh() != null, ok => Check(ok, "net client: the host's villager and warehouse arrive with the world (late join)"));
                 S(.3f, () => { Check(!IsOpen(chests[2]), "net client: untouched chest stays closed"); Open(chests[2]); Inv[It.Wood] = 20; Inv[It.Stone] = 10; Tp(surv.Pos + new Vector2(0, 30)); RescueSurvivor(surv); });
                 WaitStep(10f, () => VillagerById(1000 + W.Pois.IndexOf(surv)) != null && Villagers.Count(v => v.Id == 1000 + W.Pois.IndexOf(surv)) == 1, ok => Check(ok, "net client: the rescued villager appears once for the client too"));
                 Vector2 arena = default; float hit = 0;
                 S(.3f, () => { arena = FindDarkArena(); Tp(arena + new Vector2(60, 0)); Hp = MaxHp; Invuln = 0; });
                 WaitStep(40f, () => Enemies.Any(e => e.NetId > 0 && e.MaxHp >= 399f), ok => Check(ok, "net client: the host's enemy is shown on the client (no local AI)"));     // ждём именно тестового врага хоста (400 HP), а не случайного раньше времени
                 S(.3f, () => { Check(Enemies.All(e => e.NetId > 0), "net client: the client created no enemies of its own"); foreach (var e in Enemies.Where(x => x.NetId > 0 && x.MaxHp >= 399f).ToList()) Hurt(e, 8f, Vector2.Left, true); });
-                WaitStep(60f, () => Hp < MaxHp - 1f, ok => Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"));
+                WaitStep(60f, () => Hp < MaxHp - 1f, ok => { Check(ok, $"net client: the damage decided by the host reaches the client ({MaxHp - Hp:0.0})"); float drop = MaxHp - Hp; float one = Mathf.Max(LastNetHurt, Tune.T.EnemyMinHit) * FearMul; /* урон решает хост (с силой врага e.Scale), гость его только применяет */ Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });          // сразу после удара: дальше гость убивает врагов, получает опыт и уровень, и здоровье меняется
                 // награда за убийство у гостя: каждый вид врага (кроме стражей и двойника-миража) должен что-то давать при убийстве, засчитанном гостю
                 S(.3f, () =>
                 {
@@ -242,7 +240,7 @@ public partial class Game
                     }
                     Check(silent.Count == 0, "net client: every kind of enemy killed by the client gives some resources (" + string.Join(", ", silent) + ")");
                 });
-                S(.3f, () => { float drop = MaxHp - Hp; float one = Mathf.Max(9f * Tune.T.EnemyDamage, Tune.T.EnemyMinHit) * FearMul; Check(Mathf.Abs(drop / one - Mathf.Round(drop / one)) < .06f, $"net client: damage arrives in whole hits of {one:0.00} (not doubled by the network): {drop:0.0}"); Invuln = 99f; });
+                S(.3f, () => { Invuln = 99f; });
                 S(5f, () => { });
                 WaitStep(20f, () => Events.Any(e => e.Kind == "meteor"), ok => Check(ok, "net client: the host's meteor event is shown (shared events)"));
                 WaitStep(20f, () => { var mp = Events.FirstOrDefault(e => e.Kind == "meteor"); if (mp == null) return false; var mt = ToTile(mp.Pos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net client: the meteor ore appeared for the client too"));

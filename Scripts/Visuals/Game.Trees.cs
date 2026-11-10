@@ -125,10 +125,11 @@ public partial class Game
     /// <summary>Спрайт предмета в руке по значку (Assets/Sprites/Held/held_*.png, 16×16, смотрит вправо). Нет файла — рисуется значок, как раньше.</summary>
     static Texture2D HeldTex(int icon)
     {
-        if (heldTex.TryGetValue(icon, out var t)) return t;
+        int key = icon == UiIcons.Pickaxe ? icon + 1000 * (UiIcons.PickTier + 1) : icon;          // у кирки свой спрайт для каждого тира
+        if (heldTex.TryGetValue(key, out var t)) return t;
         Texture2D tex = null;
-        if (heldName.TryGetValue(icon, out var n)) { var im = SpriteLibrary.LoadImage($"{SpriteLibrary.Root}Held/held_{n}.png"); if (im != null) tex = ImageTexture.CreateFromImage(im); }
-        heldTex[icon] = tex; return tex;
+        if (heldName.TryGetValue(icon, out var n)) { if (icon == UiIcons.Pickaxe) n += "_" + UiIcons.PickTier; var im = SpriteLibrary.LoadImage($"{SpriteLibrary.Root}Held/held_{n}.png"); if (im != null) tex = ImageTexture.CreateFromImage(im); }
+        heldTex[key] = tex; return tex;
     }
 
     const float HeldHandDx = 3f, HeldHandDy = 6f;
