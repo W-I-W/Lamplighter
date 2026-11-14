@@ -142,11 +142,13 @@ public partial class Game
         var chests = W.Pois.Where(p => p.Kind == PK.Chest).Take(3).ToList();
         void Open(Poi p) { p.State = 3; SetObj(p.Tile.X, p.Tile.Y, Tl.ChestOpen); }
         bool IsOpen(Poi p) => p.State == 3 && W.Get(p.Tile.X, p.Tile.Y) == Tl.ChestOpen;
-        var ns = new System.Collections.Generic.List<Vector2I>(); Vector2I stoneT = new(-1, -1);
+        var ns = new System.Collections.Generic.List<Vector2I>(); Vector2I stoneT = new(-1, -1), stoneA = new(-1, -1), stoneB = new(-1, -1);       // stoneA разбивает хост до входа гостя, stoneB гость получает по заявке
+        var spare = W.Pois.Where(p => p.Kind == PK.Chest && !chests.Contains(p)).OrderBy(p => p.Pos.DistanceTo(TileCenter(W.Spawn.X, W.Spawn.Y))).FirstOrDefault();      // сундук для заявки гостя
         S(.05f, () =>
         {
             for (int r = 11; r < 20 && ns.Count < 5; r++) for (int a = -r; a <= r && ns.Count < 5; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y - r); if (W.GenObj[World.Key(tt.X, tt.Y)] == (byte)Tl.None && W.Ground[World.Key(tt.X, tt.Y)] != Art.WaterG && ns.All(q => Math.Abs(q.X - tt.X) >= 3)) ns.Add(tt); }
             for (int r = 3; r < 30 && stoneT.X < 0; r++) for (int a = -r; a <= r && stoneT.X < 0; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y + r); if (W.GenObj[World.Key(tt.X, tt.Y)] == (byte)Tl.Stone && !ns.Contains(tt)) stoneT = tt; }
+            for (int r = 3; r < 30 && stoneB.X < 0; r++) for (int a = -r; a <= r && stoneB.X < 0; a++) { var tt = new Vector2I(W.Spawn.X + a, W.Spawn.Y + r); if (W.GenObj[World.Key(tt.X, tt.Y)] != (byte)Tl.Stone || ns.Contains(tt) || tt == stoneT) continue; if (stoneA.X < 0) stoneA = tt; else if (tt != stoneA) stoneB = tt; }
         });
         // палки и камушки у маяка: одни и те же у всех игроков, собранные одним исчезают у остальных
         var fg = new System.Collections.Generic.List<Vector2I>();
@@ -169,7 +171,7 @@ public partial class Game
             else
             {
                 S(.2f, () => { Open(chests[0]); Inv[It.Shard] = 99; Activate(W.Ancients[1], 1); Check(IsOpen(chests[0]) && W.Ancients[1].Lit, "net host: progress made before the client joins (chest opened, lantern lit)"); });
-                S(.2f, () => { UpdateChunks(0, true); if (fg.Count > 0) CutBushAt(fg[0]); });
+                S(.2f, () => { UpdateChunks(0, true); if (fg.Count > 0) CutBushAt(fg[0]); if (stoneA.X >= 0) SetObj(stoneA.X, stoneA.Y, Tl.None); });
                 S(.2f, () => { SetObj(ns[0].X, ns[0].Y, Tl.Furnace); Placed.Add(World.Key(ns[0].X, ns[0].Y)); SetObj(ns[1].X, ns[1].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[1].X, Y = ns[1].Y, Anim = 1 }); TestGoal = "TEST-GOAL"; });
                 S(.2f, () =>
                 {
@@ -197,7 +199,12 @@ public partial class Game
                 S(.3f, () => { mpos = TileCenter(W.Spawn.X + 2, W.Spawn.Y - 24); SpawnEvent("meteor", mpos); BeaconLevel = 3; });
                 WaitStep(20f, () => { var mt = ToTile(mpos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net host: the meteor falls and leaves its ore"));
                 S(.3f, () => { Check(NetService.Count == 2, $"net host: two players in the roster ({NetService.Count})"); Check(Other()?.Name == "Клиент", $"net host: the client name was received ({Other()?.Name})"); });
-                WaitStep(15f, () => Other() != null && Other().Pos.DistanceTo(expectedClient) < 3f, ok => Check(ok, $"net host: the client position reaches the host ({Other()?.Pos})"));
+                WaitStep(45f, () => Other() != null && Other().Pos.DistanceTo(expectedClient) < 3f, ok => Check(ok, $"net host: the client position reaches the host ({Other()?.Pos})"));          // до этого гость проверяет заявки на добычу (несколько переходов по карте)
+                S(.2f, () =>
+                {
+                    Check(stoneB.X < 0 || W.Get(stoneB.X, stoneB.Y) == Tl.None, $"net host: a block granted to the client by claim is removed here ({(stoneB.X >= 0 ? W.Get(stoneB.X, stoneB.Y).ToString() : "none")})");
+                    Check(spare == null || spare.State == 3, "net host: a place granted to the client is marked completed here at once (nobody else can open it)");
+                });
                 S(.3f, () => { Check(Other() != null && Other().Light > 10f && Other().Light < 400f, $"net host: the client's light radius arrives ({Other()?.Light:0})"); Tp(expectedHost); GD.Print("[net] host moved"); Shot("net_host_view"); });
                 WaitStep(20f, () => NetService.Count == 1, ok => Check(ok, "net host: the client leaving is noticed"));
             }
@@ -215,7 +222,7 @@ public partial class Game
                 WaitStep(10f, () => W.Get(ns[0].X, ns[0].Y) == Tl.Furnace && Placed.Contains(World.Key(ns[0].X, ns[0].Y)) && Lamps.Any(l => l.X == ns[1].X && l.Y == ns[1].Y), ok => Check(ok && HasFurnace, $"net client: objects placed by the host before joining (furnace, lamp) are shown and the furnace counts as built (late join) furnace={W.Get(ns[0].X, ns[0].Y)} placed={Placed.Contains(World.Key(ns[0].X, ns[0].Y))} lamp={Lamps.Any(l => l.X == ns[1].X && l.Y == ns[1].Y)} lamps={Lamps.Count}"));
                 S(3f, () => { }); S(.2f, () => Check(!Goals.Any(g => g.Title == "TEST-GOAL") && Goals.Count > 0, "net client: the goal list is the player's own (the host's test goal is not shown)"));
                 WaitStep(10f, () => W.Get(ns[2].X, ns[2].Y) == Tl.AmpCrystal, ok => Check(ok, $"net client: an object placed by the host while online appears ({W.Get(ns[2].X, ns[2].Y)})"));
-                S(.3f, () => { SetObj(ns[3].X, ns[3].Y, Tl.Banner); Placed.Add(World.Key(ns[3].X, ns[3].Y)); SetObj(ns[4].X, ns[4].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[4].X, Y = ns[4].Y, Anim = 1 }); if (stoneT.X >= 0) SetObj(stoneT.X, stoneT.Y, Tl.None); });
+                S(.8f, () => { SetObj(ns[3].X, ns[3].Y, Tl.Banner); Placed.Add(World.Key(ns[3].X, ns[3].Y)); SetObj(ns[4].X, ns[4].Y, Tl.Lantern); Lamps.Add(new Lamp { X = ns[4].X, Y = ns[4].Y, Anim = 1 }); if (stoneT.X >= 0) SetObj(stoneT.X, stoneT.Y, Tl.None); if (fg.Count > 1) Tp(TileCenter(fg[1].X, fg[1].Y) + new Vector2(0, 18)); });      // гость рубит куст, стоя рядом: хост проверяет дистанцию заявки
                 WaitStep(10f, () => IsOpen(chests[1]), ok => Check(ok, "net client: a chest opened by the host while online opens here too"));
                 S(.2f, () => { UpdateChunks(0, true); Check(fg.Count == 0 || Gone(fg[0]), "net client: a stick or pebble collected by the host before joining is gone here too (late join)"); if (fg.Count > 1) CutBushAt(fg[1]); });
                 WaitStep(10f, () => VillagerById(9501) != null && Wh() != null, ok => Check(ok, "net client: the host's villager and warehouse arrive with the world (late join)"));
@@ -245,6 +252,23 @@ public partial class Game
                 WaitStep(20f, () => Events.Any(e => e.Kind == "meteor"), ok => Check(ok, "net client: the host's meteor event is shown (shared events)"));
                 WaitStep(20f, () => { var mp = Events.FirstOrDefault(e => e.Kind == "meteor"); if (mp == null) return false; var mt = ToTile(mp.Pos); return W.Get(mt.X, mt.Y) == Tl.MeteorOre; }, ok => Check(ok, "net client: the meteor ore appeared for the client too"));
                 WaitStep(15f, () => BeaconLevel >= 3, ok => Check(ok, "net client: the beacon level is shared"));
+                // заявки на разовую добычу: блок, который хост уже разбил, гостю ничего не даёт; целый — даёт после ответа хоста; пройденное место не открывается, нетронутое — открывается
+                int stoneBefore = 0; float tpAt = 0, tpNeed = 0; bool poiGot = false;
+                void TpWait(Vector2 to) { tpNeed = PPos.DistanceTo(to) / 1000f + 1f; tpAt = Time; Tp(to); }          // хост принимает перемещение не быстрее 1200 пикселей в секунду
+                S(.3f, () => { if (stoneA.X >= 0) TpWait(TileCenter(stoneA.X, stoneA.Y) + new Vector2(0, 18)); });
+                WaitStep(30f, () => Time - tpAt > tpNeed, _ => { });
+                S(.2f, () => { stoneBefore = Inv[It.Stone]; if (stoneA.X >= 0) ClaimMine(stoneA, (int)Tl.Stone); });
+                WaitStep(10f, () => stoneA.X < 0 || !pendingMine.ContainsKey(World.Key(stoneA.X, stoneA.Y)), ok => Check(ok && Inv[It.Stone] == stoneBefore, $"net client: a block the host already mined gives the client nothing (+{Inv[It.Stone] - stoneBefore})"));
+                S(.3f, () => { if (stoneB.X >= 0) TpWait(TileCenter(stoneB.X, stoneB.Y) + new Vector2(0, 18)); });
+                WaitStep(30f, () => Time - tpAt > tpNeed, _ => { });
+                S(.2f, () => { stoneBefore = Inv[It.Stone]; if (stoneB.X >= 0 && W.Get(stoneB.X, stoneB.Y) == Tl.Stone) BreakTile(stoneB, Tl.Stone, false); });
+                WaitStep(10f, () => stoneB.X < 0 || Inv[It.Stone] > stoneBefore, ok => Check(ok && (stoneB.X < 0 || W.Get(stoneB.X, stoneB.Y) == Tl.None), $"net client: an intact block gives its loot after the host confirms the claim (+{Inv[It.Stone] - stoneBefore})"));
+                S(.2f, () => { poiGot = false; ClaimPoi(W.Pois.IndexOf(chests[0]), () => poiGot = true); });
+                WaitStep(10f, () => !pendingPoi.ContainsKey(W.Pois.IndexOf(chests[0])), ok => Check(ok && !poiGot, "net client: a place the host already completed cannot be claimed again"));
+                S(.3f, () => { if (spare != null) TpWait(spare.Pos + new Vector2(0, 20)); });
+                WaitStep(30f, () => Time - tpAt > tpNeed, _ => { });
+                S(.2f, () => { poiGot = false; if (spare != null) ClaimPoi(W.Pois.IndexOf(spare), () => poiGot = true); });
+                WaitStep(10f, () => spare == null || poiGot, ok => Check(ok, "net client: an untouched place is granted to the client by the host"));
                 S(1.5f, () => { });
                 S(.3f, () =>
                 {

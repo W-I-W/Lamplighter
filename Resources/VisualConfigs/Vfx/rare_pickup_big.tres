@@ -17,3 +17,4 @@ SfxDb = -8
 SfxPitch = 0.8
 Shake = 0
 Flash = 0
+Layers = "sparkle,ring2"

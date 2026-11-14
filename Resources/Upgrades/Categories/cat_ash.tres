@@ -6,7 +6,7 @@
 script = ExtResource("1")
 Id = "ash"
 Title = "Пепел"
-Icon = "item:13"
+Icon = "tile:82"
 Order = 2
 Page = 2
 BiomeId = 2

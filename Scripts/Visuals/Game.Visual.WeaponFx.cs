@@ -14,6 +14,7 @@ public partial class Game
     public void OnWeaponFired(int kind, Vector2 pos, Vector2 dir, Color col)
     {
         Impact(pos + dir * 4f, dir, col, kind == 1 ? .7f : .5f, kind == 1 ? 4 : 2);
+        if (kind == 1) Sparkle(pos + dir * 6f, col, 3, 4f, 8f);
         if (kind == 1) AddRing(pos + dir * 6f, 9f, .22f, new Color(col.R, col.G, col.B, .8f));          // зарядка и выпуск магического шара
     }
 
@@ -22,16 +23,18 @@ public partial class Game
     {
         ghostT = 0; Burst(pos + new Vector2(0, 5), new Color("#c8e8ff"), Mathf.RoundToInt(6 * Settings.Particles), 45f);
         AddRing(pos + new Vector2(0, 4), 12f, .25f, new Color(.7f, .9f, 1f, .7f));
+        Puff(pos + new Vector2(0, 5), new Color(.85f, .9f, 1f), 5, 5f, 6f, .5f); Sparks(pos, -dir, new Color("#c8e8ff"), 6, 90f, .5f);          // пыль из-под ног и искры назад
     }
 
     /// <summary>Событие: волна света (способность F).</summary>
     public void OnPulse(Vector2 pos)
     {
         AddRing(pos, 170f, .55f, new Color("#fff2b0")); AddRing(pos, 120f, .45f, new Color("#ffe27a")); AddRing(pos, 70f, .35f, Colors.White);
+        FlashAt(pos, new Color("#fff6c8"), 30f, .2f); Sparkle(pos, new Color("#fff2b0"), 16, 70f, 26f); Rays(pos + new Vector2(0, 6), new Color("#ffe27a"), 6, 9f, 34f);
         for (int i = 0; i < Mathf.RoundToInt(40 * Settings.Particles); i++)
         {
             float a = rng.Randf() * Mathf.Tau, s = rng.RandfRange(60f, 170f);
-            Parts.Add(new Particle { P = pos, V = Vector2.FromAngle(a) * s, Life = .5f, Max = .5f, C = new Color("#fff2b0"), Size = 1.5f });
+            Parts.Add(new Particle { P = pos, V = Vector2.FromAngle(a) * s, Life = .5f, Max = .5f, C = Tone(new Color("#fff2b0"), rng.RandfRange(-.15f, .4f)), Size = 1.5f, Kind = i % 3 == 0 ? Particle.Spark : Particle.Dot, Drag = 3f });
         }
     }
 

@@ -2406,5 +2406,6 @@
   "ур.": "lv.",
   "ЛКМ — стопка · ПКМ — половина · Shift+ЛКМ — всё · Esc — закрыть": "LMB — stack · RMB — half · Shift+LMB — all · Esc — close",
   "ЛКМ — взять или положить · ПКМ — половина · Shift+ЛКМ — быстрый перенос (в хотбар) · Ctrl+Shift — один · 1–0 — обмен · Esc — закрыть": "LMB — pick up or place · RMB — half · Shift+LMB — quick move (to hotbar) · Ctrl+Shift — one · 1–0 — swap · Esc — close",
-  "Shift+ЛКМ — быстрый перенос · 1–0 — обмен\nПКМ — половина · Ctrl+клик — по 1 · Q — выбросить": "Shift+LMB — quick move · 1–0 — swap\nRMB — half · Ctrl+click — one · Q — drop"
+  "Shift+ЛКМ — быстрый перенос · 1–0 — обмен\nПКМ — половина · Ctrl+клик — по 1 · Q — выбросить": "Shift+LMB — quick move · 1–0 — swap\nRMB — half · Ctrl+click — one · Q — drop",
+  "Уже открыто другим игроком": "Already opened by another player"
 }

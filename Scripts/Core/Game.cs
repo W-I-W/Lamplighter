@@ -29,8 +29,15 @@ public static class It
     public static int IngotOf(int ore) => ore == CopperOre ? Copper : ore == IronOre ? Iron : ore == SilverOre ? Silver : -1;
 }
 
-public sealed class Particle { public Vector2 P, V; public float Life, Max, Size = 1.5f, Alpha = 1f; public Color C; }
-public sealed class FText { public Vector2 P; public string S; public float Life; public Color C; }
+/// <summary>Частица эффекта. Kind — вид (точка, искра, дым, осколок, звёздочка, вспышка, луч); Grav — гравитация, Drag — сопротивление, Spin — вращение, Grow — рост размера в секунду,
+/// Floor — высота «земли» для отскока осколков (NaN — нет). Отрисовка и готовые наборы — Scripts/Visuals/Game.Visual.Particles.cs.</summary>
+public sealed class Particle
+{
+    public const byte Dot = 0, Spark = 1, Smoke = 2, Shard = 3, Star = 4, Glow = 5, Ray = 6, Drop = 7;      // Drop — капля: у земли (Floor) становится пятном
+    public Vector2 P, V; public float Life, Max, Size = 1.5f, Alpha = 1f; public Color C;
+    public byte Kind; public float Grav, Drag = 4f, Rot, Spin, Grow, Floor = float.NaN;
+}
+public sealed class FText { public Vector2 P, V; public float Life; public string S; public Color C; }      // V ≠ 0 — число вылетает по дуге (урон по врагу)
 public sealed class Proj { public Vector2 Pos, Vel; public float Life = 3f, Dmg; public Color C = new("#ff5ec8"); public bool Fire, Zone, Cold, Dark; }
 public sealed class Beacon { public Vector2 Pos; public float T, Dur, R, Ring, Burn; }
 public sealed class Building { public Tl Type; public int X, Y, Level = 1, Count, Status, Prio = 1, Mode; public float Prog; public bool Worker, Off, Forced, Linked, Manual; public float WorkMul = .6f; public int[] Local = new int[It.Count]; public Vector2 Pos => Game.TileCenter(X, Y); }
@@ -505,7 +512,7 @@ public partial class Game : Node2D
         }
         PPos = Move(PPos, pVel * dt, 5f, false);
         if (pVel.LengthSquared() > 100) Walk += dt * 9f * (water ? .6f : 1f);
-        if (!water && !OnIce(PPos) && pVel.LengthSquared() > 400) { dustT -= dt; if (dustT <= 0) { dustT = .09f; var back = -pVel.Normalized(); Parts.Add(new Particle { P = PPos + new Vector2(rng.RandfRange(-2, 2), 5) + back * 2f, V = back * rng.RandfRange(6, 14) + new Vector2(0, -rng.RandfRange(3, 8)), Life = .45f, Max = .45f, C = new Color(.78f, .72f, .6f), Alpha = .45f, Size = rng.RandfRange(1.4f, 2.2f) }); } }   // пыль из-под ног при беге
+        if (!water && !OnIce(PPos) && pVel.LengthSquared() > 400) { dustT -= dt; if (dustT <= 0) { dustT = .09f; var back = -pVel.Normalized(); Parts.Add(new Particle { P = PPos + new Vector2(rng.RandfRange(-2, 2), 5) + back * 2f, V = back * rng.RandfRange(6, 14) + new Vector2(0, -rng.RandfRange(3, 8)), Life = .45f, Max = .45f, C = new Color(.78f, .72f, .6f), Alpha = .45f, Size = rng.RandfRange(1.2f, 1.8f), Kind = Particle.Smoke, Grow = 5f }); } }   // пыль из-под ног при беге
         if (water && pVel.LengthSquared() > 100) { rippleT -= dt; if (rippleT <= 0) { rippleT = .12f; Burst(PPos + new Vector2(0, 4), new Color("#9fd8ff"), 2, 25); } }
         if (Mathf.Abs(Aim.X - PPos.X) > 2) Facing = Aim.X < PPos.X ? -1 : 1;
         ApplyHazards(dt);
@@ -638,6 +645,26 @@ public partial class Game : Node2D
         MineProg = 0; MineTile = new Vector2I(-1, -1); mineMemo.Remove(World.Key(tile.X, tile.Y));
         var c = TileCenter(tile.X, tile.Y);
         Fx("tile_break", c, TileColor(t));
+        if (NetClient && ClaimedLoot(t)) ClaimMine(tile, (int)t);                      // гость: добычу выдаст ответ хоста — этот блок мог в тот же миг разбить другой игрок (иначе дюп)
+        else BreakLoot(tile, t, c);
+        if (chain && ChainLimit > 0 && t != Tl.Grave)
+        {
+            int left = ChainLimit; var q = new Queue<Vector2I>(); q.Enqueue(tile);
+            while (q.Count > 0 && left > 0)
+            {
+                var cur = q.Dequeue();
+                foreach (var d in World.D4)
+                {
+                    var n = cur + d;
+                    if (left > 0 && W.Get(n.X, n.Y) == t) { BreakTile(n, t, false); q.Enqueue(n); left--; }
+                }
+            }
+        }
+    }
+
+    /// <summary>Добыча и опыт за разбитый блок (вызывается внутри BreakTile, у гостя — по подтверждению хоста).</summary>
+    void BreakLoot(Vector2I tile, Tl t, Vector2 c)
+    {
         switch (t)
         {
             case Tl.Grave: OpenGrave(tile); break;
@@ -661,19 +688,6 @@ public partial class Game : Node2D
             case Tl.IceBlock: case Tl.ShadowPillar: GiveXp(1); break;
             case Tl.BossTotem: Burst(c, new Color("#c080ff"), 20, 100); Shake = Mathf.Max(Shake, 3); Sfx.Play("boss"); break;
             case Tl.MeteorOre: Give(It.AncCrystal, 1, c); Give(It.Shard, 3, c + new Vector2(0, -6)); Give(It.Crystal, 1, c + new Vector2(0, -12)); GiveXp(40); Found.Add("Осколок светового метеорита"); break;
-        }
-        if (chain && ChainLimit > 0 && t != Tl.Grave)
-        {
-            int left = ChainLimit; var q = new Queue<Vector2I>(); q.Enqueue(tile);
-            while (q.Count > 0 && left > 0)
-            {
-                var cur = q.Dequeue();
-                foreach (var d in World.D4)
-                {
-                    var n = cur + d;
-                    if (left > 0 && W.Get(n.X, n.Y) == t) { BreakTile(n, t, false); q.Enqueue(n); left--; }
-                }
-            }
         }
     }
 
@@ -858,13 +872,17 @@ public partial class Game : Node2D
     // ───────────────────────── эффекты ─────────────────────────
     public void Burst(Vector2 p, Color c, int n, float speed)
     {
+        // всплеск — смесь: точки со шлейфом, быстрые искры-штрихи и светящиеся шарики разных оттенков, плюс короткая вспышка в центре у крупных всплесков
         n = n > 0 ? Mathf.Max(Settings.Particles > .05f ? 1 : 0, Mathf.RoundToInt(n * Settings.Particles)) : 0;
         for (int i = 0; i < n; i++)
         {
             float a = rng.Randf() * Mathf.Tau, s = rng.RandfRange(.3f, 1f) * speed;
-            float life = rng.RandfRange(.3f, .7f);
-            Parts.Add(new Particle { P = p, V = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * s, Life = life, Max = life, C = c });
+            float life = rng.RandfRange(.3f, .7f), kind = rng.Randf(); var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a)); var col = Tone(c, rng.RandfRange(-.2f, .35f));
+            if (kind < .3f) Parts.Add(new Particle { P = p, V = dir * s * 1.3f, Life = life * .7f, Max = life * .7f, C = Tone(col, .3f), Kind = Particle.Spark, Size = 1f, Grav = 60f, Drag = 3f });
+            else if (kind < .42f) Parts.Add(new Particle { P = p, V = dir * s * .5f, Life = life, Max = life, C = col, Kind = Particle.Glow, Size = 1.2f, Grow = -1f });
+            else Parts.Add(new Particle { P = p, V = dir * s, Life = life, Max = life, C = col, Size = rng.RandfRange(1.2f, 2f) });
         }
+        if (n >= 6) FlashAt(p, Tone(c, .5f), Mathf.Min(3f + n * .25f, 9f));
         if (Parts.Count > 800) Parts.RemoveRange(0, Parts.Count - 800);
     }
 
@@ -873,9 +891,12 @@ public partial class Game : Node2D
         for (int i = Parts.Count - 1; i >= 0; i--)
         {
             var p = Parts[i]; p.Life -= dt; if (p.Life <= 0) { Parts.RemoveAt(i); continue; }
-            p.P += p.V * dt; p.V *= Mathf.Max(0, 1 - 4 * dt);
+            p.V.Y += p.Grav * dt; p.P += p.V * dt; p.V *= Mathf.Max(0, 1 - p.Drag * dt); p.Rot += p.Spin * dt; p.Size += p.Grow * dt;
+            if (p.Kind == Particle.Drop && p.P.Y > p.Floor && p.V.Y > 0) { AddSplat(new Vector2(p.P.X, p.Floor), p.C, p.Size); Parts.RemoveAt(i); continue; }
+            if (p.P.Y > p.Floor && p.V.Y > 0) { p.P.Y = p.Floor; p.V = new Vector2(p.V.X * .55f, -p.V.Y * .4f); p.Spin *= .5f; }      // осколок отскакивает от земли
         }
-        for (int i = Texts.Count - 1; i >= 0; i--) { var t = Texts[i]; t.Life -= dt; t.P += new Vector2(0, -14 * dt); if (t.Life <= 0) Texts.RemoveAt(i); }
+        if (Parts.Count > 800) Parts.RemoveRange(0, Parts.Count - 800);
+        for (int i = Texts.Count - 1; i >= 0; i--) { var t = Texts[i]; t.Life -= dt; if (t.V != Vector2.Zero) { t.V.Y += 260f * dt; t.V *= Mathf.Max(0, 1 - 2.5f * dt); t.P += t.V * dt; } else t.P += new Vector2(0, -14 * dt); if (t.Life <= 0) Texts.RemoveAt(i); }
         // пока открыто окно, меню или карта, сообщения не гаснут: игрок успевает их прочитать
         float msgDt = Window != Win.None || TechOpen || MapOpen || Menu != Mn.None ? 0f : dt;
         Notify.Tick(msgDt);

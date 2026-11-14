@@ -1,12 +1,16 @@
-"""Profession villager sheets (Assets/Sprites/Npc/v_<id>.png, 64x16 = 4 frames: idle, walk, work pose 1, work pose 2) and the village decor atlas
+"""Village decor atlas (profession sheets moved to make_characters.py, 8 frames). Formerly: profession villager sheets and the village decor atlas
 (Assets/Sprites/Village/decor.png, 16x16 tiles). Both are placeholders in the project's pixel style: replace the PNGs with your own art of the same size.
 Run: python tools/GraphicsGenerator/make_npc_professions.py"""
 import os
 from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..', 'Assets', 'Sprites')
-base = Image.open(os.path.join(ROOT, 'Npc', 'villager.png')).convert('RGBA')   # 32x16: two frames of the plain villager
 TUNIC, HAT = (74, 138, 74, 255), (217, 184, 74, 255)
+TUNIC_S, HAT_S, HAT_L, APRON_S = (56, 108, 60, 255), (201, 162, 74, 255), (240, 216, 120, 255), (180, 172, 144, 255)     # тени и блик базового жителя (make_art_pass_chars.py)
+
+
+def tone(c, k):
+    return (min(255, int(c[0] * k)), min(255, int(c[1] * k)), min(255, int(c[2] * k)), 255)
 OUT = (20, 17, 12, 255)
 
 PROFS = {
@@ -31,6 +35,10 @@ def recolor(frame, tunic, hat, pid):
             if p == TUNIC: px[x, y] = tunic
             elif p == HAT: px[x, y] = hat
             elif p == APRON: px[x, y] = APRONS[pid]
+            elif p == TUNIC_S: px[x, y] = tone(tunic, .76)          # тени и блик переносятся в цвета профессии
+            elif p == HAT_S: px[x, y] = tone(hat, .8)
+            elif p == HAT_L: px[x, y] = tone(hat, 1.18)
+            elif p == APRON_S: px[x, y] = tone(APRONS[pid], .8)
     # per-profession details so the five silhouettes read apart at 16x16
     def put(x, y, c): px[x, y] = c
     if pid == 'lumberjack':
@@ -76,22 +84,29 @@ def tool(f, pid, pose, cols):
             for x in range(10, 15): put(x, 12, hd); put(x, 13, hd)
             put(8, 14, (255, 190, 80, 255)); put(14, 14, (255, 190, 80, 255))
     elif pid == 'farmer':
-        for x in range(10, 15): put(x, 10 if up else 11, hd)
-        for y in range(10 if up else 11, 14): put(10, y, h)
-        put(15, 9 if up else 12, (150, 200, 230, 255)); put(15, 10 if up else 13, (150, 200, 230, 255))
+        for x in range(9, 14): put(x, 10 if up else 11, hd)
+        for y in range(10 if up else 11, 14): put(9, y, h)
+        put(14, 9 if up else 12, (150, 200, 230, 255)); put(14, 10 if up else 13, (150, 200, 230, 255))        # лейка целиком внутри кадра: x=15 упирался в край
     else:  # engineer: wrench
         for i in range(5): put(12, (5 if up else 8) + i, h)
         put(11, 5 if up else 8, hd); put(13, 5 if up else 8, hd); put(12, 4 if up else 7, hd)
     return f
 
 
-sheet_dir = os.path.join(ROOT, 'Npc')
-for pid, cols in PROFS.items():
-    f0 = recolor(base.crop((0, 0, 16, 16)), cols[0], cols[1], pid); f1 = recolor(base.crop((16, 0, 32, 16)), cols[0], cols[1], pid)
-    w0 = tool(f0.copy(), pid, 0, cols); w1 = tool(f0.copy(), pid, 1, cols)
-    sheet = Image.new('RGBA', (64, 16), (0, 0, 0, 0))
-    for i, fr in enumerate((f0, f1, w0, w1)): sheet.paste(fr, (i * 16, 0))
-    sheet.save(os.path.join(sheet_dir, f'v_{pid}.png'))
+def edge(f, body):
+    """Тёмный контур вокруг инструмента (пиксели, которых не было у жителя без инструмента), чтобы он читался на траве."""
+    px = f.load(); bp = body.load(); add = []
+    for y in range(16):
+        for x in range(16):
+            if px[x, y][3]: continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < 16 and 0 <= ny < 16 and px[nx, ny][3] and px[nx, ny] != bp[nx, ny] and px[nx, ny] != OUT: add.append((x, y)); break
+    for x, y in add: px[x, y] = OUT
+    return f
+
+
+# листы профессий (Npc/v_*.png, 8 кадров) теперь рисует make_characters.py; здесь остался только атлас украшений деревни
 
 # ───────────── village decor atlas: 0 logs, 1 crates, 2 red flowers, 3 blue flowers, 4 bench, 5 campfire A, 6 campfire B, 7 lamp post ─────────────
 dec = Image.new('RGBA', (128, 16), (0, 0, 0, 0)); d = dec.load()

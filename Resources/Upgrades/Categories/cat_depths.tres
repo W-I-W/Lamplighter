@@ -6,7 +6,7 @@
 script = ExtResource("1")
 Id = "depths"
 Title = "Глубины"
-Icon = "item:11"
+Icon = "tile:51"
 Order = 1
 Page = 1
 BiomeId = 1

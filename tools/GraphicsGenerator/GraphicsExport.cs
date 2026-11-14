@@ -14,6 +14,10 @@ public static class GraphicsExport
     static readonly HashSet<string> Ground = new() { "Dirt", "CaveFloor", "WaterG", "AshFloor", "Scorch", "HotAsh", "Snow", "IceFloor", "HeartFloor", "VoidG", "Deep", "Grass" };
     static readonly HashSet<string> Buildings = new() { "Furnace", "Lantern", "House", "Tent", "Warehouse", "Sawmill", "Mine", "Forge", "Drill", "Collector", "Wh4", "Saw4", "Mine4", "Forge4", "Stall", "Hub", "Refinery", "Cryo", "CrystalLantern", "CombatLantern", "Statue", "Fountain", "Banner", "RiftGate", "Machine", "MachineOn" };
 
+    /// <summary>Дополнительные слои эффектов (VfxDef.Layers).</summary>
+    static readonly Dictionary<string, string> FxLayers = new() { ["mine_hit"] = "sparks", ["tile_break"] = "debris,puff,flash", ["rare_pickup"] = "sparkle", ["rare_pickup_big"] = "sparkle,ring2",
+        ["level_up"] = "sparkle,rays,ring2", ["building_upgrade"] = "sparkle,rays", ["player_hurt"] = "sparks" };
+
     static string Abs(string res) => ProjectSettings.GlobalizePath(res);
     static void Dir(string res) => DirAccess.MakeDirRecursiveAbsolute(Abs(res));
     static void Text(string res, string text) { Dir(res.Substring(0, res.LastIndexOf('/'))); using var f = FileAccess.Open(res, FileAccess.ModeFlags.Write); f.StoreString(text); }
@@ -63,7 +67,7 @@ public static class GraphicsExport
             sb.Append("[gd_resource type=\"Resource\" script_class=\"EntityVisualDef\" load_steps=3 format=3]\n\n");
             sb.Append("[ext_resource type=\"Script\" path=\"res://Scripts/Visuals/EntityVisualDef.cs\" id=\"1\"]\n");
             sb.Append($"[ext_resource type=\"Texture2D\" path=\"{SpriteLibrary.SheetPath(e.sheet, e.folder)}\" id=\"2\"]\n\n[resource]\nscript = ExtResource(\"1\")\n");
-            sb.Append($"Id = \"{e.id}\"\nSheet = ExtResource(\"2\")\nFrames = 2\nFrameSize = 16\nFps = 4.0\nScale = {e.scale.ToString(System.Globalization.CultureInfo.InvariantCulture)}\n");
+            sb.Append($"Id = \"{e.id}\"\nSheet = ExtResource(\"2\")\nFrames = {(e.folder == \"Npc\" ? 8 : 2)}\nFrameSize = 16\nFps = 4.0\nScale = {e.scale.ToString(System.Globalization.CultureInfo.InvariantCulture)}\n");
             sb.Append($"Offset = Vector2({e.off.X}, {e.off.Y})\nBob = 1.2\nLift = {e.lift.ToString(System.Globalization.CultureInfo.InvariantCulture)}\nShadowRadius = {e.shadow.ToString(System.Globalization.CultureInfo.InvariantCulture)}\n");
             Text($"res://Resources/VisualConfigs/Entities/{e.id}.tres", sb.ToString()); ids.Add(e.id);
         }
@@ -87,6 +91,7 @@ public static class GraphicsExport
             sb.Append("[gd_resource type=\"Resource\" script_class=\"VfxDef\" load_steps=2 format=3]\n\n[ext_resource type=\"Script\" path=\"res://Scripts/Visuals/VfxDef.cs\" id=\"1\"]\n\n[resource]\nscript = ExtResource(\"1\")\n");
             sb.Append($"Id = \"{f.id}\"\nParticles = {f.n}\nSpeed = {f.speed.ToString(ci)}\nParticleSize = {f.size.ToString(ci)}\nTint = Color({t.R.ToString(ci)}, {t.G.ToString(ci)}, {t.B.ToString(ci)}, 1)\n");
             sb.Append($"RingRadius = {f.ring.ToString(ci)}\nRingTime = {f.ringT.ToString(ci)}\nRingColor = Color({rc.R.ToString(ci)}, {rc.G.ToString(ci)}, {rc.B.ToString(ci)}, 1)\nSfx = \"{f.sfx}\"\nSfxDb = {f.db.ToString(ci)}\nSfxPitch = {f.pitch.ToString(ci)}\nShake = {f.shake.ToString(ci)}\nFlash = {f.flash.ToString(ci)}\n");
+            if (FxLayers.TryGetValue(f.id, out var layers)) sb.Append($"Layers = \"{layers}\"\n");
             Text($"res://Resources/VisualConfigs/Vfx/{f.id}.tres", sb.ToString()); fxIds.Add(f.id);
         }
         // ── каталог ──

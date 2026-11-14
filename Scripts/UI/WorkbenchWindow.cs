@@ -9,7 +9,7 @@ namespace Lamplighter;
 public partial class WorkbenchWindow : Control
 {
     public Game G;
-    Control panel; GridContainer listGrid, invGrid; Label title, nameL, statusL, invTitle; HotbarRow hotbar; ItemTipPanel tipPanel;
+    Control panel; GridContainer cross, listGrid, invGrid; Label title, nameL, statusL, invTitle; HotbarRow hotbar; ItemTipPanel tipPanel;
     readonly List<UiSlot> listSlots = new(), invSlots = new();
     Button tabAvailable, tabAll; bool quickAll; Label quickTitle; List<(BenchRecipe r, int times)> quickList = new();
     UiSlot[] cells; UiSlot result;                       // cells: сверху, слева, справа, снизу = ячейки 0–3; result = ячейка 4
@@ -37,8 +37,9 @@ public partial class WorkbenchWindow : Control
         UpdateQuickTabs();
 
         var mid = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkBegin }; mid.AddThemeConstantOverride("separation", 2); body.AddChild(mid);
-        var cross = new GridContainer { Columns = 3, SizeFlagsHorizontal = SizeFlags.ShrinkCenter }; cross.AddThemeConstantOverride("h_separation", 1); cross.AddThemeConstantOverride("v_separation", 1); mid.AddChild(cross);
-        var top = Cell(0); var lft = Cell(1); var right = Cell(2); var bottom = Cell(3); result = Cell(Game.BenchInputs);
+        cross = new GridContainer { Columns = 3, SizeFlagsHorizontal = SizeFlags.ShrinkCenter }; cross.AddThemeConstantOverride("h_separation", CrossGap); cross.AddThemeConstantOverride("v_separation", CrossGap); mid.AddChild(cross);
+        cross.Draw += () => DrawCross(cross); cross.SortChildren += cross.QueueRedraw;
+        var top = Cell(0); var lft = Cell(1); var right = Cell(2); var bottom = Cell(3); result = Cell(Game.BenchInputs); result.ItemRectChanged += cross.QueueRedraw;
         cells = new[] { top, lft, right, bottom, result };
         cross.AddChild(Gap()); cross.AddChild(top); cross.AddChild(Gap());                 // крест: сверху, слева/центр/справа, снизу
         cross.AddChild(lft); cross.AddChild(result); cross.AddChild(right);
@@ -52,6 +53,25 @@ public partial class WorkbenchWindow : Control
         v.AddChild(new Control { CustomMinimumSize = new Vector2(0, 3) });
         hotbar = HotbarRow.Create(); v.AddChild(hotbar);
         tipPanel = ItemTipPanel.Create(this);
+    }
+
+    const int CrossGap = 7;
+    static readonly Color Gold = new("#ffd36a"), GoldDim = new("#b08a3a");
+
+    /// <summary>Под ячейками креста: черточки от каждой ячейки-компонента к результату и золотая рамка вокруг результата (рисуется в зазорах сетки, ячейки лежат поверх).</summary>
+    void DrawCross(Control cross)
+    {
+        if (cells == null || result == null || !result.IsInsideTree()) return;
+        var r = new Rect2(result.Position, result.Size); var c = r.GetCenter();
+        for (int k = 0; k < Game.BenchInputs; k++)
+        {
+            var cr = new Rect2(cells[k].Position, cells[k].Size); var cc = cr.GetCenter();
+            Vector2 a, b;                                                       // от края ячейки до края результата — черточка видна в зазоре
+            if (Mathf.Abs(cc.X - c.X) > Mathf.Abs(cc.Y - c.Y)) { float sx = Mathf.Sign(c.X - cc.X); a = new Vector2(sx > 0 ? cr.End.X : cr.Position.X, cc.Y); b = new Vector2(sx > 0 ? r.Position.X - 2 : r.End.X + 2, c.Y); }
+            else { float sy = Mathf.Sign(c.Y - cc.Y); a = new Vector2(cc.X, sy > 0 ? cr.End.Y : cr.Position.Y); b = new Vector2(c.X, sy > 0 ? r.Position.Y - 2 : r.End.Y + 2); }
+            cross.DrawLine(a, b, GoldDim, 2f);
+        }
+        cross.DrawRect(r.Grow(2f), Gold, false, 2f);                          // золотая рамка ячейки результата
     }
 
     static Control Gap() => new Control { CustomMinimumSize = new Vector2(24, 24), MouseFilter = MouseFilterEnum.Ignore };

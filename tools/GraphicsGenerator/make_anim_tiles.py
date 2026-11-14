@@ -94,12 +94,20 @@ def idx_of(name, prefix=''):
     except ValueError: return -1
 
 
-done = 0
-for folder in ('Environment', 'Buildings', 'Tilesets'):
-    for f in glob.glob(os.path.join(ROOT, folder, '*.png')):
-        i = idx_of(os.path.basename(f))
-        if i in MODES: build(f, MODES[i]); done += 1
-for f in glob.glob(os.path.join(ROOT, 'Items', 'icon_*.png')):
-    i = idx_of(os.path.basename(f), 'icon_')
-    if i in ICONS: build(f, ICONS[i]); done += 1
-print('animated strips:', done)
+def main(only=None):
+    """only — множество индексов тайлов окружения: пересобрать ленты только для них (иконки не трогаются)."""
+    done = 0
+    for folder in ('Environment', 'Buildings', 'Tilesets'):
+        for f in glob.glob(os.path.join(ROOT, folder, '*.png')):
+            i = idx_of(os.path.basename(f))
+            if i in MODES and (only is None or i in only): build(f, MODES[i]); done += 1
+    if only is None:
+        for f in glob.glob(os.path.join(ROOT, 'Items', 'icon_*.png')):
+            i = idx_of(os.path.basename(f), 'icon_')
+            if i in ICONS: build(f, ICONS[i]); done += 1
+    print('animated strips:', done)
+
+
+if __name__ == '__main__':
+    import sys
+    main({int(a) for a in sys.argv[1:]} or None)          # python make_anim_tiles.py 9 22 — только эти тайлы

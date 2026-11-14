@@ -88,10 +88,13 @@ public partial class Game
         int fid = ForageIdAt(tile); CutBush.Add(World.Key(tile.X, tile.Y));
         var ch = ChunkAt(tile.X, tile.Y); ch?.F.EraseCell(new Vector2I(tile.X % CS, tile.Y % CS));
         MineProg = 0; MineTile = new Vector2I(-1, -1); mineMemo.Remove(World.Key(tile.X, tile.Y));
-        if (NetService.Active) Net?.SendTile(tile.X, tile.Y, BushCutCode, 0);          // срубленный куст виден всем
         var c = TileCenter(tile.X, tile.Y); Fx("tile_break", c, fid == FoliagePebble ? new Color("#a0a0ac") : fid == FoliageStick ? new Color("#8c6034") : new Color("#3b8a3a"));
-        Give(fid == FoliagePebble ? It.Stone : It.Wood, fid == FoliageBush ? 1 : rng.RandiRange(1, 2), c); GiveXp(1);
+        if (NetClient) { ClaimMine(tile, BushCutCode, fid); return; }                 // гость: куст срубается у хоста по заявке, добыча — по его ответу (хост сам разошлёт куст остальным)
+        if (NetService.Active) Net?.SendTile(tile.X, tile.Y, BushCutCode, 0);          // срубленный куст виден всем
+        BushLoot(fid, c);
     }
+
+    void BushLoot(int fid, Vector2 c) { Give(fid == FoliagePebble ? It.Stone : It.Wood, fid == FoliageBush ? 1 : rng.RandiRange(1, 2), c); GiveXp(1); }
 
     /// <summary>Предмет в руках при замахе: значок выбранного слота хотбара (кирка, топор, меч, лук, посох), повёрнутый по направлению удара.</summary>
     static bool TreeFell(Tl t) => t == Tl.Tree || t == Tl.Pine || t == Tl.DeadTree;

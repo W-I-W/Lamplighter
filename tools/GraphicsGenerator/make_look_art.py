@@ -87,7 +87,7 @@ HAIR = {
     1: ['..h.h.h.h.h.h...', '..hhhhhhhhhhhh..', '.hhhhhhhhhhhhhh.', '..hhhhhhhhhhhh..', '..hhh.h..h..hh..', '..hh............'],                         # ёжик
     2: ['.....hhhhhh.....', '...hhhhhhhhhh...', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hhhh.hh.h.hh..', '..hhh.......hh..', '..hhh.......hh..', '..hhh.......hh..',
         '..hhh...........', '..hh............', '..hh............'],                                                                                       # длинная
-    3: ['.....hhhhhh.....', '...hhhhhhhhhh...', '..hhhhhhhhhhhh..', '.hhhhhhhhhhhhh..', 'hhhhhh.hh.h.hh..', 'hh.hh...........', 'h...............', 'h...............'],  # хвост
+    3: ['.....hhhhhh.....', '...hhhhhhhhhh...', '..hhhhhhhhhhhh..', '.hhhhhhhhhhhhh..', '.hhhhh.hh.h.hh..', '.hhhh...........', '.hh.............', '.h..............'],  # хвост
     4: ['....hhhhhhh.....', '..hhhhhhhhhhh...', '.hhhhhhhhhhhhh..', '.hhhhhhhhhhhhhh.', '.hhhh.......hhh.', '.hhh.........hh.', '.hhh.........hh.', '..hhh.......hh..',
         '....hhh..hhh....'],                                                                                                                                 # капюшон
     5: ['................', '....hhhhhhh.....', '...hhhhhhhhh....', '..hhhhhhhhhhhhh.', '..hh............'],                                               # кепка с козырьком
@@ -175,6 +175,16 @@ def shaded(grid, ch_set, tone_fn):
                     v = 0.82                                              # тень от чёлки на лбу
                 if x > 0 and grid[y][x - 1] not in ch_set and c in ('a', 'b'):
                     v = min(v, 0.86)
+                # объём: свет сверху-слева, поэтому правая кромка кожи и одежды уходит в тень, а под подбородком лежит тень шеи
+                right = grid[y][x + 1] if x + 1 < W else None
+                if c in ('s', 'k') and right not in ('s', 'k', 'e') and above in ('s', 'k', 'h'):
+                    v = min(v, 0.86 * BASE.get(c, 1.0))
+                if c in ('a', 'b') and right not in ('a', 'b') and above in ('a', 'b'):
+                    v = min(v, 0.78)
+                if c == 's' and y == 9:
+                    v = min(v, 0.80)
+                if c == 'h' and right not in ch_set and above in ch_set and below in ch_set:
+                    v = 0.72
                 g = int(255 * v)
                 im.putpixel((x, y), (g, g, g, 255))
     return im

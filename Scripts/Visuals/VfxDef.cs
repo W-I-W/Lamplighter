@@ -20,4 +20,6 @@ public partial class VfxDef : Resource
     [Export] public float SfxPitch = 1f;
     [Export] public float Shake = 0f;
     [Export] public float Flash = 0f;
+    /// <summary>Дополнительные слои через запятую: sparks (искры вверх), debris (осколки с отскоком), puff (пыль), sparkle (звёздочки), rays (столб света), flash (вспышка), ring2 (второе белое кольцо).</summary>
+    [Export] public string Layers = "";
 }

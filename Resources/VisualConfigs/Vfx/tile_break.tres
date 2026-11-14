@@ -17,3 +17,4 @@ SfxDb = -2
 SfxPitch = 1
 Shake = 1
 Flash = 0
+Layers = "debris,puff,flash"

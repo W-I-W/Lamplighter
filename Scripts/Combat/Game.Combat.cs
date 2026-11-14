@@ -278,7 +278,7 @@ public partial class Game
     public void Hurt(Enemy e, float dmg, Vector2 dir, bool melee = false, bool light = false)
     {
         if (e.Hidden) return;
-        if (NetClient && e.NetId > 0) { Net?.SendEnemyHit(e.NetId, dmg, dir, melee, light); e.Flash = .15f; e.VHit = 0; Fx("enemy_hit", e.Pos); return; }       // хост считает урон
+        if (NetClient && e.NetId > 0) { Net?.SendEnemyHit(e.NetId, dmg, dir, melee, light); e.Flash = .15f; Fx("enemy_hit", e.Pos, BloodColor(e.Kind)); OnEnemyHit(e, dmg, dir, melee); return; }       // хост считает урон
         e.LastHitBy = hitSrc != 0 ? hitSrc : LocalPeer;                                 // последний удар определяет, кому достанется награда
         bool remote = hitSrc != 0; var from = remote ? PosOf(hitSrc) ?? PPos : PPos;      // удар гостя: умения и позиция хоста в расчёте не участвуют
         if (e.Kind == EK.Decoy) { e.Hp = 0; Burst(e.Pos, new Color("#c080ff"), 8, 60); return; }
@@ -296,10 +296,10 @@ public partial class Game
         if (melee && !remote && Has(Tech.FlameEdge)) e.Burn = Mathf.Max(e.Burn, E(Tech.FlameEdge));
         if (melee && !remote && Has(Tech.FrostEdge)) { e.Slow = Mathf.Max(e.Slow, E(Tech.FrostEdge)); if (!e.IsBoss && Lv(Tech.FrostEdge) >= 3 && rng.Randf() < .05f * (Lv(Tech.FrostEdge) - 2)) e.Freeze = Mathf.Max(e.Freeze, 1f); }
         if (melee && !remote && Tier >= 4) e.Burn = Mathf.Max(e.Burn, 2f);
-        Fx("enemy_hit", e.Pos); OnEnemyHit(e, dmg, dir);
+        Fx("enemy_hit", e.Pos, BloodColor(e.Kind)); OnEnemyHit(e, dmg, dir, melee);
         bool kill = e.Hp <= 0, heavy = kill || (e.MaxHp > 0 && dmg >= e.MaxHp * .3f);
         if (melee && !remote) HitFeel(e, heavy, kill);
-        Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), S = ((int)Mathf.Round(dmg)).ToString() + (heavy ? "!" : ""), Life = heavy ? .85f : .6f, C = heavy ? new Color("#ffd24a") : m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
+        Texts.Add(new FText { P = e.Pos + new Vector2(0, -8 - e.Radius), V = new Vector2(dir.X * 30f + rng.RandfRange(-14f, 14f), heavy ? -105f : -80f), S = ((int)Mathf.Round(dmg)).ToString() + (heavy ? "!" : ""), Life = heavy ? .85f : .6f, C = heavy ? new Color("#ffd24a") : m < 1 ? new Color("#9aa6bf") : new Color("#ffd0d0") });
     }
 
     float hitStop;
@@ -354,6 +354,8 @@ public partial class Game
 
     /// <summary>Налёт есть только у Тени и Призрака — остальные виды остаются на границе света. Игрок на свету у края тени и не заходит в неё: враг из тени замирает, делает быстрый рывок через свет, ударяет и отскакивает обратно в тень.
     /// Состояния: 1 — замер и целится, 2 — рывок, 3 — возврат на место, откуда начал. Возвращает true, пока враг занят налётом (обычное избегание света отключено).</summary>
+    const float DashMaxLen = 48f, DashGap = 8f;                              // рывок врага короткий, и не чаще одного раза в 8 секунд
+
     bool RaidTick(Enemy e, float dt, ref Vector2 vel, Vector2 dir, float dist, bool lit)
     {
         bool can = !e.IsBoss && e.Ev == null && e.Guard == null && e.Freeze <= 0 && (e.Kind == EK.Shade || e.Kind == EK.Wraith);
@@ -362,26 +364,23 @@ public partial class Game
         {
             case 0:
                 e.RaidCd -= dt;
-                if (e.RaidCd <= 0 && !lit && edgeT >= EdgeWait && dist > 30f && dist < 130f)
+                if (e.RaidCd <= 0 && (e.Kind != EK.Wraith || e.Cd <= 0) && !lit && edgeT >= EdgeWait && dist > 30f && dist < DashMaxLen + 14f)
                 {
-                    if (AtkSlot()) { e.RaidSt = 1; e.RaidT = .45f; e.RaidHome = e.Pos; }
+                    if (AtkSlot()) { e.RaidSt = 1; e.RaidT = .4f; e.RaidHome = e.Pos; }
                     else e.RaidCd = .6f;
                 }
                 else if (e.RaidCd <= 0) e.RaidCd = .5f;
                 return false;
             case 1:
                 vel = Vector2.Zero; e.RaidT -= dt; e.Flash = Mathf.Max(e.Flash, .04f);
-                if (e.RaidT <= 0) { e.RaidSt = 2; e.RaidDir = dir; e.RaidT = Mathf.Clamp((dist + 40f) / 280f, .4f, .65f); Sfx.Play("dash", -8, 1.3f); }
+                if (e.RaidT <= 0) { e.RaidSt = 2; e.RaidDir = dir; e.RaidT = Mathf.Min((dist + 6f) / 240f, DashMaxLen / 240f); e.RaidCd = DashGap; if (e.Kind == EK.Wraith) e.Cd = Mathf.Max(e.Cd, DashGap); Sfx.Play("dash", -8, 1.3f); }
                 return true;
             case 2:
-                vel = e.RaidDir * 280f; e.RaidT -= dt;
+                vel = e.RaidDir * 240f; e.RaidT -= dt;
                 if (dist < 14f && e.Atk <= 0) { e.Atk = .9f; HurtPlayer(8f * e.Scale, -dir); e.RaidT = 0; }
-                if (e.RaidT <= 0) { e.RaidSt = 3; e.RaidT = 2.2f; }
+                if (e.RaidT <= 0) { e.RaidSt = 0; e.RaidCd = DashGap; e.T3 = .6f; }      // короткий рывок и всё: назад враг не телепортируется, дальше действует обычное поведение
                 return true;
-            default:
-                { var back = e.RaidHome - e.Pos; e.RaidT -= dt; vel = back.Length() > 6f ? back.Normalized() * 160f : Vector2.Zero; }
-                if (e.RaidT <= 0 || e.Pos.DistanceTo(e.RaidHome) <= 6f) { e.RaidSt = 0; e.RaidCd = rng.RandfRange(2.5f, 4.5f); }
-                return true;
+            default: e.RaidSt = 0; return false;
         }
     }
 
@@ -404,7 +403,7 @@ public partial class Game
     void EndDash(Enemy e)
     {
         bool lit = IsLit(e.Pos);
-        e.T3 = lit ? 1.4f : .6f; e.Cd = Mathf.Max(e.Cd, lit ? 2.4f : 1.4f);
+        e.T3 = lit ? 1.4f : .6f; e.Cd = Mathf.Max(e.Cd, DashGap);
     }
 
     /// <summary>Отступление после рывка: бегом прочь от игрока (с лёгким уклоном вбок), без нового рывка.</summary>
@@ -591,7 +590,7 @@ public partial class Game
                     break;
                 case EK.Wraith:
                     e.Cd -= dt;
-                    if (e.Tele > 0) { e.Tele -= dt; if (e.Tele <= 0) { e.Dash = Mathf.Min(Mathf.Clamp((dist + 10f) / Mathf.Max(60f, 170f * k), .32f, .8f), 110f / Mathf.Max(30f, 170f * k)); e.DashDir = dir; } }
+                    if (e.Tele > 0) { e.Tele -= dt; if (e.Tele <= 0) { e.Dash = Mathf.Min((dist + 6f) / Mathf.Max(60f, 170f * k), DashMaxLen / Mathf.Max(30f, 170f * k)); e.DashDir = dir; } }
                     else if (e.Dash > 0)
                     {
                         e.Dash -= dt; vel = e.DashDir * 170f * k;
@@ -602,7 +601,7 @@ public partial class Game
                     else
                     {
                         vel = (dir + perp * Mathf.Sin(Time * 3f + e.Phase) * .8f).Normalized() * 58f * k;
-                        if (e.Cd <= 0 && dist < 100 && !IsLit(e.Pos) && AtkSlot()) { e.Tele = .35f; e.Cd = rng.RandfRange(2.2f, 3.2f); }
+                        if (e.Cd <= 0 && e.RaidCd <= 0 && dist < DashMaxLen + 14f && !IsLit(e.Pos) && AtkSlot()) { e.Tele = .35f; e.Cd = DashGap; e.RaidCd = DashGap; }
                     }
                     break;
                 case EK.Spitter:
@@ -645,7 +644,7 @@ public partial class Game
                 case EK.DepthWarden: vel = UpdateDepthWarden(e, dt, dir, dist, water); break;
                 case EK.Eel:
                     e.Cd -= dt;
-                    if (e.Tele > 0) { e.Tele -= dt; if (e.Tele <= 0) { e.Dash = .28f; e.DashDir = dir; } }
+                    if (e.Tele > 0) { e.Tele -= dt; if (e.Tele <= 0) { e.Dash = .22f; e.DashDir = dir; } }
                     else if (e.Dash > 0)
                     {
                         e.Dash -= dt; vel = e.DashDir * 150f * wm;
@@ -654,7 +653,7 @@ public partial class Game
                     else
                     {
                         vel = (dir + perp * Mathf.Sin(Time * 2.2f + e.Phase) * .5f).Normalized() * 58f * wm * k;
-                        if (e.Cd <= 0 && dist < 40) { e.Tele = .45f; e.Cd = rng.RandfRange(1.6f, 2.4f); }
+                        if (e.Cd <= 0 && dist < 40) { e.Tele = .45f; e.Cd = DashGap; }
                         if (!water) { e.Hp -= 1.5f * dt; }
                     }
                     e.Hidden = water && e.Tele <= 0 && e.Dash <= 0 && dist > 22;
@@ -705,7 +704,7 @@ public partial class Game
             bool raiding = RaidTick(e, dt, ref vel, dir, dist, lit);
             if (!raiding && !e.IsBoss && e.Ev == null && !(e.Kind == EK.Leech && e.State == 1)) { vel = AvoidCover(e, vel, dir, dist); vel = AvoidLight(e, vel, dir, auraR); }
             if (e.Kind == EK.Leech && e.State == 1) { }
-            else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), e.Kind == EK.Wraith || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
+            else { var np = Move(e.Pos, ((e.Slow > 0 ? vel * (e.IsBoss ? .75f : .5f) : vel) * (e.Kind == EK.Eel || e.Kind == EK.DepthWarden || e.Kind == EK.Beetle ? 1f : wm) + e.Kb) * dt, Mathf.Min(5f, e.Radius), (e.Kind == EK.Wraith && e.Dash <= 0 && e.RaidSt == 0) || e.Kind == EK.Warden || e.Kind == EK.DepthWarden || e.Kind == EK.AshWarden || e.Kind == EK.Spirit || e.Kind == EK.WinterWarden || e.Kind == EK.Source || e.Kind == EK.Mirage || e.Kind == EK.Decoy || e.Kind == EK.Stalker);
                 if (!e.IsBoss && Barriers.Count > 0 && BarrierCross(e.Pos, np)) { e.Kb = Vector2.Zero; } else e.Pos = np; }
             if (e.Kind == EK.Warden && e.Home is Vector2 gh) { e.Pos = gh; e.Kb = Vector2.Zero; }      // Пожиратель Рощи врос в землю
 

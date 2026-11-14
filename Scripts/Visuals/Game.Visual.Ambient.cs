@@ -33,6 +33,8 @@ public partial class Game
         AddRing(a.Pos, r, beacon ? 2.2f : 1.5f, new Color("#ffe27a"));            // волна света расходится
         if (beacon) AddRing(a.Pos, r * .6f, 1.6f, new Color("#fff2b0"));
         Burst(a.Pos, new Color("#ffd86b"), Mathf.RoundToInt((beacon ? 40 : 24) * Settings.Particles), beacon ? 120f : 90f);
+        FlashAt(a.Pos, Colors.White, beacon ? 34f : 20f, .22f); Rays(a.Pos + new Vector2(0, 4), new Color("#ffe27a"), beacon ? 16 : 9, beacon ? 14f : 8f, beacon ? 60f : 40f);
+        Sparkle(a.Pos, new Color("#fff2b0"), beacon ? 30 : 16, r * .5f, 24f);
         emitters.Add(new Emitter { P = a.Pos, Dur = beacon ? 4f : 2.6f, Rate = beacon ? 30f : 18f, C = new Color("#ffd86b") });     // золотые частицы поднимаются вверх
     }
 
@@ -41,6 +43,7 @@ public partial class Game
     {
         var c = kind == 2 ? new Color("#bfe9ff") : kind == 1 ? new Color("#ff9a5a") : new Color("#ffd86b");
         AddRing(pos, kind == 0 ? 40f : 52f, .5f, c); Burst(pos + new Vector2(0, -4), c, Mathf.RoundToInt(10 * Settings.Particles), 50f);
+        FlashAt(pos + new Vector2(0, -4), Tone(c, .6f), 12f, .16f); Sparkle(pos + new Vector2(0, -4), c, 6, 12f, 14f);
     }
 
     // ───────────────────────── обновление ─────────────────────────
@@ -162,8 +165,9 @@ public partial class Game
             if (p.Kind == 1) a *= .5f + .5f * Mathf.Sin(p.Phase * 5f);                                           // светлячок мерцает
             if (p.Kind == 2) a *= .6f;
             var s = ((p.P - cc).Floor() * Zoom) + half; float sz = Mathf.Max(1f, Mathf.Round(p.Size * Zoom * .6f));
-            c.DrawTextureRect(GD.Load<Texture2D>("res://Assets/Sprites/Vfx/px.png"), new Rect2(s, new Vector2(sz, sz)), false, new Color(p.C.R, p.C.G, p.C.B, a * p.C.A));
-            if (p.Kind == 1 && a > .6f) c.DrawTextureRect(GD.Load<Texture2D>("res://Assets/Sprites/Vfx/px.png"), new Rect2(s - new Vector2(sz, sz), new Vector2(sz * 3, sz * 3)), false, new Color(p.C.R, p.C.G, p.C.B, a * .12f));
+            var ctr = s + new Vector2(sz, sz) * .5f;
+            Gfx.Glow(c, ctr, sz * (p.Kind == 1 ? 3.2f : 1.6f), new Color(p.C.R, p.C.G, p.C.B, a * p.C.A * (p.Kind == 1 ? .35f : .25f)));   // мягкий ореол, у светлячка шире
+            Gfx.Dot(c, ctr, sz * .7f, new Color(p.C.R, p.C.G, p.C.B, a * p.C.A));
         }
     }
 }

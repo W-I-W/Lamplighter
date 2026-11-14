@@ -25,7 +25,7 @@ public partial class Game
         if (BeaconLevel >= 6) { Fail("Центральный маяк уже активирован окончательно"); return; }
         if (BeaconLevel == 5 && !BossDown(5)) { Fail("Победите Источник Тьмы в Сердце Тьмы"); return; }
         if (Inv[It.Core] < 1) { Fail("Нужно ядро света — его даёт победа над стражем биома"); return; }
-        Inv[It.Core]--; BeaconLevel++;
+        Inv[It.Core]--; BeaconLevel++; SyncProgressNow();
         var a = W.Ancients[0]; a.TargetRadius = BeaconRadius(BeaconLevel); a.Pulse = 1f; OnAncientLit(a, true);
         Flash = .6f; Shake = 6; Burst(a.Pos, new Color("#fff2b0"), 40, 160); Sfx.Play("ancient");
         GiveXp(80);
@@ -70,7 +70,7 @@ public partial class Game
         if (t == Tl.Tablet || t == Tl.FalseLantern || t == Tl.Pylon || t == Tl.PylonOn) return HeartIx(x, y, t, ix);
         switch (t)
         {
-            case Tl.Chest: case Tl.Shrine: case Tl.Obelisk: case Tl.Cage: case Tl.TechCache: case Tl.Spire: return p != null && PoiIx(p, ix);
+            case Tl.Chest: case Tl.Shrine: case Tl.Obelisk: case Tl.Cage: case Tl.TechCache: case Tl.Spire: return p != null && PoiIxNet(p, ix);
             case Tl.Altar: ix.Lines.Add("Алтарь лучей: направьте лучи на три приёмника"); return true;
             case Tl.AltarOn: ix.Lines.Add("Алтарь пробуждён"); return true;
             case Tl.Machine:

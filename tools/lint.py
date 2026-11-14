@@ -185,7 +185,7 @@ def check_stages():
     except Exception: return
     stages = set(re.findall(r'LAMP_STAGE"\)\s*==\s*"([a-z0-9_]+)"', game))
     # стадии, которые вспомогательные/ручные
-    manual = {'genres', 'ash', 's4', 's4b', 'steamprobe', 'veg', 'riftbal', 'pressure', 'mksave', 'savesmoke', 'nethost', 'netjoin', 'netflowhost', 'netflowjoin', 'interactload', 'reload'}
+    manual = {'genres', 'ash', 's4', 's4b', 'steamprobe', 'veg', 'shake', 'fxshow', 'riftbal', 'pressure', 'mksave', 'savesmoke', 'nethost', 'netjoin', 'netflowhost', 'netflowjoin', 'interactload', 'reload'}
     used = set(re.findall(r"Run-Stage\s+'[^']*'\s+'([a-z0-9_]+)'", runner)) | set(re.findall(r"'([a-z0-9_]+)'", runner))
     for s in sorted(stages - used - manual):
         add('warn', 'stages', 'tools/run_checks.ps1', f'тестовая стадия «{s}» не вызывается из run_checks.ps1')

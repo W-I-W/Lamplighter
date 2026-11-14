@@ -129,7 +129,7 @@ public partial class Game
                 c.DrawTextureRectRegion(nt, new Rect2((n - new Vector2(8, 14)).Round(), new Vector2(16, 16)), new Rect2(((int)(Time * 4) % 2) * 16, 0, 16, 16), Colors.White);
                 if (boss == null) continue; var to = boss.Pos + GroveCoreOff;
                 Gfx.Line(c, n, to, new Color(col.R, col.G, col.B, .35f), 1f);
-                for (int i = 0; i < 6; i++) { float q = (Time * .9f + i / 6f) % 1f; Gfx.Rect(c, new Rect2((n.Lerp(to, q) - Vector2.One).Round(), new Vector2(2, 2)), new Color(col.R, col.G, col.B, .9f)); }
+                for (int i = 0; i < 6; i++) { float q = (Time * .9f + i / 6f) % 1f; { var dp = n.Lerp(to, q); Gfx.Glow(c, dp, 3f, new Color(col.R, col.G, col.B, .35f)); Gfx.Dot(c, dp, 1.2f, new Color(col.R, col.G, col.B, .9f)); } }
             }
         }
     }

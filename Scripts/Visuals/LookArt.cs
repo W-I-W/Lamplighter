@@ -7,7 +7,10 @@ namespace Lamplighter;
 /// Тонируемые слои нарисованы в оттенках серого и умножаются на цвет палитры Look, поэтому внешность меняется без новых текстур во время игры.</summary>
 public static class LookArt
 {
-    const string Dir = "res://Assets/Sprites/Player/Look/";      // Idle/ — покой (две плитки: стоя и вдох), Walk/ — ходьба (две плитки: стоя и шаг)
+    const string Dir = "res://Assets/Sprites/Player/Look/";      // Idle/ — покой (4 кадра дыхания), Walk/ — ходьба (4 кадра: шаг, проход, шаг, проход); tools/GraphicsGenerator/make_characters.py
+    public const int Frames = 4;
+    /// <summary>Кадр ходьбы по фазе шага (Walk растёт на 9 в секунду): кадр ≈ 0.1 с, полный цикл из двух шагов ≈ 0.4 с.</summary>
+    public static int WalkFrame(float walk) => (((int)(walk * 1.1f)) % Frames + Frames) % Frames;
     static readonly Dictionary<string, Texture2D> cache = new();
 
     static Texture2D T(string n, bool walk)
@@ -56,10 +59,11 @@ public static class LookArt
 
     static string SkinLayer(Look l) => l.Species == 0 ? "skin" : $"skin_s{l.Species}";          // кот и собака: своя голова с ушами и хвост
 
-    /// <summary>Рисует кадр героя (frame 0/1) в клетке 16×16 с левым верхним углом pos; height &lt; 16 обрезает низ (стоит в воде). scale — для крупного предпросмотра в интерфейсе.</summary>
+    /// <summary>Рисует кадр героя (frame 0–3) в клетке 16×16 с левым верхним углом pos; height &lt; 16 обрезает низ (стоит в воде). scale — для крупного предпросмотра в интерфейсе.</summary>
     public static void Draw(CanvasItem c, Look l, int frame, Vector2 pos, Color mod, float height = 16, float scale = 1, bool lamp = true, bool walking = false)
     {
-        l ??= new Look(); l.Clamp(); if (!walking) frame = (int)(Time.GetTicksMsec() / 550) % 2;      // в покое кадры сменяются сами: дыхание
+        l ??= new Look(); l.Clamp(); if (!walking) frame = (int)(Time.GetTicksMsec() / 450) % Frames;      // в покое кадры сменяются сами: дыхание
+        frame = ((frame % Frames) + Frames) % Frames;
         float h = Mathf.Clamp(height, 1, 16); var src = new Rect2(frame * 16, 0, 16, h); var dst = new Rect2(pos, new Vector2(16, h) * scale);
         void L(string n, Color col) { var t = T(n, walking); if (t != null) c.DrawTextureRectRegion(t, dst, src, col * mod); }
         var ol = Outline(l, walking); if (ol != null) c.DrawTextureRectRegion(ol, dst, src, Colors.White * mod);

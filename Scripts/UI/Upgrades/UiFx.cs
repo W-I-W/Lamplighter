@@ -2,7 +2,7 @@ using Godot;
 
 namespace Lamplighter;
 
-/// <summary>Мелкие пиксельные эффекты интерфейса: квадратики 2×2, разлетающиеся и гаснущие. Без размытия и градиентов.</summary>
+/// <summary>Мелкие эффекты интерфейса: круглые светящиеся искорки (Assets/Sprites/Vfx/fx_dot.png), разлетающиеся и гаснущие.</summary>
 public static class UiFx
 {
     /// <summary>Точка src (его локальные координаты) в координатах parent — интерфейс масштабируется, поэтому через матрицы.</summary>
@@ -15,7 +15,9 @@ public static class UiFx
         var rng = new RandomNumberGenerator(); rng.Randomize();
         for (int i = 0; i < n; i++)
         {
-            var p = new ColorRect { Color = col, Size = new Vector2(2, 2), Position = centre, MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = 50 };
+            float sz = rng.RandfRange(2.5f, 4f);
+            var p = new TextureRect { Texture = Gfx.DotTex, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, SelfModulate = col,
+                Size = new Vector2(sz, sz), Position = centre - new Vector2(sz, sz) * .5f, MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = 50 };
             parent.AddChild(p);
             float a = rng.Randf() * Mathf.Tau, d = dist * (.45f + rng.Randf() * .75f); var to = (centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * d).Round();
             var tw = p.CreateTween().SetParallel(true);

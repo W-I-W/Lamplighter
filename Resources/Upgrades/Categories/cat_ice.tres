@@ -6,7 +6,7 @@
 script = ExtResource("1")
 Id = "ice"
 Title = "Лёд"
-Icon = "item:19"
+Icon = "tile:110"
 Order = 3
 Page = 3
 BiomeId = 3

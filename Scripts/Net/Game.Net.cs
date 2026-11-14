@@ -27,6 +27,12 @@ public partial class Game
     /// <summary>Флаги состояния для сети: бит0 — рывок, бит1 — замах (виден союзникам).</summary>
     public int NetFlags() => (DashT > 0 ? 1 : 0) | (Swing > 0 ? 2 : 0);
 
+    float netSaveT;
+
+    /// <summary>Хост отдал гостю что-то из своего мира или запаса (передача, склад, стопка с земли, накопленное в здании): мир и герой хоста сохраняются в течение секунды.
+    /// Гость сохраняет полученное у себя, и если бы хост упал до своего автосохранения, после перезапуска эти предметы были бы и у хоста, и у гостя.</summary>
+    public void QueueNetSave() { if (netSaveT <= 0) netSaveT = 1f; }
+
     /// <summary>Сеанс завершён (хост вышел или связь потеряна): последнее состояние героя сохраняется, возврат в главное меню.</summary>
     void NetEnded()
     {
@@ -38,6 +44,7 @@ public partial class Game
     void UpdateNet(float dt)
     {
         NetWorldTick(dt); NetVillageTick(dt); NetCombatTick(dt); NetStructTick(dt); NetEventTick(dt); NetProgressTick(dt); FlushEnemyDots(dt);
+        if (netSaveT > 0 && (netSaveT -= dt) <= 0) Save();
         NetJoinTick();
     }
 
@@ -80,7 +87,7 @@ public partial class Game
         var pos = p.Shown; Shadow(c, pos, 5);
         if (p.Hp <= 0) return;
         bool moving = pos.DistanceSquaredTo(p.PrevShown) > .02f;
-        int f = moving ? (int)p.Walk % 2 : 0; float bob = moving ? -Mathf.Abs(Mathf.Sin(p.Walk)) : 0;
+        int f = moving ? LookArt.WalkFrame(p.Walk) : 0; float bob = 0;
         c.DrawSetTransform(pos + new Vector2(0, bob), 0, new Vector2(p.Face < 0 ? -1 : 1, 1));
         var mod = Colors.White; if ((p.Flags & 1) != 0) mod = new Color(.6f, 1f, 1f, .8f);
         LookArt.Draw(c, p.Look, f, Def("player").Offset, mod, 16, 1, p.Light > 1f, moving);      // у игрока без лампы свет — слабое пятно

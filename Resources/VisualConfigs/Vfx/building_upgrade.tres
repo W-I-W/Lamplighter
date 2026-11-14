@@ -17,3 +17,4 @@ SfxDb = 0
 SfxPitch = 1
 Shake = 2
 Flash = 0
+Layers = "sparkle,rays"

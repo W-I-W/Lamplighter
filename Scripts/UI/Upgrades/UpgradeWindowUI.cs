@@ -99,18 +99,30 @@ public partial class UpgradeWindowUI : Control
                     b.Pressed += () => ClickTab(tabs.IndexOf(b));
                     tabsBox.AddChild(b); tabs.Add(b);
                 }
-                var tab = tabs[i]; tab.Visible = true; tab.SetMeta("page", c.Page); tab.Text = Loc.T(c.Title); tab.Icon = UpgradeIcons.Get(c.Icon);
+                var tab = tabs[i]; tab.Visible = true; tab.SetMeta("page", c.Page); tab.Text = Loc.T(c.Title); tab.Icon = CenteredIcon(UpgradeIcons.Get(c.Icon)); tab.AddThemeConstantOverride("icon_max_width", 12);
                 bool isNew = G.Upgrades.IsNew(c.Id);
                 tab.ThemeTypeVariation = c.Page == G.TechPage ? "TabSelected" : "Tab";
                 tab.GetNode<TextureRect>("Badge").Visible = isNew;
                 tab.AddThemeColorOverride("font_color", isNew ? Gold : new Color("#d8e0f0"));
-                tab.AddThemeColorOverride("icon_normal_color", isNew ? Gold : Colors.White);
+                tab.AddThemeColorOverride("icon_normal_color", Colors.White);                   // иконка в своих цветах: новизну показывают звёздочка и золотой текст (золото перекрашивало голубой лёд в зелёный)
                 if (G.TabAnim.Remove(c.Id)) PlayTabAppear(tab);
             }
             for (int i = vis.Count; i < tabs.Count; i++) tabs[i].Visible = false;
         }
         float a = .65f + .35f * Mathf.Sin(t * 6f);
         for (int i = 0; i < vis.Count && i < tabs.Count; i++) if (G.Upgrades.IsNew(vis[i].Id)) tabs[i].GetNode<TextureRect>("Badge").Modulate = new Color(1f, .85f, .25f, a);
+    }
+
+    static readonly System.Collections.Generic.Dictionary<Texture2D, Texture2D> centered = new();
+    /// <summary>Обрезает иконку по видимым пикселям и вписывает в квадрат: рисунок стоит строго по центру клетки.</summary>
+    static Texture2D CenteredIcon(Texture2D t)
+    {
+        if (t == null) return null; if (centered.TryGetValue(t, out var r)) return r;
+        var img = t.GetImage(); if (img == null) return t; if (img.IsCompressed()) img.Decompress();
+        var u = img.GetUsedRect(); if (u.Size.X <= 0 || u.Size.Y <= 0) return t;
+        int n = Mathf.Max(u.Size.X, u.Size.Y); var o = Image.CreateEmpty(n, n, false, Image.Format.Rgba8);
+        o.BlitRect(img, u, new Vector2I((n - u.Size.X) / 2, (n - u.Size.Y) / 2));
+        return centered[t] = ImageTexture.CreateFromImage(o);
     }
 
     /// <summary>Появление новой вкладки: быстрое проявление и золотые пиксельные искры.</summary>

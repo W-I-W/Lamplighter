@@ -7,14 +7,14 @@ namespace Lamplighter;
 /// <summary>Мелкие эффекты: расходящиеся кольца (победа над стражем, улучшения, уровень), вспышка победы и искры производства.</summary>
 public partial class Game
 {
-    sealed class Ring { public Vector2 P; public float T, Dur, R; public Color C; }
+    sealed class Ring { public Vector2 P; public float T, Dur, R, Seed; public Color C; }
     readonly List<Ring> rings = new();
     public float VictoryT;
     float prodSparkT;
 
     public void AddRing(Vector2 p, float r, float dur, Color c)
     {
-        rings.Add(new Ring { P = p, R = r, Dur = dur, C = c });
+        rings.Add(new Ring { P = p, R = r, Dur = dur, C = c, Seed = rng.Randf() * Mathf.Tau });
         if (rings.Count > 24) rings.RemoveAt(0);
     }
 
@@ -41,5 +41,7 @@ public partial class Game
     {
         VictoryT = 3f; AddRing(p, 220, 1.6f, col); AddRing(p, 140, 1.1f, new Color("#ffffff")); AddRing(PPos, 90, 1.3f, new Color("#ffe27a"));
         for (int i = 0; i < 32; i++) { float a = i * Mathf.Tau / 32; Parts.Add(new Particle { P = p, V = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 150, Life = 1.2f, Max = 1.2f, C = col, Size = 2.5f }); }
+        FlashAt(p, Colors.White, 40f, .3f); Rays(p, col, 16, 34f, 70f); Sparkle(p, new Color("#fff6c8"), 34, 90f, 30f); Sparks(p, Vector2.Up, col, 24, 220f, Mathf.Pi);
+        Rays(PPos + new Vector2(0, 6), new Color("#ffe27a"), 8, 8f, 30f);
     }
 }

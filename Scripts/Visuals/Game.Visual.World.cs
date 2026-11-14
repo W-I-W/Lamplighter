@@ -17,7 +17,7 @@ public partial class Game
                     if (!World.In(x, y) || W.Ground[World.Key(x, y)] != Art.HotAsh) continue;
                     bool act = HotActive(Time, x, y, out bool warn);
                     float a = act ? .5f + .15f * Mathf.Sin(Time * 14f + x) : warn ? .2f + .25f * (.5f + .5f * Mathf.Sin(Time * 18f)) : .07f + .03f * Mathf.Sin(Time * 2f + x * .7f);
-                    Gfx.Rect(c, new Rect2(x * TS, y * TS, TS, TS), new Color(1f, act ? .45f : .35f, .1f, a));
+                    Gfx.Glow(c, TileCenter(x, y), TS * .85f, new Color(1f, act ? .45f : .35f, .1f, a * 1.3f));          // раскалённое пятно — мягкое свечение, а не квадрат клетки
                     if (act && rng.Randf() < .04f) Parts.Add(new Particle { P = new Vector2(x * TS + rng.RandfRange(2, 14), y * TS + 10), V = new Vector2(0, -rng.RandfRange(15, 35)), Life = .5f, Max = .5f, C = new Color("#ffb04a"), Size = 1.6f });
                 }
         foreach (var z in Zones)
@@ -26,7 +26,7 @@ public partial class Game
             if (pending)
             {
                 float k = z.T / Mathf.Max(z.Warn, .01f);
-                if (z.Smoke) { if ((int)(Time * 6) % 3 == 0) Gfx.Rect(c, new Rect2(z.Pos + new Vector2(rng.RandfRange(-z.R, z.R) * .6f, rng.RandfRange(-z.R, z.R) * .6f), new Vector2(1.5f, 1.5f)), new Color(1f, .5f, .2f, .5f)); }
+                if (z.Smoke) { if ((int)(Time * 6) % 3 == 0) { var sp = z.Pos + new Vector2(rng.RandfRange(-z.R, z.R) * .6f, rng.RandfRange(-z.R, z.R) * .6f); Gfx.Glow(c, sp, 3f, new Color(1f, .5f, .2f, .3f)); Gfx.Dot(c, sp, 1f, new Color(1f, .7f, .35f, .7f)); } }
                 else
                 {
                     Gfx.Disc(c, z.Pos, z.R, z.Dark ? new Color(.45f, .15f, .9f, .14f + .1f * Mathf.Sin(Time * 16f)) : z.Cold ? new Color(.5f, .85f, 1f, .12f + .1f * Mathf.Sin(Time * 16f)) : new Color(1f, .4f, .1f, .12f + .1f * Mathf.Sin(Time * 16f)));
@@ -80,7 +80,7 @@ public partial class Game
     // ───────────────────────── отрисовка сущностей ─────────────────────────
     public void DrawEntities(EntityLayer c)
     {
-        DrawWaterShimmer(c);
+        DrawWaterShimmer(c); DrawHitGround(c);
         if (SmeltQ.Count > 0)
         {
             var o = SmeltAt + new Vector2(-8, 9);
@@ -110,11 +110,7 @@ public partial class Game
 
         foreach (var p in Projs) { Gfx.Disc(c, p.Pos, 2.5f, new Color(p.C.R, p.C.G, p.C.B, .5f)); Gfx.Disc(c, p.Pos, 1.5f, p.C); }
         DrawGroveBits(c);
-        foreach (var p in Parts)
-        {
-            var col = p.C; col.A = Mathf.Clamp(p.Life / p.Max * 1.5f, 0, 1) * p.Alpha;
-            Gfx.Rect(c, new Rect2(p.P - new Vector2(p.Size, p.Size) * .5f, new Vector2(p.Size, p.Size)), col);
-        }
+        DrawParticles(c);
     }
 
     void DrawWaterShimmer(EntityLayer c)
@@ -127,7 +123,7 @@ public partial class Game
                 float ph = (x * 7 + y * 13) % 10 * .6f;
                 float a = .5f + .5f * Mathf.Sin(Time * 1.8f + ph);
                 if (a < .55f) continue;
-                Gfx.Rect(c, new Rect2(x * TS + 3 + (x * 5 + y * 3) % 7, y * TS + 4 + (x * 3 + y * 7) % 8, 4, 1), new Color(.75f, .92f, 1f, (a - .55f) * 1.2f));
+                Gfx.GlowOval(c, new Vector2(x * TS + 5 + (x * 5 + y * 3) % 7, y * TS + 4.5f + (x * 3 + y * 7) % 8), 3.5f, 1f, new Color(.75f, .92f, 1f, (a - .55f) * 1.6f));
             }
     }
 
@@ -194,13 +190,13 @@ public partial class Game
         bool water = WaterAt(PPos);
         Shadow(c, PPos, 5);
         if (Invuln > 0 && DashT <= 0 && ((int)(Time * 20) % 2 == 0)) return;
-        int f = pVel.LengthSquared() > 100 ? (int)Walk % 2 : 0;
-        float bob = pVel.LengthSquared() > 100 ? -Mathf.Abs(Mathf.Sin(Walk)) : 0;
+        int f = pVel.LengthSquared() > 100 ? LookArt.WalkFrame(Walk) : 0;
+        float bob = 0;                                                                   // подъём корпуса при шаге нарисован в кадрах
         c.DrawSetTransform(PPos + new Vector2(0, bob + (water ? 2 : 0)), 0, new Vector2(Facing, 1));
         var mod = DashT > 0 ? new Color(.6f, 1f, 1f, .8f) : Colors.White;
         LookArt.Draw(c, PlayerLook, f, Def("player").Offset, mod, water ? 13 : 16, 1, HasHandLamp, pVel.LengthSquared() > 100);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
-        if (water) Gfx.Rect(c, new Rect2(PPos.X - 7, PPos.Y + 1, 14, 2), new Color(.5f, .8f, 1f, .45f));
+        if (water) { Gfx.GlowOval(c, PPos + new Vector2(0, 2), 9f, 2.5f, new Color(.5f, .8f, 1f, .5f)); Gfx.GlowOval(c, PPos + new Vector2(0, 2), 5f, 1.2f, new Color(.85f, .95f, 1f, .5f)); }
         if (Swing > 0)
         {
             var d = (Aim - PPos); d = d.LengthSquared() > 1 ? d.Normalized() : new Vector2(Facing, 0);
@@ -240,7 +236,7 @@ public partial class Game
             if (!IsProducer(b.Type) || b.Status == 0 || b.Pos.DistanceTo(PPos) > 190) continue;
             var col = b.Status == 4 ? new Color(.7f, .72f, .8f) : b.Status == 2 ? new Color("#ffb04a") : new Color("#ff6a5a");
             var p = b.Pos + new Vector2(0, -15 - 1.5f * Mathf.Sin(Time * 5f));
-            Gfx.Rect(c, new Rect2(p - new Vector2(3, 3), new Vector2(6, 6)), new Color(0, 0, 0, .7f)); Gfx.Rect(c, new Rect2(p - new Vector2(2, 2), new Vector2(4, 4)), col);
+            Gfx.Dot(c, p, 3.6f, new Color(0, 0, 0, .7f)); Gfx.Glow(c, p, 4.5f, new Color(col.R, col.G, col.B, .35f)); Gfx.Dot(c, p, 2.4f, col);
         }
     }
 
@@ -259,7 +255,7 @@ public partial class Game
         if (MineTile.X < 0 || MineNeed <= 0) return;
         var p = TileCenter(MineTile.X, MineTile.Y); float k = Mathf.Clamp(MineProg / MineNeed, 0, 1);
         float j = Swing > 0 ? Mathf.Sin(Time * 60f) * .8f : 0;
-        Gfx.Rect(c, new Rect2(p - new Vector2(8 - j, 8), new Vector2(16, 16)), new Color(1, 1, 1, .12f * k + hitFlash * .35f));
+        Gfx.Glow(c, p + new Vector2(j, 0), 11f, new Color(1f, .95f, .8f, .18f * k + hitFlash * .45f));                 // добыча: мягкое свечение поверх блока вместо белого квадрата
     }
 
     // ───────────────────────── облики ─────────────────────────
@@ -288,7 +284,7 @@ public partial class Game
                 case "traveler":
                     if (Mathf.Abs(PPos.X - ev.Npc.X) > 10) ev.Face = PPos.X < ev.Npc.X ? -1 : 1;
                     Shadow(c, ev.Npc, 5); c.DrawSetTransform(ev.Npc, 0, new Vector2(ev.Face, 1));
-                    DrawFrame(c, Def("traveler"), (int)(Time * (ev.State == 1 ? 6 : 2)) % 2, Colors.White); c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
+                    DrawFrame(c, Def("traveler"), ev.State == 1 ? 2 + (int)(Time * 10f) % 4 : (int)(Time * 2) % 2, Colors.White); c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
                     if (ev.State == 0) Gfx.Disc(c, ev.Npc + new Vector2(0, -16), 2.2f, new Color("#8ff0ff")); break;
                 case "meteor":
                     if (ev.State == 0) { Gfx.Ring(c, ev.Pos, 10 + 8 * (1 - ev.V / 3.2f), 16, new Color(1f, .9f, .5f, .7f), 1.5f); Gfx.Line(c, ev.Pos + new Vector2(-ev.V * 30, -ev.V * 90), ev.Pos, new Color(1f, .95f, .7f, .7f), 3f); }
@@ -334,22 +330,16 @@ public partial class Game
         }
     }
 
-    void DrawRings(EntityLayer c)
-    {
-        foreach (var r in rings)
-        {
-            float k = r.T / r.Dur, e = 1 - Mathf.Pow(1 - k, 3);
-            Gfx.Ring(c, r.P, r.R * e, 48, new Color(r.C.R, r.C.G, r.C.B, (1 - k) * .8f), 2f + 2f * (1 - k));
-            Gfx.Ring(c, r.P, r.R * e * .8f, 40, new Color(1, 1, 1, (1 - k) * .35f), 1f);
-        }
-    }
 
     void DrawVillager(EntityLayer c, Villager v)
     {
         Shadow(c, v.Pos, 4);
         var pd = ProfDefs.Of(v.Prof); var def = Def(pd != null && pd.Sprite != "" ? pd.Sprite : "villager");
-        int f = v.State == VState.Working && def.Frames >= 4 ? 2 + (int)(v.Anim / .35f) % 2 : v.State == VState.Walking ? (int)v.Walk % 2 : v.Working ? (int)v.Walk % 2 : 0;
-        float bob = v.State == VState.Walking ? -Mathf.Abs(Mathf.Sin(v.Walk)) * 1f : 0;
+        // лист жителя — 8 кадров (make_characters.py): 0-1 покой (дыхание), 2-5 ходьба, 6-7 работа; подъём корпуса при шаге нарисован в кадрах
+        int idle = (int)Mathf.Abs(Time / .5f + v.Pos.X * .013f) % 2;
+        int f = def.Frames >= 8 ? (v.State == VState.Working ? 6 + (int)(v.Anim / .35f) % 2 : v.State == VState.Walking ? 2 + LookArt.WalkFrame(v.Walk) : idle)
+            : v.State == VState.Working && def.Frames >= 4 ? 2 + (int)(v.Anim / .35f) % 2 : v.State == VState.Walking ? (int)v.Walk % 2 : 0;
+        float bob = def.Frames >= 8 ? 0 : v.State == VState.Walking ? -Mathf.Abs(Mathf.Sin(v.Walk)) * 1f : 0;
         c.DrawSetTransform(v.Pos + new Vector2(0, bob), 0, new Vector2(v.Face, 1));
         DrawFrame(c, def, f, Colors.White);
         c.DrawSetTransform(Vector2.Zero, 0, Vector2.One);

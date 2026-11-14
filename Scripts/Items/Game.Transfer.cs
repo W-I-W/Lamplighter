@@ -17,7 +17,7 @@ public partial class Game
     public const float MagnetRange = 19f, MagnetMin = 30f, MagnetMax = 85f, MagnetDelay = .45f;                  // слабый магнит: тянет только совсем рядом и медленно, после «выпрыгивания»
     public const int MaxMove = 999, MaxStack = 999;
     public readonly List<WorldDrop> Drops = new();
-    int nextDropId = 1; bool dropsDirty; float dropSyncT, pickupRequestT; double dropClock;
+    int nextDropId = 1; bool dropsDirty; float dropSyncT, pickupRequestT; double dropClock; uint pickupRot;
 
     bool Authority => !NetClient;                                                    // одиночная игра или хост
     public long LocalPeer => NetService.Active ? NetService.LocalId : 1;
@@ -64,7 +64,7 @@ public partial class Game
     {
         if (n <= 0 || !Movable(item)) return;
         if (peer == LocalPeer) { AddInv(item, n, PPos); return; }
-        if (Net == null) return; var g = new int[It.Count]; g[item] = Math.Min(n, MaxMove); Net.RpcId(peer, nameof(NetNode.RpcGrant), g);
+        if (Net == null) return; var g = new int[It.Count]; g[item] = Math.Min(n, MaxMove); QueueNetSave(); Net.RpcId(peer, nameof(NetNode.RpcGrant), g);
     }
 
     void NoteTo(long peer, string text, MsgTone tone)
@@ -154,8 +154,11 @@ public partial class Game
         pickupRequestT -= dt;
         if (pickupRequestT > 0 || Net == null) return;
         pickupRequestT = .15f;
-        foreach (var drop in Drops)
+        if (Drops.Count == 0) return;
+        int start = (int)(pickupRot++ % (uint)Drops.Count);                      // по кругу: своя только что выброшенная стопка (хост её пока не отдаёт) не загораживает соседние
+        for (int k = 0; k < Drops.Count; k++)
         {
+            var drop = Drops[(start + k) % Drops.Count];
             if (!Movable(drop.Item) || drop.Pos.DistanceTo(PPos) > PickupRange) continue;
             int count = Math.Min(drop.Count, Room(drop.Item));
             if (count == 0) { FullMsg(); continue; }
@@ -169,7 +172,7 @@ public partial class Game
         var drop = Drops.Find(d => d.Id == id);
         if (drop == null || !Movable(drop.Item) || requested <= 0 ||
             PosOf(peer) is not Vector2 pos || pos.DistanceTo(drop.Pos) > PickupRange ||
-            (peer == drop.Owner && DropAge(drop) < DropProtect)) return null;
+            (peer == drop.Owner && (DropAge(drop) < DropProtect || drop.NeedLeave))) return null;          // как у хоста: выброшенное вручную не подбирается, пока выбросивший не отойдёт
 
         int count = Math.Min(requested, drop.Count);
         var taken = new WorldDrop { Id = drop.Id, Item = drop.Item, Count = count, Pos = drop.Pos, Owner = drop.Owner, Born = drop.Born };
@@ -234,7 +237,7 @@ public partial class Game
                         var rd = RelicOfDrop(d.Item); if (rd == null) { Drops.RemoveAt(i); dropsDirty = true; break; }
                         if (peer == LocalPeer && OwnedRelics.Contains(rd.Id)) continue;     // такая реликвия уже есть: остаётся лежать для другого игрока
                         Drops.RemoveAt(i); dropsDirty = true;
-                        if (peer == LocalPeer) GiveRelic(rd.Id); else Net?.RpcId(peer, nameof(NetNode.RpcGrantRelic), d.Item - RelicBase);
+                        if (peer == LocalPeer) GiveRelic(rd.Id); else { QueueNetSave(); Net?.RpcId(peer, nameof(NetNode.RpcGrantRelic), d.Item - RelicBase); }
                         Sfx.Play("pickup", -4); break;
                     }
                     if (IsBuildDrop(d.Item))

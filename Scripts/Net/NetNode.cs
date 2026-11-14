@@ -53,7 +53,7 @@ public partial class NetNode : Node
     {
         pendingPickups.Remove(id);
         if (!Multiplayer.IsServer()) return;
-        rate.Remove(id);
+        rate.Remove(id); wrate.Remove(id); moveRate.Remove(id);
         if (NetService.Players.Remove(id, out var p)) { if (p.Handshaken) { chatRate.Remove(id); G.Notify.Post(MsgKind.World, MsgTone.Info, string.Format(Loc.T("{0} покинул игру"), p.Name), null, 0, null, true); NetService.RaiseLeft(p); BroadcastRoster(); } }
     }
 
@@ -186,7 +186,7 @@ public partial class NetNode : Node
     {
         if (!Multiplayer.IsServer()) return; long s = Multiplayer.GetRemoteSenderId();
         if (!NetService.Players.TryGetValue(s, out var p) || !p.Handshaken || !WorldRateOk(s)) return;
-        if (G.NetRescue(idx)) BroadcastVillage();
+        if (G.NetRescue(idx)) G.QueueVillageSync();
     }
 
     public void SendAssign(int key, int manual, int vid) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcAssign), key, manual, vid); }
@@ -196,11 +196,11 @@ public partial class NetNode : Node
     {
         if (!Multiplayer.IsServer()) return; long s = Multiplayer.GetRemoteSenderId();
         if (!NetService.Players.TryGetValue(s, out var p) || !p.Handshaken || !WorldRateOk(s)) return;
-        if (G.NetApplyAssign(key, manual, vid)) BroadcastVillage();
+        if (G.NetApplyAssign(key, manual, vid)) G.QueueVillageSync();
     }
 
     /// <summary>Команды строительства от клиента: 1 построить (тип, x, y), 2 улучшить, 3 разобрать, 4 режим, 5 приоритет, 6 пауза, 7 забрать ресурсы.</summary>
-    public void SendBuildCmd(int op, int a, int b, int c) { if (Multiplayer.MultiplayerPeer != null) RpcId(1, nameof(RpcBuildCmd), op, a, b, c); }
+    public void SendBuildCmd(int op, int a, int b, int c) { if (Multiplayer.MultiplayerPeer == null) return; if (op == 1 || op == 2) G?.Save(); RpcId(1, nameof(RpcBuildCmd), op, a, b, c); }     // стоимость уже списана: сохранить до отправки (см. SendTransfer)
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     public void RpcBuildCmd(int op, int a, int b, int c)
@@ -208,8 +208,8 @@ public partial class NetNode : Node
         if (!Multiplayer.IsServer()) return; long s = Multiplayer.GetRemoteSenderId();
         if (!NetService.Players.TryGetValue(s, out var p) || !p.Handshaken || !WorldRateOk(s)) return;
         var grant = G.NetBuildCmd(op, a, b, c);
-        if (grant != null) RpcId(s, nameof(RpcGrant), grant);
-        BroadcastVillage();
+        if (grant != null) { G.QueueNetSave(); RpcId(s, nameof(RpcGrant), grant); }
+        G.QueueVillageSync();                                                           // не чаще 10 рассылок в секунду, сколько бы команд ни пришло
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -245,7 +245,7 @@ public partial class NetNode : Node
         long sender = Multiplayer.GetRemoteSenderId();
         if (Multiplayer.IsServer())
         {
-            if (!NetService.Players.TryGetValue(sender, out var p) || !p.Handshaken || !WorldRateOk(sender) || !G.NetApplyProgress(beacon, boss)) return;
+            if (!NetService.Players.TryGetValue(sender, out var p) || !p.Handshaken || !WorldRateOk(sender) || !G.NetGuestProgress(sender, beacon)) return;
             foreach (var o in NetService.Players.Values.Where(q => q.Handshaken && q.PeerId != 1 && q.PeerId != sender)) RpcId(o.PeerId, nameof(RpcProgress), G.BeaconLevel, G.BossMask);
         }
         else if (sender == 1) G.NetApplyProgress(beacon, boss);

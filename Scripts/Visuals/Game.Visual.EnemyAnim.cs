@@ -44,6 +44,7 @@ public partial class Game
     {
         flashMat = GD.Load<ShaderMaterial>("res://Assets/Materials/flash_white.tres");
         flashLayer = new FlashLayer { G = this, Material = flashMat }; AddChild(flashLayer);
+        hitTopLayer = new HitTopLayer { G = this }; AddChild(hitTopLayer);              // серпы удара — поверх вспышки
     }
 
     /// <summary>Профиль силы попадания: 0 — обычный враг, 1 — сильный, 2 — босс.</summary>
@@ -51,13 +52,14 @@ public partial class Game
 
     // ───────────────────────── события ─────────────────────────
     /// <summary>Событие логики: враг получил урон.</summary>
-    public void OnEnemyHit(Enemy e, float dmg, Vector2 dir)
+    public void OnEnemyHit(Enemy e, float dmg, Vector2 dir, bool melee = false)
     {
         var cfg = VisualFxConfig.Get(); int hc = HitClass(e); bool crit = dmg >= .3f * e.MaxHp && !e.IsBoss;
         float mul = crit ? cfg.CritMul : 1f;
         e.VHit = 0; e.VHitDir = dir; e.VHitMul = mul;
         int n = Mathf.RoundToInt(cfg.HitParticles[hc] * mul * Settings.Particles);
-        Impact(e.Pos + dir * -2f, dir, e.IsBoss ? new Color("#ffe9a0") : new Color("#fff0c0"), (crit ? 1.5f : 1f) * (hc == 2 ? 1.2f : 1f), n);
+        Impact(e.Pos + dir * -2f, dir, e.IsBoss ? new Color("#ffe9a0") : new Color("#fff0c0"), (crit ? 1.3f : .8f) * (hc == 2 ? 1.2f : 1f), n / 2);
+        HitFx(e, dir, melee, crit, hc);                                                           // серп, волна, брызги и пятна, линии удара
         Shake = Mathf.Max(Shake, 1.2f * cfg.HitCamShake[hc] * mul);
     }
 
@@ -83,6 +85,8 @@ public partial class Game
         }
         sparks.Add(new Spark { P = p, D = Vector2.Zero, Len = 4f * strength, Life = .12f, C = Colors.White });     // вспышка-крест
         if (particles > 0) Burst(p, col, particles, 70f * strength);
+        FlashAt(p, Tone(col, .5f), 4.5f * strength, .08f);
+        if (strength >= 1.4f) { AddRing(p, 13f * strength, .22f, col); Sparkle(p, col, 3, 6f, 10f); }          // сильный удар: кольцо и звёздочки
         if (sparks.Count > 120) sparks.RemoveRange(0, sparks.Count - 120);
     }
 
@@ -114,11 +118,18 @@ public partial class Game
         for (int i = deaths.Count - 1; i >= 0; i--)
         {
             var d = deaths[i]; bool first = d.T <= 0; d.T += dt;
-            if (first && Settings.Particles > .05f) Burst(d.Pos, d.C, Mathf.RoundToInt((d.Boss ? 26 : 10) * Settings.Particles), d.Boss ? 110f : 70f);
+            if (first && Settings.Particles > .05f)
+            {
+                Burst(d.Pos, d.C, Mathf.RoundToInt((d.Boss ? 26 : 10) * Settings.Particles), d.Boss ? 110f : 70f);
+                Puff(d.Pos, Tone(d.C, -.35f), d.Boss ? 12 : 5, d.Boss ? 14f : 6f, 18f, .5f);                 // тёмное облачко на месте врага и искры-души вверх
+                Sparkle(d.Pos + new Vector2(0, -4), d.C, d.Boss ? 12 : 4, d.Boss ? 20f : 8f, 26f);
+                if (d.Boss) { AddRing(d.Pos, 60f, .7f, d.C); Rays(d.Pos + new Vector2(0, 6), d.C, 10, 16f, 50f); }
+            }
             if (d.T > cfg.DeathTime * (d.Boss ? 2f : 1f)) deaths.RemoveAt(i);
         }
         for (int i = sparks.Count - 1; i >= 0; i--) { sparks[i].T += dt; if (sparks[i].T >= sparks[i].Life) sparks.RemoveAt(i); }
-        flashLayer?.QueueRedraw();
+        UpdateHitFx(dt);
+        flashLayer?.QueueRedraw(); hitTopLayer?.QueueRedraw();
     }
 
     // ───────────────────────── поза тела ─────────────────────────
@@ -202,7 +213,7 @@ public partial class Game
             float ft = cfg.HitFlashTime[HitClass(e)]; bool fuse = e.Kind == EK.Bomber && e.State == 1 && ((int)(Time * 16) % 2 == 0);
             if (e.VHit >= ft && !fuse) continue;
             if (!EnemyDraw(e, out var vd, out var at, out var scale, out int f, out float fy)) continue;
-            float a = e.VHit < ft ? (1f - e.VHit / ft * .6f) * Settings.Flash * .85f : .5f * Settings.Flash;
+            float a = e.VHit < ft ? (1f - e.VHit / ft * .7f) * Settings.Flash * .6f : .5f * Settings.Flash;          // вспышка не до сплошного белого: рисунок врага виден
             c.DrawSetTransform(at, 0, scale);
             c.DrawTextureRectRegion(vd.Sheet, new Rect2(vd.Offset - new Vector2(0, fy), new Vector2(vd.FrameSize, vd.FrameSize)), new Rect2(f * vd.FrameSize, 0, vd.FrameSize, vd.FrameSize), new Color(1, 1, 1, a));
         }
@@ -228,8 +239,8 @@ public partial class Game
         foreach (var s in sparks)
         {
             float k = s.T / s.Life; var col = new Color(s.C.R, s.C.G, s.C.B, 1f - k * .8f);
-            if (s.D == Vector2.Zero) { float l = s.Len * (1f - k * .5f); Gfx.Line(c, s.P + new Vector2(-l, 0), s.P + new Vector2(l, 0), col, 1f); Gfx.Line(c, s.P + new Vector2(0, -l), s.P + new Vector2(0, l), col, 1f); }
-            else { var a = s.P + s.D * s.Len * k * .8f; var b = s.P + s.D * s.Len * (.3f + k); Gfx.Line(c, a, b, col, 1f); }
+            if (s.D == Vector2.Zero) { float l = s.Len * (1f - k * .5f); Gfx.Star(c, s.P, l * 1.6f, col); Gfx.Glow(c, s.P, l, new Color(col.R, col.G, col.B, col.A * .4f)); }
+            else { var a = s.P + s.D * s.Len * k * .8f; var b = s.P + s.D * s.Len * (.3f + k); Gfx.Streak(c, a, b, col, 1.3f); }
         }
     }
 
@@ -252,6 +263,6 @@ public partial class Game
     {
         if (e.Tele <= 0 || StyleOf(e.Kind) != EStyle.Shoot) return;
         var d = (PPos - e.Pos).Normalized(); float k = e.VTele0 > .01f ? 1f - e.Tele / e.VTele0 : 0;
-        for (int i = 0; i < 6; i++) { if (i * 7 > 40 + 30 * k) break; var a = e.Pos + d * (10 + i * 7); Gfx.Rect(c, new Rect2(a - new Vector2(.5f, .5f), new Vector2(2, 2)), new Color(1f, .6f, .35f, .25f + .5f * k)); }
+        for (int i = 0; i < 6; i++) { if (i * 7 > 40 + 30 * k) break; var a = e.Pos + d * (10 + i * 7); Gfx.Dot(c, a, 1.3f, new Color(1f, .6f, .35f, .25f + .5f * k)); }
     }
 }

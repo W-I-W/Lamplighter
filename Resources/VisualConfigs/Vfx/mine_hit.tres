@@ -17,3 +17,4 @@ SfxDb = -3
 SfxPitch = 1.1
 Shake = 0
 Flash = 0
+Layers = "sparks"

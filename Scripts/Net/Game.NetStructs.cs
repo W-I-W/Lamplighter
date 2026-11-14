@@ -102,6 +102,24 @@ public partial class Game
         if (BeaconLevel != shBeacon || BossMask != shBoss) { Net.SendProgress(BeaconLevel, BossMask); shBeacon = BeaconLevel; shBoss = BossMask; }
     }
 
+    /// <summary>Улучшение маяка уходит сразу, отдельным сообщением на каждую ступень (хост принимает по одной ступени за раз).</summary>
+    void SyncProgressNow()
+    {
+        if (!NetService.Active || Net == null) return;
+        Net.SendProgress(BeaconLevel, BossMask); shBeacon = BeaconLevel; shBoss = BossMask;
+    }
+
+    const float BeaconReach = 160f;                                                   // гость улучшает маяк, стоя рядом с ним (запас на задержку сети)
+
+    /// <summary>Хост: прогресс, присланный гостем. Стражей убивает только хост (их ИИ и смерть считаются у него), поэтому биты стражей от гостя не принимаются.
+    /// Маяк — ровно на одну ступень выше текущей, гость должен стоять у маяка, последняя ступень — только после победы над Источником Тьмы (как в UpgradeBeacon).</summary>
+    public bool NetGuestProgress(long sender, int beacon)
+    {
+        if (beacon != BeaconLevel + 1 || beacon > 6 || (beacon == 6 && !BossDown(5))) return false;
+        if (PosOf(sender) is not Vector2 sp || sp.DistanceTo(W.Ancients[0].Pos) > BeaconReach) return false;
+        return NetApplyProgress(beacon, BossMask);
+    }
+
     /// <summary>Уровень маяка и побеждённые стражи общие для всех: берётся наибольшее значение, печати открываются у всех. Награды за стражей получает тот, кто победил.</summary>
     public bool NetApplyProgress(int beacon, int boss)
     {

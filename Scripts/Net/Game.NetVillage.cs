@@ -9,7 +9,10 @@ namespace Lamplighter;
 /// (назначить работника, построить, улучшить, разобрать, настроить, забрать ресурсы, освободить жителя). Игровые ресурсы игрока (его инвентарь) остаются у него.</summary>
 public partial class Game
 {
-    float netVillT, netPosT, netVillFull; string netVillHash = "";
+    float netVillT, netPosT, netVillFull, netVillGap; string netVillHash = ""; bool netVillDirty;
+
+    /// <summary>Хост: деревня или склад изменились по команде гостя — разослать снимок на ближайшем кадре (команды сливаются, рассылка не чаще 10 раз в секунду).</summary>
+    public void QueueVillageSync() => netVillDirty = true;
     bool NetClient => NetService.Active && NetService.Role == NetRole.Client;
     bool NetHost => NetService.Active && NetService.Role == NetRole.Host;
 
@@ -40,6 +43,8 @@ public partial class Game
             foreach (var v in Villagers) { d.Add(v.Id); d.Add(v.Pos.X); d.Add(v.Pos.Y); d.Add((int)v.State); d.Add(v.Face); }
             Net.SendVillPos(d);
         }
+        netVillGap -= dt;
+        if (netVillDirty && netVillGap <= 0) { netVillDirty = false; netVillGap = .1f; netVillT = 0; netVillFull = 0; }       // команда гостя изменила деревню: снимок уходит сразу, но не чаще 10 раз в секунду
         if (netVillT > 0) return; netVillT = .5f;
         var sb = new System.Text.StringBuilder();
         foreach (var v in Villagers) sb.Append(v.Id).Append(v.Prof).Append(v.Work).Append(v.Home).Append(';');

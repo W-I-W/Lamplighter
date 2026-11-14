@@ -39,7 +39,6 @@ public partial class Game
         if (placingStock || !GameSession.Active || W == null || charSave == null) return;
         try
         {
-            while (SmeltQ.Count > 0) { int ig = It.IngotOf(SmeltQ[0]); if (ig >= 0) Inv[ig]++; SmeltQ.RemoveAt(0); }
             if (GameSession.Mode != SessionMode.Guest && NetService.Role != NetRole.Client && worldSave != null)
             {
                 if (!SaveManager.SaveSession(BuildCharacter(), BuildWorld())) { GD.PushWarning("session save failed"); return; }
@@ -57,6 +56,7 @@ public partial class Game
         c.HealthModel = CombatMath.HealthModel;
         c.Look = PlayerLook; c.PlaySecs = PlaySecs; c.Hp = Hp; c.MaxHp = MaxHp - relicHp; c.Xp = Xp; c.Level = Level; c.Tier = Tier; c.Kills = Kills; c.HeroLamp = HeroLampLv; c.Ann = Ann;
         c.Inv = (int[])Inv.Clone(); IncludeCraftIngredientsInSave(c.Inv); c.ModInv = (int[])ModInv.Clone(); c.SkK = sk.k; c.SkV = sk.v;
+        foreach (var ore in SmeltQ) { int ig = It.IngotOf(ore); if (ig >= 0) c.Inv[ig]++; }      // очередь плавки не сохраняется: в файл она попадает готовыми слитками, а в игре продолжает плавиться (раньше каждое сохранение мгновенно доплавляло всё)
         c.Hot = (string[])Hot.Clone(); c.Quick = SaveQuickSlots(); c.QuickCounts = SaveQuickCounts(); c.HotSel = HotSel; c.Tools = OwnedTools.ToArray(); c.CurTool = CurTool;
         c.Graves = Graves.ToArray(); c.BuildingUp = MyBuildingUp; c.WId = Owned.ConvertAll(o => o.Id).ToArray(); c.WMods = Owned.ConvertAll(o => o.Mods.ToArray()).ToArray(); c.CurW = CurW; c.WLv = Owned.ConvertAll(o => o.Lv).ToArray(); c.AxeLv = AxeLv;
         c.Relics = OwnedRelics.ToArray(); c.Equipped = EquippedRelics.ToArray(); c.BpDone = BpDone.ToArray();
